@@ -1,7 +1,6 @@
+import { SearchField, SelectField } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { SearchField } from '../../shared/SearchField/SearchField';
-import { SelectField } from '../../shared/SelectField/SelectField';
 import { FilterBar } from './FilterBar';
 
 const meta = {
