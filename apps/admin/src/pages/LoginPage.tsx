@@ -42,7 +42,7 @@ export const LoginPage = ({ onLogin }: LoginPageProps) => {
           </p>
         </div>
 
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <Input
             errorMessage={loginIdError}
             label="관리자 ID"
