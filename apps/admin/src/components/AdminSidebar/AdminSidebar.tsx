@@ -1,4 +1,4 @@
-import type { ComponentType, SVGProps } from 'react';
+import { type ComponentType, type SVGProps, useState } from 'react';
 import {
   CircleDollarSign,
   ClipboardCheck,
@@ -10,6 +10,7 @@ import {
   Store,
   UserCog,
   Users,
+  UtensilsCrossed,
 } from 'lucide-react';
 
 type NavigationIcon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -45,19 +46,39 @@ export function AdminSidebar({
   onItemSelect,
   onLogout,
 }: AdminSidebarProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
-    <aside className="flex min-h-screen w-60 shrink-0 flex-col gap-2 bg-bg-surface px-4 pb-6 pt-4">
-      <nav aria-label="관리자 메뉴">
+    <aside
+      className={`absolute inset-y-0 left-0 z-10 flex min-h-screen flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out ${
+        isExpanded ? 'w-60 shadow-lg' : 'w-[72px]'
+      }`}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+    >
+      <div className="flex h-10 select-none items-center gap-3 overflow-hidden px-5">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-action-primary text-text-inverse">
+          <UtensilsCrossed aria-hidden="true" className="size-[18px]" />
+        </span>
+        <span
+          className={`overflow-hidden whitespace-nowrap text-body-sm-web font-bold tracking-tight text-text-primary transition-[max-width,opacity] duration-200 ${
+            isExpanded ? 'max-w-36 opacity-100' : 'max-w-0 opacity-0'
+          }`}
+        >
+          LUNCH CATCH
+        </span>
+      </div>
+      <nav aria-label="관리자 메뉴" className="px-4">
         <ul className="flex flex-col gap-2">
           {items.map(({ icon: Icon, id, label }) => {
             const isSelected = id === activeItemId;
 
             return (
-              <li key={id}>
+              <li className="w-full" key={id}>
                 <button
                   aria-current={isSelected ? 'page' : undefined}
                   className={[
-                    'flex h-10 w-full items-center gap-2 rounded-md px-3 text-left text-body-sm-web font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary',
+                    'flex h-10 w-full items-center justify-start gap-3 rounded-md px-[11px] text-left text-body-sm-web font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary',
                     isSelected
                       ? 'bg-status-info-bg text-action-primary'
                       : 'text-text-secondary hover:bg-surface-subtle hover:text-action-primary',
@@ -66,22 +87,36 @@ export function AdminSidebar({
                   type="button"
                 >
                   <Icon aria-hidden="true" className="size-[18px] shrink-0" />
-                  <span className="truncate">{label}</span>
+                  <span
+                    className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ${
+                      isExpanded ? 'max-w-36 opacity-100' : 'max-w-0 opacity-0'
+                    }`}
+                  >
+                    {label}
+                  </span>
                 </button>
               </li>
             );
           })}
         </ul>
       </nav>
-      <div className="border-t border-border-subtle" />
-      <button
-        className="flex h-10 items-center gap-2 text-caption-web font-medium text-text-secondary transition-colors hover:text-action-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
-        onClick={onLogout}
-        type="button"
-      >
-        <LogOut aria-hidden="true" className="size-[18px]" />
-        로그아웃
-      </button>
+      <div className="mt-auto px-4">
+        <div className="mb-3 border-t border-border-subtle" />
+        <button
+          className="flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:text-status-danger-fg active:text-status-danger-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-status-danger-border"
+          onClick={onLogout}
+          type="button"
+        >
+          <LogOut aria-hidden="true" className="size-4 shrink-0" />
+          <span
+            className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ${
+              isExpanded ? 'max-w-24 opacity-100' : 'max-w-0 opacity-0'
+            }`}
+          >
+            로그아웃
+          </span>
+        </button>
+      </div>
     </aside>
   );
 }
