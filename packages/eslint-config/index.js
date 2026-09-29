@@ -12,8 +12,7 @@ import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  // apps, packages는 각 워크스페이스의 ESLint 설정으로 검사한다
-  globalIgnores(['dist', 'apps', 'packages']),
+  globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
