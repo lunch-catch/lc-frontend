@@ -1,7 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
+import { Button } from '@repo/ui';
 import { RotateCcw } from 'lucide-react';
-
-import { Button } from '../../shared/Button/Button';
 
 export interface FilterBarProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
