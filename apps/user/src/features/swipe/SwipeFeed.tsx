@@ -11,6 +11,7 @@ import AppHeader from '@user/components/AppHeader/AppHeader';
 
 import GestureRail from './GestureRail';
 import PosterCard from './PosterCard';
+import SwipeDone from './SwipeDone';
 import { useSwipeGesture } from './useSwipeGesture';
 
 const SwipeFeed = () => {
@@ -36,6 +37,7 @@ const SwipeFeed = () => {
 
   const topCard = cards[currentIndex];
   const nextCard = cards[currentIndex + 1];
+  const isDone = cards.length > 0 && currentIndex >= cards.length;
 
   useEffect(() => {
     if (topCard && !impressedServeIds.current.has(topCard.serveId)) {
@@ -59,6 +61,7 @@ const SwipeFeed = () => {
     <>
       {/* 위치 설정(#14) 전까지는 고정 위치를 보여준다 */}
       <AppHeader locationName="강남역 주변" />
+      {isDone && <SwipeDone onRestart={() => setCurrentIndex(0)} />}
       {topCard && (
         // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
         <section className="flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-3">
