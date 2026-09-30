@@ -249,7 +249,7 @@ export function TableHeaderCell({
               : undefined
       }
       className={[
-        'relative h-10 border-r border-table-divider bg-surface-subtle px-4 text-caption-web font-normal text-table-header-text last:border-r-0',
+        'group/header relative h-10 border-r border-table-divider bg-surface-subtle px-4 text-caption-web font-normal text-table-header-text first:rounded-tl-md last:rounded-tr-md last:border-r-0',
         className,
       ]
         .filter(Boolean)
@@ -257,25 +257,30 @@ export function TableHeaderCell({
       scope="col"
       {...props}
     >
-      <div className="flex items-center gap-1">
-        <span>{children}</span>
-        {onSortChange && (
-          <button
-            aria-label={`${children} ${
-              sortDirection === 'asc'
-                ? '내림차순 정렬'
-                : sortDirection === 'desc'
-                  ? '오름차순 정렬'
-                  : '오름차순 정렬'
+      {onSortChange ? (
+        <button
+          aria-label={`${children} ${
+            sortDirection === 'asc'
+              ? '정렬 해제'
+              : sortDirection === 'desc'
+                ? '오름차순 정렬'
+                : '내림차순 정렬'
+          }`}
+          className="flex h-full cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action-primary"
+          onClick={onSortChange}
+          type="button"
+        >
+          <span>{children}</span>
+          <SortIcon
+            aria-hidden="true"
+            className={`invisible size-3.5 shrink-0 text-text-tertiary opacity-0 transition-[color,opacity] group-hover/header:visible group-hover/header:opacity-100 ${
+              sortDirection ? 'visible opacity-100' : ''
             }`}
-            className="flex size-5 shrink-0 items-center justify-center rounded-sm text-text-tertiary transition-colors hover:bg-bg-surface hover:text-action-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action-primary"
-            onClick={onSortChange}
-            type="button"
-          >
-            <SortIcon aria-hidden="true" className="size-3.5" />
-          </button>
-        )}
-      </div>
+          />
+        </button>
+      ) : (
+        children
+      )}
       {canResize && (
         <button
           aria-label={`${children} 열 너비 조절`}
@@ -295,7 +300,7 @@ export function TableCell({ children, className, ...props }: TableCellProps) {
     <td
       className={[
         tableCellHeightClassName[density],
-        'px-4 text-caption-web text-table-body-text transition-[height] duration-200 ease-out motion-reduce:transition-none',
+        'overflow-hidden whitespace-nowrap px-4 text-ellipsis text-caption-web text-table-body-text transition-[height] duration-200 ease-out motion-reduce:transition-none',
         className,
       ]
         .filter(Boolean)
@@ -315,7 +320,7 @@ export function TableRow({
   return (
     <tr
       className={[
-        'group border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-surface-subtle last:border-b-0 motion-reduce:transition-none',
+        'group border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-surface-subtle last:border-b-0 last:[&>td:first-child]:rounded-bl-md last:[&>td:last-child]:rounded-br-md motion-reduce:transition-none',
         className,
       ]
         .filter(Boolean)
