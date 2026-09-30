@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import { AdminLayout } from '@admin/layout/AdminLayout';
 import { LoginPage } from '@admin/pages/LoginPage';
+import { StoreApplicationsPage } from '@admin/pages/StoreApplicationsPage';
 
 const pageTitles: Record<string, string> = {
   account: '계정 관리',
@@ -35,16 +36,19 @@ const App = () => {
       activeItemId={activeItemId}
       onLogout={logout}
       onNavigate={setActiveItemId}
-      pageTitle={pageTitle}
     >
-      <section className="rounded-xl border border-border-subtle bg-bg-surface p-6">
-        <h2 className="text-title-sm-web font-semibold text-text-primary">
-          {pageTitle}
-        </h2>
-        <p className="mt-2 text-body-sm-web text-text-secondary">
-          화면 구현을 위한 관리자 공통 레이아웃입니다.
-        </p>
-      </section>
+      {activeItemId === 'merchant' ? (
+        <StoreApplicationsPage />
+      ) : (
+        <section className="rounded-xl border border-border-subtle bg-bg-surface p-6">
+          <h2 className="text-title-sm-web font-semibold text-text-primary">
+            {pageTitle}
+          </h2>
+          <p className="mt-2 text-body-sm-web text-text-secondary">
+            화면 구현을 위한 관리자 공통 레이아웃입니다.
+          </p>
+        </section>
+      )}
     </AdminLayout>
   );
 };

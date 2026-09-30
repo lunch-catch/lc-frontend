@@ -3,3 +3,10 @@
 
 /* 앱 폴더 밖에 있는 공통 패키지의 Tailwind 클래스도 빌드에 포함한다 */
 @source '../../../packages/ui/src';
+
+@layer base {
+  html {
+    /* 스크롤바 표시 여부에 따른 콘텐츠 폭 변화를 막는다. */
+    scrollbar-gutter: stable;
+  }
+}
