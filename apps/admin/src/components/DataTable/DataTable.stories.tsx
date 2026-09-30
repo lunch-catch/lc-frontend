@@ -57,6 +57,32 @@ export const Default: Story = {
   ),
 };
 
+export const ColumnWidths: Story = {
+  render: () => (
+    <DataTable
+      className="table-fixed"
+      columns={[
+        { width: '18%' },
+        { width: '16%' },
+        { width: '28%' },
+        { width: '24%' },
+        { width: '14%' },
+      ]}
+    >
+      {tableHeader}
+      <tbody>
+        <TableRow>
+          <TableCell>LC-20260923-001</TableCell>
+          <TableCell>김런치</TableCell>
+          <TableCell>점심 예약 쿠폰</TableCell>
+          <TableCell>2026. 09. 23. 12:30</TableCell>
+          <TableCell>사용 완료</TableCell>
+        </TableRow>
+      </tbody>
+    </DataTable>
+  ),
+};
+
 export const Empty: Story = {
   render: () => (
     <DataTable>
