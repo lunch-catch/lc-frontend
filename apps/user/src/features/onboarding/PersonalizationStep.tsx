@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
 
+import { useAuth } from '@user/auth/useAuth';
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import ChoiceChip from '@user/components/ChoiceChip/ChoiceChip';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
@@ -24,6 +25,7 @@ const ageGroupOptions: { value: AgeGroup; label: string }[] = [
 const PersonalizationStep = () => {
   const navigate = useNavigate();
   const { ageGroup, gender, setAgeGroup, setGender } = useOnboarding();
+  const { completeOnboarding } = useAuth();
 
   const isComplete = gender !== null && ageGroup !== null;
 
@@ -87,7 +89,10 @@ const PersonalizationStep = () => {
         <ActionButton
           disabled={!isComplete}
           // 위치 설정 화면(#14)이 생기면 그쪽으로 이동한다
-          onClick={() => navigate('/swipe')}
+          onClick={() => {
+            completeOnboarding();
+            navigate('/swipe', { replace: true });
+          }}
           size="large"
         >
           {isComplete ? '계속하기' : '성별·연령대를 선택해 주세요'}
