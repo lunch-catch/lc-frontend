@@ -50,7 +50,7 @@ export function AdminSidebar({
 
   return (
     <aside
-      className={`absolute inset-y-0 left-0 z-10 flex min-h-screen flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out ${
+      className={`absolute inset-y-0 left-0 z-30 flex min-h-screen flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out ${
         isExpanded ? 'w-60 shadow-lg' : 'w-[72px]'
       }`}
       onMouseEnter={() => setIsExpanded(true)}
