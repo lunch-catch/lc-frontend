@@ -40,6 +40,8 @@ interface Owner extends BaseMember {
 }
 
 interface Member extends BaseMember {
+  ageGroup: string;
+  gender: string;
   nickname: string;
 }
 
@@ -54,7 +56,7 @@ interface MemberSort {
 }
 
 const statusOptions = [
-  { label: '전체 상태', value: 'ALL' },
+  { label: '전체', value: 'ALL' },
   { label: '활성', value: 'ACTIVE' },
   { label: '정지', value: 'SUSPENDED' },
   { label: '탈퇴', value: 'WITHDRAWN' },
@@ -105,11 +107,13 @@ const ownerTableColumns: DataTableColumn[] = [
 ];
 
 const memberTableColumns: DataTableColumn[] = [
-  { minWidth: 140, width: '22%' },
-  { minWidth: 160, width: '26%' },
   { minWidth: 120, width: '16%' },
-  { minWidth: 130, width: '18%' },
-  { minWidth: 140, width: '18%' },
+  { minWidth: 150, width: '20%' },
+  { minWidth: 100, width: '12%' },
+  { minWidth: 90, width: '10%' },
+  { minWidth: 100, width: '12%' },
+  { minWidth: 120, width: '15%' },
+  { minWidth: 140, width: '15%' },
 ];
 
 const owners: Owner[] = Array.from({ length: 24 }, (_, index) => {
@@ -134,6 +138,8 @@ const members: Member[] = Array.from({ length: 24 }, (_, index) => {
     number % 10 === 0 ? 'WITHDRAWN' : number % 6 === 0 ? 'SUSPENDED' : 'ACTIVE';
 
   return {
+    ageGroup: ['20대', '30대', '40대', '50대 이상'][number % 4],
+    gender: ['남', '여', '기타'][number % 3],
     id: `MEM-${String(number).padStart(4, '0')}`,
     joinedAt: `2026-09-${String(((number + 1) % 28) + 1).padStart(2, '0')}`,
     lastAccessedAt: `2026-09-${String(((number + 5) % 28) + 1).padStart(2, '0')} 12:10`,
@@ -177,14 +183,8 @@ export const MemberManagementPage = () => {
   const [status, setStatus] = useState('ALL');
   const [tableDensity, setTableDensity] = useState<TableDensity>('normal');
   const [pageSize, setPageSize] = useState(20);
-  const [ownerSort, setOwnerSort] = useState<OwnerSort>({
-    direction: 'desc',
-    key: 'joinedAt',
-  });
-  const [memberSort, setMemberSort] = useState<MemberSort>({
-    direction: 'desc',
-    key: 'joinedAt',
-  });
+  const [ownerSort, setOwnerSort] = useState<OwnerSort | null>(null);
+  const [memberSort, setMemberSort] = useState<MemberSort | null>(null);
 
   useEffect(() => {
     // 입력 중에는 목록을 다시 계산하지 않고, 입력이 멈춘 뒤에만 검색어를 반영한다.
@@ -219,6 +219,10 @@ export const MemberManagementPage = () => {
       );
     });
 
+    if (!ownerSort) {
+      return matchedOwners;
+    }
+
     return [...matchedOwners].sort((firstOwner, secondOwner) => {
       const comparison = getOwnerSortValue(
         firstOwner,
@@ -252,6 +256,10 @@ export const MemberManagementPage = () => {
       );
     });
 
+    if (!memberSort) {
+      return matchedMembers;
+    }
+
     return [...matchedMembers].sort((firstMember, secondMember) => {
       const comparison = getMemberSortValue(
         firstMember,
@@ -277,8 +285,8 @@ export const MemberManagementPage = () => {
     setStatus('ALL');
     setStartDate('');
     setEndDate('');
-    setOwnerSort({ direction: 'desc', key: 'joinedAt' });
-    setMemberSort({ direction: 'desc', key: 'joinedAt' });
+    setOwnerSort(null);
+    setMemberSort(null);
   };
 
   const handleReset = () => {
@@ -288,30 +296,34 @@ export const MemberManagementPage = () => {
     setStatus('ALL');
     setStartDate('');
     setEndDate('');
-    setOwnerSort({ direction: 'desc', key: 'joinedAt' });
-    setMemberSort({ direction: 'desc', key: 'joinedAt' });
+    setOwnerSort(null);
+    setMemberSort(null);
   };
 
   const handleOwnerSortChange = (nextKey: keyof Owner) => {
     setCurrentPage(1);
-    setOwnerSort((currentSort) => ({
-      direction:
-        currentSort.key === nextKey && currentSort.direction === 'asc'
-          ? 'desc'
-          : 'asc',
-      key: nextKey,
-    }));
+    setOwnerSort((currentSort) => {
+      if (!currentSort || currentSort.key !== nextKey) {
+        return { direction: 'desc', key: nextKey };
+      }
+
+      return currentSort.direction === 'desc'
+        ? { direction: 'asc', key: nextKey }
+        : null;
+    });
   };
 
   const handleMemberSortChange = (nextKey: keyof Member) => {
     setCurrentPage(1);
-    setMemberSort((currentSort) => ({
-      direction:
-        currentSort.key === nextKey && currentSort.direction === 'asc'
-          ? 'desc'
-          : 'asc',
-      key: nextKey,
-    }));
+    setMemberSort((currentSort) => {
+      if (!currentSort || currentSort.key !== nextKey) {
+        return { direction: 'desc', key: nextKey };
+      }
+
+      return currentSort.direction === 'desc'
+        ? { direction: 'asc', key: nextKey }
+        : null;
+    });
   };
 
   return (
@@ -388,8 +400,8 @@ export const MemberManagementPage = () => {
           onSortChange={(nextKey) =>
             handleOwnerSortChange(nextKey as keyof Owner)
           }
-          sortDirection={ownerSort.direction}
-          sortKey={ownerSort.key}
+          sortDirection={ownerSort?.direction}
+          sortKey={ownerSort?.key}
           totalCount={filteredOwners.length}
           totalPages={totalPages}
           type="owner"
@@ -408,8 +420,8 @@ export const MemberManagementPage = () => {
           onSortChange={(nextKey) =>
             handleMemberSortChange(nextKey as keyof Member)
           }
-          sortDirection={memberSort.direction}
-          sortKey={memberSort.key}
+          sortDirection={memberSort?.direction}
+          sortKey={memberSort?.key}
           totalCount={filteredMembers.length}
           totalPages={totalPages}
           type="member"
@@ -433,8 +445,8 @@ interface MemberTableProps {
   onPageSizeChange: (pageSize: number) => void;
   onSortChange: (key: string) => void;
   pageSize: number;
-  sortDirection: TableSortDirection;
-  sortKey: string;
+  sortDirection?: TableSortDirection;
+  sortKey?: string;
   totalCount: number;
   totalPages: number;
   type: MemberType;
@@ -459,7 +471,7 @@ const MemberTable = ({
   return (
     <div className="flex flex-col gap-3">
       <DataTable
-        className="min-w-[860px] table-fixed"
+        className="table-fixed"
         columns={isOwner ? ownerTableColumns : memberTableColumns}
         density={density}
         resizableColumns
@@ -493,6 +505,28 @@ const MemberTable = ({
             >
               상태
             </TableHeaderCell>
+            {!isOwner && (
+              <>
+                <TableHeaderCell
+                  columnIndex={3}
+                  onSortChange={() => onSortChange('gender')}
+                  sortDirection={
+                    sortKey === 'gender' ? sortDirection : undefined
+                  }
+                >
+                  성별
+                </TableHeaderCell>
+                <TableHeaderCell
+                  columnIndex={4}
+                  onSortChange={() => onSortChange('ageGroup')}
+                  sortDirection={
+                    sortKey === 'ageGroup' ? sortDirection : undefined
+                  }
+                >
+                  연령대
+                </TableHeaderCell>
+              </>
+            )}
             {isOwner && (
               <TableHeaderCell
                 columnIndex={3}
@@ -507,14 +541,14 @@ const MemberTable = ({
               </TableHeaderCell>
             )}
             <TableHeaderCell
-              columnIndex={isOwner ? 4 : 3}
+              columnIndex={isOwner ? 4 : 5}
               onSortChange={() => onSortChange('joinedAt')}
               sortDirection={sortKey === 'joinedAt' ? sortDirection : undefined}
             >
               가입일
             </TableHeaderCell>
             <TableHeaderCell
-              columnIndex={isOwner ? 5 : 4}
+              columnIndex={isOwner ? 5 : 6}
               onSortChange={() => onSortChange('lastAccessedAt')}
               sortDirection={
                 sortKey === 'lastAccessedAt' ? sortDirection : undefined
@@ -526,7 +560,7 @@ const MemberTable = ({
         </thead>
         <tbody>
           {members.length === 0 && (
-            <TableEmpty colSpan={isOwner ? 6 : 5}>
+            <TableEmpty colSpan={isOwner ? 6 : 7}>
               조회된 회원이 없습니다
             </TableEmpty>
           )}
@@ -577,6 +611,8 @@ const MemberTable = ({
                         {status.label}
                       </StatusBadge>
                     </TableCell>
+                    <TableCell>{member.gender}</TableCell>
+                    <TableCell>{member.ageGroup}</TableCell>
                     <TableCell>{member.joinedAt}</TableCell>
                     <TableCell>{member.lastAccessedAt}</TableCell>
                   </TableRow>
