@@ -20,7 +20,8 @@ const TabLayout = () => {
   return (
     <div className="mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page">
       {/* 하단 탭바에 내용이 가려지지 않도록 탭바 높이만큼 비워둔다 */}
-      <main className="flex-1 pb-[calc(82px+env(safe-area-inset-bottom))]">
+      {/* 화면이 남는 높이를 채울 수 있도록 세로 flex로 둔다 */}
+      <main className="flex flex-1 flex-col pb-[calc(82px+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
       <BottomNav

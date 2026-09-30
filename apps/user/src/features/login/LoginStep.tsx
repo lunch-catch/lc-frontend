@@ -6,9 +6,9 @@ import loginDiscover from '@user/assets/illustrations/login-discover.webp';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
 import mascotLoading from '@user/assets/illustrations/mascot-loading.webp';
 import { useAuth } from '@user/auth/useAuth';
+import Wordmark from '@user/components/Wordmark/Wordmark';
 
 import KakaoLoginButton from './KakaoLoginButton';
-import Wordmark from './Wordmark';
 
 type LoginStatus = 'idle' | 'loading' | 'error';
 
