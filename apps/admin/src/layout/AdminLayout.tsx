@@ -16,7 +16,7 @@ export const AdminLayout = ({
   onNavigate,
 }: AdminLayoutProps) => {
   return (
-    <div className="relative min-h-screen bg-surface-subtle">
+    <div className="relative min-h-screen bg-bg-page">
       <AdminSidebar
         activeItemId={activeItemId}
         onItemSelect={onNavigate}

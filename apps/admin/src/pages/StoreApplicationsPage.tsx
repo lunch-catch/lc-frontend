@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   SearchField,
+  SegmentedControl,
+  type SegmentedControlItem,
   SelectField,
   StatusBadge,
-  Toggle,
 } from '@repo/ui';
 import { RotateCcw } from 'lucide-react';
 
 import {
   DataTable,
+  type DataTableColumn,
   TableCell,
   type TableDensity,
   TableEmpty,
@@ -124,7 +126,7 @@ const applications: StoreApplication[] = [
 ];
 
 const statusOptions = [
-  { label: '상태: 전체', value: 'ALL' },
+  { label: '전체', value: 'ALL' },
   { label: '입점 진행 중', value: 'ONBOARDING' },
   { label: '입점 완료', value: 'ACTIVE' },
 ];
@@ -132,6 +134,19 @@ const statusOptions = [
 const sortOptions = [
   { label: '최신순', value: 'LATEST' },
   { label: '오래된순', value: 'OLDEST' },
+];
+
+const tableDensityOptions: SegmentedControlItem<TableDensity>[] = [
+  { label: '좁게 보기', value: 'compact' },
+  { label: '넓게 보기', value: 'comfortable' },
+];
+
+const applicationTableColumns: DataTableColumn[] = [
+  { minWidth: 100, width: '12.5%' },
+  { minWidth: 160, width: '25%' },
+  { minWidth: 180, width: '23%' },
+  { minWidth: 120, width: '18%' },
+  { minWidth: 140, width: '18%' },
 ];
 
 const statusMeta: Record<
@@ -151,8 +166,7 @@ export const StoreApplicationsPage = ({
   const [sortOrder, setSortOrder] = useState('LATEST');
   const [status, setStatus] = useState('ALL');
   const [resetAnimationKey, setResetAnimationKey] = useState(0);
-  const [tableDensity, setTableDensity] =
-    useState<Extract<TableDensity, 'compact' | 'comfortable'>>('compact');
+  const [tableDensity, setTableDensity] = useState<TableDensity>('compact');
   const pageSize = 10;
 
   useEffect(() => {
@@ -214,12 +228,11 @@ export const StoreApplicationsPage = ({
 
       <FilterBar className="mb-2 shrink-0">
         <div className="flex w-full min-w-[700px] items-center justify-between gap-3">
-          <Toggle
-            checked={tableDensity === 'comfortable'}
-            label="넓게 보기"
-            onChange={(event) =>
-              setTableDensity(event.target.checked ? 'comfortable' : 'compact')
-            }
+          <SegmentedControl
+            ariaLabel="테이블 행 높이"
+            items={tableDensityOptions}
+            onValueChange={setTableDensity}
+            value={tableDensity}
           />
           <div className="flex items-center gap-3">
             <SearchField
@@ -248,6 +261,7 @@ export const StoreApplicationsPage = ({
             />
             <Button
               aria-label="필터 초기화"
+              className="size-10 !p-0 hover:!bg-transparent"
               leadingIcon={
                 <RotateCcw
                   aria-hidden="true"
@@ -268,21 +282,19 @@ export const StoreApplicationsPage = ({
       </FilterBar>
 
       <div className="flex flex-col gap-3">
-        <DataTable className="min-w-[760px] table-fixed" density={tableDensity}>
-          <colgroup>
-            <col className="w-[12.5%]" />
-            <col className="w-1/4" />
-            <col className="w-[23%]" />
-            <col className="w-[18%]" />
-            <col className="w-[18%]" />
-          </colgroup>
+        <DataTable
+          className="min-w-[760px] table-fixed"
+          columns={applicationTableColumns}
+          density={tableDensity}
+          resizableColumns
+        >
           <thead>
             <tr>
-              <TableHeaderCell>신청 ID</TableHeaderCell>
-              <TableHeaderCell>상호</TableHeaderCell>
-              <TableHeaderCell>사업자등록번호</TableHeaderCell>
-              <TableHeaderCell>신청일</TableHeaderCell>
-              <TableHeaderCell>상태</TableHeaderCell>
+              <TableHeaderCell columnIndex={0}>신청 ID</TableHeaderCell>
+              <TableHeaderCell columnIndex={1}>상호</TableHeaderCell>
+              <TableHeaderCell columnIndex={2}>사업자등록번호</TableHeaderCell>
+              <TableHeaderCell columnIndex={3}>신청일</TableHeaderCell>
+              <TableHeaderCell columnIndex={4}>상태</TableHeaderCell>
             </tr>
           </thead>
           <tbody>

@@ -80,7 +80,7 @@ export function Pagination({
       style={{ justifyContent: 'space-between', width: '100%' }}
     >
       <span className="text-caption-web text-text-secondary">
-        총 {totalCount.toLocaleString()}건 중 {firstItem.toLocaleString()} -
+        총 {totalCount.toLocaleString()}건 중 {firstItem.toLocaleString()} -{' '}
         {lastItem.toLocaleString()}건
       </span>
       <div
