@@ -1,5 +1,5 @@
 import { mockFeedCards } from './mocks/feed';
-import { addMockWish } from './mocks/wishlist';
+import { addMockWish, getMockWishes } from './mocks/wishlist';
 
 export interface FeedCard {
   serveId: string;
@@ -57,3 +57,5 @@ export const sendSwipeAction = async (
     addMockWish(card);
   }
 };
+
+export const getWishCount = () => getMockWishes().length;
