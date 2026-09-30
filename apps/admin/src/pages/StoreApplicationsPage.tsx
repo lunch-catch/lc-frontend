@@ -7,7 +7,7 @@ import {
   SelectField,
   StatusBadge,
 } from '@repo/ui';
-import { RotateCcw } from 'lucide-react';
+import { ChevronRight, RotateCcw, Rows2, Rows3, Rows4 } from 'lucide-react';
 
 import {
   DataTable,
@@ -19,6 +19,7 @@ import {
   TableHeaderCell,
   TableLoading,
   TableRow,
+  type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { Pagination } from '@admin/components/Pagination/Pagination';
@@ -29,6 +30,7 @@ import {
 
 type ApplicationStatus = 'ACTIVE' | 'ONBOARDING';
 type ApplicationListState = 'error' | 'loading' | 'success';
+type ApplicationSortKey = keyof StoreApplication;
 
 interface StoreApplication {
   id: string;
@@ -40,6 +42,11 @@ interface StoreApplication {
 
 interface StoreApplicationsPageProps {
   listState?: ApplicationListState;
+}
+
+interface ApplicationSort {
+  direction: TableSortDirection;
+  key: ApplicationSortKey;
 }
 
 const applications: StoreApplication[] = [
@@ -156,14 +163,25 @@ const statusOptions = [
   { label: '입점 완료', value: 'ACTIVE' },
 ];
 
-const sortOptions = [
-  { label: '최신순', value: 'LATEST' },
-  { label: '오래된순', value: 'OLDEST' },
-];
-
 const tableDensityOptions: SegmentedControlItem<TableDensity>[] = [
-  { label: '좁게 보기', value: 'compact' },
-  { label: '넓게 보기', value: 'comfortable' },
+  {
+    icon: <Rows4 aria-hidden="true" className="size-4" />,
+    iconOnly: true,
+    label: '축약 보기 (40px)',
+    value: 'compact',
+  },
+  {
+    icon: <Rows3 aria-hidden="true" className="size-4" />,
+    iconOnly: true,
+    label: '일반 보기 (48px)',
+    value: 'normal',
+  },
+  {
+    icon: <Rows2 aria-hidden="true" className="size-4" />,
+    iconOnly: true,
+    label: '여유 보기 (56px)',
+    value: 'comfortable',
+  },
 ];
 
 const applicationTableColumns: DataTableColumn[] = [
@@ -188,14 +206,14 @@ export const StoreApplicationsPage = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [draftKeyword, setDraftKeyword] = useState('');
   const [keyword, setKeyword] = useState('');
-  const [sortOrder, setSortOrder] = useState('LATEST');
+  const [sort, setSort] = useState<ApplicationSort | null>(null);
   const [status, setStatus] = useState('ALL');
   const [resetAnimationKey, setResetAnimationKey] = useState(0);
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
   >(null);
-  const [tableDensity, setTableDensity] = useState<TableDensity>('compact');
-  const pageSize = 10;
+  const [tableDensity, setTableDensity] = useState<TableDensity>('normal');
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     // 입력마다 목록을 갱신하지 않도록 검색어 반영을 잠시 지연한다.
@@ -222,10 +240,21 @@ export const StoreApplicationsPage = ({
       return isMatchedStatus && isMatchedKeyword;
     });
 
-    return sortOrder === 'LATEST'
-      ? matchedApplications
-      : [...matchedApplications].reverse();
-  }, [keyword, sortOrder, status]);
+    if (!sort) {
+      return matchedApplications;
+    }
+
+    return [...matchedApplications].sort(
+      (firstApplication, secondApplication) => {
+        const comparison = firstApplication[sort.key].localeCompare(
+          secondApplication[sort.key],
+          'ko',
+        );
+
+        return sort.direction === 'asc' ? comparison : -comparison;
+      },
+    );
+  }, [keyword, sort, status]);
 
   const totalPages = Math.ceil(filteredApplications.length / pageSize);
   const visibleApplications = filteredApplications.slice(
@@ -245,8 +274,21 @@ export const StoreApplicationsPage = ({
     setCurrentPage(1);
     setDraftKeyword('');
     setKeyword('');
-    setSortOrder('LATEST');
+    setSort(null);
     setStatus('ALL');
+  };
+
+  const handleSortChange = (nextKey: ApplicationSortKey) => {
+    setCurrentPage(1);
+    setSort((currentSort) => {
+      if (!currentSort || currentSort.key !== nextKey) {
+        return { direction: 'desc', key: nextKey };
+      }
+
+      return currentSort.direction === 'desc'
+        ? { direction: 'asc', key: nextKey }
+        : null;
+    });
   };
 
   return (
@@ -270,9 +312,7 @@ export const StoreApplicationsPage = ({
           />
           <div className="flex items-center gap-3">
             <SearchField
-              className="w-[183px]"
               onChange={(event) => setDraftKeyword(event.target.value)}
-              placeholder="검색어를 입력하세요"
               value={draftKeyword}
             />
             <SelectField
@@ -283,15 +323,6 @@ export const StoreApplicationsPage = ({
               }}
               options={statusOptions}
               value={status}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(nextSortOrder) => {
-                setCurrentPage(1);
-                setSortOrder(nextSortOrder);
-              }}
-              options={sortOptions}
-              value={sortOrder}
             />
             <Button
               aria-label="필터 초기화"
@@ -317,18 +348,56 @@ export const StoreApplicationsPage = ({
 
       <div className="flex flex-col gap-3">
         <DataTable
-          className="min-w-[760px] table-fixed"
+          className="table-fixed"
           columns={applicationTableColumns}
           density={tableDensity}
           resizableColumns
         >
           <thead>
             <tr>
-              <TableHeaderCell columnIndex={0}>신청 ID</TableHeaderCell>
-              <TableHeaderCell columnIndex={1}>상호</TableHeaderCell>
-              <TableHeaderCell columnIndex={2}>사업자등록번호</TableHeaderCell>
-              <TableHeaderCell columnIndex={3}>신청일</TableHeaderCell>
-              <TableHeaderCell columnIndex={4}>상태</TableHeaderCell>
+              <TableHeaderCell
+                columnIndex={0}
+                onSortChange={() => handleSortChange('id')}
+                sortDirection={sort?.key === 'id' ? sort.direction : undefined}
+              >
+                신청 ID
+              </TableHeaderCell>
+              <TableHeaderCell
+                columnIndex={1}
+                onSortChange={() => handleSortChange('storeName')}
+                sortDirection={
+                  sort?.key === 'storeName' ? sort.direction : undefined
+                }
+              >
+                상호
+              </TableHeaderCell>
+              <TableHeaderCell
+                columnIndex={2}
+                onSortChange={() => handleSortChange('businessNumber')}
+                sortDirection={
+                  sort?.key === 'businessNumber' ? sort.direction : undefined
+                }
+              >
+                사업자등록번호
+              </TableHeaderCell>
+              <TableHeaderCell
+                columnIndex={3}
+                onSortChange={() => handleSortChange('appliedAt')}
+                sortDirection={
+                  sort?.key === 'appliedAt' ? sort.direction : undefined
+                }
+              >
+                신청일
+              </TableHeaderCell>
+              <TableHeaderCell
+                columnIndex={4}
+                onSortChange={() => handleSortChange('status')}
+                sortDirection={
+                  sort?.key === 'status' ? sort.direction : undefined
+                }
+              >
+                상태
+              </TableHeaderCell>
             </tr>
           </thead>
           <tbody>
@@ -362,10 +431,14 @@ export const StoreApplicationsPage = ({
                     </TableCell>
                     <TableCell>{application.businessNumber}</TableCell>
                     <TableCell>{application.appliedAt}</TableCell>
-                    <TableCell>
+                    <TableCell className="relative">
                       <StatusBadge variant={applicationStatus.variant}>
                         {applicationStatus.label}
                       </StatusBadge>
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-[var(--space-6)] top-1/2 size-4 -translate-y-1/2 text-text-secondary opacity-0 transition-opacity duration-150 ease-out group-focus-visible:opacity-100 group-hover:opacity-100 motion-reduce:transition-none"
+                      />
                     </TableCell>
                   </TableRow>
                 );
@@ -377,7 +450,12 @@ export const StoreApplicationsPage = ({
           <Pagination
             currentPage={currentPage}
             onPageChange={setCurrentPage}
+            onPageSizeChange={(nextPageSize) => {
+              setCurrentPage(1);
+              setPageSize(nextPageSize);
+            }}
             pageSize={pageSize}
+            pageSizeOptions={[10, 20, 50]}
             totalCount={filteredApplications.length}
             totalPages={totalPages}
           />
