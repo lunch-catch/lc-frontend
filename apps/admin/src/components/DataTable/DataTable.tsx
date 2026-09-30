@@ -5,9 +5,14 @@ import type {
   TdHTMLAttributes,
   ThHTMLAttributes,
 } from 'react';
+import { createContext, useContext } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
-export type DataTableProps = TableHTMLAttributes<HTMLTableElement>;
+export type TableDensity = 'compact' | 'comfortable' | 'regular';
+
+export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
+  density?: TableDensity;
+}
 export type TableHeaderCellProps = ThHTMLAttributes<HTMLTableCellElement>;
 export type TableCellProps = TdHTMLAttributes<HTMLTableCellElement>;
 
@@ -19,6 +24,14 @@ interface TableErrorProps extends TableStateProps {
   description?: string;
   title?: string;
 }
+
+const TableDensityContext = createContext<TableDensity>('regular');
+
+const tableCellHeightClassName: Record<TableDensity, string> = {
+  compact: 'h-11',
+  comfortable: 'h-16',
+  regular: 'h-14',
+};
 
 const stateCellStyle: CSSProperties = {
   height: 'calc(var(--space-16) * 5)',
@@ -32,18 +45,25 @@ const stateContentStyle: CSSProperties = {
   textAlign: 'center',
 };
 
-export function DataTable({ children, className, ...props }: DataTableProps) {
+export function DataTable({
+  children,
+  className,
+  density = 'regular',
+  ...props
+}: DataTableProps) {
   return (
-    <div className="overflow-x-auto rounded-md border border-table-border bg-bg-surface">
-      <table
-        className={['w-full border-collapse text-left', className]
-          .filter(Boolean)
-          .join(' ')}
-        {...props}
-      >
-        {children}
-      </table>
-    </div>
+    <TableDensityContext.Provider value={density}>
+      <div className="overflow-x-auto rounded-md border border-table-border bg-bg-surface">
+        <table
+          className={['w-full border-collapse text-left', className]
+            .filter(Boolean)
+            .join(' ')}
+          {...props}
+        >
+          {children}
+        </table>
+      </div>
+    </TableDensityContext.Provider>
   );
 }
 
@@ -69,9 +89,15 @@ export function TableHeaderCell({
 }
 
 export function TableCell({ children, className, ...props }: TableCellProps) {
+  const density = useContext(TableDensityContext);
+
   return (
     <td
-      className={['h-14 px-4 text-caption-web text-table-body-text', className]
+      className={[
+        tableCellHeightClassName[density],
+        'px-4 text-caption-web text-table-body-text transition-[height] duration-200 ease-out motion-reduce:transition-none',
+        className,
+      ]
         .filter(Boolean)
         .join(' ')}
       {...props}
@@ -89,7 +115,7 @@ export function TableRow({
   return (
     <tr
       className={[
-        'border-b border-table-divider bg-bg-surface hover:bg-surface-subtle last:border-b-0',
+        'border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-surface-subtle last:border-b-0 motion-reduce:transition-none',
         className,
       ]
         .filter(Boolean)
