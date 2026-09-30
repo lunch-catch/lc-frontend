@@ -1,10 +1,13 @@
 import type { CSSProperties } from 'react';
+import { SelectField } from '@repo/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface PaginationProps {
   currentPage: number;
   onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   pageSize?: number;
+  pageSizeOptions?: number[];
   totalCount: number;
   totalPages: number;
 }
@@ -49,7 +52,9 @@ const createPageItems = (
 export function Pagination({
   currentPage,
   onPageChange,
+  onPageSizeChange,
   pageSize = 10,
+  pageSizeOptions,
   totalCount,
   totalPages,
 }: PaginationProps) {
@@ -79,10 +84,27 @@ export function Pagination({
       className="flex w-full items-center gap-4"
       style={{ justifyContent: 'space-between', width: '100%' }}
     >
-      <span className="text-caption-web text-text-secondary">
-        총 {totalCount.toLocaleString()}건 중 {firstItem.toLocaleString()} -{' '}
-        {lastItem.toLocaleString()}건
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="whitespace-nowrap text-caption-web text-text-secondary">
+          총 {totalCount.toLocaleString()}건 중 {firstItem.toLocaleString()} -{' '}
+          {lastItem.toLocaleString()}건
+        </span>
+        {pageSizeOptions && onPageSizeChange && (
+          <SelectField
+            fitContent
+            menuPlacement="top"
+            onValueChange={(nextPageSize) =>
+              onPageSizeChange(Number(nextPageSize))
+            }
+            options={pageSizeOptions.map((option) => ({
+              label: `${option}개씩 보기`,
+              value: String(option),
+            }))}
+            size="compact"
+            value={String(pageSize)}
+          />
+        )}
+      </div>
       <div
         className="flex items-center gap-1"
         style={{ flexShrink: 0, gap: 'var(--space-1)' }}

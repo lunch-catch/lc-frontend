@@ -7,9 +7,10 @@ import type {
   ThHTMLAttributes,
 } from 'react';
 import { createContext, useContext, useRef, useState } from 'react';
-import { LoaderCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, LoaderCircle } from 'lucide-react';
 
-export type TableDensity = 'compact' | 'comfortable';
+export type TableDensity = 'compact' | 'normal' | 'comfortable';
+export type TableSortDirection = 'asc' | 'desc';
 
 export interface DataTableColumn {
   minWidth?: number;
@@ -23,6 +24,8 @@ export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
 }
 export interface TableHeaderCellProps extends ThHTMLAttributes<HTMLTableCellElement> {
   columnIndex?: number;
+  onSortChange?: () => void;
+  sortDirection?: TableSortDirection;
 }
 export type TableCellProps = TdHTMLAttributes<HTMLTableCellElement>;
 
@@ -44,7 +47,7 @@ interface TableResizeContextValue {
   resizableColumns: boolean;
 }
 
-const TableDensityContext = createContext<TableDensity>('comfortable');
+const TableDensityContext = createContext<TableDensity>('normal');
 const TableResizeContext = createContext<TableResizeContextValue>({
   columns: [],
   resizableColumns: false,
@@ -54,6 +57,7 @@ const defaultColumnMinWidth = 80;
 
 const tableCellHeightClassName: Record<TableDensity, string> = {
   compact: 'h-[var(--space-10)]',
+  normal: 'h-[var(--space-12)]',
   comfortable: 'h-[var(--space-14)]',
 };
 
@@ -73,7 +77,7 @@ export function DataTable({
   children,
   className,
   columns,
-  density = 'comfortable',
+  density = 'normal',
   resizableColumns = false,
   ...props
 }: DataTableProps) {
@@ -181,10 +185,10 @@ export function DataTable({
           resizableColumns,
         }}
       >
-        <div className="overflow-x-auto rounded-md border border-table-border bg-bg-surface">
+        <div className="overflow-visible rounded-md border border-table-border bg-bg-surface">
           <table
             className={[
-              'w-full border-collapse text-left [&_td:first-child]:pl-[var(--space-6)] [&_td:last-child]:pr-[var(--space-6)] [&_th:first-child]:pl-[var(--space-6)] [&_th:last-child]:pr-[var(--space-6)]',
+              'w-full border-collapse text-left [&_thead]:sticky [&_thead]:top-[calc(var(--space-6)*-1)] [&_thead]:z-10 [&_thead]:bg-surface-subtle [&_td:first-child]:pl-[var(--space-6)] [&_td:last-child]:pr-[var(--space-6)] [&_th:first-child]:pl-[var(--space-6)] [&_th:last-child]:pr-[var(--space-6)]',
               className,
             ]
               .filter(Boolean)
@@ -216,6 +220,8 @@ export function TableHeaderCell({
   children,
   className,
   columnIndex,
+  onSortChange,
+  sortDirection,
   ...props
 }: TableHeaderCellProps) {
   const { columns, onResizeStart, resizableColumns } =
@@ -224,11 +230,26 @@ export function TableHeaderCell({
     resizableColumns &&
     columnIndex !== undefined &&
     columnIndex < columns.length - 1;
+  const SortIcon =
+    sortDirection === 'asc'
+      ? ArrowUp
+      : sortDirection === 'desc'
+        ? ArrowDown
+        : ArrowUpDown;
 
   return (
     <th
+      aria-sort={
+        sortDirection === 'asc'
+          ? 'ascending'
+          : sortDirection === 'desc'
+            ? 'descending'
+            : onSortChange
+              ? 'none'
+              : undefined
+      }
       className={[
-        'relative h-10 bg-surface-subtle px-4 text-caption-web font-normal text-table-header-text',
+        'relative h-10 border-r border-table-divider bg-surface-subtle px-4 text-caption-web font-normal text-table-header-text last:border-r-0',
         className,
       ]
         .filter(Boolean)
@@ -236,7 +257,25 @@ export function TableHeaderCell({
       scope="col"
       {...props}
     >
-      {children}
+      <div className="flex items-center gap-1">
+        <span>{children}</span>
+        {onSortChange && (
+          <button
+            aria-label={`${children} ${
+              sortDirection === 'asc'
+                ? '내림차순 정렬'
+                : sortDirection === 'desc'
+                  ? '오름차순 정렬'
+                  : '오름차순 정렬'
+            }`}
+            className="flex size-5 shrink-0 items-center justify-center rounded-sm text-text-tertiary transition-colors hover:bg-bg-surface hover:text-action-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action-primary"
+            onClick={onSortChange}
+            type="button"
+          >
+            <SortIcon aria-hidden="true" className="size-3.5" />
+          </button>
+        )}
+      </div>
       {canResize && (
         <button
           aria-label={`${children} 열 너비 조절`}
@@ -276,7 +315,7 @@ export function TableRow({
   return (
     <tr
       className={[
-        'border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-surface-subtle last:border-b-0 motion-reduce:transition-none',
+        'group border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-surface-subtle last:border-b-0 motion-reduce:transition-none',
         className,
       ]
         .filter(Boolean)
