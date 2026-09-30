@@ -43,6 +43,12 @@ export const fetchFeed = async (): Promise<FeedResponse> => {
   };
 };
 
+// 카드가 맨 위에 보인 순간 노출 1회로 기록한다 (광고 과금 기준)
+// 서버가 없어 지금은 아무것도 하지 않는다
+export const sendImpression = async (card: FeedCard): Promise<void> => {
+  void card;
+};
+
 export const sendSwipeAction = async (
   card: FeedCard,
   action: SwipeAction,
