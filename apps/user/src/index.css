@@ -9,6 +9,9 @@
   --color-kakao: #fee500;
   --color-on-kakao: #181600;
 
+  /* 스와이프에서 찜 쪽으로 끌 때 강조하는 색 (Figma Gesture Rail · State=Like) */
+  --color-like: #e55348;
+
   /* 스플래시 마스코트가 왼쪽에서 달려 들어오는 움직임 */
   --animate-splash-enter: splash-enter 0.4s ease-out both;
 

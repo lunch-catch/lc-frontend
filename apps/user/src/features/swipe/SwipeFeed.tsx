@@ -11,6 +11,7 @@ import AppHeader from '@user/components/AppHeader/AppHeader';
 
 import GestureRail from './GestureRail';
 import PosterCard from './PosterCard';
+import { useSwipeGesture } from './useSwipeGesture';
 
 const SwipeFeed = () => {
   const [cards, setCards] = useState<FeedCard[]>([]);
@@ -50,12 +51,17 @@ const SwipeFeed = () => {
     setCurrentIndex((index) => index + 1);
   };
 
+  const { cardProps, direction, swipe } = useSwipeGesture({
+    onSwipe: handleSwipe,
+  });
+
   return (
     <>
       {/* 위치 설정(#14) 전까지는 고정 위치를 보여준다 */}
       <AppHeader locationName="강남역 주변" />
       {topCard && (
-        <section className="px-page pt-2">
+        // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
+        <section className="overflow-x-clip px-page pt-2">
           <div className="relative mx-auto max-w-82">
             {/* 다음 카드가 뒤에 살짝 보이도록 작게 겹쳐 둔다 */}
             {nextCard && (
@@ -66,12 +72,18 @@ const SwipeFeed = () => {
                 <PosterCard card={nextCard} />
               </div>
             )}
-            <div className="relative">
-              <PosterCard card={topCard} key={topCard.serveId} />
+            {/* 좌우로만 끌고, 위아래 움직임은 화면 스크롤에 맡긴다 */}
+            <div
+              className="relative cursor-grab touch-pan-y select-none active:cursor-grabbing"
+              key={topCard.serveId}
+              {...cardProps}
+            >
+              <PosterCard card={topCard} />
             </div>
             <GestureRail
-              onPass={() => handleSwipe('pass')}
-              onWish={() => handleSwipe('wish')}
+              direction={direction}
+              onPass={() => swipe('pass')}
+              onWish={() => swipe('wish')}
               storeName={topCard.storeName}
             />
           </div>
