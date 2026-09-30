@@ -61,24 +61,32 @@ const SwipeFeed = () => {
       <AppHeader locationName="강남역 주변" />
       {topCard && (
         // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
-        <section className="overflow-x-clip px-page pt-2">
-          <div className="relative mx-auto max-w-82">
-            {/* 다음 카드가 뒤에 살짝 보이도록 작게 겹쳐 둔다 */}
-            {nextCard && (
+        <section className="flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-3">
+          {/* 카드와 버튼을 한 묶음으로 남는 높이의 세로 가운데에 둔다 */}
+          <div className="@container relative mx-auto flex w-full max-w-82 flex-1 flex-col justify-center">
+            {/* 카드는 남는 높이만큼 늘어나되, 사진이 4:5(125cqw)보다 길어지지 않게 한다 */}
+            {/* 10.5rem은 사진 아래 글자 영역의 높이 */}
+            <div className="relative flex max-h-[calc(125cqw+10.5rem)] flex-1 flex-col">
+              {/* 다음 카드가 뒤에 살짝 보이도록 작게 겹쳐 둔다 */}
+              {nextCard && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 top-2 flex origin-top scale-95 flex-col"
+                >
+                  <PosterCard card={nextCard} />
+                </div>
+              )}
+              {/* 좌우로만 끌고, 위아래 움직임은 화면 스크롤에 맡긴다 */}
               <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-2 origin-top scale-95"
+                className="relative flex flex-1 cursor-grab touch-pan-y flex-col select-none active:cursor-grabbing"
+                key={topCard.serveId}
+                {...cardProps}
               >
-                <PosterCard card={nextCard} />
+                {/* 끌기 움직임과 겹치지 않도록 다가오는 움직임은 안쪽 요소에 준다 */}
+                <div className="flex flex-1 origin-top animate-card-enter flex-col motion-reduce:animate-none">
+                  <PosterCard card={topCard} />
+                </div>
               </div>
-            )}
-            {/* 좌우로만 끌고, 위아래 움직임은 화면 스크롤에 맡긴다 */}
-            <div
-              className="relative cursor-grab touch-pan-y select-none active:cursor-grabbing"
-              key={topCard.serveId}
-              {...cardProps}
-            >
-              <PosterCard card={topCard} />
             </div>
             <GestureRail
               direction={direction}
@@ -86,10 +94,10 @@ const SwipeFeed = () => {
               onWish={() => swipe('wish')}
               storeName={topCard.storeName}
             />
+            <p className="mt-1 text-center text-caption-mobile text-text-secondary">
+              찜은 발급 전 단계예요 · 11:00부터 찜 목록에서 받기
+            </p>
           </div>
-          <p className="mt-1 text-center text-caption-mobile text-text-secondary">
-            찜은 발급 전 단계예요 · 11:00부터 찜 목록에서 받기
-          </p>
         </section>
       )}
     </>

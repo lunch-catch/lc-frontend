@@ -21,4 +21,13 @@
       transform: translateX(-32px);
     }
   }
+
+  /* 뒤에 있던 스와이프 카드가 앞으로 다가오는 움직임 (뒤 카드의 95% 크기, 8px 아래에서 시작) */
+  --animate-card-enter: card-enter 0.2s ease-out both;
+
+  @keyframes card-enter {
+    from {
+      transform: translateY(8px) scale(0.95);
+    }
+  }
 }
