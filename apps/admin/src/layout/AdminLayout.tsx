@@ -16,14 +16,14 @@ export const AdminLayout = ({
   onNavigate,
 }: AdminLayoutProps) => {
   return (
-    <div className="relative min-h-screen bg-bg-page">
+    <div className="relative h-dvh overflow-hidden bg-bg-page">
       <AdminSidebar
         activeItemId={activeItemId}
         onItemSelect={onNavigate}
         onLogout={onLogout}
       />
-      <div className="ml-[72px] flex min-h-screen min-w-0 flex-col">
-        <main className="flex-1 p-6">{children}</main>
+      <div className="ml-[72px] flex h-full min-w-0 flex-col">
+        <main className="min-h-0 flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   );

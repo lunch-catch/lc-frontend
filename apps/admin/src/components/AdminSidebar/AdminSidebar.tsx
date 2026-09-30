@@ -50,7 +50,7 @@ export function AdminSidebar({
 
   return (
     <aside
-      className={`absolute inset-y-0 left-0 z-30 flex min-h-screen flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out ${
+      className={`fixed inset-y-0 left-0 z-30 flex h-dvh flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out ${
         isExpanded ? 'w-60 shadow-lg' : 'w-[72px]'
       }`}
       onMouseEnter={() => setIsExpanded(true)}
@@ -68,7 +68,10 @@ export function AdminSidebar({
           LUNCH CATCH
         </span>
       </div>
-      <nav aria-label="관리자 메뉴" className="px-4">
+      <nav
+        aria-label="관리자 메뉴"
+        className="min-h-0 flex-1 overflow-y-auto px-4"
+      >
         <ul className="flex flex-col gap-2">
           {items.map(({ icon: Icon, id, label }) => {
             const isSelected = id === activeItemId;
