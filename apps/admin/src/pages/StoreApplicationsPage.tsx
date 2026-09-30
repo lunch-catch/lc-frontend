@@ -22,6 +22,10 @@ import {
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { Pagination } from '@admin/components/Pagination/Pagination';
+import {
+  type StoreApplicationDetail,
+  StoreApplicationDetailDrawer,
+} from '@admin/components/StoreApplicationDetailDrawer/StoreApplicationDetailDrawer';
 
 type ApplicationStatus = 'ACTIVE' | 'ONBOARDING';
 type ApplicationListState = 'error' | 'loading' | 'success';
@@ -125,6 +129,27 @@ const applications: StoreApplication[] = [
   },
 ];
 
+const storeApplicationDetail: Omit<
+  StoreApplicationDetail,
+  'appliedAt' | 'businessNumber' | 'id' | 'status' | 'storeName'
+> = {
+  address: '서울특별시 강남구 테헤란로 152',
+  addressDetail: '역삼동, 런치타워 1층 102호',
+  businessDays: '월요일 ~ 일요일',
+  businessLicenseRegistered: true,
+  businessVerified: true,
+  category: '한식',
+  menus: [
+    { name: '명품 한우 설렁탕', price: '12,000원' },
+    { name: '바삭 고소 감자전', price: '8,000원' },
+  ],
+  ownerName: '홍길동',
+  phoneNumber: '02-1234-5678',
+  termsAgreed: true,
+  weekdayHours: '11:00 ~ 21:00',
+  weekendHours: '11:00 ~ 20:00',
+};
+
 const statusOptions = [
   { label: '전체', value: 'ALL' },
   { label: '입점 진행 중', value: 'ONBOARDING' },
@@ -166,6 +191,9 @@ export const StoreApplicationsPage = ({
   const [sortOrder, setSortOrder] = useState('LATEST');
   const [status, setStatus] = useState('ALL');
   const [resetAnimationKey, setResetAnimationKey] = useState(0);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<
+    string | null
+  >(null);
   const [tableDensity, setTableDensity] = useState<TableDensity>('compact');
   const pageSize = 10;
 
@@ -204,6 +232,12 @@ export const StoreApplicationsPage = ({
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+  const selectedApplication = applications.find(
+    (application) => application.id === selectedApplicationId,
+  );
+  const selectedApplicationDetail = selectedApplication
+    ? { ...storeApplicationDetail, ...selectedApplication }
+    : null;
 
   const handleReset = () => {
     // 같은 아이콘 애니메이션도 매번 다시 재생할 수 있도록 key를 갱신한다.
@@ -308,7 +342,20 @@ export const StoreApplicationsPage = ({
                 const applicationStatus = statusMeta[application.status];
 
                 return (
-                  <TableRow key={application.id}>
+                  <TableRow
+                    aria-label={`${application.storeName} 입점 신청 상세 보기`}
+                    className="cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-action-primary"
+                    key={application.id}
+                    onClick={() => setSelectedApplicationId(application.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedApplicationId(application.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
                     <TableCell>{application.id}</TableCell>
                     <TableCell className="font-medium text-text-primary">
                       {application.storeName}
@@ -336,6 +383,11 @@ export const StoreApplicationsPage = ({
           />
         )}
       </div>
+
+      <StoreApplicationDetailDrawer
+        application={selectedApplicationDetail}
+        onClose={() => setSelectedApplicationId(null)}
+      />
     </section>
   );
 };
