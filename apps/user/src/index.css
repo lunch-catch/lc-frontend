@@ -3,3 +3,19 @@
 
 /* 앱 폴더 밖에 있는 공통 패키지의 Tailwind 클래스도 빌드에 포함한다 */
 @source '../../../packages/ui/src';
+
+@theme {
+  /* 카카오 로그인 버튼 색 (카카오 디자인 가이드에서 정한 고정 값) */
+  --color-kakao: #fee500;
+  --color-on-kakao: #181600;
+
+  /* 스플래시 마스코트가 왼쪽에서 달려 들어오는 움직임 */
+  --animate-splash-enter: splash-enter 0.4s ease-out both;
+
+  @keyframes splash-enter {
+    from {
+      opacity: 0;
+      transform: translateX(-32px);
+    }
+  }
+}

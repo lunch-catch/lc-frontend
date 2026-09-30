@@ -1,46 +1,66 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 
+import RequireAuth from '@user/auth/RequireAuth';
 import { OnboardingProvider } from '@user/features/onboarding/OnboardingProvider';
 import StackLayout from '@user/layout/StackLayout';
 import TabLayout from '@user/layout/TabLayout';
 import CouponPage from '@user/pages/CouponPage';
 import ExplorePage from '@user/pages/ExplorePage';
+import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
+import SplashPage from '@user/pages/SplashPage';
 import SwipePage from '@user/pages/SwipePage';
 
 export const router = createBrowserRouter([
   {
-    element: <TabLayout />,
+    element: <RequireAuth access="guest" />,
     children: [
-      { path: '/swipe', element: <SwipePage /> },
-      { path: '/explore', element: <ExplorePage /> },
-      { path: '/coupons', element: <CouponPage /> },
-      { path: '/my', element: <MyPage /> },
+      { path: '/', element: <SplashPage /> },
+      { path: '/login', element: <LoginPage /> },
     ],
   },
   {
-    element: <StackLayout />,
+    element: <RequireAuth access="onboarding" />,
     children: [
       {
-        path: '/onboarding',
-        element: (
-          <OnboardingProvider>
-            <Outlet />
-          </OnboardingProvider>
-        ),
+        element: <StackLayout />,
         children: [
-          { index: true, element: <Navigate replace to="consent" /> },
-          { path: 'consent', element: <OnboardingConsentPage /> },
           {
-            path: 'personalization',
-            element: <OnboardingPersonalizationPage />,
+            path: '/onboarding',
+            element: (
+              <OnboardingProvider>
+                <Outlet />
+              </OnboardingProvider>
+            ),
+            children: [
+              { index: true, element: <Navigate replace to="consent" /> },
+              { path: 'consent', element: <OnboardingConsentPage /> },
+              {
+                path: 'personalization',
+                element: <OnboardingPersonalizationPage />,
+              },
+            ],
           },
         ],
       },
     ],
   },
-  // 로그인 화면이 생기기 전까지는 첫 화면을 스와이프 탭으로 보낸다
-  { path: '*', element: <Navigate replace to="/swipe" /> },
+  {
+    element: <RequireAuth access="member" />,
+    children: [
+      {
+        element: <TabLayout />,
+        children: [
+          { path: '/swipe', element: <SwipePage /> },
+          { path: '/explore', element: <ExplorePage /> },
+          { path: '/coupons', element: <CouponPage /> },
+          { path: '/my', element: <MyPage /> },
+        ],
+      },
+    ],
+  },
+  // 없는 주소는 첫 화면으로 보내고, RequireAuth가 상태에 맞는 화면으로 다시 보낸다
+  { path: '*', element: <Navigate replace to="/" /> },
 ]);
