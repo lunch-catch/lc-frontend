@@ -8,9 +8,11 @@ import ExplorePage from '@user/pages/ExplorePage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
+import SplashPage from '@user/pages/SplashPage';
 import SwipePage from '@user/pages/SwipePage';
 
 export const router = createBrowserRouter([
+  { path: '/', element: <SplashPage /> },
   {
     element: <TabLayout />,
     children: [
@@ -41,6 +43,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  // 로그인 화면이 생기기 전까지는 첫 화면을 스와이프 탭으로 보낸다
+  // 로그인 화면이 생기기 전까지는 없는 주소를 스와이프 탭으로 보낸다
   { path: '*', element: <Navigate replace to="/swipe" /> },
 ]);
