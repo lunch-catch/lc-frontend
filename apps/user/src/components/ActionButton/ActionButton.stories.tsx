@@ -37,3 +37,11 @@ export const Disabled: Story = {
     disabled: true,
   },
 };
+
+export const Ghost: Story = {
+  args: {
+    children: '처음부터 다시 보기',
+    size: 'medium',
+    variant: 'ghost',
+  },
+};

@@ -1,28 +1,33 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode } from 'react';
 
-export interface ChoiceChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  selected: boolean;
+export interface ChoiceChipProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'type'
+> {
+  // 하나만 고르면 radio, 여러 개를 고르면 checkbox
+  type?: 'radio' | 'checkbox';
+  children: ReactNode;
 }
 
-// 여러 항목 중 하나를 고르는 칩 (디자인 시스템 Form/Chip, 터치 영역 44px)
+// 칩 모양의 선택 항목 (디자인 시스템 Form/Chip, 터치 영역 44px)
 const ChoiceChip = ({
+  children,
   className,
-  selected,
-  type = 'button',
+  type = 'radio',
   ...props
 }: ChoiceChipProps) => {
-  const chipClassName = [
-    'flex h-11 items-center justify-center rounded-full border border-border-subtle px-3.5 text-caption-mobile font-medium whitespace-nowrap transition-colors',
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary',
-    selected
-      ? 'bg-surface-brand text-action-primary'
-      : 'bg-bg-surface text-text-primary',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return <button className={chipClassName} type={type} {...props} />;
+  return (
+    <label
+      className={['flex h-11 cursor-pointer', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <input className="peer sr-only" type={type} {...props} />
+      <span className="flex w-full items-center justify-center rounded-full border border-border-subtle bg-bg-surface px-3.5 text-caption-mobile font-medium whitespace-nowrap text-text-primary transition-colors peer-checked:bg-surface-brand peer-checked:text-action-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-action-primary">
+        {children}
+      </span>
+    </label>
+  );
 };
 
 export default ChoiceChip;

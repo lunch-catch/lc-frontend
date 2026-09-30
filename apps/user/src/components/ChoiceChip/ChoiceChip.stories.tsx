@@ -7,7 +7,7 @@ const meta = {
   component: ChoiceChip,
   args: {
     children: '30대',
-    selected: false,
+    name: 'age-group',
   },
   decorators: [
     (Story) => (
@@ -28,6 +28,6 @@ export const Default: Story = {};
 
 export const Selected: Story = {
   args: {
-    selected: true,
+    defaultChecked: true,
   },
 };
