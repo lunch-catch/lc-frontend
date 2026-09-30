@@ -206,10 +206,7 @@ export const StoreApplicationsPage = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [draftKeyword, setDraftKeyword] = useState('');
   const [keyword, setKeyword] = useState('');
-  const [sort, setSort] = useState<ApplicationSort>({
-    direction: 'desc',
-    key: 'appliedAt',
-  });
+  const [sort, setSort] = useState<ApplicationSort | null>(null);
   const [status, setStatus] = useState('ALL');
   const [resetAnimationKey, setResetAnimationKey] = useState(0);
   const [selectedApplicationId, setSelectedApplicationId] = useState<
@@ -243,6 +240,10 @@ export const StoreApplicationsPage = ({
       return isMatchedStatus && isMatchedKeyword;
     });
 
+    if (!sort) {
+      return matchedApplications;
+    }
+
     return [...matchedApplications].sort(
       (firstApplication, secondApplication) => {
         const comparison = firstApplication[sort.key].localeCompare(
@@ -273,19 +274,21 @@ export const StoreApplicationsPage = ({
     setCurrentPage(1);
     setDraftKeyword('');
     setKeyword('');
-    setSort({ direction: 'desc', key: 'appliedAt' });
+    setSort(null);
     setStatus('ALL');
   };
 
   const handleSortChange = (nextKey: ApplicationSortKey) => {
     setCurrentPage(1);
-    setSort((currentSort) => ({
-      direction:
-        currentSort.key === nextKey && currentSort.direction === 'asc'
-          ? 'desc'
-          : 'asc',
-      key: nextKey,
-    }));
+    setSort((currentSort) => {
+      if (!currentSort || currentSort.key !== nextKey) {
+        return { direction: 'desc', key: nextKey };
+      }
+
+      return currentSort.direction === 'desc'
+        ? { direction: 'asc', key: nextKey }
+        : null;
+    });
   };
 
   return (
@@ -345,7 +348,7 @@ export const StoreApplicationsPage = ({
 
       <div className="flex flex-col gap-3">
         <DataTable
-          className="min-w-[760px] table-fixed"
+          className="table-fixed"
           columns={applicationTableColumns}
           density={tableDensity}
           resizableColumns
@@ -355,7 +358,7 @@ export const StoreApplicationsPage = ({
               <TableHeaderCell
                 columnIndex={0}
                 onSortChange={() => handleSortChange('id')}
-                sortDirection={sort.key === 'id' ? sort.direction : undefined}
+                sortDirection={sort?.key === 'id' ? sort.direction : undefined}
               >
                 신청 ID
               </TableHeaderCell>
@@ -363,7 +366,7 @@ export const StoreApplicationsPage = ({
                 columnIndex={1}
                 onSortChange={() => handleSortChange('storeName')}
                 sortDirection={
-                  sort.key === 'storeName' ? sort.direction : undefined
+                  sort?.key === 'storeName' ? sort.direction : undefined
                 }
               >
                 상호
@@ -372,7 +375,7 @@ export const StoreApplicationsPage = ({
                 columnIndex={2}
                 onSortChange={() => handleSortChange('businessNumber')}
                 sortDirection={
-                  sort.key === 'businessNumber' ? sort.direction : undefined
+                  sort?.key === 'businessNumber' ? sort.direction : undefined
                 }
               >
                 사업자등록번호
@@ -381,7 +384,7 @@ export const StoreApplicationsPage = ({
                 columnIndex={3}
                 onSortChange={() => handleSortChange('appliedAt')}
                 sortDirection={
-                  sort.key === 'appliedAt' ? sort.direction : undefined
+                  sort?.key === 'appliedAt' ? sort.direction : undefined
                 }
               >
                 신청일
@@ -390,7 +393,7 @@ export const StoreApplicationsPage = ({
                 columnIndex={4}
                 onSortChange={() => handleSortChange('status')}
                 sortDirection={
-                  sort.key === 'status' ? sort.direction : undefined
+                  sort?.key === 'status' ? sort.direction : undefined
                 }
               >
                 상태
