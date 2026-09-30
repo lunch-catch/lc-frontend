@@ -48,10 +48,11 @@ const PersonalizationStep = () => {
           <div className="grid grid-cols-3 gap-2">
             {genderOptions.map((option) => (
               <ChoiceChip
-                aria-pressed={gender === option.value}
+                checked={gender === option.value}
                 key={option.value}
-                onClick={() => setGender(option.value)}
-                selected={gender === option.value}
+                name="gender"
+                onChange={() => setGender(option.value)}
+                value={option.value}
               >
                 {option.label}
               </ChoiceChip>
@@ -66,10 +67,11 @@ const PersonalizationStep = () => {
           <div className="grid grid-cols-3 gap-2">
             {ageGroupOptions.map((option) => (
               <ChoiceChip
-                aria-pressed={ageGroup === option.value}
+                checked={ageGroup === option.value}
                 key={option.value}
-                onClick={() => setAgeGroup(option.value)}
-                selected={ageGroup === option.value}
+                name="age-group"
+                onChange={() => setAgeGroup(option.value)}
+                value={option.value}
               >
                 {option.label}
               </ChoiceChip>
