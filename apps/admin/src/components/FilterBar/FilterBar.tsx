@@ -16,7 +16,7 @@ export function FilterBar({
   return (
     <div
       className={[
-        'flex min-h-16 flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-bg-page p-3',
+        'relative z-20 flex min-h-12 items-center gap-3 px-3 py-1',
         className,
       ]
         .filter(Boolean)
@@ -24,7 +24,7 @@ export function FilterBar({
       {...props}
     >
       <div
-        className="flex w-full flex-wrap items-center justify-end gap-3"
+        className="flex w-full items-center justify-start gap-3"
         style={{ gap: 'var(--space-3)' }}
       >
         {children}
