@@ -5,6 +5,7 @@ import StackLayout from '@user/layout/StackLayout';
 import TabLayout from '@user/layout/TabLayout';
 import CouponPage from '@user/pages/CouponPage';
 import ExplorePage from '@user/pages/ExplorePage';
+import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
@@ -13,6 +14,7 @@ import SwipePage from '@user/pages/SwipePage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <SplashPage /> },
+  { path: '/login', element: <LoginPage /> },
   {
     element: <TabLayout />,
     children: [
