@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { type FeedCard, fetchFeed } from '@user/api/feed';
+import AppHeader from '@user/components/AppHeader/AppHeader';
 
 import PosterCard from './PosterCard';
 
@@ -25,9 +26,13 @@ const SwipeFeed = () => {
   const topCard = cards[0];
 
   return (
-    <section className="px-page pt-2">
-      {topCard && <PosterCard card={topCard} />}
-    </section>
+    <>
+      {/* 위치 설정(#14) 전까지는 고정 위치를 보여준다 */}
+      <AppHeader locationName="강남역 주변" />
+      <section className="px-page pt-2">
+        {topCard && <PosterCard card={topCard} />}
+      </section>
+    </>
   );
 };
 
