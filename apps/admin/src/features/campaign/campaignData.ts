@@ -21,6 +21,7 @@ export interface Campaign {
   gender: string;
   ageGroups: string;
   posterTitle: string;
+  posterImageUrl?: string;
   posterDescription: string;
 }
 
