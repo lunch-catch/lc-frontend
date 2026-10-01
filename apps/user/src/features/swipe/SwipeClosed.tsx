@@ -4,28 +4,27 @@ import mascotAlert from '@user/assets/illustrations/mascot-alert.webp';
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 
-interface SwipeDoneProps {
-  onRestart: () => void;
-}
-
-// 오늘의 포스터를 모두 넘겼을 때 보여주는 화면
-const SwipeDone = ({ onRestart }: SwipeDoneProps) => {
+// 서빙 시간대(10:00~12:59) 밖에 피드 대신 보여주는 화면
+const SwipeClosed = () => {
   const navigate = useNavigate();
 
   return (
     <EmptyState
-      description="마음에 든 포스터는 찜 목록에서 다시 볼 수 있어요"
+      description={
+        <>
+          피드는 매일 10:00–12:59에 열려요.
+          <br />
+          찜한 캠페인과 받은 쿠폰은 계속 확인할 수 있어요.
+        </>
+      }
       image={mascotAlert}
-      title="오늘의 포스터를 모두 확인했어요"
+      title="내일 10시에 만나요"
     >
       <ActionButton onClick={() => navigate('/wishlist')}>
         찜한 포스터 보기
-      </ActionButton>
-      <ActionButton onClick={onRestart} variant="ghost">
-        처음부터 다시 보기
       </ActionButton>
     </EmptyState>
   );
 };
 
-export default SwipeDone;
+export default SwipeClosed;

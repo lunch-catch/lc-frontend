@@ -2,20 +2,24 @@ import type { FeedCard } from '@user/api/feed';
 
 interface PosterCardProps {
   card: FeedCard;
+  // 맨 위 카드는 사진을 먼저 받도록 우선순위를 높인다
+  priority?: boolean;
 }
 
 const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
 
 // 스와이프 피드의 가게 포스터 카드
-const PosterCard = ({ card }: PosterCardProps) => {
+const PosterCard = ({ card, priority = false }: PosterCardProps) => {
   return (
     <article className="flex flex-1 flex-col overflow-hidden rounded-lg bg-bg-surface shadow-[0_8px_16px_rgba(47,42,39,0.1)]">
       {/* 사진은 카드 높이에 맞춰 늘거나 줄되, 너무 작아지지 않게 막는다 */}
-      <div className="relative min-h-56 flex-1">
+      {/* 사진을 받는 동안에는 회색 배경이 보인다 */}
+      <div className="relative min-h-56 flex-1 bg-surface-subtle">
         <img
           alt=""
           className="absolute inset-0 size-full object-cover"
           draggable={false}
+          fetchPriority={priority ? 'high' : 'low'}
           src={card.imageUrl}
         />
         {/* 사진 위 흰 글자가 잘 보이도록 아래쪽을 어둡게 덮는다 */}
