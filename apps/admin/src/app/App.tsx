@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import { AdminLayout } from '@admin/layout/AdminLayout';
+import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
 import { StoreApplicationsPage } from '@admin/pages/StoreApplicationsPage';
@@ -42,6 +43,8 @@ const App = () => {
         <StoreApplicationsPage />
       ) : activeItemId === 'member' ? (
         <MemberManagementPage />
+      ) : activeItemId === 'campaign' ? (
+        <CampaignManagementPage />
       ) : (
         <section className="rounded-xl border border-border-subtle bg-bg-surface p-6">
           <h2 className="text-title-sm-web font-semibold text-text-primary">
