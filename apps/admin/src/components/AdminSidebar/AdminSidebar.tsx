@@ -30,11 +30,11 @@ export interface AdminSidebarProps {
 
 const defaultNavigationItems: AdminNavigationItem[] = [
   { icon: LayoutDashboard, id: 'dashboard', label: '대시보드' },
-  { icon: Store, id: 'merchant', label: '입점 관리' },
-  { icon: Users, id: 'member', label: '회원 관리' },
   { icon: Megaphone, id: 'campaign', label: '캠페인 관리' },
   { icon: FileText, id: 'template', label: '템플릿 관리' },
   { icon: CircleDollarSign, id: 'settlement', label: '포인트/정산 관리' },
+  { icon: Store, id: 'merchant', label: '입점 관리' },
+  { icon: Users, id: 'member', label: '회원 관리' },
   { icon: ShieldAlert, id: 'fraud', label: '부정 관리' },
   { icon: ClipboardCheck, id: 'review', label: '심사 관리' },
   { icon: UserCog, id: 'account', label: '계정 관리' },
