@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DateRangePicker, type DateRangeValue, StatusBadge } from '@repo/ui';
+import { formatDate } from '@repo/utils';
 
 import {
   DataTable,
@@ -42,7 +43,7 @@ const summaryColumns = [
   { label: '소진액 합계', width: summaryAmountColumnWidth },
   { label: '무효 환급액 합계', width: summaryAmountColumnWidth },
   { label: '환불액 합계', width: summaryAmountColumnWidth },
-  { label: '기간 말 미소진 잔액', width: summaryAmountColumnWidth },
+  { label: '미소진 잔액 합계', width: summaryAmountColumnWidth },
 ];
 export const SalesOverviewTab = ({
   state,
@@ -97,7 +98,7 @@ export const SalesOverviewTab = ({
       ownerId: '',
       search: item.key,
       cells: [
-        cell(item.key, item.key),
+        cell(formatDate(item.key), item.key),
         metric(item.charge),
         metric(item.spend),
         metric(item.invalidCredit),
