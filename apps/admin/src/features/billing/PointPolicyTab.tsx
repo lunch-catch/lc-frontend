@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Button, Input } from '@repo/ui';
+import { formatDateTime } from '@repo/utils';
 import { Plus, Trash2 } from 'lucide-react';
 
 import { Pagination } from '@admin/components/Pagination/Pagination';
@@ -9,7 +10,6 @@ import { BillingFeedback } from './BillingDetails';
 import {
   type BillingTabProps,
   currentTimestamp,
-  timestamp,
   useBillingFeedback,
 } from './billingView';
 export const PointPolicyTab = (props: BillingTabProps) => {
@@ -201,7 +201,7 @@ export const PointPolicyTab = (props: BillingTabProps) => {
                       dateTime={item.updatedAt}
                       className="text-caption-web font-medium"
                     >
-                      {timestamp(item.updatedAt)}
+                      {formatDateTime(item.updatedAt)}
                     </time>
                     {historyPage === 1 && index === 0 && (
                       <span className="rounded-md bg-status-success-bg px-2 py-1 text-caption-web text-status-success-fg">

@@ -6,6 +6,7 @@ import {
   StatusBadge,
   Tabs,
 } from '@repo/ui';
+import { formatDate, formatDateTime } from '@repo/utils';
 import { RotateCcw } from 'lucide-react';
 
 import {
@@ -568,8 +569,10 @@ const MemberTable = ({
                           : '등록 진행 중'}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell>{owner.joinedAt}</TableCell>
-                    <TableCell>{owner.lastAccessedAt}</TableCell>
+                    <TableCell>{formatDate(owner.joinedAt)}</TableCell>
+                    <TableCell>
+                      {formatDateTime(owner.lastAccessedAt)}
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -589,8 +592,10 @@ const MemberTable = ({
                     </TableCell>
                     <TableCell>{member.gender}</TableCell>
                     <TableCell>{member.ageGroup}</TableCell>
-                    <TableCell>{member.joinedAt}</TableCell>
-                    <TableCell>{member.lastAccessedAt}</TableCell>
+                    <TableCell>{formatDate(member.joinedAt)}</TableCell>
+                    <TableCell>
+                      {formatDateTime(member.lastAccessedAt)}
+                    </TableCell>
                   </TableRow>
                 );
               })}

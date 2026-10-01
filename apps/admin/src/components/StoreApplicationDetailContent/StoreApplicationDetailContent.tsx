@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { StatusBadge } from '@repo/ui';
+import { formatDate } from '@repo/utils';
 import { Check, Clock3, FileText, Image, MapPin } from 'lucide-react';
 
 export interface StoreApplicationDetail {
@@ -73,12 +74,14 @@ export const StoreApplicationDetailContent = ({
           {application.storeName}
         </h3>
         <p className="mt-1 text-caption-web text-text-secondary">
-          {application.category} · 신청일 {application.appliedAt}
+          {application.category} · 신청일 {formatDate(application.appliedAt)}
         </p>
       </div>
       <DetailSection title="신청 정보">
         <dl>
-          <DetailItem label="신청일">{application.appliedAt}</DetailItem>
+          <DetailItem label="신청일">
+            {formatDate(application.appliedAt)}
+          </DetailItem>
           <DetailItem label="약관 동의">
             <span
               className={`inline-flex items-center gap-1 ${application.termsAgreed ? 'text-status-success-fg' : 'text-text-secondary'}`}

@@ -46,8 +46,6 @@ export interface BillingColumn {
   label: string;
   width: number;
 }
-export const timestamp = (value: string) =>
-  value.slice(0, 16).replace('T', ' ');
 export const currentTimestamp = (today: string) =>
   today +
   'T' +

@@ -6,6 +6,7 @@ import {
   SearchField,
   StatusBadge,
 } from '@repo/ui';
+import { formatDateRange } from '@repo/utils';
 import { ChevronRight, RotateCcw } from 'lucide-react';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
@@ -297,9 +298,9 @@ export const CampaignManagementPage = () => {
                 </TableCell>
                 <TableCell
                   className="relative !pr-10"
-                  title={`${campaign.startDate} ~ ${campaign.endDate}`}
+                  title={formatDateRange(campaign.startDate, campaign.endDate)}
                 >
-                  {campaign.startDate} ~ {campaign.endDate}
+                  {formatDateRange(campaign.startDate, campaign.endDate)}
                   <ChevronRight
                     aria-hidden="true"
                     className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
+import { formatDate } from '@repo/utils';
 import { ChevronRight, RotateCcw } from 'lucide-react';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
@@ -408,7 +409,7 @@ export const StoreApplicationsPage = ({
                       {application.storeName}
                     </TableCell>
                     <TableCell>{application.businessNumber}</TableCell>
-                    <TableCell>{application.appliedAt}</TableCell>
+                    <TableCell>{formatDate(application.appliedAt)}</TableCell>
                     <TableCell className="relative">
                       <StatusBadge variant={applicationStatus.variant}>
                         {applicationStatus.label}

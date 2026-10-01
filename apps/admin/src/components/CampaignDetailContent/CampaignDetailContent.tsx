@@ -1,4 +1,5 @@
 import { StatusBadge } from '@repo/ui';
+import { formatDateRange } from '@repo/utils';
 import { Image } from 'lucide-react';
 
 import {
@@ -20,7 +21,7 @@ export const CampaignDetailContent = ({
     ? [
         ['캠페인 ID', campaign.id],
         ['가게', campaign.storeName],
-        ['집행 기간', `${campaign.startDate} ~ ${campaign.endDate}`],
+        ['집행 기간', formatDateRange(campaign.startDate, campaign.endDate)],
         ['하루 사용 한도', formatPoints(campaign.dailyBudget)],
         ['오늘 사용 포인트', formatPoints(campaign.todaySpent)],
         ['예산 사용률', `${getBudgetProgress(campaign).toFixed(1)}%`],
@@ -66,7 +67,7 @@ export const CampaignDetailContent = ({
               {campaign.storeName}
             </h3>
             <p className="mt-1 text-caption-web text-text-secondary">
-              {campaign.startDate} ~ {campaign.endDate}
+              {formatDateRange(campaign.startDate, campaign.endDate)}
             </p>
           </div>
           {campaign.pausedReason && (

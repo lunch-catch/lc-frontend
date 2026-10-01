@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Input, StatusBadge, type StatusBadgeVariant } from '@repo/ui';
+import { formatDateTime } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
@@ -17,7 +18,6 @@ import {
   type BillingTabProps,
   cell,
   currentTimestamp,
-  timestamp,
   useBillingFeedback,
 } from './billingView';
 const refundVariants: Record<RefundStatus, StatusBadgeVariant> = {
@@ -65,7 +65,7 @@ export const RefundRequestsTab = (props: BillingTabProps) => {
         item.status,
       ),
       cell(item.actorId ?? '—', item.actorId ?? ''),
-      cell(timestamp(item.requestedAt), item.requestedAt),
+      cell(formatDateTime(item.requestedAt), item.requestedAt),
     ],
   }));
   const handleRefund = (decision: 'APPROVED' | 'REJECTED') => {
@@ -138,11 +138,11 @@ export const RefundRequestsTab = (props: BillingTabProps) => {
                 {formatPoints(refundBalance.reserved)}
               </DetailItem>
               <DetailItem label="요청 시각">
-                {timestamp(selectedRefund.requestedAt)}
+                {formatDateTime(selectedRefund.requestedAt)}
               </DetailItem>
               <DetailItem label="처리 시각">
                 {selectedRefund.processedAt
-                  ? timestamp(selectedRefund.processedAt)
+                  ? formatDateTime(selectedRefund.processedAt)
                   : '—'}
               </DetailItem>
               <DetailItem label="처리자">

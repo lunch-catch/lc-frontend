@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { StatusBadge } from '@repo/ui';
+import { formatDateTime } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
@@ -12,12 +13,7 @@ import {
 import { DetailItem } from './BillingDetails';
 import { BillingMetrics } from './BillingMetrics';
 import { BillingTable } from './BillingTable';
-import {
-  type BillingTabProps,
-  cell,
-  getMonthRange,
-  timestamp,
-} from './billingView';
+import { type BillingTabProps, cell, getMonthRange } from './billingView';
 const columns = [
   { label: '점주 ID', width: 14 },
   { label: '변동 유형', width: 14 },
@@ -55,7 +51,7 @@ export const PointLedgerTab = ({
         item.balanceDelta,
       ),
       cell(formatPoints(item.afterBalance), item.afterBalance),
-      cell(timestamp(item.createdAt), item.createdAt),
+      cell(formatDateTime(item.createdAt), item.createdAt),
     ],
   }));
   return (
@@ -132,7 +128,7 @@ export const PointLedgerTab = ({
                 {formatPoints(selectedLedger.afterBalance)}
               </DetailItem>
               <DetailItem label="일시">
-                {timestamp(selectedLedger.createdAt)}
+                {formatDateTime(selectedLedger.createdAt)}
               </DetailItem>
               <DetailItem label="캠페인 ID">
                 {selectedLedger.campaignId || '—'}

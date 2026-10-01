@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StatusBadge, type StatusBadgeVariant } from '@repo/ui';
+import { formatDateTime } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
@@ -11,7 +12,7 @@ import {
 } from './billingData';
 import { DetailItem } from './BillingDetails';
 import { BillingTable } from './BillingTable';
-import { type BillingTabProps, cell, timestamp } from './billingView';
+import { type BillingTabProps, cell } from './billingView';
 const paymentVariants: Record<PaymentStatus, StatusBadgeVariant> = {
   PENDING: 'warning',
   SUCCESS: 'success',
@@ -50,7 +51,7 @@ export const PaymentHistoryTab = (props: BillingTabProps) => {
         </StatusBadge>,
         item.status,
       ),
-      cell(timestamp(item.paidAt), item.paidAt),
+      cell(formatDateTime(item.paidAt), item.paidAt),
     ],
   }));
   return (
@@ -86,7 +87,7 @@ export const PaymentHistoryTab = (props: BillingTabProps) => {
                 {formatPoints(selectedPayment.points)}
               </DetailItem>
               <DetailItem label="결제 시각">
-                {timestamp(selectedPayment.paidAt)}
+                {formatDateTime(selectedPayment.paidAt)}
               </DetailItem>
               {selectedPayment.status !== 'SUCCESS' && (
                 <>
