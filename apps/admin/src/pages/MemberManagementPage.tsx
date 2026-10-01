@@ -2,13 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   DateRangePicker,
   SearchField,
-  SegmentedControl,
-  type SegmentedControlItem,
   SelectField,
   StatusBadge,
   Tabs,
 } from '@repo/ui';
-import { RotateCcw, Rows2, Rows3, Rows4 } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 
 import {
   DataTable,
@@ -22,6 +20,7 @@ import {
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { Pagination } from '@admin/components/Pagination/Pagination';
+import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
 
 type MemberStatus = 'ACTIVE' | 'SUSPENDED' | 'WITHDRAWN';
 type MemberType = 'member' | 'owner';
@@ -65,27 +64,6 @@ const statusOptions = [
 const memberTabs = [
   { label: '점주 목록', value: 'owner' },
   { label: '사용자 목록', value: 'member' },
-];
-
-const tableDensityOptions: SegmentedControlItem<TableDensity>[] = [
-  {
-    icon: <Rows4 aria-hidden="true" className="size-4" />,
-    iconOnly: true,
-    label: '축약 보기 (40px)',
-    value: 'compact',
-  },
-  {
-    icon: <Rows3 aria-hidden="true" className="size-4" />,
-    iconOnly: true,
-    label: '일반 보기 (48px)',
-    value: 'normal',
-  },
-  {
-    icon: <Rows2 aria-hidden="true" className="size-4" />,
-    iconOnly: true,
-    label: '여유 보기 (56px)',
-    value: 'comfortable',
-  },
 ];
 
 const statusMeta: Record<
@@ -345,9 +323,7 @@ export const MemberManagementPage = () => {
 
       <FilterBar className="mb-2 mt-3 shrink-0">
         <div className="flex w-full min-w-[860px] items-center justify-between gap-3">
-          <SegmentedControl
-            ariaLabel="테이블 행 높이"
-            items={tableDensityOptions}
+          <TableDensityControl
             onValueChange={setTableDensity}
             value={tableDensity}
           />
