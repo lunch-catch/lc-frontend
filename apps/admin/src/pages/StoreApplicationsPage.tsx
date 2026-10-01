@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Button,
-  SearchField,
-  SegmentedControl,
-  type SegmentedControlItem,
-  SelectField,
-  StatusBadge,
-} from '@repo/ui';
-import { ChevronRight, RotateCcw, Rows2, Rows3, Rows4 } from 'lucide-react';
+import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
+import { ChevronRight, RotateCcw } from 'lucide-react';
 
+import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import {
   DataTable,
   type DataTableColumn,
@@ -25,8 +19,9 @@ import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { Pagination } from '@admin/components/Pagination/Pagination';
 import {
   type StoreApplicationDetail,
-  StoreApplicationDetailDrawer,
-} from '@admin/components/StoreApplicationDetailDrawer/StoreApplicationDetailDrawer';
+  StoreApplicationDetailContent,
+} from '@admin/components/StoreApplicationDetailContent/StoreApplicationDetailContent';
+import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
 
 type ApplicationStatus = 'ACTIVE' | 'ONBOARDING';
 type ApplicationListState = 'error' | 'loading' | 'success';
@@ -163,27 +158,6 @@ const statusOptions = [
   { label: '입점 완료', value: 'ACTIVE' },
 ];
 
-const tableDensityOptions: SegmentedControlItem<TableDensity>[] = [
-  {
-    icon: <Rows4 aria-hidden="true" className="size-4" />,
-    iconOnly: true,
-    label: '축약 보기 (40px)',
-    value: 'compact',
-  },
-  {
-    icon: <Rows3 aria-hidden="true" className="size-4" />,
-    iconOnly: true,
-    label: '일반 보기 (48px)',
-    value: 'normal',
-  },
-  {
-    icon: <Rows2 aria-hidden="true" className="size-4" />,
-    iconOnly: true,
-    label: '여유 보기 (56px)',
-    value: 'comfortable',
-  },
-];
-
 const applicationTableColumns: DataTableColumn[] = [
   { minWidth: 100, width: '12.5%' },
   { minWidth: 160, width: '25%' },
@@ -214,6 +188,8 @@ export const StoreApplicationsPage = ({
   >(null);
   const [tableDensity, setTableDensity] = useState<TableDensity>('normal');
   const [pageSize, setPageSize] = useState(10);
+  // 패널을 닫아도 선택 데이터는 남겨 퇴장 애니메이션 중 내용이 사라지지 않게 한다.
+  const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
     // 입력마다 목록을 갱신하지 않도록 검색어 반영을 잠시 지연한다.
@@ -304,9 +280,7 @@ export const StoreApplicationsPage = ({
 
       <FilterBar className="mb-2 shrink-0">
         <div className="flex w-full min-w-[700px] items-center justify-between gap-3">
-          <SegmentedControl
-            ariaLabel="테이블 행 높이"
-            items={tableDensityOptions}
+          <TableDensityControl
             onValueChange={setTableDensity}
             value={tableDensity}
           />
@@ -415,11 +389,15 @@ export const StoreApplicationsPage = ({
                     aria-label={`${application.storeName} 입점 신청 상세 보기`}
                     className="cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-action-primary"
                     key={application.id}
-                    onClick={() => setSelectedApplicationId(application.id)}
+                    onClick={() => {
+                      setSelectedApplicationId(application.id);
+                      setDetailOpen(true);
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         setSelectedApplicationId(application.id);
+                        setDetailOpen(true);
                       }
                     }}
                     role="button"
@@ -462,10 +440,18 @@ export const StoreApplicationsPage = ({
         )}
       </div>
 
-      <StoreApplicationDetailDrawer
-        application={selectedApplicationDetail}
-        onClose={() => setSelectedApplicationId(null)}
-      />
+      <AdminDrawer
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        title={selectedApplicationDetail?.storeName ?? '입점 신청 상세'}
+        resizable
+      >
+        {selectedApplicationDetail && (
+          <StoreApplicationDetailContent
+            application={selectedApplicationDetail}
+          />
+        )}
+      </AdminDrawer>
     </section>
   );
 };

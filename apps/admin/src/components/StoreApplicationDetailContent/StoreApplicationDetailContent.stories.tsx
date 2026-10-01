@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import {
   type StoreApplicationDetail,
-  StoreApplicationDetailDrawer,
-} from './StoreApplicationDetailDrawer';
+  StoreApplicationDetailContent,
+} from './StoreApplicationDetailContent';
 
 const application: StoreApplicationDetail = {
   address: '서울특별시 강남구 테헤란로 152',
@@ -30,31 +29,9 @@ const application: StoreApplicationDetail = {
 };
 
 const meta = {
-  component: StoreApplicationDetailDrawer,
-  title: 'Admin/StoreApplicationDetailDrawer',
-} satisfies Meta<typeof StoreApplicationDetailDrawer>;
-
+  component: StoreApplicationDetailContent,
+  title: 'Admin/StoreApplicationDetailContent',
+} satisfies Meta<typeof StoreApplicationDetailContent>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {
-  args: {
-    application: null,
-    onClose: () => undefined,
-  },
-  render: () => {
-    const [isOpen, setIsOpen] = useState(true);
-
-    return (
-      <>
-        <button onClick={() => setIsOpen(true)} type="button">
-          상세 열기
-        </button>
-        <StoreApplicationDetailDrawer
-          application={isOpen ? application : null}
-          onClose={() => setIsOpen(false)}
-        />
-      </>
-    );
-  },
-};
+export const Default: Story = { args: { application } };
