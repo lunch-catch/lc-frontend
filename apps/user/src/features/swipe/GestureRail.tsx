@@ -3,7 +3,10 @@ import { Heart, X } from 'lucide-react';
 import type { SwipeAction } from '@user/api/feed';
 
 interface GestureRailProps {
-  storeName: string;
+  // 버튼 이름에 붙일 가게 이름. 로딩 중에는 없을 수 있다
+  storeName?: string;
+  // 피드를 불러오는 중처럼 아직 고를 카드가 없을 때
+  disabled?: boolean;
   // 카드를 끌고 있는 방향. 끌지 않으면 null
   direction: SwipeAction | null;
   onPass: () => void;
@@ -11,7 +14,7 @@ interface GestureRailProps {
 }
 
 const actionButtonClassName =
-  'flex h-14 w-22 items-center justify-center gap-1.5 rounded-lg text-caption-mobile transition-colors active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary';
+  'flex h-14 w-22 items-center justify-center gap-1.5 rounded-lg text-caption-mobile transition-colors active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed';
 
 const hintByDirection = {
   wish: {
@@ -37,6 +40,7 @@ const hintByDirection = {
 // 포스터 아래 패스 / 찜 버튼과 좌우로 밀 수 있다는 안내
 const GestureRail = ({
   direction,
+  disabled = false,
   onPass,
   onWish,
   storeName,
@@ -44,9 +48,12 @@ const GestureRail = ({
   const hint = hintByDirection[direction ?? 'none'];
 
   return (
-    <div className="flex h-16 items-center justify-between">
+    <div
+      className={`flex h-16 items-center justify-between ${disabled ? 'opacity-40' : ''}`}
+    >
       <button
-        aria-label={`${storeName} 패스`}
+        aria-label={storeName ? `${storeName} 패스` : '패스'}
+        disabled={disabled}
         className={`${actionButtonClassName} ${
           direction === 'pass'
             ? 'font-bold text-text-primary'
@@ -71,7 +78,8 @@ const GestureRail = ({
         </span>
       </div>
       <button
-        aria-label={`${storeName} 찜하기`}
+        aria-label={storeName ? `${storeName} 찜하기` : '찜하기'}
+        disabled={disabled}
         className={`${actionButtonClassName} ${
           direction === 'wish'
             ? 'font-bold text-like'

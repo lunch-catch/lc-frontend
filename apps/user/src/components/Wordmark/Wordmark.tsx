@@ -7,7 +7,7 @@ export interface WordmarkProps {
 
 // sm: 상단 헤더, md: 로그인 화면
 const sizeClassNames: Record<WordmarkSize, string> = {
-  sm: 'text-h3-mobile font-bold',
+  sm: 'text-h2-mobile font-bold',
   md: 'text-h2-mobile font-black',
 };
 
