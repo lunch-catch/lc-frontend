@@ -4,6 +4,7 @@ import { fetchIssueStatus, type IssueStatusResponse } from '@user/api/coupon';
 import { fetchWishlist, type WishItem } from '@user/api/wishlist';
 
 import WishCard from './WishCard';
+import WishlistEmpty from './WishlistEmpty';
 import WishlistSkeleton from './WishlistSkeleton';
 import WishlistSummary from './WishlistSummary';
 import { getWishState } from './wishState';
@@ -39,6 +40,10 @@ const WishlistScreen = () => {
   const isOpen = !new URLSearchParams(window.location.search).has(
     'mockBeforeOpen',
   );
+
+  if (issueStatus && wishes.length === 0) {
+    return <WishlistEmpty />;
+  }
 
   return (
     <div className="flex flex-col gap-4 px-page pt-4 pb-6">
