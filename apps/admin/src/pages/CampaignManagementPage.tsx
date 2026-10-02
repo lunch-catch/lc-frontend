@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   DateRangePicker,
   type DateRangeValue,
@@ -6,8 +6,8 @@ import {
   SearchField,
   StatusBadge,
 } from '@repo/ui';
-import { formatDateRange } from '@repo/utils';
-import { ChevronRight, RotateCcw } from 'lucide-react';
+import { formatDateRange, formatPoints } from '@repo/utils';
+import { ChevronRight } from 'lucide-react';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import { CampaignDetailContent } from '@admin/components/CampaignDetailContent/CampaignDetailContent';
@@ -22,6 +22,7 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 import { Pagination } from '@admin/components/Pagination/Pagination';
 import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
 import {
@@ -29,9 +30,9 @@ import {
   campaigns,
   type CampaignStatus,
   campaignStatusMeta,
-  formatPoints,
   getBudgetProgress,
 } from '@admin/features/campaign/campaignData';
+import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 type CampaignSortKey =
   | 'id'
@@ -77,8 +78,6 @@ const headers: { label: string; key: CampaignSortKey }[] = [
 ];
 
 export const CampaignManagementPage = () => {
-  const [draftKeyword, setDraftKeyword] = useState('');
-  const [keyword, setKeyword] = useState('');
   const [statuses, setStatuses] = useState<CampaignStatus[]>(initialStatuses);
   // 닫힘 애니메이션 중에도 상세 내용이 유지되도록 선택 데이터와 표시 상태를 분리한다.
   const [detailOpen, setDetailOpen] = useState(false);
@@ -90,15 +89,8 @@ export const CampaignManagementPage = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
     null,
   );
-
-  useEffect(() => {
-    // 연속 입력마다 목록을 갱신하지 않고 마지막 입력 후 300ms가 지나면 검색한다.
-    const timer = window.setTimeout(() => {
-      setKeyword(draftKeyword);
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [draftKeyword]);
+  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
+    useDebouncedSearch({ onCommit: () => setPage(1) });
 
   const filteredCampaigns = useMemo(() => {
     const query = keyword.trim().toLowerCase();
@@ -145,8 +137,7 @@ export const CampaignManagementPage = () => {
   };
 
   const handleReset = () => {
-    setDraftKeyword('');
-    setKeyword('');
+    resetSearch();
     // 첫 진입은 오늘의 진행 예정/집행 중 항목이며, 초기화는 조건 없는 전체 조회다.
     setStatuses(Object.keys(campaignStatusMeta) as CampaignStatus[]);
     setRange({ startDate: '', endDate: '' });
@@ -194,14 +185,7 @@ export const CampaignManagementPage = () => {
                 }}
               />
             </div>
-            <button
-              aria-label="필터 초기화"
-              className="flex size-10 cursor-pointer items-center justify-center text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
-              onClick={handleReset}
-              type="button"
-            >
-              <RotateCcw className="size-4" />
-            </button>
+            <FilterResetButton onClick={handleReset} />
           </div>
         </div>
       </FilterBar>
