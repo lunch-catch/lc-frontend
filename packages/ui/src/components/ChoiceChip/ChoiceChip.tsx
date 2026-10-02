@@ -10,12 +10,12 @@ export interface ChoiceChipProps extends Omit<
 }
 
 // 칩 모양의 선택 항목 (디자인 시스템 Form/Chip, 터치 영역 44px)
-const ChoiceChip = ({
+export function ChoiceChip({
   children,
   className,
   type = 'radio',
   ...props
-}: ChoiceChipProps) => {
+}: ChoiceChipProps) {
   return (
     <label
       className={['flex h-11 cursor-pointer', className]
@@ -28,6 +28,4 @@ const ChoiceChip = ({
       </span>
     </label>
   );
-};
-
-export default ChoiceChip;
+}

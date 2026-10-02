@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router';
+import { ChoiceChip } from '@repo/ui';
 
 import { useAuth } from '@user/auth/useAuth';
 import ActionButton from '@user/components/ActionButton/ActionButton';
-import ChoiceChip from '@user/components/ChoiceChip/ChoiceChip';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
 import TopBar from '@user/components/TopBar/TopBar';
 
@@ -12,7 +12,8 @@ import { useOnboarding } from './useOnboarding';
 const genderOptions: { value: Gender; label: string }[] = [
   { value: 'male', label: '남' },
   { value: 'female', label: '여' },
-  { value: 'other', label: '기타' },
+  // 성별을 밝히고 싶지 않은 사용자를 위한 선택지. 값은 API가 정해지기 전까지 'other'로 둔다
+  { value: 'other', label: '선택 안 함' },
 ];
 
 const ageGroupOptions: { value: AgeGroup; label: string }[] = [

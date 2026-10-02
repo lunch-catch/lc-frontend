@@ -2,8 +2,10 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 
 import RequireAuth from '@user/auth/RequireAuth';
 import { OnboardingProvider } from '@user/features/onboarding/OnboardingProvider';
+import CouponLayout from '@user/layout/CouponLayout';
 import StackLayout from '@user/layout/StackLayout';
 import TabLayout from '@user/layout/TabLayout';
+import CouponHistoryPage from '@user/pages/CouponHistoryPage';
 import CouponPage from '@user/pages/CouponPage';
 import ExplorePage from '@user/pages/ExplorePage';
 import LoginPage from '@user/pages/LoginPage';
@@ -12,6 +14,7 @@ import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
 import SplashPage from '@user/pages/SplashPage';
 import SwipePage from '@user/pages/SwipePage';
+import WishlistPage from '@user/pages/WishlistPage';
 
 export const router = createBrowserRouter([
   {
@@ -55,7 +58,16 @@ export const router = createBrowserRouter([
         children: [
           { path: '/swipe', element: <SwipePage /> },
           { path: '/explore', element: <ExplorePage /> },
-          { path: '/coupons', element: <CouponPage /> },
+          {
+            // 쿠폰함은 찜 목록, 사용 가능, 사용 내역 세 탭으로 나뉜다
+            path: '/coupons',
+            element: <CouponLayout />,
+            children: [
+              { index: true, element: <CouponPage /> },
+              { path: 'wishlist', element: <WishlistPage /> },
+              { path: 'history', element: <CouponHistoryPage /> },
+            ],
+          },
           { path: '/my', element: <MyPage /> },
         ],
       },

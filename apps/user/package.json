@@ -14,6 +14,7 @@
     "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",
     "lucide-react": "catalog:",
+    "qrcode.react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "catalog:"

@@ -24,7 +24,7 @@ const AppHeader = ({ locationName, wishCount = 0 }: AppHeaderProps) => {
         <Link
           aria-label={wishCount > 0 ? `찜 목록 ${wishCount}개` : undefined}
           className="flex h-11 items-center gap-1 px-1.5 text-body-sm-mobile font-bold text-text-secondary"
-          to="/wishlist"
+          to="/coupons/wishlist"
         >
           찜 목록
           {wishCount > 0 && (

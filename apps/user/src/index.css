@@ -51,14 +51,6 @@
   }
 }
 
-@layer base {
-  /* Tailwind v4부터 버튼 기본 커서가 화살표라, 누를 수 있는 버튼은 손가락으로 되돌린다 */
-  button:not(:disabled),
-  [role='button']:not([aria-disabled='true']) {
-    cursor: pointer;
-  }
-}
-
 /* PC처럼 화면이 모바일 폭보다 넓을 때 바깥을 한 톤 어둡게 칠해 앱 영역을 구분한다 */
 /* 모바일에서는 당겨서 튕길 때 보이는 배경이 앱과 같도록 그대로 둔다 */
 @media (width > 480px) {
