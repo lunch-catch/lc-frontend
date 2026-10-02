@@ -1,10 +1,7 @@
 import { Button, StatusBadge, Toggle } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
 
-import {
-  getTemplatePreviewHtml,
-  type PosterTemplate,
-} from '@admin/features/template/templateData';
+import { getTemplatePreviewHtml, type PosterTemplate } from './templateData';
 
 export interface TemplatePreviewCardProps {
   onActivationRequest: (template: PosterTemplate) => void;

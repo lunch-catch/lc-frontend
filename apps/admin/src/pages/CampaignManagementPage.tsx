@@ -10,7 +10,6 @@ import { formatDateRange, formatPoints } from '@repo/utils';
 import { ChevronRight } from 'lucide-react';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
-import { CampaignDetailContent } from '@admin/components/CampaignDetailContent/CampaignDetailContent';
 import {
   DataTable,
   type DataTableColumn,
@@ -32,6 +31,7 @@ import {
   campaignStatusMeta,
   getBudgetProgress,
 } from '@admin/features/campaign/campaignData';
+import { CampaignDetailContent } from '@admin/features/campaign/CampaignDetailContent';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 type CampaignSortKey =

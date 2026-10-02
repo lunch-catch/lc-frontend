@@ -19,11 +19,11 @@ import {
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 import { Pagination } from '@admin/components/Pagination/Pagination';
+import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
 import {
   type StoreApplicationDetail,
   StoreApplicationDetailContent,
-} from '@admin/components/StoreApplicationDetailContent/StoreApplicationDetailContent';
-import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+} from '@admin/features/merchant/StoreApplicationDetailContent';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 type ApplicationStatus = 'ACTIVE' | 'ONBOARDING';

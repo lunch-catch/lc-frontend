@@ -5,8 +5,7 @@ import { ArrowLeft, Send, X } from 'lucide-react';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { QuickPromptButton } from '@admin/components/QuickPromptButton/QuickPromptButton';
 import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
-import { TemplateChatBubble } from '@admin/components/TemplateChatBubble/TemplateChatBubble';
-import { TemplatePreviewEmptyState } from '@admin/components/TemplatePreviewEmptyState/TemplatePreviewEmptyState';
+import { TemplateChatBubble } from '@admin/features/template/TemplateChatBubble';
 import {
   createMockTemplateVersion,
   getCurrentTemplateVersion,
@@ -15,6 +14,7 @@ import {
   type TemplateVersion,
   validateTemplateVersion,
 } from '@admin/features/template/templateData';
+import { TemplatePreviewEmptyState } from '@admin/features/template/TemplatePreviewEmptyState';
 
 interface TemplateCreatePageProps {
   draftTemplate: PosterTemplate | null;

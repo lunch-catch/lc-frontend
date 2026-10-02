@@ -6,7 +6,7 @@ import {
   type Campaign,
   campaignStatusMeta,
   getBudgetProgress,
-} from '@admin/features/campaign/campaignData';
+} from './campaignData';
 
 interface CampaignDetailContentProps {
   campaign: Campaign | null;

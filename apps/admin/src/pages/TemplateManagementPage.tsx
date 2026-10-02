@@ -6,8 +6,8 @@ import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 import { Pagination } from '@admin/components/Pagination/Pagination';
-import { TemplatePreviewCard } from '@admin/components/TemplatePreviewCard/TemplatePreviewCard';
 import { type PosterTemplate } from '@admin/features/template/templateData';
+import { TemplatePreviewCard } from '@admin/features/template/TemplatePreviewCard';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 type TemplateSort =
