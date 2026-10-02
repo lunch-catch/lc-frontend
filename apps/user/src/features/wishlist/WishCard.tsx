@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router';
+import { X } from 'lucide-react';
 
 import type { CampaignIssueStatus } from '@user/api/coupon';
 import type { WishItem } from '@user/api/wishlist';
@@ -16,6 +17,7 @@ interface WishCardProps {
   isIssuing?: boolean;
   // 다른 카드의 쿠폰을 받는 중이라 잠시 누를 수 없는지
   isIssueBlocked?: boolean;
+  onRemove?: () => void;
 }
 
 const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
@@ -27,10 +29,13 @@ const WishCard = ({
   isIssuing = false,
   issueStatus,
   onIssue,
+  onRemove,
   state,
   wish,
 }: WishCardProps) => {
   const navigate = useNavigate();
+  // 받은 쿠폰은 쿠폰함에서 관리하므로, 받았거나 받는 중인 카드는 찜에서 지울 수 없다
+  const canRemove = onRemove && state !== 'issued' && !isIssuing;
   const remaining = `잔여 ${issueStatus.remainingCount}장`;
 
   const statusTextByState: Record<WishState, string> = {
@@ -43,7 +48,17 @@ const WishCard = ({
 
   return (
     // 버튼이 어느 가게 것인지 헷갈리지 않도록 사용 시간과 버튼까지 카드 하나에 담는다
-    <li className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+    <li className="relative flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+      {canRemove && (
+        <button
+          aria-label={`${wish.storeName} 찜 삭제`}
+          className="absolute top-1 right-1 flex size-10 items-center justify-center rounded-full text-text-tertiary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+          onClick={onRemove}
+          type="button"
+        >
+          <X aria-hidden="true" className="size-4" />
+        </button>
+      )}
       <div className="flex items-center gap-3">
         <img
           alt=""
@@ -68,7 +83,8 @@ const WishCard = ({
           </p>
         </div>
         {/* 하루에 받을 수 있는 수가 정해져 있어, 카드끼리 가격을 쉽게 비교하도록 오른쪽 끝에 맞춘다 */}
-        <p className="flex shrink-0 flex-col items-end">
+        {/* 오른쪽 위는 삭제 버튼 자리라 아래쪽에 붙인다 */}
+        <p className="flex shrink-0 flex-col items-end self-end">
           <del className="text-caption-mobile text-text-secondary">
             {formatPrice(wish.originalPrice)}
           </del>

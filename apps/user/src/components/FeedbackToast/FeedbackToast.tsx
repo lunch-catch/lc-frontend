@@ -2,10 +2,17 @@ import { CircleAlert, CircleCheck } from 'lucide-react';
 
 export type FeedbackToastTone = 'success' | 'error';
 
+export interface FeedbackToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface FeedbackToastProps {
   message: string;
   // success: 처리됨, error: 처리하지 못함
   tone?: FeedbackToastTone;
+  // 방금 한 행동을 되돌리는 것처럼 바로 이어서 할 수 있는 행동
+  action?: FeedbackToastAction;
 }
 
 const toneClassNames: Record<FeedbackToastTone, string> = {
@@ -14,7 +21,11 @@ const toneClassNames: Record<FeedbackToastTone, string> = {
 };
 
 // 행동이 처리됐는지 잠깐 알려주는 알림 (디자인 시스템 Feedback/Toast)
-const FeedbackToast = ({ message, tone = 'success' }: FeedbackToastProps) => {
+const FeedbackToast = ({
+  action,
+  message,
+  tone = 'success',
+}: FeedbackToastProps) => {
   const Icon = tone === 'success' ? CircleCheck : CircleAlert;
 
   return (
@@ -23,7 +34,16 @@ const FeedbackToast = ({ message, tone = 'success' }: FeedbackToastProps) => {
       role="status"
     >
       <Icon aria-hidden="true" className="size-5 shrink-0" />
-      {message}
+      <span className="min-w-0 flex-1">{message}</span>
+      {action && (
+        <button
+          className="-my-3 -mr-2 h-11 shrink-0 px-2 font-bold underline underline-offset-2"
+          onClick={action.onClick}
+          type="button"
+        >
+          {action.label}
+        </button>
+      )}
     </div>
   );
 };

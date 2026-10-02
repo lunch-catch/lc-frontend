@@ -17,3 +17,25 @@ export const addMockWish = (card: FeedCard) => {
 };
 
 export const getMockWishes = () => [...wishedCards];
+
+// 오늘 찜 목록에서 삭제한 캠페인과 원래 자리. 당일 피드에 다시 보여주지 않고, 되돌리면 같은 자리에 넣는다
+const removedWishes = new Map<string, { card: FeedCard; index: number }>();
+
+export const removeMockWish = (campaignId: string) => {
+  const index = wishedCards.findIndex((card) => card.campaignId === campaignId);
+  if (index === -1) return;
+
+  const [card] = wishedCards.splice(index, 1);
+  removedWishes.set(campaignId, { card, index });
+};
+
+export const restoreMockWish = (campaignId: string) => {
+  const removed = removedWishes.get(campaignId);
+  if (!removed) return;
+
+  wishedCards.splice(removed.index, 0, removed.card);
+  removedWishes.delete(campaignId);
+};
+
+export const isMockWishRemoved = (campaignId: string) =>
+  removedWishes.has(campaignId);
