@@ -1,3 +1,4 @@
+import { getNow } from './clock';
 import {
   getMockCoupons,
   getMockIssuedCount,
@@ -84,6 +85,26 @@ export const fetchCoupons = async (): Promise<Coupon[]> => {
   }
 
   return getMockCoupons().sort((a, b) => b.issuedAt.localeCompare(a.issuedAt));
+};
+
+// 매장에서 보여줄 1회용 QR 토큰
+export interface QrToken {
+  value: string;
+  expiresAt: number;
+}
+
+export const QR_TOKEN_LIFETIME_MS = 60_000;
+
+// 60초 동안만 쓸 수 있는 QR 토큰을 받는다
+// 실제 서버는 서명한 토큰(JWT)을 주고, 한 번 쓰면 다시 쓸 수 없게 막는다
+export const fetchQrToken = async (issueId: string): Promise<QrToken> => {
+  await wait(MOCK_DELAY_MS);
+
+  const issuedAt = getNow();
+  return {
+    value: `lunch-catch:${issueId}:${issuedAt}`,
+    expiresAt: issuedAt + QR_TOKEN_LIFETIME_MS,
+  };
 };
 
 // 주소에 ?mockIssueSoldOut을 붙이면 받는 사이 수량이 소진된 경우를 확인할 수 있다

@@ -7,7 +7,6 @@ import StackLayout from '@user/layout/StackLayout';
 import TabLayout from '@user/layout/TabLayout';
 import CouponHistoryPage from '@user/pages/CouponHistoryPage';
 import CouponPage from '@user/pages/CouponPage';
-import CouponQrPage from '@user/pages/CouponQrPage';
 import ExplorePage from '@user/pages/ExplorePage';
 import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
@@ -71,11 +70,6 @@ export const router = createBrowserRouter([
           },
           { path: '/my', element: <MyPage /> },
         ],
-      },
-      {
-        // 하단 탭바 없이 뒤로 가기로 돌아오는 화면
-        element: <StackLayout />,
-        children: [{ path: '/coupons/:issueId/qr', element: <CouponQrPage /> }],
       },
     ],
   },

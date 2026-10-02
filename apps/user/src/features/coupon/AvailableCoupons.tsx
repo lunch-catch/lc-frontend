@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
+import { BottomSheet } from '@repo/ui';
 
 import { type Coupon, fetchCoupons } from '@user/api/coupon';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
@@ -8,11 +9,14 @@ import EmptyState from '@user/components/EmptyState/EmptyState';
 
 import CouponCard from './CouponCard';
 import CouponListSkeleton from './CouponListSkeleton';
+import CouponQr from './CouponQr';
 
-// 쿠폰함 사용 가능 탭. 받은 쿠폰 중 아직 쓰지 않은 쿠폰과 QR 보기 버튼
+// 쿠폰함 사용 가능 탭. 받은 쿠폰 중 아직 쓰지 않은 쿠폰과 QR
 const AvailableCoupons = () => {
   const navigate = useNavigate();
   const [coupons, setCoupons] = useState<Coupon[] | null>(null);
+  // QR을 띄운 쿠폰. 계산대에서 빨리 열고 닫도록 페이지를 옮기지 않고 시트로 띄운다
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -57,25 +61,28 @@ const AvailableCoupons = () => {
           {coupons.map((coupon) => (
             <CouponCard
               action={
-                // 버튼 모양은 작게 두되, 누르는 영역은 44px 높이로 넉넉하게 잡는다
-                <Link
-                  aria-label={`${coupon.storeName} QR 보기`}
-                  className="-my-1.5 flex h-11 shrink-0 items-center"
-                  to={`/coupons/${coupon.issueId}/qr`}
-                >
-                  <span className="rounded-lg bg-surface-brand px-3 py-1.5 text-caption-mobile font-bold text-text-brand">
-                    QR 보기
-                  </span>
-                </Link>
+                <span className="shrink-0 rounded-lg bg-surface-brand px-3 py-1.5 text-caption-mobile font-bold text-text-brand">
+                  QR 보기
+                </span>
               }
               coupon={coupon}
               // 쿠폰은 받은 날 사용 시간 안에만 쓸 수 있다
               detail={`사용 ${coupon.usableFrom}–${coupon.usableTo} · 오늘`}
               key={coupon.issueId}
+              label={`${coupon.storeName} 쿠폰 QR 보기`}
+              onClick={() => setSelectedCoupon(coupon)}
             />
           ))}
         </ul>
       )}
+      {/* 시트를 닫으면 QR 화면이 사라지면서 QR 갱신 타이머도 멈춘다 */}
+      <BottomSheet
+        isOpen={selectedCoupon !== null}
+        onClose={() => setSelectedCoupon(null)}
+        title="쿠폰 사용"
+      >
+        {selectedCoupon && <CouponQr coupon={selectedCoupon} />}
+      </BottomSheet>
     </div>
   );
 };
