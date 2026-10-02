@@ -28,10 +28,10 @@ const AppHeader = ({ locationName, wishCount = 0 }: AppHeaderProps) => {
         >
           찜 목록
           {wishCount > 0 && (
+            // 배경 없이 주황색 숫자만 두어 헤더를 가볍게 유지한다
             // 개수가 바뀔 때마다 key가 바뀌어 튀는 움직임이 다시 재생된다
-            // 숫자가 폰트 특성상 아래로 치우쳐 보여서 아래 여백 1px로 가운데를 맞춘다
             <span
-              className="flex h-5 min-w-5 animate-count-bump items-center justify-center rounded-full bg-action-primary px-1.5 pb-px text-caption-mobile text-text-inverse motion-reduce:animate-none"
+              className="inline-block animate-count-bump text-text-brand tabular-nums motion-reduce:animate-none"
               key={wishCount}
             >
               {wishCount}
