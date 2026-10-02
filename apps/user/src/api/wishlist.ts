@@ -1,5 +1,9 @@
 import type { FeedCard } from './feed';
-import { getMockWishes } from './mocks/wishlist';
+import {
+  getMockWishes,
+  removeMockWish,
+  restoreMockWish,
+} from './mocks/wishlist';
 
 // 찜한 캠페인의 가게와 혜택 정보. 잔여 수량과 받았는지는 쿠폰(api/coupon)에서 따로 받는다
 export interface WishItem {
@@ -35,4 +39,18 @@ export const fetchWishlist = async (): Promise<WishItem[]> => {
   }
 
   return getMockWishes().map(toWishItem);
+};
+
+// 삭제한 캠페인은 당일 피드에 다시 나오지 않고 10:50 오픈 알림 대상에서도 빠진다 (서버 처리)
+export const removeWish = async (campaignId: string): Promise<void> => {
+  await wait(MOCK_DELAY_MS);
+
+  removeMockWish(campaignId);
+};
+
+// 삭제를 되돌린다. 실제 서버에서는 같은 캠페인을 다시 찜하는 요청이다
+export const restoreWish = async (campaignId: string): Promise<void> => {
+  await wait(MOCK_DELAY_MS);
+
+  restoreMockWish(campaignId);
 };

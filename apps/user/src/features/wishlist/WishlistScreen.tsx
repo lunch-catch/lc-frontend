@@ -7,8 +7,15 @@ import {
   type IssueResult,
   type IssueStatusResponse,
 } from '@user/api/coupon';
-import { fetchWishlist, type WishItem } from '@user/api/wishlist';
-import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
+import {
+  fetchWishlist,
+  removeWish,
+  restoreWish,
+  type WishItem,
+} from '@user/api/wishlist';
+import FeedbackToast, {
+  type FeedbackToastProps,
+} from '@user/components/FeedbackToast/FeedbackToast';
 
 import { formatCountdown, useOpenCountdown } from './useOpenCountdown';
 import WishCard from './WishCard';
@@ -18,6 +25,8 @@ import WishlistSummary from './WishlistSummary';
 import { getWishState, WISH_STATE_ORDER } from './wishState';
 
 const TOAST_DURATION_MS = 2500;
+// 되돌리기 버튼을 누를 시간을 조금 더 준다
+const ACTION_TOAST_DURATION_MS = 4000;
 
 const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   soldOut: '아쉽게도 그사이 수량이 모두 소진됐어요',
@@ -35,7 +44,7 @@ const WishlistScreen = () => {
   );
   // 이 화면에서 쿠폰을 받았는지. 받았으면 맨 위 제목으로 알려준다
   const [hasIssued, setHasIssued] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 카드가 받기로 바뀐다
   const { isOpen, remainingMs } = useOpenCountdown();
 
@@ -60,11 +69,14 @@ const WishlistScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (!toastMessage) return;
+    if (!toast) return;
 
-    const timer = setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+    const timer = setTimeout(
+      () => setToast(null),
+      toast.action ? ACTION_TOAST_DURATION_MS : TOAST_DURATION_MS,
+    );
     return () => clearTimeout(timer);
-  }, [toastMessage]);
+  }, [toast]);
 
   const handleIssue = async (campaignId: string) => {
     if (issuingCampaignId) return;
@@ -82,18 +94,52 @@ const WishlistScreen = () => {
       if (result === 'issued') {
         setHasIssued(true);
       } else {
-        setToastMessage(ISSUE_FAIL_MESSAGES[result]);
+        setToast({ message: ISSUE_FAIL_MESSAGES[result], tone: 'error' });
       }
     } catch {
-      setToastMessage('쿠폰 발급에 실패했어요');
+      setToast({ message: '쿠폰 발급에 실패했어요', tone: 'error' });
     } finally {
       setIssuingCampaignId(null);
     }
   };
 
-  if (issueStatus && wishes.length === 0) {
-    return <WishlistEmpty />;
-  }
+  // 지운 카드를 원래 자리에 다시 넣는다
+  const putBack = (wish: WishItem, index: number) => {
+    setWishes((current) => [
+      ...current.slice(0, index),
+      wish,
+      ...current.slice(index),
+    ]);
+  };
+
+  const handleUndoRemove = (wish: WishItem, index: number) => {
+    putBack(wish, index);
+    setToast(null);
+    restoreWish(wish.campaignId);
+  };
+
+  // 응답을 기다리지 않고 바로 목록에서 빼서, 실수로 지웠을 때 곧바로 되돌릴 수 있게 한다
+  const handleRemove = (wish: WishItem) => {
+    const index = wishes.findIndex(
+      (item) => item.campaignId === wish.campaignId,
+    );
+
+    setWishes((current) =>
+      current.filter((item) => item.campaignId !== wish.campaignId),
+    );
+    setToast({
+      message: '찜 목록에서 삭제했어요',
+      action: {
+        label: '되돌리기',
+        onClick: () => handleUndoRemove(wish, index),
+      },
+    });
+
+    removeWish(wish.campaignId).catch(() => {
+      putBack(wish, index);
+      setToast({ message: '찜을 삭제하지 못했어요', tone: 'error' });
+    });
+  };
 
   const getSummaryTitle = (dailyRemaining: number) => {
     if (hasIssued) {
@@ -145,49 +191,57 @@ const WishlistScreen = () => {
       })
       .sort((a, b) => WISH_STATE_ORDER[a.state] - WISH_STATE_ORDER[b.state]);
 
+  const isEmpty = issueStatus !== null && wishes.length === 0;
+
   return (
-    // 토스트를 탭 바로 아래에 띄우기 위한 기준 영역
-    <div className="relative flex flex-col gap-4 px-page pt-4 pb-6">
-      {toastMessage && (
+    // 토스트를 탭 바로 아래에 띄우기 위한 기준 영역. 마지막 찜을 지워 빈 화면이 돼도 토스트를 보여준다
+    <div className="relative flex flex-1 flex-col">
+      {toast && (
         <div className="absolute inset-x-0 top-0 z-20 px-page pt-3">
-          <FeedbackToast message={toastMessage} tone="error" />
+          <FeedbackToast {...toast} />
         </div>
       )}
-      {/* 요청 두 번이 차례로 끝나야 그릴 수 있어, 그동안 빈 화면 대신 회색 틀을 보여준다 */}
-      {!issueStatus && (
-        <>
-          <WishlistSkeleton />
-          <p className="sr-only" role="status">
-            찜 목록을 불러오는 중이에요
-          </p>
-        </>
-      )}
-      {issueStatus && (
-        <>
-          <WishlistSummary
-            dailyLimit={issueStatus.dailyLimit}
-            dailyRemaining={issueStatus.dailyRemaining}
-            showNotice={!isOpen}
-            title={getSummaryTitle(issueStatus.dailyRemaining)}
-          />
-          <ul className="flex flex-col gap-4">
-            {getSortedEntries(issueStatus).map(({ state, status, wish }) => (
-              <WishCard
+      {isEmpty ? (
+        <WishlistEmpty />
+      ) : (
+        <div className="flex flex-col gap-4 px-page pt-4 pb-6">
+          {/* 요청 두 번이 차례로 끝나야 그릴 수 있어, 그동안 빈 화면 대신 회색 틀을 보여준다 */}
+          {!issueStatus && (
+            <>
+              <WishlistSkeleton />
+              <p className="sr-only" role="status">
+                찜 목록을 불러오는 중이에요
+              </p>
+            </>
+          )}
+          {issueStatus && (
+            <>
+              <WishlistSummary
                 dailyLimit={issueStatus.dailyLimit}
-                isIssueBlocked={issuingCampaignId !== null}
-                isIssuing={issuingCampaignId === wish.campaignId}
-                issueStatus={status}
-                key={wish.campaignId}
-                onIssue={() => handleIssue(wish.campaignId)}
-                state={state}
-                wish={wish}
+                dailyRemaining={issueStatus.dailyRemaining}
+                showNotice={!isOpen}
+                title={getSummaryTitle(issueStatus.dailyRemaining)}
               />
-            ))}
-          </ul>
-          <p className="text-caption-mobile text-text-secondary">
-            찜 취소는 가게 상세에서 할 수 있어요
-          </p>
-        </>
+              <ul className="flex flex-col gap-4">
+                {getSortedEntries(issueStatus).map(
+                  ({ state, status, wish }) => (
+                    <WishCard
+                      dailyLimit={issueStatus.dailyLimit}
+                      isIssueBlocked={issuingCampaignId !== null}
+                      isIssuing={issuingCampaignId === wish.campaignId}
+                      issueStatus={status}
+                      key={wish.campaignId}
+                      onIssue={() => handleIssue(wish.campaignId)}
+                      onRemove={() => handleRemove(wish)}
+                      state={state}
+                      wish={wish}
+                    />
+                  ),
+                )}
+              </ul>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

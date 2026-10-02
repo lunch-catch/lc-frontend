@@ -1,5 +1,9 @@
 import { mockFeedCards } from './mocks/feed';
-import { addMockWish, getMockWishes } from './mocks/wishlist';
+import {
+  addMockWish,
+  getMockWishes,
+  isMockWishRemoved,
+} from './mocks/wishlist';
 
 export interface FeedCard {
   serveId: string;
@@ -39,7 +43,10 @@ export const fetchFeed = async (): Promise<FeedResponse> => {
 
   return {
     status: 'serving',
-    cards: mockFeedCards.map((card) => ({ ...card })),
+    // 찜 목록에서 삭제한 캠페인은 당일 피드에 다시 보여주지 않는다
+    cards: mockFeedCards
+      .filter((card) => !isMockWishRemoved(card.campaignId))
+      .map((card) => ({ ...card })),
   };
 };
 
