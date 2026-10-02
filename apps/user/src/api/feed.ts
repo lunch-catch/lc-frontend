@@ -20,6 +20,8 @@ export interface FeedCard {
   usableFrom: string;
   usableTo: string;
   remainingCount: number;
+  // 점주가 템플릿으로 만든 포스터 HTML. 관리자 검증을 거쳐 스크립트와 외부 리소스가 없는 것만 내려온다
+  posterHtml: string;
 }
 
 // 서빙 시간대(10:00~12:59) 밖이면 서버가 카드 없이 closed를 돌려준다
