@@ -1,8 +1,9 @@
 // API 연동 전 화면 흐름을 검증하는 목업이다. 실제 잔액·집계·환불 처리는 서버가 확정한다.
 export type PaymentStatus =
   'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELED' | 'UNKNOWN';
+// 무효 노출은 차감하지 않는다. 과오 차감의 정정은 ADJUST로 기록한다.
 export type LedgerType =
-  'CHARGE' | 'RESERVE' | 'SPEND' | 'RELEASE' | 'INVALID_CREDIT' | 'REFUND';
+  'CHARGE' | 'RESERVE' | 'DEDUCT' | 'RELEASE' | 'ADJUST' | 'REFUND';
 export type RefundStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED';
 export type ReportPeriod = 'day' | 'week' | 'month';
 
@@ -16,19 +17,24 @@ export interface Payment {
   failureReason?: string;
   cancellationId?: string;
 }
+
 export interface LedgerEntry {
   id: string;
   ownerId: string;
   type: LedgerType;
-  // 거래 규모와 잔액 변동은 다르다. 예약 포인트를 소진하면 amount만큼 써도 balanceDelta는 0이다.
+  // 거래 규모와 잔액 변동은 다르다. 예약 포인트 소진 시 사용 가능 잔액은 그대로다.
   amount: number;
+  /** 사용 가능 잔액의 증감. 감소는 음수다. */
   balanceDelta: number;
+  /** 예약 중 포인트의 증감. 예약은 양수, 소진과 예약 해제는 음수다. */
   reservedDelta: number;
   createdAt: string;
   campaignId?: string;
   serveId?: string;
   transactionId?: string;
+  reason?: string;
 }
+
 export interface RefundRequest {
   id: string;
   ownerId: string;
@@ -40,6 +46,7 @@ export interface RefundRequest {
   rejectionReason?: string;
   cancellationId?: string;
 }
+
 export interface BillingCampaign {
   id: string;
   ownerId: string;
@@ -51,6 +58,7 @@ export interface BillingCampaign {
   dailyBudget: number;
   validImpressions: number;
 }
+
 export interface PointPolicy {
   minimum: number;
   products: number[];
@@ -58,6 +66,7 @@ export interface PointPolicy {
   updatedAt: string;
   reason: string;
 }
+
 export interface BillingState {
   payments: Payment[];
   ledger: LedgerEntry[];
@@ -66,32 +75,37 @@ export interface BillingState {
   policy: PointPolicy;
   policyHistory: PointPolicy[];
 }
+
 export interface LedgerRow extends LedgerEntry {
   beforeBalance: number;
   afterBalance: number;
+  beforeReserved: number;
   afterReserved: number;
 }
+
 export interface Totals {
   charge: number;
   reserve: number;
   spend: number;
   release: number;
-  invalidCredit: number;
+  adjustment: number;
   refund: number;
   balance: number;
   reserved: number;
   unspent: number;
 }
+
 export interface ReportRow extends Totals {
   key: string;
   pending: boolean;
   mismatchCount: number;
 }
+
 export interface DailyCache {
   date: string;
   charge: number;
   spend: number;
-  invalidCredit: number;
+  adjustment: number;
   refund: number;
   unspent: number;
 }
@@ -103,23 +117,21 @@ export const paymentStatusLabels: Record<PaymentStatus, string> = {
   CANCELED: '취소됨',
   UNKNOWN: '확인 필요',
 };
+
 export const ledgerTypeLabels: Record<LedgerType, string> = {
   CHARGE: '충전',
   RESERVE: '예약',
-  SPEND: '소진',
+  DEDUCT: '소진',
   RELEASE: '예약 해제',
-  INVALID_CREDIT: '무효 환급',
+  ADJUST: '조정',
   REFUND: '환불',
 };
+
 export const refundStatusLabels: Record<RefundStatus, string> = {
   REQUESTED: '요청',
   APPROVED: '승인',
   REJECTED: '반려',
 };
-export const formatPoints = (value: number) =>
-  value.toLocaleString('ko-KR') + ' P';
-export const formatWon = (value: number) =>
-  value.toLocaleString('ko-KR') + ' 원';
 
 export const getKoreaDate = (date = new Date()) =>
   new Intl.DateTimeFormat('en-CA', {
@@ -128,6 +140,7 @@ export const getKoreaDate = (date = new Date()) =>
     month: '2-digit',
     day: '2-digit',
   }).format(date);
+
 export const inDateRange = (timestamp: string, start: string, end: string) =>
   (!start || timestamp.slice(0, 10) >= start) &&
   (!end || timestamp.slice(0, 10) <= end);
@@ -151,6 +164,7 @@ export const getLedgerRows = (ledger: LedgerEntry[]): LedgerRow[] => {
         ...entry,
         beforeBalance: previous.balance,
         afterBalance: next.balance,
+        beforeReserved: previous.reserved,
         afterReserved: next.reserved,
       };
     });
@@ -195,9 +209,15 @@ export const aggregateLedger = (
   return {
     charge: sum('CHARGE'),
     reserve: sum('RESERVE'),
-    spend: sum('SPEND'),
+    spend: sum('DEDUCT'),
     release: sum('RELEASE'),
-    invalidCredit: sum('INVALID_CREDIT'),
+    // 조정액은 거래 규모가 아니라 사용 가능·예약 잔액의 순증감으로 집계한다.
+    adjustment: entries
+      .filter((entry) => entry.type === 'ADJUST')
+      .reduce(
+        (total, entry) => total + entry.balanceDelta + entry.reservedDelta,
+        0,
+      ),
     refund: sum('REFUND'),
     balance,
     reserved,
@@ -314,7 +334,7 @@ export const createDailyCache = (
         date,
         charge: totals.charge,
         spend: totals.spend,
-        invalidCredit: totals.invalidCredit,
+        adjustment: totals.adjustment,
         refund: totals.refund,
         unspent: totals.unspent,
       };
@@ -323,7 +343,7 @@ export const createDailyCache = (
 const reportMetricKeys: (keyof Omit<DailyCache, 'date'>)[] = [
   'charge',
   'spend',
-  'invalidCredit',
+  'adjustment',
   'refund',
   'unspent',
 ];
@@ -443,13 +463,13 @@ export const createBillingState = (today: string): BillingState => {
         amount: 10000,
         balanceDelta: -10000,
         reservedDelta: 10000,
-        createdAt: '2026-09-21T09:00:00+09:00',
+        createdAt: '2026-09-21T00:00:00+09:00',
         campaignId: 'CMP-' + (index + 1),
       },
       {
-        id: 'L-SPEND-' + index,
+        id: 'L-DEDUCT-' + index,
         ownerId,
-        type: 'SPEND',
+        type: 'DEDUCT',
         amount: 6000,
         balanceDelta: 0,
         reservedDelta: -6000,
@@ -471,15 +491,16 @@ export const createBillingState = (today: string): BillingState => {
   });
   ledger.push(
     {
-      id: 'L-CREDIT-2',
+      id: 'L-ADJUST-2',
       ownerId: 'OWN-002',
-      type: 'INVALID_CREDIT',
+      type: 'ADJUST',
       amount: 500,
       balanceDelta: 500,
       reservedDelta: 0,
       createdAt: '2026-09-22T09:00:00+09:00',
       campaignId: 'CMP-2',
       serveId: 'SERVE-1',
+      reason: '과오 차감 정정',
     },
     {
       id: 'L-REFUND-4',
@@ -498,13 +519,13 @@ export const createBillingState = (today: string): BillingState => {
       amount: 30000,
       balanceDelta: -30000,
       reservedDelta: 30000,
-      createdAt: today + 'T09:00:00+09:00',
+      createdAt: today + 'T00:00:00+09:00',
       campaignId: 'CMP-3',
     },
     {
-      id: 'L-TODAY-SPEND',
+      id: 'L-TODAY-DEDUCT',
       ownerId: 'OWN-003',
-      type: 'SPEND',
+      type: 'DEDUCT',
       amount: 10000,
       balanceDelta: 0,
       reservedDelta: -10000,

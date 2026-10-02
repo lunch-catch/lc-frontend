@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DateRangePicker, type DateRangeValue, StatusBadge } from '@repo/ui';
-import { formatDate } from '@repo/utils';
+import { formatDate, formatPoints } from '@repo/utils';
 
 import {
   DataTable,
@@ -12,7 +12,6 @@ import {
 import {
   aggregateLedger,
   type DailyCache,
-  formatPoints,
   getSalesReport,
 } from './billingData';
 import { BillingTable } from './BillingTable';
@@ -29,7 +28,7 @@ const columns = [
   { label: '일자', width: 18 },
   { label: '충전액', width: 13 },
   { label: '소진액', width: 13 },
-  { label: '무효 환급액', width: 13 },
+  { label: '조정액', width: 13 },
   { label: '환불액', width: 13 },
   { label: '미소진 잔액', width: 16 },
   { label: '집계 상태', width: 14 },
@@ -41,7 +40,7 @@ const summaryColumns = [
   { label: '조회 기간', width: summaryDateColumnWidth },
   { label: '충전액 합계', width: summaryAmountColumnWidth },
   { label: '소진액 합계', width: summaryAmountColumnWidth },
-  { label: '무효 환급액 합계', width: summaryAmountColumnWidth },
+  { label: '조정액 합계', width: summaryAmountColumnWidth },
   { label: '환불액 합계', width: summaryAmountColumnWidth },
   { label: '미소진 잔액 합계', width: summaryAmountColumnWidth },
 ];
@@ -71,7 +70,7 @@ export const SalesOverviewTab = ({
   const summaryAmounts = [
     summary.charge,
     summary.spend,
-    summary.invalidCredit,
+    summary.adjustment,
     summary.refund,
     summary.unspent,
   ];
@@ -101,7 +100,7 @@ export const SalesOverviewTab = ({
         cell(formatDate(item.key), item.key),
         metric(item.charge),
         metric(item.spend),
-        metric(item.invalidCredit),
+        metric(item.adjustment),
         metric(item.refund),
         metric(item.unspent),
         cell(

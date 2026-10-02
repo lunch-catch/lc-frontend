@@ -1,11 +1,11 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import {
   DateRangePicker,
   type DateRangeValue,
   SearchField,
   SelectField,
 } from '@repo/ui';
-import { ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 import {
   DataTable,
@@ -16,8 +16,10 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 import { Pagination } from '@admin/components/Pagination/Pagination';
 import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import { inDateRange } from './billingData';
 import type {
@@ -25,6 +27,7 @@ import type {
   BillingRecord,
   BillingTablePreferences,
 } from './billingView';
+
 interface Sort {
   index: number;
   direction: TableSortDirection;
@@ -41,7 +44,6 @@ interface BillingTableProps {
   showSearch?: boolean;
   showDateRange?: boolean;
   extraFilters?: ReactNode;
-  renderSummary?: (range: DateRangeValue) => ReactNode;
   onRowClick?: (id: string) => void;
 }
 
@@ -55,28 +57,19 @@ export const BillingTable = ({
   showSearch = true,
   showDateRange = true,
   extraFilters,
-  renderSummary,
   onRowClick,
   preferences,
 }: BillingTableProps) => {
   const { density, setDensity, pageSize, setPageSize } = preferences;
-  const [draftKeyword, setDraftKeyword] = useState('');
-  const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState(defaultStatus);
   const [range, setRange] = useState<DateRangeValue>(() => ({
     ...defaultRange,
   }));
   const [sort, setSort] = useState<Sort | null>(null);
   const [page, setPage] = useState(1);
+  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
+    useDebouncedSearch({ onCommit: () => setPage(1) });
 
-  useEffect(() => {
-    // 검색 입력은 300ms 동안 기다리고, 상태·기간 선택은 즉시 목록에 반영한다.
-    const timer = window.setTimeout(() => {
-      setKeyword(draftKeyword);
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [draftKeyword]);
   const records = useMemo(
     () => (typeof rows === 'function' ? rows(range) : rows),
     [rows, range],
@@ -105,18 +98,19 @@ export const BillingTable = ({
   }, [records, range, status, keyword, sort]);
 
   const resetFilters = () => {
-    setDraftKeyword('');
-    setKeyword('');
+    resetSearch();
     setStatus(defaultStatus);
     setRange({ ...defaultRange });
     setSort(null);
     setPage(1);
   };
+
   // 다른 탭에서 페이지당 개수가 바뀌어도 현재 목록의 유효 페이지 범위를 지킨다.
   const currentPage = Math.min(
     page,
     Math.max(1, Math.ceil(filteredRows.length / pageSize)),
   );
+
   return (
     <>
       <FilterBar className="!px-0 !py-0">
@@ -161,18 +155,10 @@ export const BillingTable = ({
                 />
               </div>
             )}
-            <button
-              aria-label="필터 초기화"
-              type="button"
-              onClick={resetFilters}
-              className="flex size-10 cursor-pointer items-center justify-center text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
-            >
-              <RotateCcw aria-hidden="true" className="size-4" />
-            </button>
+            <FilterResetButton onClick={resetFilters} />
           </div>
         </div>
       </FilterBar>
-      {renderSummary?.(range)}
       <DataTable
         className="table-fixed"
         columns={columns.map((item) => ({ width: item.width + '%' }))}
