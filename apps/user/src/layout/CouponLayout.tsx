@@ -22,7 +22,7 @@ const CouponLayout = () => {
         {couponTabs.map((tab) => (
           <NavLink
             className={({ isActive }) =>
-              `flex h-11 flex-1 flex-col items-center justify-between pt-3 text-body-mobile ${
+              `flex h-11 flex-1 flex-col items-center justify-between pt-3 text-body-sm-mobile ${
                 isActive
                   ? 'font-bold text-text-primary'
                   : 'font-medium text-text-secondary'
