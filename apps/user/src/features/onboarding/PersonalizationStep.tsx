@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router';
+import { ChoiceChip } from '@repo/ui';
 
 import { useAuth } from '@user/auth/useAuth';
 import ActionButton from '@user/components/ActionButton/ActionButton';
-import ChoiceChip from '@user/components/ChoiceChip/ChoiceChip';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
 import TopBar from '@user/components/TopBar/TopBar';
 
