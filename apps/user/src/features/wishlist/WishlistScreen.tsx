@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react';
 import { fetchIssueStatus, type IssueStatusResponse } from '@user/api/coupon';
 import { fetchWishlist, type WishItem } from '@user/api/wishlist';
 
+import WishCard from './WishCard';
+import WishlistSkeleton from './WishlistSkeleton';
 import WishlistSummary from './WishlistSummary';
+import { getWishState } from './wishState';
 
 const WishlistScreen = () => {
   const [wishes, setWishes] = useState<WishItem[]>([]);
@@ -31,10 +34,25 @@ const WishlistScreen = () => {
     };
   }, []);
 
+  // 11:00 오픈 전후는 다음 단계에서 시간으로 판단한다
+  // 그전까지 주소에 ?mockBeforeOpen을 붙이면 오픈 전 화면을 확인할 수 있다
+  const isOpen = !new URLSearchParams(window.location.search).has(
+    'mockBeforeOpen',
+  );
+
   return (
-    <>
+    <div className="flex flex-col gap-4 px-page pt-4 pb-6">
+      {/* 요청 두 번이 차례로 끝나야 그릴 수 있어, 그동안 빈 화면 대신 회색 틀을 보여준다 */}
+      {!issueStatus && (
+        <>
+          <WishlistSkeleton />
+          <p className="sr-only" role="status">
+            찜 목록을 불러오는 중이에요
+          </p>
+        </>
+      )}
       {issueStatus && (
-        <div className="flex flex-col gap-4 px-page pt-4 pb-6">
+        <>
           <WishlistSummary
             dailyLimit={issueStatus.dailyLimit}
             dailyRemaining={issueStatus.dailyRemaining}
@@ -44,18 +62,35 @@ const WishlistScreen = () => {
                 : '오늘의 발급을 모두 마쳤어요'
             }
           />
-          {/* 3단계에서 찜 카드로 바꾼다 */}
-          <ul className="flex flex-col gap-2 text-body-sm-mobile text-text-primary">
-            {wishes.map((wish) => (
-              <li key={wish.campaignId}>{wish.storeName}</li>
-            ))}
+          <ul className="flex flex-col gap-4">
+            {wishes.map((wish) => {
+              const status = issueStatus.campaigns.find(
+                (campaign) => campaign.campaignId === wish.campaignId,
+              );
+              if (!status) return null;
+
+              return (
+                <WishCard
+                  dailyLimit={issueStatus.dailyLimit}
+                  issueStatus={status}
+                  key={wish.campaignId}
+                  state={getWishState({
+                    dailyRemaining: issueStatus.dailyRemaining,
+                    isIssued: status.isIssued,
+                    isOpen,
+                    remainingCount: status.remainingCount,
+                  })}
+                  wish={wish}
+                />
+              );
+            })}
           </ul>
           <p className="text-caption-mobile text-text-secondary">
             찜 취소는 가게 상세에서 할 수 있어요
           </p>
-        </div>
+        </>
       )}
-    </>
+    </div>
   );
 };
 
