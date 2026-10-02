@@ -1,12 +1,18 @@
 import { useState } from 'react';
 
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
+import {
+  initialPosterTemplates,
+  type PosterTemplate,
+} from '@admin/features/template/templateData';
 import { AdminLayout } from '@admin/layout/AdminLayout';
 import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
 import { PointSettlementPage } from '@admin/pages/PointSettlementPage';
 import { StoreApplicationsPage } from '@admin/pages/StoreApplicationsPage';
+import { TemplateCreatePage } from '@admin/pages/TemplateCreatePage';
+import { TemplateManagementPage } from '@admin/pages/TemplateManagementPage';
 
 const pageTitles: Record<string, string> = {
   account: '계정 관리',
@@ -22,6 +28,14 @@ const pageTitles: Record<string, string> = {
 
 const App = () => {
   const [activeItemId, setActiveItemId] = useState('dashboard');
+  const [templateView, setTemplateView] = useState<'create' | 'list'>('list');
+  const [templates, setTemplates] = useState<PosterTemplate[]>(
+    initialPosterTemplates,
+  );
+  const [draftTemplate, setDraftTemplate] = useState<PosterTemplate | null>(
+    null,
+  );
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const { isAuthenticated, login, logout } = useAdminAuth();
 
   if (!isAuthenticated) {
@@ -38,7 +52,13 @@ const App = () => {
     <AdminLayout
       activeItemId={activeItemId}
       onLogout={logout}
-      onNavigate={setActiveItemId}
+      onNavigate={(itemId) => {
+        setActiveItemId(itemId);
+        if (itemId === 'template') {
+          setIsLoadingDraft(false);
+          setTemplateView('list');
+        }
+      }}
     >
       {activeItemId === 'merchant' ? (
         <StoreApplicationsPage />
@@ -48,6 +68,47 @@ const App = () => {
         <CampaignManagementPage />
       ) : activeItemId === 'settlement' ? (
         <PointSettlementPage />
+      ) : activeItemId === 'template' ? (
+        templateView === 'create' ? (
+          <TemplateCreatePage
+            draftTemplate={isLoadingDraft ? draftTemplate : null}
+            onBack={() => {
+              setIsLoadingDraft(false);
+              setTemplateView('list');
+            }}
+            onSave={(template) => {
+              setTemplates((current) => [
+                {
+                  ...template,
+                  id: `TPL-${String(current.length + 1).padStart(4, '0')}`,
+                },
+                ...current,
+              ]);
+              setDraftTemplate(null);
+              setIsLoadingDraft(false);
+              setTemplateView('list');
+            }}
+            onTemporarySave={(template) => {
+              setDraftTemplate(template);
+              setIsLoadingDraft(false);
+              setTemplateView('list');
+            }}
+          />
+        ) : (
+          <TemplateManagementPage
+            hasDraft={draftTemplate !== null}
+            onCreate={() => {
+              setIsLoadingDraft(false);
+              setTemplateView('create');
+            }}
+            onLoadDraft={() => {
+              setIsLoadingDraft(true);
+              setTemplateView('create');
+            }}
+            onTemplatesChange={setTemplates}
+            templates={templates}
+          />
+        )
       ) : (
         <section className="rounded-xl border border-border-subtle bg-bg-surface p-6">
           <h2 className="text-title-sm-web font-semibold text-text-primary">
