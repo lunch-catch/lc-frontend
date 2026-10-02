@@ -1,9 +1,10 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { BottomNav, type BottomNavItem } from '@repo/ui';
-import { ArrowRightLeft, Compass, Ticket, User } from 'lucide-react';
+import { Compass, Ticket, User, UtensilsCrossed } from 'lucide-react';
 
 const tabItems: BottomNavItem[] = [
-  { icon: <ArrowRightLeft />, label: '스와이프', value: '/swipe' },
+  // 넘기는 방법보다 화면의 목적(오늘 점심 쿠폰 고르기)이 드러나도록 이름과 아이콘을 정한다
+  { icon: <UtensilsCrossed />, label: '오늘 점심', value: '/swipe' },
   { icon: <Compass />, label: '탐색', value: '/explore' },
   { icon: <Ticket />, label: '쿠폰함', value: '/coupons' },
   { icon: <User />, label: '마이', value: '/my' },
