@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
+import { ChoiceChip } from '@repo/ui';
 
 import { type Coupon, fetchCoupons } from '@user/api/coupon';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import ChoiceChip from '@user/components/ChoiceChip/ChoiceChip';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 
 import CouponCard from './CouponCard';
