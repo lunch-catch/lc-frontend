@@ -8,16 +8,19 @@ import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
 import { TemplateChatBubble } from '@admin/components/TemplateChatBubble/TemplateChatBubble';
 import { TemplatePreviewEmptyState } from '@admin/components/TemplatePreviewEmptyState/TemplatePreviewEmptyState';
 import {
-  getTemplatePreviewHtml,
+  createMockTemplateVersion,
+  getCurrentTemplateVersion,
   posterPreviewThemes,
   type PosterTemplate,
+  type TemplateVersion,
+  validateTemplateVersion,
 } from '@admin/features/template/templateData';
 
 interface TemplateCreatePageProps {
   draftTemplate: PosterTemplate | null;
   onBack: () => void;
-  onSave: (template: PosterTemplate) => void;
-  onTemporarySave: (template: PosterTemplate) => void;
+  onSave: (template: PosterTemplate) => boolean;
+  onTemporarySave: (template: PosterTemplate) => boolean;
 }
 
 interface ChatMessage {
@@ -33,6 +36,7 @@ const suggestions = [
 const minPromptHeight = 48;
 const maxPromptHeight = 80;
 const assistantResponseDelay = 700;
+const generationTimeout = 30_000;
 
 export const TemplateCreatePage = ({
   draftTemplate,
@@ -48,28 +52,25 @@ export const TemplateCreatePage = ({
     },
   ]);
   const [prompt, setPrompt] = useState('');
-  const [hasPreview, setHasPreview] = useState(draftTemplate !== null);
+  const [generatedVersion, setGeneratedVersion] =
+    useState<TemplateVersion | null>(
+      draftTemplate ? getCurrentTemplateVersion(draftTemplate) : null,
+    );
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [isResponding, setIsResponding] = useState(false);
   const [exitModalOpen, setExitModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [temporarySaveModalOpen, setTemporarySaveModalOpen] = useState(false);
   const [saveName, setSaveName] = useState(draftTemplate?.name ?? '새 템플릿');
+  const [publishVersion, setPublishVersion] = useState<number | null>(
+    draftTemplate?.draftVersions.at(-1)?.version ?? null,
+  );
   const [themeIndex, setThemeIndex] = useState(0);
   const [selectedThemeIndexes, setSelectedThemeIndexes] = useState([0, 1, 2]);
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const responseTimeoutRef = useRef<number | null>(null);
-
-  const previewTemplate: PosterTemplate = {
-    createdAt: '2026-10-02 10:00',
-    id: 'TPL-0003',
-    isActive: false,
-    name: saveName.trim() || '새 템플릿',
-    status: 'PUBLISHED',
-    updatedAt: '2026-10-02 10:00',
-    updatedBy: 'ADM-001',
-    usageCount: 0,
-  };
+  const generationTimeoutRef = useRef<number | null>(null);
 
   const handleSend = (nextPrompt = prompt) => {
     const trimmedPrompt = nextPrompt.trim();
@@ -80,10 +81,31 @@ export const TemplateCreatePage = ({
       { id: Date.now(), isAssistant: false, text: trimmedPrompt },
     ]);
     setPrompt('');
-    setHasPreview(true);
+    setGenerationError(null);
     setIsResponding(true);
 
     responseTimeoutRef.current = window.setTimeout(() => {
+      const nextVersion = createMockTemplateVersion({
+        name: saveName.trim() || '새 템플릿',
+        request: trimmedPrompt,
+        themeIndex,
+        version: (draftTemplate?.draftVersions.at(-1)?.version ?? 0) + 1,
+      });
+      const validationError = validateTemplateVersion(nextVersion);
+
+      if (generationTimeoutRef.current) {
+        window.clearTimeout(generationTimeoutRef.current);
+        generationTimeoutRef.current = null;
+      }
+
+      if (validationError) {
+        setGenerationError(validationError);
+        setIsResponding(false);
+        return;
+      }
+
+      setGeneratedVersion(nextVersion);
+      setPublishVersion(null);
       setMessages((current) => [
         ...current,
         {
@@ -95,28 +117,77 @@ export const TemplateCreatePage = ({
       responseTimeoutRef.current = null;
       setIsResponding(false);
     }, assistantResponseDelay);
+
+    generationTimeoutRef.current = window.setTimeout(() => {
+      if (responseTimeoutRef.current) {
+        window.clearTimeout(responseTimeoutRef.current);
+        responseTimeoutRef.current = null;
+      }
+      setGenerationError(
+        '생성 요청이 30초 안에 완료되지 않았습니다. 다시 시도해 주세요.',
+      );
+      setIsResponding(false);
+    }, generationTimeout);
   };
 
   const handleSave = () => {
     const templateName = saveName.trim();
-    if (!templateName) return;
+    const selectedDraftVersion = draftTemplate?.draftVersions.find(
+      (version) => version.version === publishVersion,
+    );
+    const versionToPublish = selectedDraftVersion ?? generatedVersion;
+    if (!templateName || !versionToPublish) {
+      setGenerationError('먼저 템플릿을 생성해 주세요.');
+      return;
+    }
 
-    onSave({
-      ...previewTemplate,
-      id: 'TPL-NEW',
-      name: templateName,
-      updatedAt: '2026-10-02 10:00',
-    });
+    if (
+      !onSave({
+        createdAt: draftTemplate?.createdAt ?? '2026-10-02 10:00',
+        draftVersions: [],
+        id: draftTemplate?.id ?? `TPL-DRAFT-${Date.now()}`,
+        isActive: false,
+        name: templateName,
+        publishedVersion: versionToPublish,
+        status: 'PUBLISHED',
+        updatedAt: '2026-10-02 10:00',
+        updatedBy: 'ADM-001',
+        usageCount: 0,
+      })
+    ) {
+      setGenerationError('템플릿은 최대 10개까지 등록할 수 있습니다.');
+    }
   };
 
   const handleTemporarySave = () => {
-    onTemporarySave({
-      ...previewTemplate,
-      id: 'TPL-NEW',
-      name: saveName.trim() || previewTemplate.name,
-      status: 'DRAFT',
-      updatedAt: '2026-10-02 10:00',
-    });
+    if (!generatedVersion) {
+      setGenerationError('먼저 템플릿을 생성해 주세요.');
+      return;
+    }
+
+    const existingVersions = draftTemplate?.draftVersions ?? [];
+    const draftVersions = existingVersions.some(
+      (version) => version.version === generatedVersion.version,
+    )
+      ? existingVersions
+      : [...existingVersions, generatedVersion];
+
+    if (
+      !onTemporarySave({
+        createdAt: draftTemplate?.createdAt ?? '2026-10-02 10:00',
+        draftVersions,
+        id: draftTemplate?.id ?? `TPL-DRAFT-${Date.now()}`,
+        isActive: false,
+        name: saveName.trim() || '새 템플릿',
+        publishedVersion: null,
+        status: 'DRAFT',
+        updatedAt: '2026-10-02 10:00',
+        updatedBy: 'ADM-001',
+        usageCount: 0,
+      })
+    ) {
+      setGenerationError('템플릿은 최대 10개까지 등록할 수 있습니다.');
+    }
   };
 
   const handleThemeRemove = (index: number) => {
@@ -166,6 +237,9 @@ export const TemplateCreatePage = ({
       if (responseTimeoutRef.current) {
         window.clearTimeout(responseTimeoutRef.current);
       }
+      if (generationTimeoutRef.current) {
+        window.clearTimeout(generationTimeoutRef.current);
+      }
     },
     [],
   );
@@ -197,6 +271,11 @@ export const TemplateCreatePage = ({
               </TemplateChatBubble>
             ))}
             {isResponding && <TemplateChatBubble variant="loading" />}
+            {generationError && (
+              <TemplateChatBubble variant="assistant">
+                {generationError}
+              </TemplateChatBubble>
+            )}
           </ScrollArea>
           <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-b from-transparent via-bg-page/80 to-bg-page px-4 pb-4 pt-8">
             <label className="sr-only" htmlFor="template-request">
@@ -253,11 +332,11 @@ export const TemplateCreatePage = ({
         <section className="flex min-h-0 flex-col border-b border-border-subtle bg-surface-subtle p-3 xl:border-b-0">
           <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
             <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
-              {hasPreview ? (
+              {generatedVersion ? (
                 <iframe
                   className="size-full rounded-lg border border-border-subtle bg-bg-page shadow-md"
                   sandbox=""
-                  srcDoc={getTemplatePreviewHtml(previewTemplate, themeIndex)}
+                  srcDoc={generatedVersion.html}
                   title="새 템플릿 미리보기"
                 />
               ) : (
@@ -405,11 +484,44 @@ export const TemplateCreatePage = ({
             placeholder="템플릿명을 입력해 주세요"
             value={saveName}
           />
+          {draftTemplate?.draftVersions.length ? (
+            <div>
+              <p className="mb-2 text-caption-web font-medium text-text-secondary">
+                게시할 임시저장 버전
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {draftTemplate.draftVersions.map((version) => (
+                  <button
+                    aria-pressed={publishVersion === version.version}
+                    className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-body-sm-web transition-colors ${publishVersion === version.version ? 'border-action-primary bg-surface-brand text-text-primary' : 'border-border-subtle text-text-secondary hover:bg-surface-subtle'}`}
+                    key={version.version}
+                    onClick={() => setPublishVersion(version.version)}
+                    type="button"
+                  >
+                    <span>버전 {version.version}</span>
+                    <span className="text-caption-web">
+                      {version.createdAt}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-caption-web leading-5 text-text-secondary">
+              현재 생성된 결과를 바로 게시합니다.
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <Button onClick={() => setSaveModalOpen(false)} variant="secondary">
               취소
             </Button>
-            <Button disabled={!saveName.trim()} onClick={handleSave}>
+            <Button
+              disabled={
+                !saveName.trim() ||
+                (publishVersion === null && generatedVersion === null)
+              }
+              onClick={handleSave}
+            >
               등록
             </Button>
           </div>

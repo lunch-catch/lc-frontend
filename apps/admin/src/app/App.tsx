@@ -32,10 +32,8 @@ const App = () => {
   const [templates, setTemplates] = useState<PosterTemplate[]>(
     initialPosterTemplates,
   );
-  const [draftTemplate, setDraftTemplate] = useState<PosterTemplate | null>(
-    null,
-  );
-  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
+  const [draftTemplates, setDraftTemplates] = useState<PosterTemplate[]>([]);
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const { isAuthenticated, login, logout } = useAdminAuth();
 
   if (!isAuthenticated) {
@@ -55,7 +53,7 @@ const App = () => {
       onNavigate={(itemId) => {
         setActiveItemId(itemId);
         if (itemId === 'template') {
-          setIsLoadingDraft(false);
+          setEditingDraftId(null);
           setTemplateView('list');
         }
       }}
@@ -71,42 +69,79 @@ const App = () => {
       ) : activeItemId === 'template' ? (
         templateView === 'create' ? (
           <TemplateCreatePage
-            draftTemplate={isLoadingDraft ? draftTemplate : null}
+            draftTemplate={
+              draftTemplates.find(
+                (template) => template.id === editingDraftId,
+              ) ?? null
+            }
             onBack={() => {
-              setIsLoadingDraft(false);
+              setEditingDraftId(null);
               setTemplateView('list');
             }}
             onSave={(template) => {
+              const isNewTemplate = template.id.startsWith('TPL-DRAFT');
+              if (
+                isNewTemplate &&
+                templates.length + draftTemplates.length >= 10
+              ) {
+                return false;
+              }
+
               setTemplates((current) => [
                 {
                   ...template,
-                  id: `TPL-${String(current.length + 1).padStart(4, '0')}`,
+                  id: template.id.startsWith('TPL-DRAFT')
+                    ? `TPL-${String(current.length + 1).padStart(4, '0')}`
+                    : template.id,
                 },
-                ...current,
+                ...current.filter((item) => item.id !== template.id),
               ]);
-              setDraftTemplate(null);
-              setIsLoadingDraft(false);
+              setDraftTemplates((current) =>
+                current.filter((item) => item.id !== template.id),
+              );
+              setEditingDraftId(null);
               setTemplateView('list');
+              return true;
             }}
             onTemporarySave={(template) => {
-              setDraftTemplate(template);
-              setIsLoadingDraft(false);
+              const isNewTemplate = !draftTemplates.some(
+                (item) => item.id === template.id,
+              );
+              if (
+                isNewTemplate &&
+                templates.length + draftTemplates.length >= 10
+              ) {
+                return false;
+              }
+
+              setDraftTemplates((current) => {
+                const previous = current.filter(
+                  (item) => item.id !== template.id,
+                );
+                return [template, ...previous];
+              });
+              setEditingDraftId(null);
               setTemplateView('list');
+              return true;
             }}
           />
         ) : (
           <TemplateManagementPage
-            hasDraft={draftTemplate !== null}
+            hasDraft={draftTemplates.length > 0}
             onCreate={() => {
-              setIsLoadingDraft(false);
+              setEditingDraftId(null);
               setTemplateView('create');
             }}
             onLoadDraft={() => {
-              setIsLoadingDraft(true);
+              setEditingDraftId(draftTemplates[0]?.id ?? null);
+              setTemplateView('create');
+            }}
+            onEditDraft={(template) => {
+              setEditingDraftId(template.id);
               setTemplateView('create');
             }}
             onTemplatesChange={setTemplates}
-            templates={templates}
+            templates={[...draftTemplates, ...templates]}
           />
         )
       ) : (
