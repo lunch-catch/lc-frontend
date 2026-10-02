@@ -8,17 +8,26 @@ interface CouponCardProps {
   detail: ReactNode;
   // 오른쪽 끝에 두는 버튼 (QR 보기 등)
   action?: ReactNode;
+  // 이미 쓴 쿠폰처럼 더 쓸 수 없는 쿠폰은 사진을 흑백으로 흐리게 보여준다
+  dimmed?: boolean;
 }
 
 const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
 
 // 쿠폰함의 받은 쿠폰 한 장
-const CouponCard = ({ action, coupon, detail }: CouponCardProps) => {
+const CouponCard = ({
+  action,
+  coupon,
+  detail,
+  dimmed = false,
+}: CouponCardProps) => {
   return (
     <li className="flex items-center gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
       <img
         alt=""
-        className="size-18 shrink-0 rounded-lg bg-surface-subtle object-cover"
+        className={`size-18 shrink-0 rounded-lg bg-surface-subtle object-cover ${
+          dimmed ? 'opacity-60 grayscale' : ''
+        }`}
         height={72}
         src={coupon.imageUrl}
         width={72}
