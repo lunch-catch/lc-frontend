@@ -48,9 +48,10 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // 레이아웃 안에서 실제 너비를 차지해 펼칠 때 메인 영역을 덮지 않고 밀어낸다.
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-30 flex h-dvh flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out ${
+      className={`relative z-30 flex h-dvh shrink-0 flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out motion-reduce:transition-none ${
         isExpanded ? 'w-60 shadow-lg' : 'w-[72px]'
       }`}
       onMouseEnter={() => setIsExpanded(true)}
