@@ -9,6 +9,8 @@ import {
   useState,
 } from 'react';
 
+import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+
 export interface AdminDrawerProps {
   children: ReactNode;
   open: boolean;
@@ -28,19 +30,6 @@ const resizeHandleMask: CSSProperties = {
   maskSize: '100% 100%',
   maskRepeat: 'no-repeat',
 };
-
-// 스크롤바 공간을 미리 확보해 콘텐츠 폭 변화를 막는다.
-// Chromium은 표준 스크롤바 설정을 해제해야 아래 전용 선택자 스타일이 적용된다.
-const scrollAreaClassName = [
-  'min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-6',
-  '[scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--semantic-border-subtle)_transparent]',
-  '[@supports_selector(::-webkit-scrollbar)]:[scrollbar-width:auto] [@supports_selector(::-webkit-scrollbar)]:[scrollbar-color:auto]',
-  '[&::-webkit-scrollbar]:w-[var(--space-2)] [&::-webkit-scrollbar]:h-[var(--space-2)]',
-  '[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-corner]:bg-transparent',
-  '[&::-webkit-scrollbar-thumb]:border-[calc(var(--space-1)/2)] [&::-webkit-scrollbar-thumb]:border-solid [&::-webkit-scrollbar-thumb]:border-transparent',
-  '[&::-webkit-scrollbar-thumb]:rounded-[var(--space-2)] [&::-webkit-scrollbar-thumb]:bg-border-subtle [&::-webkit-scrollbar-thumb]:bg-clip-padding',
-  '[&::-webkit-scrollbar-thumb:hover]:bg-text-tertiary',
-].join(' ');
 
 // 좁은 화면에서는 최소 너비보다 뷰포트 너비를 우선한다.
 const clampDrawerWidth = (value: number) =>
@@ -196,7 +185,7 @@ export const AdminDrawer = ({
             {title}
           </h2>
         </header>
-        <div className={scrollAreaClassName}>{children}</div>
+        <ScrollArea className="p-6">{children}</ScrollArea>
       </div>
     </dialog>
   );
