@@ -6,6 +6,7 @@ import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { QuickPromptButton } from '@admin/components/QuickPromptButton/QuickPromptButton';
 import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
 import { TemplateChatBubble } from '@admin/components/TemplateChatBubble/TemplateChatBubble';
+import { TemplatePreviewEmptyState } from '@admin/components/TemplatePreviewEmptyState/TemplatePreviewEmptyState';
 import {
   getTemplatePreviewHtml,
   posterPreviewThemes,
@@ -47,6 +48,7 @@ export const TemplateCreatePage = ({
     },
   ]);
   const [prompt, setPrompt] = useState('');
+  const [hasPreview, setHasPreview] = useState(draftTemplate !== null);
   const [isResponding, setIsResponding] = useState(false);
   const [exitModalOpen, setExitModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -78,6 +80,7 @@ export const TemplateCreatePage = ({
       { id: Date.now(), isAssistant: false, text: trimmedPrompt },
     ]);
     setPrompt('');
+    setHasPreview(true);
     setIsResponding(true);
 
     responseTimeoutRef.current = window.setTimeout(() => {
@@ -250,12 +253,16 @@ export const TemplateCreatePage = ({
         <section className="flex min-h-0 flex-col border-b border-border-subtle bg-surface-subtle p-3 xl:border-b-0">
           <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
             <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
-              <iframe
-                className="size-full rounded-lg border border-border-subtle bg-bg-page shadow-md"
-                sandbox=""
-                srcDoc={getTemplatePreviewHtml(previewTemplate, themeIndex)}
-                title="새 템플릿 미리보기"
-              />
+              {hasPreview ? (
+                <iframe
+                  className="size-full rounded-lg border border-border-subtle bg-bg-page shadow-md"
+                  sandbox=""
+                  srcDoc={getTemplatePreviewHtml(previewTemplate, themeIndex)}
+                  title="새 템플릿 미리보기"
+                />
+              ) : (
+                <TemplatePreviewEmptyState />
+              )}
             </div>
           </div>
         </section>
