@@ -1,11 +1,10 @@
 import { StatusBadge } from '@repo/ui';
-import { formatDateRange } from '@repo/utils';
+import { formatDateRange, formatNumber, formatPoints } from '@repo/utils';
 import { Image } from 'lucide-react';
 
 import {
   type Campaign,
   campaignStatusMeta,
-  formatPoints,
   getBudgetProgress,
 } from '@admin/features/campaign/campaignData';
 
@@ -25,22 +24,13 @@ export const CampaignDetailContent = ({
         ['하루 사용 한도', formatPoints(campaign.dailyBudget)],
         ['오늘 사용 포인트', formatPoints(campaign.todaySpent)],
         ['예산 사용률', `${getBudgetProgress(campaign).toFixed(1)}%`],
-        [
-          '누적 유효 노출',
-          `${campaign.validImpressions.toLocaleString('ko-KR')}회`,
-        ],
-        [
-          '배분 슬롯 노출',
-          `${campaign.allocationImpressions.toLocaleString('ko-KR')}회`,
-        ],
+        ['누적 유효 노출', `${formatNumber(campaign.validImpressions)}회`],
+        ['배분 슬롯 노출', `${formatNumber(campaign.allocationImpressions)}회`],
         [
           '관련성 슬롯 노출',
-          `${campaign.relevanceImpressions.toLocaleString('ko-KR')}회`,
+          `${formatNumber(campaign.relevanceImpressions)}회`,
         ],
-        [
-          '무효 노출',
-          `${campaign.invalidImpressions.toLocaleString('ko-KR')}회`,
-        ],
+        ['무효 노출', `${formatNumber(campaign.invalidImpressions)}회`],
         [
           '노출 대상',
           `${campaign.radius}m · ${campaign.gender} · ${campaign.ageGroups}`,
@@ -109,7 +99,7 @@ export const CampaignDetailContent = ({
                   누적 유효 노출
                 </dt>
                 <dd className="mt-1 text-body-md-web font-semibold">
-                  {campaign.validImpressions.toLocaleString('ko-KR')}회
+                  {formatNumber(campaign.validImpressions)}회
                 </dd>
               </div>
             </dl>

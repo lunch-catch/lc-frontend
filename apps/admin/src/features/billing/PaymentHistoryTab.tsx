@@ -1,15 +1,10 @@
 import { useState } from 'react';
 import { StatusBadge, type StatusBadgeVariant } from '@repo/ui';
-import { formatDateTime } from '@repo/utils';
+import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
-import {
-  formatPoints,
-  formatWon,
-  type PaymentStatus,
-  paymentStatusLabels,
-} from './billingData';
+import { type PaymentStatus, paymentStatusLabels } from './billingData';
 import { DetailItem } from './BillingDetails';
 import { BillingTable } from './BillingTable';
 import { type BillingTabProps, cell } from './billingView';

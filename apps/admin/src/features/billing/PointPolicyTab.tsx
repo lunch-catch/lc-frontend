@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { Button, Input } from '@repo/ui';
-import { formatDateTime } from '@repo/utils';
+import { formatDateTime, formatWon } from '@repo/utils';
 import { Plus, Trash2 } from 'lucide-react';
 
 import { Pagination } from '@admin/components/Pagination/Pagination';
 
-import { formatWon, validatePolicy } from './billingData';
+import { validatePolicy } from './billingData';
 import { BillingFeedback } from './BillingDetails';
 import {
   type BillingTabProps,

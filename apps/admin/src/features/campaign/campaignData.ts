@@ -86,6 +86,3 @@ export const getBudgetProgress = (campaign: Campaign) =>
   campaign.cumulativeTarget > 0
     ? (campaign.cumulativeSpent / campaign.cumulativeTarget) * 100
     : 0;
-
-export const formatPoints = (value: number) =>
-  `${value.toLocaleString('ko-KR')} P`;

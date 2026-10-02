@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Button, Input, StatusBadge, type StatusBadgeVariant } from '@repo/ui';
-import { formatDateTime } from '@repo/utils';
+import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
 import {
-  formatPoints,
   getBalance,
   getRefundBlockReason,
   processRefund,
