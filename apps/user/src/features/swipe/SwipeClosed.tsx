@@ -20,7 +20,7 @@ const SwipeClosed = () => {
       image={mascotAlert}
       title="내일 10시에 만나요"
     >
-      <ActionButton onClick={() => navigate('/wishlist')}>
+      <ActionButton onClick={() => navigate('/coupons/wishlist')}>
         찜한 포스터 보기
       </ActionButton>
     </EmptyState>

@@ -30,3 +30,10 @@ export const Short: Story = {
     message: '쿠폰이 발급되었어요',
   },
 };
+
+export const Failure: Story = {
+  args: {
+    message: '쿠폰 발급에 실패했어요',
+    tone: 'error',
+  },
+};

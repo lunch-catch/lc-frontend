@@ -38,6 +38,12 @@ export const Disabled: Story = {
   },
 };
 
+export const Loading: Story = {
+  args: {
+    loading: true,
+  },
+};
+
 export const Ghost: Story = {
   args: {
     children: '처음부터 다시 보기',

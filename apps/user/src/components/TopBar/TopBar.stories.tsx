@@ -30,3 +30,18 @@ export const WithBack: Story = {
 };
 
 export const TitleOnly: Story = {};
+
+export const WithAction: Story = {
+  args: {
+    title: '찜 목록',
+    tone: 'page',
+    action: (
+      <button
+        className="flex h-11 items-center px-2.5 text-body-sm-mobile font-medium text-text-secondary"
+        type="button"
+      >
+        쿠폰함
+      </button>
+    ),
+  },
+};

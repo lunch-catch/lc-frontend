@@ -18,7 +18,7 @@ const SwipeDone = ({ onRestart }: SwipeDoneProps) => {
       image={mascotAlert}
       title="오늘의 포스터를 모두 확인했어요"
     >
-      <ActionButton onClick={() => navigate('/wishlist')}>
+      <ActionButton onClick={() => navigate('/coupons/wishlist')}>
         찜한 포스터 보기
       </ActionButton>
       <ActionButton onClick={onRestart} variant="ghost">
