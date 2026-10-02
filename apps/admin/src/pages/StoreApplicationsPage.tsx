@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
-import { ChevronRight, RotateCcw } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { SearchField, SelectField, StatusBadge } from '@repo/ui';
+import { formatDate } from '@repo/utils';
+import { ChevronRight } from 'lucide-react';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import {
@@ -16,12 +17,14 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 import { Pagination } from '@admin/components/Pagination/Pagination';
 import {
   type StoreApplicationDetail,
   StoreApplicationDetailContent,
 } from '@admin/components/StoreApplicationDetailContent/StoreApplicationDetailContent';
 import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 type ApplicationStatus = 'ACTIVE' | 'ONBOARDING';
 type ApplicationListState = 'error' | 'loading' | 'success';
@@ -178,11 +181,10 @@ export const StoreApplicationsPage = ({
   listState = 'success',
 }: StoreApplicationsPageProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [draftKeyword, setDraftKeyword] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
+    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
   const [sort, setSort] = useState<ApplicationSort | null>(null);
   const [status, setStatus] = useState('ALL');
-  const [resetAnimationKey, setResetAnimationKey] = useState(0);
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
   >(null);
@@ -190,16 +192,6 @@ export const StoreApplicationsPage = ({
   const [pageSize, setPageSize] = useState(10);
   // 패널을 닫아도 선택 데이터는 남겨 퇴장 애니메이션 중 내용이 사라지지 않게 한다.
   const [detailOpen, setDetailOpen] = useState(false);
-
-  useEffect(() => {
-    // 입력마다 목록을 갱신하지 않도록 검색어 반영을 잠시 지연한다.
-    const debounceTimer = window.setTimeout(() => {
-      setCurrentPage(1);
-      setKeyword(draftKeyword);
-    }, 300);
-
-    return () => window.clearTimeout(debounceTimer);
-  }, [draftKeyword]);
 
   const filteredApplications = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -245,11 +237,8 @@ export const StoreApplicationsPage = ({
     : null;
 
   const handleReset = () => {
-    // 같은 아이콘 애니메이션도 매번 다시 재생할 수 있도록 key를 갱신한다.
-    setResetAnimationKey((currentKey) => currentKey + 1);
     setCurrentPage(1);
-    setDraftKeyword('');
-    setKeyword('');
+    resetSearch();
     setSort(null);
     setStatus('ALL');
   };
@@ -298,24 +287,7 @@ export const StoreApplicationsPage = ({
               options={statusOptions}
               value={status}
             />
-            <Button
-              aria-label="필터 초기화"
-              className="size-10 !p-0 hover:!bg-transparent"
-              leadingIcon={
-                <RotateCcw
-                  aria-hidden="true"
-                  className={
-                    resetAnimationKey > 0
-                      ? 'size-4 animate-[spin_400ms_ease-in-out] motion-reduce:animate-none'
-                      : 'size-4'
-                  }
-                  key={resetAnimationKey}
-                />
-              }
-              onClick={handleReset}
-              title="필터 초기화"
-              variant="tertiary"
-            />
+            <FilterResetButton onClick={handleReset} />
           </div>
         </div>
       </FilterBar>
@@ -408,7 +380,7 @@ export const StoreApplicationsPage = ({
                       {application.storeName}
                     </TableCell>
                     <TableCell>{application.businessNumber}</TableCell>
-                    <TableCell>{application.appliedAt}</TableCell>
+                    <TableCell>{formatDate(application.appliedAt)}</TableCell>
                     <TableCell className="relative">
                       <StatusBadge variant={applicationStatus.variant}>
                         {applicationStatus.label}

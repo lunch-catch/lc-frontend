@@ -28,13 +28,13 @@ export const AdminLayout = ({
   onNavigate,
 }: AdminLayoutProps) => {
   return (
-    <div className="relative h-dvh overflow-hidden bg-bg-page">
+    <div className="relative flex h-dvh overflow-hidden bg-bg-page">
       <AdminSidebar
         activeItemId={activeItemId}
         onItemSelect={onNavigate}
         onLogout={onLogout}
       />
-      <div className="ml-[72px] flex h-full min-w-0 flex-col">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
         <main className={mainScrollClassName}>{children}</main>
       </div>
     </div>

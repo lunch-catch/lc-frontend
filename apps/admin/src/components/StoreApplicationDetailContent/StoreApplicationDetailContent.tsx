@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { StatusBadge } from '@repo/ui';
+import { formatDate } from '@repo/utils';
 import { Check, Clock3, FileText, Image, MapPin } from 'lucide-react';
 
 export interface StoreApplicationDetail {
@@ -73,12 +74,14 @@ export const StoreApplicationDetailContent = ({
           {application.storeName}
         </h3>
         <p className="mt-1 text-caption-web text-text-secondary">
-          {application.category} · 신청일 {application.appliedAt}
+          {application.category} · 신청일 {formatDate(application.appliedAt)}
         </p>
       </div>
       <DetailSection title="신청 정보">
         <dl>
-          <DetailItem label="신청일">{application.appliedAt}</DetailItem>
+          <DetailItem label="신청일">
+            {formatDate(application.appliedAt)}
+          </DetailItem>
           <DetailItem label="약관 동의">
             <span
               className={`inline-flex items-center gap-1 ${application.termsAgreed ? 'text-status-success-fg' : 'text-text-secondary'}`}
@@ -131,13 +134,15 @@ export const StoreApplicationDetailContent = ({
           </DetailItem>
           <DetailItem label="상세 주소">{application.addressDetail}</DetailItem>
           <DetailItem label="영업 요일">{application.businessDays}</DetailItem>
-          <DetailItem label="평일 영업시간">
-            <span className="inline-flex items-center gap-1">
+          <DetailItem label="영업시간">
+            <span className="flex min-h-5 items-center gap-1">
               <Clock3
                 aria-hidden="true"
-                className="size-4 text-text-secondary"
+                className="block size-4 shrink-0 text-text-secondary"
               />
-              {application.weekdayHours}
+              <span className="block leading-5">
+                {application.weekdayHours}
+              </span>
             </span>
           </DetailItem>
           <DetailItem label="주말 영업시간">

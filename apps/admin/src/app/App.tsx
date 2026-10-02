@@ -5,6 +5,7 @@ import { AdminLayout } from '@admin/layout/AdminLayout';
 import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
+import { PointSettlementPage } from '@admin/pages/PointSettlementPage';
 import { StoreApplicationsPage } from '@admin/pages/StoreApplicationsPage';
 
 const pageTitles: Record<string, string> = {
@@ -45,6 +46,8 @@ const App = () => {
         <MemberManagementPage />
       ) : activeItemId === 'campaign' ? (
         <CampaignManagementPage />
+      ) : activeItemId === 'settlement' ? (
+        <PointSettlementPage />
       ) : (
         <section className="rounded-xl border border-border-subtle bg-bg-surface p-6">
           <h2 className="text-title-sm-web font-semibold text-text-primary">

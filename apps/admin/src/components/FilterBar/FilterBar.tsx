@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { Button } from '@repo/ui';
-import { RotateCcw } from 'lucide-react';
+
+import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 
 export interface FilterBarProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
@@ -28,15 +28,7 @@ export function FilterBar({
         style={{ gap: 'var(--space-3)' }}
       >
         {children}
-        {onReset && (
-          <Button
-            leadingIcon={<RotateCcw aria-hidden="true" className="size-4" />}
-            onClick={onReset}
-            variant="tertiary"
-          >
-            초기화
-          </Button>
-        )}
+        {onReset && <FilterResetButton onClick={onReset} />}
       </div>
     </div>
   );

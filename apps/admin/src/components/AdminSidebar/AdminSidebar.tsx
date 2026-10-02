@@ -30,11 +30,11 @@ export interface AdminSidebarProps {
 
 const defaultNavigationItems: AdminNavigationItem[] = [
   { icon: LayoutDashboard, id: 'dashboard', label: '대시보드' },
-  { icon: Store, id: 'merchant', label: '입점 관리' },
-  { icon: Users, id: 'member', label: '회원 관리' },
   { icon: Megaphone, id: 'campaign', label: '캠페인 관리' },
   { icon: FileText, id: 'template', label: '템플릿 관리' },
   { icon: CircleDollarSign, id: 'settlement', label: '포인트/정산 관리' },
+  { icon: Store, id: 'merchant', label: '입점 관리' },
+  { icon: Users, id: 'member', label: '회원 관리' },
   { icon: ShieldAlert, id: 'fraud', label: '부정 관리' },
   { icon: ClipboardCheck, id: 'review', label: '심사 관리' },
   { icon: UserCog, id: 'account', label: '계정 관리' },
@@ -48,9 +48,10 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // 레이아웃 안에서 실제 너비를 차지해 펼칠 때 메인 영역을 덮지 않고 밀어낸다.
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-30 flex h-dvh flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out ${
+      className={`relative z-30 flex h-dvh shrink-0 flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out motion-reduce:transition-none ${
         isExpanded ? 'w-60 shadow-lg' : 'w-[72px]'
       }`}
       onMouseEnter={() => setIsExpanded(true)}
