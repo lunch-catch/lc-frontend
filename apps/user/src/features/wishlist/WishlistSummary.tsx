@@ -4,12 +4,15 @@ interface WishlistSummaryProps {
   title: ReactNode;
   dailyRemaining: number;
   dailyLimit: number;
+  // 찜이 발급을 보장하지 않는다는 안내. 받기 전인 오픈 전에만 보여준다
+  showNotice: boolean;
 }
 
 // 찜 목록 맨 위의 발급 상황 요약과 하루 남은 발급 횟수
 const WishlistSummary = ({
   dailyLimit,
   dailyRemaining,
+  showNotice,
   title,
 }: WishlistSummaryProps) => {
   return (
@@ -23,9 +26,11 @@ const WishlistSummary = ({
           : '오늘 남은 발급 0개'}
         {` · 하루 최대 ${dailyLimit}개`}
       </p>
-      <p className="text-caption-mobile text-text-secondary">
-        찜은 발급을 보장하지 않아요. 오픈 후 선착순이에요.
-      </p>
+      {showNotice && (
+        <p className="text-caption-mobile text-text-secondary">
+          찜은 발급을 보장하지 않아요. 오픈 후 선착순이에요.
+        </p>
+      )}
     </section>
   );
 };

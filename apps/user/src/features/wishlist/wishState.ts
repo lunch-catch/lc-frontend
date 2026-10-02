@@ -2,6 +2,16 @@
 export type WishState =
   'beforeOpen' | 'available' | 'soldOut' | 'limitReached' | 'issued';
 
+// 찜 목록에서 보여줄 순서. 11:00 선착순에 받을 수 있는 카드를 바로 찾도록 맨 위에 두고,
+// 받은 카드, 더 받을 수 없는 카드 순으로 내린다. 같은 순위끼리는 찜한 순서를 유지한다
+export const WISH_STATE_ORDER: Record<WishState, number> = {
+  available: 0,
+  beforeOpen: 0,
+  issued: 1,
+  soldOut: 2,
+  limitReached: 2,
+};
+
 interface WishStateInput {
   // 11:00 선착순 오픈이 지났는지
   isOpen: boolean;

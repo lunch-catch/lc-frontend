@@ -41,13 +41,6 @@ const WishCard = ({
     issued: '발급 완료 · 쿠폰함에서 확인',
   };
 
-  const disabledLabelByState: Partial<Record<WishState, string>> = {
-    beforeOpen: '11:00 오픈',
-    soldOut: '마감',
-    limitReached: `오늘 발급 한도 ${dailyLimit}개 완료`,
-  };
-  const disabledLabel = disabledLabelByState[state];
-
   return (
     // 버튼이 어느 가게 것인지 헷갈리지 않도록 사용 시간과 버튼까지 카드 하나에 담는다
     <li className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
@@ -87,7 +80,11 @@ const WishCard = ({
       <p className="text-caption-mobile text-text-secondary">
         사용 {issueStatus.usableFrom}–{issueStatus.usableTo} · 오늘
       </p>
-      {disabledLabel && <ActionButton disabled>{disabledLabel}</ActionButton>}
+      {/* 마감과 하루 한도는 상태 줄로 알 수 있어 버튼을 두지 않고, */}
+      {/* 오픈 전에는 11:00에 같은 자리가 받기로 바뀌도록 자리를 미리 잡아 둔다 */}
+      {state === 'beforeOpen' && (
+        <ActionButton disabled>11:00 오픈</ActionButton>
+      )}
       {/* 받는 동안 다시 누르지 못하게 막아 같은 요청이 두 번 가지 않게 한다 */}
       {state === 'available' && (
         <ActionButton

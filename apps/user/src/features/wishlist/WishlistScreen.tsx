@@ -10,11 +10,12 @@ import {
 import { fetchWishlist, type WishItem } from '@user/api/wishlist';
 import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
 
+import { formatCountdown, useOpenCountdown } from './useOpenCountdown';
 import WishCard from './WishCard';
 import WishlistEmpty from './WishlistEmpty';
 import WishlistSkeleton from './WishlistSkeleton';
 import WishlistSummary from './WishlistSummary';
-import { getWishState } from './wishState';
+import { getWishState, WISH_STATE_ORDER } from './wishState';
 
 const TOAST_DURATION_MS = 2500;
 
@@ -35,6 +36,8 @@ const WishlistScreen = () => {
   // 이 화면에서 쿠폰을 받았는지. 받았으면 맨 위 제목으로 알려준다
   const [hasIssued, setHasIssued] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // 11:00이 되면 새로고침하지 않아도 카드가 받기로 바뀐다
+  const { isOpen, remainingMs } = useOpenCountdown();
 
   useEffect(() => {
     let ignore = false;
@@ -88,12 +91,6 @@ const WishlistScreen = () => {
     }
   };
 
-  // 11:00 오픈 전후는 다음 단계에서 시간으로 판단한다
-  // 그전까지 주소에 ?mockBeforeOpen을 붙이면 오픈 전 화면을 확인할 수 있다
-  const isOpen = !new URLSearchParams(window.location.search).has(
-    'mockBeforeOpen',
-  );
-
   if (issueStatus && wishes.length === 0) {
     return <WishlistEmpty />;
   }
@@ -111,9 +108,42 @@ const WishlistScreen = () => {
         </>
       );
     }
+    if (!isOpen) {
+      return (
+        // 숫자 폭을 같게 해 1초마다 글자가 좌우로 흔들리지 않게 한다
+        <span>
+          11:00 오픈까지{' '}
+          <span className="text-text-brand tabular-nums">
+            {formatCountdown(remainingMs)}
+          </span>
+        </span>
+      );
+    }
     if (dailyRemaining === 0) return '오늘의 발급을 모두 마쳤어요';
     return '선착순 발급이 열렸어요';
   };
+
+  // 찜마다 발급 상태를 붙이고 카드 상태를 정한 뒤, 받을 수 있는 카드가 위로 오게 정렬한다
+  const getSortedEntries = ({
+    campaigns,
+    dailyRemaining,
+  }: IssueStatusResponse) =>
+    wishes
+      .flatMap((wish) => {
+        const status = campaigns.find(
+          (campaign) => campaign.campaignId === wish.campaignId,
+        );
+        if (!status) return [];
+
+        const state = getWishState({
+          dailyRemaining,
+          isIssued: status.isIssued,
+          isOpen,
+          remainingCount: status.remainingCount,
+        });
+        return [{ state, status, wish }];
+      })
+      .sort((a, b) => WISH_STATE_ORDER[a.state] - WISH_STATE_ORDER[b.state]);
 
   return (
     // 토스트를 탭 바로 아래에 띄우기 위한 기준 영역
@@ -137,33 +167,22 @@ const WishlistScreen = () => {
           <WishlistSummary
             dailyLimit={issueStatus.dailyLimit}
             dailyRemaining={issueStatus.dailyRemaining}
+            showNotice={!isOpen}
             title={getSummaryTitle(issueStatus.dailyRemaining)}
           />
           <ul className="flex flex-col gap-4">
-            {wishes.map((wish) => {
-              const status = issueStatus.campaigns.find(
-                (campaign) => campaign.campaignId === wish.campaignId,
-              );
-              if (!status) return null;
-
-              return (
-                <WishCard
-                  dailyLimit={issueStatus.dailyLimit}
-                  isIssueBlocked={issuingCampaignId !== null}
-                  isIssuing={issuingCampaignId === wish.campaignId}
-                  issueStatus={status}
-                  key={wish.campaignId}
-                  onIssue={() => handleIssue(wish.campaignId)}
-                  state={getWishState({
-                    dailyRemaining: issueStatus.dailyRemaining,
-                    isIssued: status.isIssued,
-                    isOpen,
-                    remainingCount: status.remainingCount,
-                  })}
-                  wish={wish}
-                />
-              );
-            })}
+            {getSortedEntries(issueStatus).map(({ state, status, wish }) => (
+              <WishCard
+                dailyLimit={issueStatus.dailyLimit}
+                isIssueBlocked={issuingCampaignId !== null}
+                isIssuing={issuingCampaignId === wish.campaignId}
+                issueStatus={status}
+                key={wish.campaignId}
+                onIssue={() => handleIssue(wish.campaignId)}
+                state={state}
+                wish={wish}
+              />
+            ))}
           </ul>
           <p className="text-caption-mobile text-text-secondary">
             찜 취소는 가게 상세에서 할 수 있어요
