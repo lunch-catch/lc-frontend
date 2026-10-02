@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
+import { LoaderCircle } from 'lucide-react';
 
 export type ActionButtonSize = 'medium' | 'large';
 export type ActionButtonVariant = 'brand' | 'ghost';
@@ -6,6 +7,8 @@ export type ActionButtonVariant = 'brand' | 'ghost';
 export interface ActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ActionButtonSize;
   variant?: ActionButtonVariant;
+  // 요청을 보내고 기다리는 중. 색은 그대로 두고 글자 대신 도는 아이콘을 보여주며, 다시 누를 수 없다
+  loading?: boolean;
 }
 
 // 디자인 시스템 Core UI Button의 모바일 크기
@@ -23,7 +26,10 @@ const variantClassNames: Record<ActionButtonVariant, string> = {
 };
 
 const ActionButton = ({
+  children,
   className,
+  loading = false,
+  onClick,
   size = 'medium',
   type = 'button',
   variant = 'brand',
@@ -31,7 +37,7 @@ const ActionButton = ({
 }: ActionButtonProps) => {
   const buttonClassName = [
     'flex w-full items-center justify-center rounded-lg px-5 leading-normal font-bold whitespace-nowrap transition-colors',
-    'disabled:cursor-not-allowed',
+    'disabled:cursor-not-allowed aria-busy:cursor-progress',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary',
     variantClassNames[variant],
     sizeClassNames[size],
@@ -40,7 +46,30 @@ const ActionButton = ({
     .filter(Boolean)
     .join(' ');
 
-  return <button className={buttonClassName} type={type} {...props} />;
+  return (
+    <button
+      // disabled를 쓰면 회색으로 바뀌어 실패처럼 보이므로, 색은 두고 누르는 것만 막는다
+      aria-busy={loading || undefined}
+      aria-disabled={loading || undefined}
+      className={buttonClassName}
+      onClick={loading ? undefined : onClick}
+      type={type}
+      {...props}
+    >
+      {loading ? (
+        <>
+          <LoaderCircle
+            aria-hidden="true"
+            className="size-5 animate-spin motion-reduce:animate-none"
+          />
+          {/* 화면 낭독기는 원래 버튼 이름을 그대로 읽는다 */}
+          <span className="sr-only">{children}</span>
+        </>
+      ) : (
+        children
+      )}
+    </button>
+  );
 };
 
 export default ActionButton;

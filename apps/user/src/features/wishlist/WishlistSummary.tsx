@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
+
 interface WishlistSummaryProps {
-  title: string;
+  title: ReactNode;
   dailyRemaining: number;
   dailyLimit: number;
 }
@@ -12,7 +14,9 @@ const WishlistSummary = ({
 }: WishlistSummaryProps) => {
   return (
     <section className="flex flex-col gap-1.5">
-      <h2 className="text-h2-mobile font-bold text-text-primary">{title}</h2>
+      <h2 className="flex items-center gap-1.5 text-h2-mobile font-bold text-text-primary">
+        {title}
+      </h2>
       <p className="text-caption-mobile text-text-secondary">
         {dailyRemaining > 0
           ? `오늘 ${dailyRemaining}개 더 받을 수 있어요`

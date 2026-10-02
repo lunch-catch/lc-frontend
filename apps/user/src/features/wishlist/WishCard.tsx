@@ -12,6 +12,10 @@ interface WishCardProps {
   state: WishState;
   dailyLimit: number;
   onIssue?: () => void;
+  // 이 카드의 쿠폰을 받는 중인지
+  isIssuing?: boolean;
+  // 다른 카드의 쿠폰을 받는 중이라 잠시 누를 수 없는지
+  isIssueBlocked?: boolean;
 }
 
 const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
@@ -19,6 +23,8 @@ const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
 // 찜 목록의 캠페인 한 줄. 카드, 사용 시간, 상태에 맞는 버튼으로 이루어진다
 const WishCard = ({
   dailyLimit,
+  isIssueBlocked = false,
+  isIssuing = false,
   issueStatus,
   onIssue,
   state,
@@ -82,8 +88,15 @@ const WishCard = ({
         사용 {issueStatus.usableFrom}–{issueStatus.usableTo} · 오늘
       </p>
       {disabledLabel && <ActionButton disabled>{disabledLabel}</ActionButton>}
+      {/* 받는 동안 다시 누르지 못하게 막아 같은 요청이 두 번 가지 않게 한다 */}
       {state === 'available' && (
-        <ActionButton onClick={onIssue}>받기</ActionButton>
+        <ActionButton
+          disabled={isIssueBlocked && !isIssuing}
+          loading={isIssuing}
+          onClick={onIssue}
+        >
+          받기
+        </ActionButton>
       )}
       {state === 'issued' && (
         <ActionButton onClick={() => navigate('/coupons')}>

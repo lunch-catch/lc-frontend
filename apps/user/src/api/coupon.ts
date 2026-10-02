@@ -51,8 +51,13 @@ export const fetchIssueStatus = async (
   };
 };
 
+// 주소에 ?mockIssueSoldOut을 붙이면 받는 사이 수량이 소진된 경우를 확인할 수 있다
 export const issueCoupon = async (campaignId: string): Promise<IssueResult> => {
   await wait(MOCK_DELAY_MS);
+
+  if (new URLSearchParams(window.location.search).has('mockIssueSoldOut')) {
+    return 'soldOut';
+  }
 
   return issueMockCoupon(campaignId);
 };
