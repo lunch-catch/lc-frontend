@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { SelectField } from '@repo/ui';
+import { formatNumber } from '@repo/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface PaginationProps {
@@ -86,8 +87,8 @@ export function Pagination({
     >
       <div className="flex items-center gap-3">
         <span className="whitespace-nowrap text-caption-web text-text-secondary">
-          총 {totalCount.toLocaleString()}건 중 {firstItem.toLocaleString()} -{' '}
-          {lastItem.toLocaleString()}건
+          총 {formatNumber(totalCount)}건 중 {formatNumber(firstItem)} -{' '}
+          {formatNumber(lastItem)}건
         </span>
         {pageSizeOptions && onPageSizeChange && (
           <SelectField

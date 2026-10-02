@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   DateRangePicker,
   SearchField,
@@ -6,7 +6,7 @@ import {
   StatusBadge,
   Tabs,
 } from '@repo/ui';
-import { RotateCcw } from 'lucide-react';
+import { formatDate, formatDateTime } from '@repo/utils';
 
 import {
   DataTable,
@@ -19,8 +19,10 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 import { Pagination } from '@admin/components/Pagination/Pagination';
 import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 type MemberStatus = 'ACTIVE' | 'SUSPENDED' | 'WITHDRAWN';
 type MemberType = 'member' | 'owner';
@@ -154,25 +156,15 @@ const getMemberSortValue = (member: Member, key: keyof Member) =>
 export const MemberManagementPage = () => {
   const [activeTab, setActiveTab] = useState<MemberType>('owner');
   const [currentPage, setCurrentPage] = useState(1);
-  const [draftKeyword, setDraftKeyword] = useState('');
+  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
+    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
   const [endDate, setEndDate] = useState('');
-  const [keyword, setKeyword] = useState('');
   const [startDate, setStartDate] = useState('');
   const [status, setStatus] = useState('ALL');
   const [tableDensity, setTableDensity] = useState<TableDensity>('normal');
   const [pageSize, setPageSize] = useState(20);
   const [ownerSort, setOwnerSort] = useState<OwnerSort | null>(null);
   const [memberSort, setMemberSort] = useState<MemberSort | null>(null);
-
-  useEffect(() => {
-    // 입력 중에는 목록을 다시 계산하지 않고, 입력이 멈춘 뒤에만 검색어를 반영한다.
-    const debounceTimer = window.setTimeout(() => {
-      setCurrentPage(1);
-      setKeyword(draftKeyword);
-    }, 300);
-
-    return () => window.clearTimeout(debounceTimer);
-  }, [draftKeyword]);
 
   const filteredOwners = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -258,8 +250,7 @@ export const MemberManagementPage = () => {
   const handleTabChange = (nextTab: string) => {
     setActiveTab(nextTab as MemberType);
     setCurrentPage(1);
-    setDraftKeyword('');
-    setKeyword('');
+    resetSearch();
     setStatus('ALL');
     setStartDate('');
     setEndDate('');
@@ -269,8 +260,7 @@ export const MemberManagementPage = () => {
 
   const handleReset = () => {
     setCurrentPage(1);
-    setDraftKeyword('');
-    setKeyword('');
+    resetSearch();
     setStatus('ALL');
     setStartDate('');
     setEndDate('');
@@ -355,15 +345,7 @@ export const MemberManagementPage = () => {
                 value={{ endDate, startDate }}
               />
             </div>
-            <button
-              aria-label="필터 초기화"
-              className="flex size-10 items-center justify-center rounded-md text-action-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
-              onClick={handleReset}
-              title="필터 초기화"
-              type="button"
-            >
-              <RotateCcw aria-hidden="true" className="size-4" />
-            </button>
+            <FilterResetButton onClick={handleReset} />
           </div>
         </div>
       </FilterBar>
@@ -568,8 +550,10 @@ const MemberTable = ({
                           : '등록 진행 중'}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell>{owner.joinedAt}</TableCell>
-                    <TableCell>{owner.lastAccessedAt}</TableCell>
+                    <TableCell>{formatDate(owner.joinedAt)}</TableCell>
+                    <TableCell>
+                      {formatDateTime(owner.lastAccessedAt)}
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -589,8 +573,10 @@ const MemberTable = ({
                     </TableCell>
                     <TableCell>{member.gender}</TableCell>
                     <TableCell>{member.ageGroup}</TableCell>
-                    <TableCell>{member.joinedAt}</TableCell>
-                    <TableCell>{member.lastAccessedAt}</TableCell>
+                    <TableCell>{formatDate(member.joinedAt)}</TableCell>
+                    <TableCell>
+                      {formatDateTime(member.lastAccessedAt)}
+                    </TableCell>
                   </TableRow>
                 );
               })}
