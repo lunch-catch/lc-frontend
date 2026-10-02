@@ -18,6 +18,11 @@ const activationOptions = [
   { label: '활성', value: 'ACTIVE' },
   { label: '비활성', value: 'INACTIVE' },
 ];
+const statusOptions = [
+  { label: '상태 전체', value: 'ALL' },
+  { label: '임시저장 중', value: 'DRAFT' },
+  { label: '게시됨', value: 'PUBLISHED' },
+];
 const sortOptions = [
   { label: '최신 등록순', value: 'REGISTERED' },
   { label: '인기순', value: 'POPULAR' },
@@ -27,6 +32,7 @@ const sortOptions = [
 
 export interface TemplateManagementPageProps {
   onCreate: () => void;
+  onEditDraft: (template: PosterTemplate) => void;
   onLoadDraft: () => void;
   onTemplatesChange: (templates: PosterTemplate[]) => void;
   hasDraft: boolean;
@@ -35,6 +41,7 @@ export interface TemplateManagementPageProps {
 
 export const TemplateManagementPage = ({
   onCreate,
+  onEditDraft,
   onLoadDraft,
   onTemplatesChange,
   hasDraft,
@@ -46,6 +53,7 @@ export const TemplateManagementPage = ({
     useState<PosterTemplate | null>(null);
   const [pageSize, setPageSize] = useState(12);
   const [sort, setSort] = useState<TemplateSort>('REGISTERED');
+  const [status, setStatus] = useState('ALL');
   const { draftKeyword, keyword, resetSearch, setDraftKeyword } =
     useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
 
@@ -55,13 +63,14 @@ export const TemplateManagementPage = ({
       const matchesActivation =
         activation === 'ALL' ||
         (activation === 'ACTIVE' ? template.isActive : !template.isActive);
+      const matchesStatus = status === 'ALL' || template.status === status;
       const matchesKeyword =
         !query ||
         [template.id, template.name].some((value) =>
           value.toLowerCase().includes(query),
         );
 
-      return matchesActivation && matchesKeyword;
+      return matchesActivation && matchesKeyword && matchesStatus;
     });
 
     return [...result].sort((first, second) => {
@@ -75,7 +84,7 @@ export const TemplateManagementPage = ({
 
       return second.createdAt.localeCompare(first.createdAt);
     });
-  }, [activation, keyword, sort, templates]);
+  }, [activation, keyword, sort, status, templates]);
 
   const totalPages = Math.ceil(filteredTemplates.length / pageSize);
   const visibleTemplates = filteredTemplates.slice(
@@ -88,6 +97,7 @@ export const TemplateManagementPage = ({
     setActivation('ALL');
     setCurrentPage(1);
     setSort('REGISTERED');
+    setStatus('ALL');
   };
 
   const handleConfirmActivation = () => {
@@ -152,6 +162,15 @@ export const TemplateManagementPage = ({
             <SelectField
               fitContent
               onValueChange={(value) => {
+                setCurrentPage(1);
+                setStatus(value);
+              }}
+              options={statusOptions}
+              value={status}
+            />
+            <SelectField
+              fitContent
+              onValueChange={(value) => {
                 setActivation(value);
                 setCurrentPage(1);
               }}
@@ -178,6 +197,7 @@ export const TemplateManagementPage = ({
             <TemplatePreviewCard
               key={template.id}
               onActivationRequest={setPendingActivationTemplate}
+              onEditDraft={onEditDraft}
               template={template}
             />
           ))}

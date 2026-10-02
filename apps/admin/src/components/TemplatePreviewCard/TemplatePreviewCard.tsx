@@ -1,4 +1,4 @@
-import { Toggle } from '@repo/ui';
+import { Button, StatusBadge, Toggle } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
 
 import {
@@ -8,18 +8,20 @@ import {
 
 export interface TemplatePreviewCardProps {
   onActivationRequest: (template: PosterTemplate) => void;
+  onEditDraft?: (template: PosterTemplate) => void;
   template: PosterTemplate;
 }
 
 export const TemplatePreviewCard = ({
   onActivationRequest,
+  onEditDraft,
   template,
 }: TemplatePreviewCardProps) => {
   const canChangeActivation = template.status === 'PUBLISHED';
 
   return (
     <article className="flex min-w-0 flex-col rounded-xl border border-border-subtle bg-bg-surface p-4 shadow-sm">
-      <header>
+      <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-title-sm-web font-semibold text-text-primary">
             {template.name}
@@ -28,6 +30,9 @@ export const TemplatePreviewCard = ({
             {template.id}
           </p>
         </div>
+        <StatusBadge variant={canChangeActivation ? 'info' : 'warning'}>
+          {canChangeActivation ? '게시됨' : '임시저장 중'}
+        </StatusBadge>
       </header>
 
       <iframe
@@ -45,9 +50,9 @@ export const TemplatePreviewCard = ({
           </dd>
         </div>
         <div>
-          <dt className="text-text-secondary">사용 횟수</dt>
+          <dt className="text-text-secondary">최종 수정</dt>
           <dd className="mt-1 font-medium text-text-primary">
-            {template.usageCount.toLocaleString()}회
+            {formatDateTime(template.updatedAt)}
           </dd>
         </div>
       </dl>
@@ -67,9 +72,13 @@ export const TemplatePreviewCard = ({
             onChange={() => onActivationRequest(template)}
           />
         ) : (
-          <span className="text-caption-web font-medium text-text-tertiary">
-            비활성
-          </span>
+          <Button
+            className="!min-h-8 !px-2 text-caption-web"
+            onClick={() => onEditDraft?.(template)}
+            variant="neutral"
+          >
+            수정
+          </Button>
         )}
       </div>
     </article>
