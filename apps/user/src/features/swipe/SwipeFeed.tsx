@@ -16,6 +16,7 @@ import PosterCard from './PosterCard';
 import PosterSkeleton from './PosterSkeleton';
 import SwipeClosed from './SwipeClosed';
 import SwipeDone from './SwipeDone';
+import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
 const TOAST_DURATION_MS = 2500;
@@ -47,6 +48,7 @@ const SwipeFeed = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // 같은 카드의 노출이 두 번 기록되지 않도록 보낸 serveId를 기억한다
   const impressedServeIds = useRef(new Set<string>());
+  const [setCardArea, cardMaxWidth] = usePosterFitWidth();
 
   useEffect(() => {
     let ignore = false;
@@ -120,12 +122,19 @@ const SwipeFeed = () => {
         {/* 불러오는 중에는 카드 자리에 회색 틀을 보여준다 */}
         {(status === 'loading' || topCard) && (
           // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
-          <section className="flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-3">
+          <section
+            className="flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-3"
+            ref={setCardArea}
+          >
             {/* 카드와 버튼을 한 묶음으로 남는 높이의 세로 가운데에 둔다 */}
-            <div className="@container relative mx-auto flex w-full max-w-100 flex-1 flex-col justify-center">
-              {/* 카드는 남는 높이만큼 늘어나되, 사진이 4:5(125cqw)보다 길어지지 않게 한다 */}
-              {/* 10.5rem은 사진 아래 글자 영역의 높이 */}
-              <div className="relative flex max-h-[calc(125cqw+10.5rem)] flex-1 flex-col">
+            {/* PC처럼 화면이 낮으면 포스터가 3:4를 지키도록 묶음 폭을 줄인다 */}
+            <div
+              className="@container relative mx-auto flex w-full flex-1 flex-col justify-center"
+              style={{ maxWidth: cardMaxWidth }}
+            >
+              {/* 카드는 남는 높이만큼 늘어나되, 포스터가 점주 화면과 같은 3:4(133.33cqw)보다 길어지지 않게 한다 */}
+              {/* 69px은 포스터 아래 가격과 시간 영역의 높이 */}
+              <div className="relative flex max-h-[calc(133.33cqw+69px)] flex-1 flex-col">
                 {!topCard && (
                   <>
                     <PosterSkeleton />
@@ -152,7 +161,7 @@ const SwipeFeed = () => {
                   >
                     {/* 끌기 움직임과 겹치지 않도록 다가오는 움직임은 안쪽 요소에 준다 */}
                     <div className="flex flex-1 origin-top animate-card-enter flex-col motion-reduce:animate-none">
-                      <PosterCard card={topCard} priority />
+                      <PosterCard card={topCard} />
                     </div>
                   </div>
                 )}

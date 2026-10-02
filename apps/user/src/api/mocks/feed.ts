@@ -1,10 +1,50 @@
 import type { FeedCard } from '@user/api/feed';
 
+import { type PosterSlotValues, renderMockPoster } from './posterTemplates';
+
 // Unsplash 음식 사진 (카드 폭 328px의 2배 크기로 요청)
 const photo = (id: string) =>
   `https://images.unsplash.com/photo-${id}?w=656&q=70&fm=webp&fit=crop`;
 
-export const mockFeedCards: FeedCard[] = [
+// 점주 앱 mock 가게(apps/owner/src/api/mocks/store.ts)의 수제 치즈 돈까스 사진
+const OWNER_CHEESE_KATSU_IMAGE =
+  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=720&q=70&fm=webp&fit=crop';
+
+// 점주 앱의 진행 중 캠페인(apps/owner/src/api/mocks/campaigns.ts)과 같은 포스터.
+// 점주가 만든 포스터가 사용자 피드에 그대로 보이는지 확인할 수 있게 첫 카드로 둔다
+const ownerPosters: Record<
+  string,
+  { templateIndex: number; slots: PosterSlotValues }
+> = {
+  'campaign-katsu': {
+    templateIndex: 0,
+    slots: {
+      eventName: '오늘 점심 한정 특별 혜택!',
+      discountText: '전 메뉴 20% 할인',
+      period: '11:30 ~ 15:00',
+      storeName: '카츠쿠라 역삼점',
+      imageUrl: OWNER_CHEESE_KATSU_IMAGE,
+    },
+  },
+};
+
+const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
+  {
+    serveId: 'serve-0',
+    campaignId: 'campaign-katsu',
+    storeId: 'store-katsu',
+    storeName: '카츠쿠라 역삼점',
+    category: '일식',
+    walkMinutes: 3,
+    imageUrl: OWNER_CHEESE_KATSU_IMAGE,
+    offerTitle: '전 메뉴 20% 할인',
+    originalPrice: 11000,
+    salePrice: 8800,
+    issueOpenTime: '11:00',
+    usableFrom: '11:30',
+    usableTo: '15:00',
+    remainingCount: 50,
+  },
   {
     serveId: 'serve-1',
     campaignId: 'campaign-1',
@@ -166,3 +206,20 @@ export const mockFeedCards: FeedCard[] = [
     remainingCount: 18,
   },
 ];
+
+// 카드마다 점주가 만든 포스터 HTML을 붙인다. 실제로는 서버가 저장된 포스터를 함께 내려준다
+// 점주 앱과 같은 포스터가 있으면 그대로 쓰고, 나머지는 템플릿을 돌아가며 골라 카드 정보로 채운다
+export const mockFeedCards: FeedCard[] = feedCardData.map((card, index) => {
+  const ownerPoster = ownerPosters[card.campaignId];
+  const posterHtml = ownerPoster
+    ? renderMockPoster(ownerPoster.templateIndex, ownerPoster.slots)
+    : renderMockPoster(index, {
+        discountText: `${Math.round((1 - card.salePrice / card.originalPrice) * 100)}% 할인`,
+        eventName: card.offerTitle,
+        imageUrl: card.imageUrl,
+        period: `${card.usableFrom} ~ ${card.usableTo}`,
+        storeName: card.storeName,
+      });
+
+  return { ...card, posterHtml };
+});
