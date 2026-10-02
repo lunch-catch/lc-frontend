@@ -69,7 +69,8 @@ const SwipeFeed = () => {
   }, []);
 
   const topCard = cards[currentIndex];
-  const nextCard = cards[currentIndex + 1];
+  // 맨 앞 카드와 그 뒤 두 장. 뒤 카드의 포스터를 미리 그려 두어 넘길 때 깜빡이지 않게 한다
+  const visibleCards = cards.slice(currentIndex, currentIndex + 3);
   const isDone = cards.length > 0 && currentIndex >= cards.length;
 
   useEffect(() => {
@@ -143,28 +144,37 @@ const SwipeFeed = () => {
                     </p>
                   </>
                 )}
-                {/* 다음 카드가 뒤에 살짝 보이도록 작게 겹쳐 둔다 */}
-                {topCard && nextCard && (
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 top-2 flex origin-top scale-95 flex-col"
-                  >
-                    <PosterCard card={nextCard} />
-                  </div>
-                )}
-                {/* 좌우로만 끌고, 위아래 움직임은 화면 스크롤에 맡긴다 */}
-                {topCard && (
-                  <div
-                    className="relative flex flex-1 cursor-grab touch-pan-y flex-col select-none active:cursor-grabbing"
-                    key={topCard.serveId}
-                    {...cardProps}
-                  >
-                    {/* 끌기 움직임과 겹치지 않도록 다가오는 움직임은 안쪽 요소에 준다 */}
-                    <div className="flex flex-1 origin-top animate-card-enter flex-col motion-reduce:animate-none">
-                      <PosterCard card={topCard} />
+                {/* 맨 앞, 바로 뒤, 그다음 카드까지 미리 그려 둔다 */}
+                {/* 카드마다 key가 같아서 뒤에 있던 카드가 앞으로 와도 포스터를 다시 그리지 않고 자리만 옮긴다 */}
+                {visibleCards.map((card, position) => {
+                  const isTop = position === 0;
+
+                  return (
+                    <div
+                      aria-hidden={isTop ? undefined : true}
+                      className={
+                        isTop
+                          ? // 좌우로만 끌고, 위아래 움직임은 화면 스크롤에 맡긴다
+                            'relative z-10 flex flex-1 cursor-grab touch-pan-y flex-col select-none active:cursor-grabbing'
+                          : 'pointer-events-none absolute inset-0 flex flex-col'
+                      }
+                      key={card.serveId}
+                      {...(isTop ? cardProps : {})}
+                    >
+                      {/* 끌기 움직임과 겹치지 않도록 크기와 위치 변화는 안쪽 요소에 준다 */}
+                      {/* 바로 뒤 카드는 작게 겹쳐 보이고, 앞으로 오면 원래 크기로 커진다. 그다음 카드는 숨겨 두고 미리 그리기만 한다 */}
+                      <div
+                        className={`flex flex-1 origin-top flex-col transition-[translate,scale,opacity] duration-200 ease-out motion-reduce:transition-none ${
+                          isTop
+                            ? ''
+                            : `translate-y-2 scale-95 ${position === 2 ? 'opacity-0' : ''}`
+                        }`}
+                      >
+                        <PosterCard card={card} />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
               <GestureRail
                 direction={direction}

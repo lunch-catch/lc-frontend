@@ -1,4 +1,9 @@
-import { type PointerEvent, useRef, useState } from 'react';
+import {
+  type PointerEvent,
+  type TransitionEvent,
+  useRef,
+  useState,
+} from 'react';
 
 import type { SwipeAction } from '@user/api/feed';
 
@@ -76,7 +81,10 @@ export const useSwipeGesture = ({ onSwipe }: UseSwipeGestureOptions) => {
     }
   };
 
-  const handleTransitionEnd = () => {
+  const handleTransitionEnd = (event: TransitionEvent<HTMLElement>) => {
+    // 카드 안쪽의 크기 변화가 끝난 신호는 무시하고, 카드가 날아가는 움직임이 끝났을 때만 처리한다
+    if (event.target !== event.currentTarget) return;
+
     if (leavingAction) {
       finish(leavingAction);
     }
