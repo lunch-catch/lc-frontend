@@ -21,7 +21,7 @@ import { Pagination } from '@admin/components/Pagination/Pagination';
 import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
-import { inDateRange } from './billingData';
+import { inDateRange } from './billingUtils';
 import type {
   BillingColumn,
   BillingRecord,

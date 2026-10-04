@@ -9,12 +9,9 @@ import {
   TableRow,
 } from '@admin/components/DataTable/DataTable';
 
-import {
-  aggregateLedger,
-  type DailyCache,
-  getSalesReport,
-} from './billingData';
 import { BillingTable } from './BillingTable';
+import type { DailyCache } from './billingTypes';
+import { aggregateLedger, getSalesReport } from './billingUtils';
 import {
   type BillingRecord,
   type BillingTabProps,

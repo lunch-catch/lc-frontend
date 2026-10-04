@@ -4,15 +4,15 @@ import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
+import { BillingFeedback, DetailItem } from './BillingDetails';
+import { BillingTable } from './BillingTable';
+import type { RefundStatus } from './billingTypes';
 import {
   getBalance,
   getRefundBlockReason,
   processRefund,
-  type RefundStatus,
   refundStatusLabels,
-} from './billingData';
-import { BillingFeedback, DetailItem } from './BillingDetails';
-import { BillingTable } from './BillingTable';
+} from './billingUtils';
 import {
   type BillingTabProps,
   cell,

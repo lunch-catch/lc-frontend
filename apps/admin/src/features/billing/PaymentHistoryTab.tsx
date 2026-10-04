@@ -4,9 +4,10 @@ import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
-import { type PaymentStatus, paymentStatusLabels } from './billingData';
 import { DetailItem } from './BillingDetails';
 import { BillingTable } from './BillingTable';
+import type { PaymentStatus } from './billingTypes';
+import { paymentStatusLabels } from './billingUtils';
 import { type BillingTabProps, cell } from './billingView';
 const paymentVariants: Record<PaymentStatus, StatusBadgeVariant> = {
   PENDING: 'warning',

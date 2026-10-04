@@ -4,13 +4,10 @@ import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 
-import {
-  getLedgerRows,
-  type LedgerType,
-  ledgerTypeLabels,
-} from './billingData';
 import { DetailItem } from './BillingDetails';
 import { BillingTable } from './BillingTable';
+import type { LedgerType } from './billingTypes';
+import { getLedgerRows, ledgerTypeLabels } from './billingUtils';
 import { type BillingTabProps, cell, getMonthRange } from './billingView';
 
 const columns = [

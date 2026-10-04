@@ -5,8 +5,8 @@ import { Plus, Trash2 } from 'lucide-react';
 
 import { Pagination } from '@admin/components/Pagination/Pagination';
 
-import { validatePolicy } from './billingData';
 import { BillingFeedback } from './BillingDetails';
+import { validatePolicy } from './billingUtils';
 import {
   type BillingTabProps,
   currentTimestamp,
