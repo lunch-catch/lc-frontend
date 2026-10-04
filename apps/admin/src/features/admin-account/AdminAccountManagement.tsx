@@ -9,6 +9,7 @@ import {
 } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
+import { initialAdminAccounts } from '@admin/api/mocks/adminAccounts';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import {
   DataTable,
@@ -23,12 +24,11 @@ import { FilterResetButton } from '@admin/components/FilterResetButton/FilterRes
 import { Pagination } from '@admin/components/Pagination/Pagination';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
-import {
-  type AdminAccount,
-  type AdminAccountRole,
-  type AdminAccountStatus,
-  initialAdminAccounts,
-} from './adminAccountData';
+import type {
+  AdminAccount,
+  AdminAccountRole,
+  AdminAccountStatus,
+} from './adminAccountTypes';
 
 interface AccountForm {
   id: string;

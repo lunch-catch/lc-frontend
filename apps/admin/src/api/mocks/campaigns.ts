@@ -1,41 +1,8 @@
-import type { StatusBadgeVariant } from '@repo/ui';
-
-export type CampaignStatus = 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'ENDED';
-
-export interface Campaign {
-  id: string;
-  storeName: string;
-  status: CampaignStatus;
-  pausedReason?: string;
-  startDate: string;
-  endDate: string;
-  dailyBudget: number;
-  todaySpent: number;
-  cumulativeSpent: number;
-  cumulativeTarget: number;
-  validImpressions: number;
-  invalidImpressions: number;
-  allocationImpressions: number;
-  relevanceImpressions: number;
-  radius: number;
-  gender: string;
-  ageGroups: string;
-  posterTitle: string;
-  posterImageUrl?: string;
-  posterDescription: string;
-}
-
-export const campaignStatusMeta: Record<
+import type {
+  Campaign,
   CampaignStatus,
-  { label: string; variant: StatusBadgeVariant }
-> = {
-  SCHEDULED: { label: '집행 예정', variant: 'info' },
-  ACTIVE: { label: '집행 중', variant: 'success' },
-  PAUSED: { label: '일시 중단', variant: 'warning' },
-  ENDED: { label: '종료', variant: 'danger' },
-};
+} from '@admin/features/campaign/campaignTypes';
 
-// API 연동 전 상태별 표시와 여러 페이지 조회를 확인하기 위한 고정 목업 데이터다.
 export const campaigns: Campaign[] = Array.from({ length: 28 }, (_, index) => {
   const number = 28 - index;
   const status: CampaignStatus = (
@@ -80,9 +47,3 @@ export const campaigns: Campaign[] = Array.from({ length: 28 }, (_, index) => {
       '점심 시간에 사용할 수 있는 런치캐치 할인 쿠폰 캠페인입니다.',
   };
 });
-
-export const getBudgetProgress = (campaign: Campaign) =>
-  // 집행 전에는 누적 목표가 없으므로 0으로 처리하고, 초과 소진율은 그대로 표시한다.
-  campaign.cumulativeTarget > 0
-    ? (campaign.cumulativeSpent / campaign.cumulativeTarget) * 100
-    : 0;
