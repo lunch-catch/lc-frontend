@@ -6,6 +6,7 @@ import {
   type PosterTemplate,
 } from '@admin/features/template/templateData';
 import { AdminLayout } from '@admin/layout/AdminLayout';
+import { AdminAccountManagementPage } from '@admin/pages/AdminAccountManagementPage';
 import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
@@ -60,6 +61,8 @@ const App = () => {
     >
       {activeItemId === 'merchant' ? (
         <StoreApplicationsPage />
+      ) : activeItemId === 'account' ? (
+        <AdminAccountManagementPage />
       ) : activeItemId === 'member' ? (
         <MemberManagementPage />
       ) : activeItemId === 'campaign' ? (
