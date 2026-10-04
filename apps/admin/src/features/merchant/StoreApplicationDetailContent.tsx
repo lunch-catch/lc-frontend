@@ -3,25 +3,7 @@ import { StatusBadge } from '@repo/ui';
 import { formatDate } from '@repo/utils';
 import { Check, Clock3, FileText, Image, MapPin } from 'lucide-react';
 
-export interface StoreApplicationDetail {
-  address: string;
-  addressDetail: string;
-  appliedAt: string;
-  businessDays: string;
-  businessLicenseRegistered: boolean;
-  businessNumber: string;
-  businessVerified: boolean;
-  category: string;
-  id: string;
-  menus: { name: string; price: string }[];
-  ownerName: string;
-  phoneNumber: string;
-  status: 'ACTIVE' | 'ONBOARDING';
-  storeName: string;
-  termsAgreed: boolean;
-  weekdayHours: string;
-  weekendHours: string;
-}
+import type { StoreApplicationDetail } from './merchantTypes';
 
 interface StoreApplicationDetailContentProps {
   application: StoreApplicationDetail;
