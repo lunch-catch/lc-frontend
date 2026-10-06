@@ -107,9 +107,9 @@ export const FraudManagementContent = ({
       {tab === 'impressions' && warningCampaigns.length > 0 && (
         <section
           aria-label="부정 의심 캠페인 경고"
-          className="mb-5 rounded-xl border border-status-warning-border bg-status-warning-bg p-4"
+          className="mb-5 rounded-xl border border-status-warning-border bg-bg-surface p-4"
         >
-          <h3 className="text-body-sm-web font-semibold text-status-warning-fg">
+          <h3 className="text-body-sm-web font-semibold text-text-primary">
             확인이 필요한 캠페인 {warningCampaigns.length}개
           </h3>
           <p className="mt-1 text-caption-web text-text-secondary">

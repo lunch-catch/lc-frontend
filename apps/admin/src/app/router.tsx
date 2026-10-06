@@ -4,6 +4,7 @@ import { RequireAdminAuth } from '@admin/auth/RequireAdminAuth';
 import { AdminLayout } from '@admin/layout/AdminLayout';
 import { AdminAccountManagementPage } from '@admin/pages/AdminAccountManagementPage';
 import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
+import { DashboardPage } from '@admin/pages/DashboardPage';
 import { FraudManagementPage } from '@admin/pages/FraudManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
@@ -25,7 +26,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate replace to="/dashboard" /> },
           {
             path: '/dashboard',
-            element: <PendingManagementPage title="대시보드" />,
+            element: <DashboardPage />,
           },
           { path: '/campaigns', element: <CampaignManagementPage /> },
           { path: '/templates', element: <TemplateManagementPage /> },
