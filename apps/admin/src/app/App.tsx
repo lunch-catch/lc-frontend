@@ -5,6 +5,7 @@ import { useTemplateManagement } from '@admin/features/template/useTemplateManag
 import { AdminLayout } from '@admin/layout/AdminLayout';
 import { AdminAccountManagementPage } from '@admin/pages/AdminAccountManagementPage';
 import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
+import { FraudManagementPage } from '@admin/pages/FraudManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
 import { PointSettlementPage } from '@admin/pages/PointSettlementPage';
@@ -26,6 +27,7 @@ const pageTitles: Record<string, string> = {
 
 const App = () => {
   const [activeItemId, setActiveItemId] = useState('dashboard');
+  const [fraudMemberId, setFraudMemberId] = useState<string>();
   const templateManagement = useTemplateManagement();
   const { isAuthenticated, login, logout } = useAdminAuth();
 
@@ -39,23 +41,35 @@ const App = () => {
 
   const pageTitle = pageTitles[activeItemId] ?? '관리자';
 
+  const handleNavigate = (itemId: string) => {
+    // 일반 메뉴 이동에서는 부정 관리에서 전달한 특정 사용자 선택을 남기지 않는다.
+    setFraudMemberId(undefined);
+    setActiveItemId(itemId);
+    if (itemId === 'template') {
+      templateManagement.returnToList();
+    }
+  };
+
+  const handleManageMember = (userId: string) => {
+    // 기능 간 이동만 앱에서 조합하고 각 feature는 상대 feature를 import하지 않는다.
+    setFraudMemberId(userId);
+    setActiveItemId('member');
+  };
+
   return (
     <AdminLayout
       activeItemId={activeItemId}
       onLogout={logout}
-      onNavigate={(itemId) => {
-        setActiveItemId(itemId);
-        if (itemId === 'template') {
-          templateManagement.returnToList();
-        }
-      }}
+      onNavigate={handleNavigate}
     >
       {activeItemId === 'merchant' ? (
         <StoreApplicationsPage />
       ) : activeItemId === 'account' ? (
         <AdminAccountManagementPage />
       ) : activeItemId === 'member' ? (
-        <MemberManagementPage />
+        <MemberManagementPage initialMemberId={fraudMemberId} />
+      ) : activeItemId === 'fraud' ? (
+        <FraudManagementPage onManageMember={handleManageMember} />
       ) : activeItemId === 'campaign' ? (
         <CampaignManagementPage />
       ) : activeItemId === 'settlement' ? (
