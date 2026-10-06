@@ -17,7 +17,7 @@ import type {
   DashboardInterval,
   UsageMetric,
 } from './dashboardTypes';
-import { shiftDate, usageMetrics } from './dashboardUtils';
+import { usageMetrics } from './dashboardUtils';
 import { useDashboard } from './useDashboard';
 import { useDashboardReport } from './useDashboardReport';
 
@@ -50,10 +50,10 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
     pending,
   } = useDashboardReport(data);
   return (
-    <div className="space-y-6">
-      <div className="relative z-20 rounded-xl border border-border-subtle bg-bg-surface p-5">
+    <div className="space-y-5">
+      <div className="relative z-20 rounded-xl border border-border-subtle bg-bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
             <SegmentedControl<DashboardInterval>
               ariaLabel="집계 표시 단위"
               value={interval}
@@ -64,28 +64,14 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                 { label: '월별', value: 'month' },
               ]}
             />
-            <DateRangePicker
-              ariaLabel="대시보드 조회 기간"
-              value={range}
-              onValueChange={setRange}
-              placeholder="조회 기간 선택"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[7, 30, 90].map((length) => (
-              <Button
-                key={length}
-                variant="neutral"
-                onClick={() =>
-                  setRange({
-                    startDate: shiftDate(data.completedThrough, 1 - length),
-                    endDate: data.completedThrough,
-                  })
-                }
-              >
-                최근 {length}일
-              </Button>
-            ))}
+            <div className="w-64 max-w-full">
+              <DateRangePicker
+                ariaLabel="대시보드 조회 기간"
+                value={range}
+                onValueChange={setRange}
+                placeholder="조회 기간 선택"
+              />
+            </div>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3 text-caption-web text-text-secondary">
@@ -154,72 +140,90 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                       label={`${item.label} 수`}
                       value={summary[item.value]}
                       previous={canCompare ? previous[item.value] : undefined}
+                      selected={metric === item.value}
+                      onSelect={() => setMetric(item.value)}
+                      values={trend.map((point) => point[item.value])}
                     />
                   ))}
                 </div>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <DashboardMetricCard
-                    label="신규 가입자 수"
-                    value={summary.newUsers}
-                    previous={canCompare ? previous.newUsers : undefined}
-                    unit="명"
-                    description={
-                      snapshot
-                        ? `${snapshot.date} 기준 전체 사용자 ${formatNumber(snapshot.totalUsers)}명 · 점주 계정 제외`
-                        : '해당 기간 집계 없음'
-                    }
-                  />
-                  <DashboardMetricCard
-                    label="신규 입점 업체 수"
-                    value={summary.newStores}
-                    previous={canCompare ? previous.newStores : undefined}
-                    unit="개"
-                    description={
-                      snapshot
-                        ? `${snapshot.date} 기준 등록 완료 가게 ${formatNumber(snapshot.totalStores)}개`
-                        : '해당 기간 집계 없음'
-                    }
-                  />
-                </div>
               </section>
-              <DashboardSection
-                title="서비스 이용 추이"
-                description="주별은 월요일 시작, 월별은 달력 기준입니다. 양끝 구간은 선택 기간에 포함된 날짜만 집계합니다."
-                action={
-                  <Toggle
-                    label="이전 기간 비교"
-                    checked={compare && canCompare}
-                    disabled={!canCompare}
-                    onChange={(event) => setCompare(event.target.checked)}
-                  />
-                }
-              >
-                <div className="mb-5">
-                  <SegmentedControl<UsageMetric>
-                    ariaLabel="이용 추이 지표"
-                    items={usageMetrics}
-                    value={metric}
-                    onValueChange={setMetric}
-                  />
+              {/* 추이와 성장 지표는 같은 패널 구조로 묶고 데스크톱에서 높이를 맞춘다. */}
+              <div className="grid items-stretch gap-5 xl:grid-cols-3">
+                <div className="flex min-w-0 xl:col-span-2 [&>section]:w-full">
+                  <DashboardSection
+                    title="서비스 이용 추이"
+                    description="선택한 지표의 변화를 이전 기간과 비교합니다."
+                    action={
+                      <Toggle
+                        label="이전 기간 비교"
+                        checked={compare && canCompare}
+                        disabled={!canCompare}
+                        onChange={(event) => setCompare(event.target.checked)}
+                      />
+                    }
+                  >
+                    <div className="mb-5">
+                      <SegmentedControl<UsageMetric>
+                        ariaLabel="이용 추이 지표"
+                        items={usageMetrics}
+                        value={metric}
+                        onValueChange={setMetric}
+                      />
+                    </div>
+                    <DashboardTrendChart
+                      key={`${metric}-${interval}-${range.startDate}-${range.endDate}`}
+                      title={`${selectedMetric.label} 추이`}
+                      labels={trend.map((point) => point.label)}
+                      primary={{
+                        name: selectedMetric.label,
+                        values: trend.map((point) => point[metric]),
+                      }}
+                      secondary={
+                        compare && canCompare
+                          ? {
+                              name: '이전 기간 (동일 길이)',
+                              values: previousTrend.map(
+                                (point) => point[metric],
+                              ),
+                            }
+                          : undefined
+                      }
+                    />
+                  </DashboardSection>
                 </div>
-                <DashboardTrendChart
-                  key={`${metric}-${interval}-${range.startDate}-${range.endDate}`}
-                  title={`${selectedMetric.label} 추이`}
-                  labels={trend.map((point) => point.label)}
-                  primary={{
-                    name: selectedMetric.label,
-                    values: trend.map((point) => point[metric]),
-                  }}
-                  secondary={
-                    compare && canCompare
-                      ? {
-                          name: '이전 기간 (동일 길이)',
-                          values: previousTrend.map((point) => point[metric]),
-                        }
-                      : undefined
-                  }
-                />
-              </DashboardSection>
+                <DashboardSection
+                  title="플랫폼 성장"
+                  description="선택 기간의 신규 가입과 입점 현황입니다."
+                >
+                  <div className="grid gap-6 divide-y divide-border-subtle [&>div+div]:pt-6">
+                    {/* 신규 수는 기간 합계이며 전체 수는 마지막 집계일의 값이다. */}
+                    <DashboardMetricCard
+                      variant="inset"
+                      label="신규 가입자 수"
+                      value={summary.newUsers}
+                      previous={canCompare ? previous.newUsers : undefined}
+                      unit="명"
+                      description={
+                        snapshot
+                          ? `${snapshot.date} 기준 전체 사용자 ${formatNumber(snapshot.totalUsers)}명 · 점주 계정 제외`
+                          : '해당 기간 집계 없음'
+                      }
+                    />
+                    <DashboardMetricCard
+                      variant="inset"
+                      label="신규 입점 가게 수"
+                      value={summary.newStores}
+                      previous={canCompare ? previous.newStores : undefined}
+                      unit="개"
+                      description={
+                        snapshot
+                          ? `${snapshot.date} 기준 등록 완료 가게 ${formatNumber(snapshot.totalStores)}개`
+                          : '해당 기간 집계 없음'
+                      }
+                    />
+                  </div>
+                </DashboardSection>
+              </div>
               <DashboardBreakdown
                 days={days}
                 previousDays={previousDays}
@@ -344,13 +348,15 @@ export const DashboardContent = () => {
   const state = useDashboard();
   return (
     <section className="space-y-6">
-      <header>
-        <h2 className="text-display-web font-semibold text-text-primary">
-          대시보드
-        </h2>
-        <p className="mt-2 text-body-sm-web text-text-secondary">
-          서비스 이용 흐름과 지역별 변화, 포인트 현황을 한눈에 확인합니다.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-display-web font-semibold text-text-primary">
+            대시보드
+          </h2>
+          <p className="mt-2 text-body-sm-web text-text-secondary">
+            서비스 이용 흐름과 지역별 변화, 포인트 현황을 한눈에 확인합니다.
+          </p>
+        </div>
       </header>
       {state.status === 'loading' && (
         <div
