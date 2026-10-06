@@ -2,11 +2,8 @@ import { StatusBadge } from '@repo/ui';
 import { formatDateRange, formatNumber, formatPoints } from '@repo/utils';
 import { Image } from 'lucide-react';
 
-import {
-  type Campaign,
-  campaignStatusMeta,
-  getBudgetProgress,
-} from './campaignData';
+import type { Campaign } from './campaignTypes';
+import { campaignStatusMeta, getBudgetProgress } from './campaignUtils';
 
 interface CampaignDetailContentProps {
   campaign: Campaign | null;

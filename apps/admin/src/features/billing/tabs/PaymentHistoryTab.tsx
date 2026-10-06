@@ -3,11 +3,14 @@ import { StatusBadge, type StatusBadgeVariant } from '@repo/ui';
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
-
-import { type PaymentStatus, paymentStatusLabels } from './billingData';
-import { DetailItem } from './BillingDetails';
-import { BillingTable } from './BillingTable';
-import { type BillingTabProps, cell } from './billingView';
+import type { PaymentStatus } from '@admin/features/billing/billingTypes';
+import { paymentStatusLabels } from '@admin/features/billing/billingUtils';
+import {
+  type BillingTabProps,
+  cell,
+} from '@admin/features/billing/billingView';
+import { DetailItem } from '@admin/features/billing/components/BillingDetails';
+import { BillingTable } from '@admin/features/billing/components/BillingTable';
 const paymentVariants: Record<PaymentStatus, StatusBadgeVariant> = {
   PENDING: 'warning',
   SUCCESS: 'success',

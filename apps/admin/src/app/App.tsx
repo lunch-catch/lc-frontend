@@ -1,11 +1,9 @@
 import { useState } from 'react';
 
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
-import {
-  initialPosterTemplates,
-  type PosterTemplate,
-} from '@admin/features/template/templateData';
+import { useTemplateManagement } from '@admin/features/template/useTemplateManagement';
 import { AdminLayout } from '@admin/layout/AdminLayout';
+import { AdminAccountManagementPage } from '@admin/pages/AdminAccountManagementPage';
 import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
@@ -28,12 +26,7 @@ const pageTitles: Record<string, string> = {
 
 const App = () => {
   const [activeItemId, setActiveItemId] = useState('dashboard');
-  const [templateView, setTemplateView] = useState<'create' | 'list'>('list');
-  const [templates, setTemplates] = useState<PosterTemplate[]>(
-    initialPosterTemplates,
-  );
-  const [draftTemplates, setDraftTemplates] = useState<PosterTemplate[]>([]);
-  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+  const templateManagement = useTemplateManagement();
   const { isAuthenticated, login, logout } = useAdminAuth();
 
   if (!isAuthenticated) {
@@ -53,13 +46,14 @@ const App = () => {
       onNavigate={(itemId) => {
         setActiveItemId(itemId);
         if (itemId === 'template') {
-          setEditingDraftId(null);
-          setTemplateView('list');
+          templateManagement.returnToList();
         }
       }}
     >
       {activeItemId === 'merchant' ? (
         <StoreApplicationsPage />
+      ) : activeItemId === 'account' ? (
+        <AdminAccountManagementPage />
       ) : activeItemId === 'member' ? (
         <MemberManagementPage />
       ) : activeItemId === 'campaign' ? (
@@ -67,81 +61,21 @@ const App = () => {
       ) : activeItemId === 'settlement' ? (
         <PointSettlementPage />
       ) : activeItemId === 'template' ? (
-        templateView === 'create' ? (
+        templateManagement.view === 'create' ? (
           <TemplateCreatePage
-            draftTemplate={
-              draftTemplates.find(
-                (template) => template.id === editingDraftId,
-              ) ?? null
-            }
-            onBack={() => {
-              setEditingDraftId(null);
-              setTemplateView('list');
-            }}
-            onSave={(template) => {
-              const isNewTemplate = template.id.startsWith('TPL-DRAFT');
-              if (
-                isNewTemplate &&
-                templates.length + draftTemplates.length >= 10
-              ) {
-                return false;
-              }
-
-              setTemplates((current) => [
-                {
-                  ...template,
-                  id: template.id.startsWith('TPL-DRAFT')
-                    ? `TPL-${String(current.length + 1).padStart(4, '0')}`
-                    : template.id,
-                },
-                ...current.filter((item) => item.id !== template.id),
-              ]);
-              setDraftTemplates((current) =>
-                current.filter((item) => item.id !== template.id),
-              );
-              setEditingDraftId(null);
-              setTemplateView('list');
-              return true;
-            }}
-            onTemporarySave={(template) => {
-              const isNewTemplate = !draftTemplates.some(
-                (item) => item.id === template.id,
-              );
-              if (
-                isNewTemplate &&
-                templates.length + draftTemplates.length >= 10
-              ) {
-                return false;
-              }
-
-              setDraftTemplates((current) => {
-                const previous = current.filter(
-                  (item) => item.id !== template.id,
-                );
-                return [template, ...previous];
-              });
-              setEditingDraftId(null);
-              setTemplateView('list');
-              return true;
-            }}
+            draftTemplate={templateManagement.draftTemplate}
+            onBack={templateManagement.returnToList}
+            onSave={templateManagement.saveTemplate}
+            onTemporarySave={templateManagement.saveTemporaryTemplate}
           />
         ) : (
           <TemplateManagementPage
-            hasDraft={draftTemplates.length > 0}
-            onCreate={() => {
-              setEditingDraftId(null);
-              setTemplateView('create');
-            }}
-            onLoadDraft={() => {
-              setEditingDraftId(draftTemplates[0]?.id ?? null);
-              setTemplateView('create');
-            }}
-            onEditDraft={(template) => {
-              setEditingDraftId(template.id);
-              setTemplateView('create');
-            }}
-            onTemplatesChange={setTemplates}
-            templates={[...draftTemplates, ...templates]}
+            hasDraft={templateManagement.hasDraft}
+            onCreate={templateManagement.openCreate}
+            onEditDraft={templateManagement.openDraftEditor}
+            onLoadDraft={templateManagement.openDraft}
+            onTemplatesChange={templateManagement.updateTemplates}
+            templates={templateManagement.templates}
           />
         )
       ) : (

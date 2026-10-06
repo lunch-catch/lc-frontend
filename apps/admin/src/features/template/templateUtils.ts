@@ -1,38 +1,8 @@
-import { mockPosterTemplates } from '@repo/utils';
-
-export type TemplateStatus = 'DRAFT' | 'PUBLISHED';
-
-export interface TemplateSlot {
-  height: number;
-  id: 'adLabel' | 'discount' | 'eventName' | 'image' | 'period';
-  label: string;
-  type: 'image' | 'text';
-  width: number;
-  x: number;
-  y: number;
-}
-
-export interface TemplateVersion {
-  createdAt: string;
-  html: string;
-  request: string;
-  slots: TemplateSlot[];
-  themeIndex: number;
-  version: number;
-}
-
-export interface PosterTemplate {
-  createdAt: string;
-  draftVersions: TemplateVersion[];
-  id: string;
-  isActive: boolean;
-  name: string;
-  publishedVersion: TemplateVersion | null;
-  status: TemplateStatus;
-  updatedAt: string;
-  updatedBy: string;
-  usageCount: number;
-}
+import type {
+  PosterTemplate,
+  TemplateSlot,
+  TemplateVersion,
+} from './templateTypes';
 
 export const posterPreviewThemes = [
   {
@@ -76,10 +46,15 @@ const allowedTags = new Set([
   'style',
 ]);
 const allowedAttributes = new Set(['charset', 'class', 'data-slot', 'lang']);
+const htmlEscapes: Record<string, string> = {
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&#39;',
+  '<': '&lt;',
+  '>': '&gt;',
+};
 
-const getNow = () => '2026-10-02 10:00';
-
-const createSlots = (): TemplateSlot[] => [
+export const createTemplateSlots = (): TemplateSlot[] => [
   {
     height: 24,
     id: 'adLabel',
@@ -127,18 +102,10 @@ const createSlots = (): TemplateSlot[] => [
   },
 ];
 
-const htmlEscapes: Record<string, string> = {
-  '&': '&amp;',
-  '"': '&quot;',
-  "'": '&#39;',
-  '<': '&lt;',
-  '>': '&gt;',
-};
-
 const escapeHtml = (value: string) =>
   value.replace(/[&<>'"]/g, (character) => htmlEscapes[character]);
 
-const createHtml = (name: string, themeIndex: number) => {
+const createTemplateHtml = (name: string, themeIndex: number) => {
   const theme = posterPreviewThemes[themeIndex % posterPreviewThemes.length];
   const safeName = escapeHtml(name);
 
@@ -152,11 +119,11 @@ export const createMockTemplateVersion = ({
   version,
 }: Pick<TemplateVersion, 'request' | 'themeIndex' | 'version'> & {
   name: string;
-}) => ({
-  createdAt: getNow(),
-  html: createHtml(name, themeIndex),
+}): TemplateVersion => ({
+  createdAt: '2026-10-02 10:00',
+  html: createTemplateHtml(name, themeIndex),
   request,
-  slots: createSlots(),
+  slots: createTemplateSlots(),
   themeIndex,
   version,
 });
@@ -207,45 +174,3 @@ export const getCurrentTemplateVersion = (template: PosterTemplate) =>
 
 export const getTemplatePreviewHtml = (template: PosterTemplate) =>
   getCurrentTemplateVersion(template)?.html ?? '';
-
-const ownerSlotValues = {
-  discountText: '점심 20% 할인',
-  eventName: '오늘의 추천 메뉴',
-  imageUrl: '',
-  period: '평일 11:00 - 14:00',
-  storeName: '런치캐치 가게',
-};
-
-const fillOwnerTemplate = (html: string) =>
-  html.replace(/\{\{(\w+)\}\}/g, (placeholder, slotName: string) =>
-    slotName in ownerSlotValues
-      ? ownerSlotValues[slotName as keyof typeof ownerSlotValues]
-      : placeholder,
-  );
-
-export const initialPosterTemplates: PosterTemplate[] = mockPosterTemplates.map(
-  (template, index) => {
-    const updatedAt = `2026-10-0${2 - index} ${String(9 + index).padStart(2, '0')}:40`;
-    const publishedVersion: TemplateVersion = {
-      createdAt: updatedAt,
-      html: fillOwnerTemplate(template.html),
-      request: `${template.name} 스타일로 만들어줘`,
-      slots: createSlots(),
-      themeIndex: index,
-      version: 1,
-    };
-
-    return {
-      createdAt: updatedAt,
-      draftVersions: [],
-      id: template.id,
-      isActive: true,
-      name: template.name,
-      publishedVersion,
-      status: 'PUBLISHED' as const,
-      updatedAt,
-      updatedBy: 'ADM-001',
-      usageCount: [128, 87, 64][index] ?? 0,
-    };
-  },
-);

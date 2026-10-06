@@ -19,14 +19,13 @@ import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
 import { Pagination } from '@admin/components/Pagination/Pagination';
 import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
-
-import { inDateRange } from './billingData';
+import { inDateRange } from '@admin/features/billing/billingUtils';
 import type {
   BillingColumn,
   BillingRecord,
   BillingTablePreferences,
-} from './billingView';
+} from '@admin/features/billing/billingView';
+import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 interface Sort {
   index: number;

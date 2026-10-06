@@ -8,7 +8,7 @@ import type { DateRangeValue } from '@repo/ui';
 
 import type { TableDensity } from '@admin/components/DataTable/DataTable';
 
-import type { BillingState } from './billingData';
+import type { BillingState } from './billingTypes';
 
 export const getMonthRange = (today: string): DateRangeValue => {
   const [year, month] = today.split('-').map(Number);
