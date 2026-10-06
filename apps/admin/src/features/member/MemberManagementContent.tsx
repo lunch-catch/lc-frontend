@@ -25,7 +25,11 @@ import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import { MemberSuspensionReview } from './MemberSuspensionReview';
 import type { Member, MemberStatus, MemberType, Owner } from './memberTypes';
-import { getMaskedValue, isIncludedInDateRange } from './memberUtils';
+import {
+  getMaskedValue,
+  getMemberDisplayValue,
+  isIncludedInDateRange,
+} from './memberUtils';
 
 interface OwnerSort {
   direction: TableSortDirection;
@@ -68,13 +72,14 @@ const ownerTableColumns: DataTableColumn[] = [
 ];
 
 const memberTableColumns: DataTableColumn[] = [
-  { minWidth: 120, width: '16%' },
-  { minWidth: 150, width: '20%' },
-  { minWidth: 100, width: '12%' },
-  { minWidth: 90, width: '10%' },
-  { minWidth: 100, width: '12%' },
-  { minWidth: 120, width: '15%' },
-  { minWidth: 140, width: '15%' },
+  { minWidth: 120, width: '12%' },
+  { minWidth: 150, width: '16%' },
+  { minWidth: 100, width: '10%' },
+  { minWidth: 90, width: '8%' },
+  { minWidth: 100, width: '10%' },
+  { minWidth: 180, width: '18%' },
+  { minWidth: 120, width: '12%' },
+  { minWidth: 140, width: '14%' },
 ];
 
 const getOwnerSortValue = (owner: Owner, key: keyof Owner) =>
@@ -83,8 +88,11 @@ const getOwnerSortValue = (owner: Owner, key: keyof Owner) =>
     : String(owner[key]);
 
 const getMemberSortValue = (member: Member, key: keyof Member) =>
-  key === 'nickname'
-    ? getMaskedValue(member.nickname, member.status)
+  key === 'nickname' ||
+  key === 'gender' ||
+  key === 'ageGroup' ||
+  key === 'address'
+    ? getMemberDisplayValue(member, key)
     : String(member[key]);
 
 interface MemberManagementContentProps {
@@ -158,11 +166,10 @@ export const MemberManagementContent = ({
 
     const matchedMembers = members.filter((member) => {
       const isMatchedStatus = status === 'ALL' || member.status === status;
-      // 탈퇴 회원의 원본 닉네임은 목록뿐 아니라 검색 대상에서도 제외한다.
-      const searchableValues =
-        member.status === 'WITHDRAWN'
-          ? [member.id]
-          : [member.id, member.nickname];
+      const searchableValues = [
+        member.id,
+        getMemberDisplayValue(member, 'nickname'),
+      ];
       const isMatchedKeyword =
         !normalizedKeyword ||
         searchableValues.some((value) =>
@@ -443,6 +450,15 @@ const MemberTable = ({
                 >
                   연령대
                 </TableHeaderCell>
+                <TableHeaderCell
+                  columnIndex={5}
+                  onSortChange={() => onSortChange('address')}
+                  sortDirection={
+                    sortKey === 'address' ? sortDirection : undefined
+                  }
+                >
+                  주소
+                </TableHeaderCell>
               </>
             )}
             {isOwner && (
@@ -459,14 +475,14 @@ const MemberTable = ({
               </TableHeaderCell>
             )}
             <TableHeaderCell
-              columnIndex={isOwner ? 4 : 5}
+              columnIndex={isOwner ? 4 : 6}
               onSortChange={() => onSortChange('joinedAt')}
               sortDirection={sortKey === 'joinedAt' ? sortDirection : undefined}
             >
               가입일
             </TableHeaderCell>
             <TableHeaderCell
-              columnIndex={isOwner ? 5 : 6}
+              columnIndex={isOwner ? 5 : 7}
               onSortChange={() => onSortChange('lastAccessedAt')}
               sortDirection={
                 sortKey === 'lastAccessedAt' ? sortDirection : undefined
@@ -479,7 +495,7 @@ const MemberTable = ({
         <tbody>
           {members.length === 0 && (
             <tr>
-              <TableEmpty colSpan={isOwner ? 6 : 7}>
+              <TableEmpty colSpan={isOwner ? 6 : 8}>
                 조회된 회원이 없습니다
               </TableEmpty>
             </tr>
@@ -526,15 +542,22 @@ const MemberTable = ({
                   <TableRow key={member.id}>
                     <TableCell>{member.id}</TableCell>
                     <TableCell className="font-medium text-text-primary">
-                      {getMaskedValue(member.nickname, member.status)}
+                      {getMemberDisplayValue(member, 'nickname')}
                     </TableCell>
                     <TableCell>
                       <StatusBadge variant={status.variant}>
                         {status.label}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell>{member.gender}</TableCell>
-                    <TableCell>{member.ageGroup}</TableCell>
+                    <TableCell>
+                      {getMemberDisplayValue(member, 'gender')}
+                    </TableCell>
+                    <TableCell>
+                      {getMemberDisplayValue(member, 'ageGroup')}
+                    </TableCell>
+                    <TableCell>
+                      {getMemberDisplayValue(member, 'address')}
+                    </TableCell>
                     <TableCell>{formatDate(member.joinedAt)}</TableCell>
                     <TableCell>
                       {formatDateTime(member.lastAccessedAt)}
