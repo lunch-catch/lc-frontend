@@ -5,11 +5,11 @@ import { createMockBillingState } from '@admin/api/mocks/billing';
 import type { TableDensity } from '@admin/components/DataTable/DataTable';
 
 import { createDailyCache, getKoreaDate } from './billingUtils';
-import { PaymentHistoryTab } from './PaymentHistoryTab';
-import { PointLedgerTab } from './PointLedgerTab';
-import { PointPolicyTab } from './PointPolicyTab';
-import { RefundRequestsTab } from './RefundRequestsTab';
-import { SalesOverviewTab } from './SalesOverviewTab';
+import { PaymentHistoryTab } from './tabs/PaymentHistoryTab';
+import { PointLedgerTab } from './tabs/PointLedgerTab';
+import { PointPolicyTab } from './tabs/PointPolicyTab';
+import { RefundRequestsTab } from './tabs/RefundRequestsTab';
+import { SalesOverviewTab } from './tabs/SalesOverviewTab';
 
 type BillingTab = 'payments' | 'refunds' | 'ledger' | 'sales' | 'policy';
 

@@ -3,12 +3,18 @@ import { StatusBadge } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
-
-import { DetailItem } from './BillingDetails';
-import { BillingTable } from './BillingTable';
-import type { LedgerType } from './billingTypes';
-import { getLedgerRows, ledgerTypeLabels } from './billingUtils';
-import { type BillingTabProps, cell, getMonthRange } from './billingView';
+import type { LedgerType } from '@admin/features/billing/billingTypes';
+import {
+  getLedgerRows,
+  ledgerTypeLabels,
+} from '@admin/features/billing/billingUtils';
+import {
+  type BillingTabProps,
+  cell,
+  getMonthRange,
+} from '@admin/features/billing/billingView';
+import { DetailItem } from '@admin/features/billing/components/BillingDetails';
+import { BillingTable } from '@admin/features/billing/components/BillingTable';
 
 const columns = [
   { label: '점주 ID', width: 14 },

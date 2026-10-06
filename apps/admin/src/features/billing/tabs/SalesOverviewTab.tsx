@@ -8,16 +8,18 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@admin/components/DataTable/DataTable';
-
-import { BillingTable } from './BillingTable';
-import type { DailyCache } from './billingTypes';
-import { aggregateLedger, getSalesReport } from './billingUtils';
+import type { DailyCache } from '@admin/features/billing/billingTypes';
+import {
+  aggregateLedger,
+  getSalesReport,
+} from '@admin/features/billing/billingUtils';
 import {
   type BillingRecord,
   type BillingTabProps,
   cell,
   getMonthRange,
-} from './billingView';
+} from '@admin/features/billing/billingView';
+import { BillingTable } from '@admin/features/billing/components/BillingTable';
 interface SalesOverviewTabProps extends BillingTabProps {
   dailyCache: DailyCache[];
 }

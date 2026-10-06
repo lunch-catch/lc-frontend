@@ -4,14 +4,13 @@ import { formatDateTime, formatWon } from '@repo/utils';
 import { Plus, Trash2 } from 'lucide-react';
 
 import { Pagination } from '@admin/components/Pagination/Pagination';
-
-import { BillingFeedback } from './BillingDetails';
-import { validatePolicy } from './billingUtils';
+import { validatePolicy } from '@admin/features/billing/billingUtils';
 import {
   type BillingTabProps,
   currentTimestamp,
   useBillingFeedback,
-} from './billingView';
+} from '@admin/features/billing/billingView';
+import { BillingFeedback } from '@admin/features/billing/components/BillingDetails';
 export const PointPolicyTab = (props: BillingTabProps) => {
   const { state, setState, today } = props;
   const { notice, error, setError, setNotice } = useBillingFeedback(props);
