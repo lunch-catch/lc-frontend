@@ -26,6 +26,12 @@ export const mockMembers: Member[] = Array.from({ length: 24 }, (_, index) => {
     number % 10 === 0 ? 'WITHDRAWN' : number % 6 === 0 ? 'SUSPENDED' : 'ACTIVE';
 
   return {
+    address:
+      status === 'WITHDRAWN'
+        ? undefined
+        : ['서울특별시 강남구', '서울특별시 서초구', '서울특별시 송파구'][
+            number % 3
+          ],
     ageGroup: ['20대', '30대', '40대', '50대 이상'][number % 4],
     gender: ['남', '여', '기타'][number % 3],
     id: `MEM-${String(number).padStart(4, '0')}`,
