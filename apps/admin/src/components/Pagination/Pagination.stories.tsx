@@ -8,7 +8,6 @@ const meta = {
   component: Pagination,
   args: {
     currentPage: 1,
-    totalCount: 128,
     totalPages: 20,
   },
   parameters: {
@@ -19,7 +18,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function PaginationExample() {
+const PaginationExample = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   return (
@@ -27,12 +26,11 @@ function PaginationExample() {
       <Pagination
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        totalCount={128}
         totalPages={20}
       />
     </div>
   );
-}
+};
 
 export const Default: Story = {
   render: () => <PaginationExample />,
@@ -41,6 +39,18 @@ export const Default: Story = {
 export const LastPage: Story = {
   args: {
     currentPage: 20,
-    totalCount: 200,
+  },
+};
+
+// 빈 목록과 단일 페이지에서는 이동 컨트롤이 렌더링되지 않는 상태를 보여준다.
+export const SinglePage: Story = {
+  args: {
+    totalPages: 1,
+  },
+};
+
+export const Empty: Story = {
+  args: {
+    totalPages: 0,
   },
 };
