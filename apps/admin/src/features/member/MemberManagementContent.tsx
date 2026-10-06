@@ -8,7 +8,7 @@ import {
 } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 
-import { mockMembers, mockOwners } from '@admin/api/mocks/members';
+import { getMockMembers, mockOwners } from '@admin/api/mocks/members';
 import {
   DataTable,
   type DataTableColumn,
@@ -23,6 +23,7 @@ import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
+import { MemberSuspensionReview } from './MemberSuspensionReview';
 import type { Member, MemberStatus, MemberType, Owner } from './memberTypes';
 import { getMaskedValue, isIncludedInDateRange } from './memberUtils';
 
@@ -86,8 +87,20 @@ const getMemberSortValue = (member: Member, key: keyof Member) =>
     ? getMaskedValue(member.nickname, member.status)
     : String(member[key]);
 
-export const MemberManagementContent = () => {
-  const [activeTab, setActiveTab] = useState<MemberType>('owner');
+interface MemberManagementContentProps {
+  initialMemberId?: string;
+}
+
+export const MemberManagementContent = ({
+  initialMemberId,
+}: MemberManagementContentProps) => {
+  // 부정 관리에서 넘어온 사용자 ID는 점주 탭이 아닌 사용자 탭에서 바로 검토한다.
+  const [activeTab, setActiveTab] = useState<MemberType>(
+    initialMemberId ? 'member' : 'owner',
+  );
+  const [members, setMembers] = useState(getMockMembers);
+  const [targetMemberId, setTargetMemberId] = useState(initialMemberId);
+  const targetMember = members.find((member) => member.id === targetMemberId);
   const [currentPage, setCurrentPage] = useState(1);
   const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
     useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
@@ -139,7 +152,7 @@ export const MemberManagementContent = () => {
   const filteredMembers = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    const matchedMembers = mockMembers.filter((member) => {
+    const matchedMembers = members.filter((member) => {
       const isMatchedStatus = status === 'ALL' || member.status === status;
       // 탈퇴 회원의 원본 닉네임은 목록뿐 아니라 검색 대상에서도 제외한다.
       const searchableValues =
@@ -153,6 +166,7 @@ export const MemberManagementContent = () => {
         );
 
       return (
+        (!targetMemberId || member.id === targetMemberId) &&
         isMatchedStatus &&
         isMatchedKeyword &&
         isIncludedInDateRange(member.joinedAt, startDate, endDate)
@@ -171,7 +185,15 @@ export const MemberManagementContent = () => {
 
       return memberSort.direction === 'asc' ? comparison : -comparison;
     });
-  }, [endDate, keyword, memberSort, startDate, status]);
+  }, [
+    endDate,
+    keyword,
+    members,
+    memberSort,
+    startDate,
+    status,
+    targetMemberId,
+  ]);
 
   const activeList = activeTab === 'owner' ? filteredOwners : filteredMembers;
   const totalPages = Math.ceil(activeList.length / pageSize);
@@ -181,6 +203,7 @@ export const MemberManagementContent = () => {
   );
 
   const handleTabChange = (nextTab: string) => {
+    setTargetMemberId(undefined);
     // 점주와 사용자의 검색 대상이 달라 탭 전환 시 이전 조회 조건을 넘기지 않는다.
     setActiveTab(nextTab as MemberType);
     setCurrentPage(1);
@@ -231,6 +254,16 @@ export const MemberManagementContent = () => {
     totalPages,
   };
 
+  const handleShowAllMembers = () => {
+    // 전체 목록으로 돌아갈 때 검토 중 입력한 조건 때문에 일부 계정만 남지 않도록 초기화한다.
+    setTargetMemberId(undefined);
+    setCurrentPage(1);
+    resetSearch();
+    setStatus('ALL');
+    setStartDate('');
+    setEndDate('');
+    setMemberSort(null);
+  };
   return (
     <section className="flex flex-col">
       <header className="mb-4 shrink-0">
@@ -248,6 +281,23 @@ export const MemberManagementContent = () => {
         value={activeTab}
       />
 
+      {targetMemberId && (
+        <MemberSuspensionReview
+          userId={targetMemberId}
+          member={targetMember}
+          statusLabel={
+            targetMember ? statusMeta[targetMember.status].label : undefined
+          }
+          onShowAll={handleShowAllMembers}
+          onSuspended={(updatedMember) =>
+            setMembers((previous) =>
+              previous.map((member) =>
+                member.id === updatedMember.id ? updatedMember : member,
+              ),
+            )
+          }
+        />
+      )}
       <FilterBar
         className="mb-2 mt-3 shrink-0"
         density={{ value: tableDensity, onValueChange: setTableDensity }}
@@ -421,9 +471,11 @@ const MemberTable = ({
         </thead>
         <tbody>
           {members.length === 0 && (
-            <TableEmpty colSpan={isOwner ? 6 : 7}>
-              조회된 회원이 없습니다
-            </TableEmpty>
+            <tr>
+              <TableEmpty colSpan={isOwner ? 6 : 7}>
+                조회된 회원이 없습니다
+              </TableEmpty>
+            </tr>
           )}
           {isOwner
             ? (members as Owner[]).map((owner) => {
