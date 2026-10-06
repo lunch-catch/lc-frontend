@@ -1,4 +1,4 @@
-export type AdminAccountRole = 'ADMIN' | 'OPERATOR';
+export type AdminAccountRole = 'ADMIN' | 'SUPER_ADMIN';
 export type AdminAccountStatus = 'ACTIVE' | 'SUSPENDED';
 
 export interface AdminAccount {

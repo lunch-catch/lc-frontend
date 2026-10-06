@@ -10,6 +10,7 @@ import {
 import { Plus } from 'lucide-react';
 
 import { initialAdminAccounts } from '@admin/api/mocks/adminAccounts';
+import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import {
   DataTable,
@@ -55,7 +56,7 @@ const accountColumns: DataTableColumn[] = [
 
 const issueRoleOptions: { label: string; value: AdminAccountRole }[] = [
   { label: '관리자', value: 'ADMIN' },
-  { label: '운영자', value: 'OPERATOR' },
+  { label: '최고 관리자', value: 'SUPER_ADMIN' },
 ];
 
 const roleOptions = [{ label: '전체 권한', value: 'ALL' }, ...issueRoleOptions];
@@ -68,7 +69,7 @@ const statusOptions = [
 
 const roleMeta: Record<AdminAccountRole, string> = {
   ADMIN: '관리자',
-  OPERATOR: '운영자',
+  SUPER_ADMIN: '최고 관리자',
 };
 
 const statusMeta: Record<
@@ -84,10 +85,12 @@ const emptyForm: AccountForm = {
   name: '',
   password: '',
   passwordConfirmation: '',
-  role: 'OPERATOR',
+  role: 'ADMIN',
 };
 
 export const AdminAccountManagement = () => {
+  const { role: currentRole } = useAdminAuth();
+  const canIssueAccount = currentRole === 'SUPER_ADMIN';
   const [accounts, setAccounts] = useState(initialAdminAccounts);
   const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState<AccountForm>(emptyForm);
@@ -130,6 +133,8 @@ export const AdminAccountManagement = () => {
   };
 
   const handleIssue = () => {
+    // 버튼 표시 외에도 처리 시점의 권한을 확인한다. 서버에서도 검증이 필요하다.
+    if (!canIssueAccount) return;
     const nextErrors: AccountFormErrors = {};
     const accountId = form.id.trim().toUpperCase();
     const accountName = form.name.trim();
@@ -206,15 +211,18 @@ export const AdminAccountManagement = () => {
             계정 관리
           </h2>
           <p className="mt-2 text-body-sm-web text-text-secondary">
-            관리자 계정을 발급하고 권한 및 상태를 조회할 수 있습니다.
+            관리자 권한과 상태를 조회합니다. 계정 발급은 최고 관리자만
+            가능합니다.
           </p>
         </div>
-        <Button
-          leadingIcon={<Plus aria-hidden="true" className="size-4" />}
-          onClick={() => setIsIssueModalOpen(true)}
-        >
-          관리자 계정 발급
-        </Button>
+        {canIssueAccount && (
+          <Button
+            leadingIcon={<Plus aria-hidden="true" className="size-4" />}
+            onClick={() => setIsIssueModalOpen(true)}
+          >
+            관리자 계정 발급
+          </Button>
+        )}
       </header>
 
       <FilterBar
@@ -289,7 +297,7 @@ export const AdminAccountManagement = () => {
 
       <AdminModal
         onClose={closeIssueModal}
-        open={isIssueModalOpen}
+        open={isIssueModalOpen && canIssueAccount}
         title="관리자 계정 발급"
       >
         <div className="flex flex-col gap-5">
