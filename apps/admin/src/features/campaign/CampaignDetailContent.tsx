@@ -1,27 +1,41 @@
 import { StatusBadge } from '@repo/ui';
-import { formatDateRange, formatNumber, formatPoints } from '@repo/utils';
+import {
+  formatDateRange,
+  formatDateTime,
+  formatNumber,
+  formatPoints,
+} from '@repo/utils';
 import { Image } from 'lucide-react';
 
-import type { Campaign } from './campaignTypes';
+import type { Campaign, CampaignReport } from './campaignTypes';
 import { campaignStatusMeta, getBudgetProgress } from './campaignUtils';
 
 interface CampaignDetailContentProps {
   campaign: Campaign | null;
+  report?: CampaignReport;
 }
 
 export const CampaignDetailContent = ({
   campaign,
+  report,
 }: CampaignDetailContentProps) => {
   const progress = campaign ? getBudgetProgress(campaign) : 0;
   const items = campaign
     ? [
         ['캠페인 ID', campaign.id],
+        ['점주 ID', campaign.ownerId],
+        ['등록 시각', formatDateTime(campaign.registeredAt)],
         ['가게', campaign.storeName],
         ['집행 기간', formatDateRange(campaign.startDate, campaign.endDate)],
         ['하루 사용 한도', formatPoints(campaign.dailyBudget)],
         ['오늘 사용 포인트', formatPoints(campaign.todaySpent)],
         ['예산 사용률', `${getBudgetProgress(campaign).toFixed(1)}%`],
-        ['누적 유효 노출', `${formatNumber(campaign.validImpressions)}회`],
+        ['집계 확정일', report?.confirmedThrough ?? '-'],
+        ['누적 소진 포인트', report ? formatPoints(report.spentPoints) : '-'],
+        [
+          '누적 유효 노출',
+          report ? `${formatNumber(report.validImpressions)}회` : '-',
+        ],
         ['배분 슬롯 노출', `${formatNumber(campaign.allocationImpressions)}회`],
         [
           '관련성 슬롯 노출',
@@ -96,7 +110,7 @@ export const CampaignDetailContent = ({
                   누적 유효 노출
                 </dt>
                 <dd className="mt-1 text-body-md-web font-semibold">
-                  {formatNumber(campaign.validImpressions)}회
+                  {report ? `${formatNumber(report.validImpressions)}회` : '-'}
                 </dd>
               </div>
             </dl>

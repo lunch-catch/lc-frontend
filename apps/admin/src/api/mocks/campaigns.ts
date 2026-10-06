@@ -1,5 +1,6 @@
 import type {
   Campaign,
+  CampaignReport,
   CampaignStatus,
 } from '@admin/features/campaign/campaignTypes';
 
@@ -12,6 +13,8 @@ export const campaigns: Campaign[] = Array.from({ length: 28 }, (_, index) => {
   const validImpressions = cumulativeSpent / 10;
 
   return {
+    ownerId: `OWN-${String((index % 24) + 1).padStart(4, '0')}`,
+    registeredAt: `2026-09-${String(number).padStart(2, '0')} 09:00`,
     id: `CMP-${String(number).padStart(4, '0')}`,
     storeName: [
       '한상차림',
@@ -47,3 +50,29 @@ export const campaigns: Campaign[] = Array.from({ length: 28 }, (_, index) => {
       '점심 시간에 사용할 수 있는 런치캐치 할인 쿠폰 캠페인입니다.',
   };
 });
+
+// 실제 연동 시 캠페인 목록과 별도로 조회할 분석 리포트의 목업이다.
+export const getMockCampaignReports = (): CampaignReport[] => {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const yesterday = new Date(`${today}T00:00:00Z`);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const confirmedThrough = yesterday.toISOString().slice(0, 10);
+
+  return campaigns.map((campaign) => {
+    const spentPoints = Math.max(
+      0,
+      campaign.cumulativeSpent - campaign.todaySpent,
+    );
+    return {
+      campaignId: campaign.id,
+      confirmedThrough,
+      spentPoints,
+      validImpressions: spentPoints / 10,
+    };
+  });
+};
