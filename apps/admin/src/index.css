@@ -3,3 +3,26 @@
 
 /* 앱 폴더 밖에 있는 공통 패키지의 Tailwind 클래스도 빌드에 포함한다 */
 @source '../../../packages/ui/src';
+
+/* 테마 전환 중에는 개별 효과를 멈추고 화면 스냅샷 전체를 같은 속도로 전환한다. */
+:root[data-admin-theme-transition] *,
+:root[data-admin-theme-transition] *::before,
+:root[data-admin-theme-transition] *::after {
+  transition: none !important;
+}
+
+/* 스냅샷 레이어가 hover를 가로채 사이드바가 닫혔다 열리는 것을 막는다. */
+:root[data-admin-theme-transition]::view-transition,
+:root[data-admin-theme-transition]::view-transition-group(root),
+:root[data-admin-theme-transition]::view-transition-image-pair(root),
+:root[data-admin-theme-transition]::view-transition-old(root),
+:root[data-admin-theme-transition]::view-transition-new(root) {
+  pointer-events: none;
+}
+
+:root[data-admin-theme-transition]::view-transition-group(root),
+:root[data-admin-theme-transition]::view-transition-old(root),
+:root[data-admin-theme-transition]::view-transition-new(root) {
+  animation-duration: var(--default-transition-duration);
+  animation-timing-function: var(--default-transition-timing-function);
+}

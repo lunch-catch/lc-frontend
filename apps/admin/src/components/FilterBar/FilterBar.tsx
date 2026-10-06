@@ -1,35 +1,50 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
+import {
+  Pagination,
+  type PaginationProps,
+} from '@admin/components/Pagination/Pagination';
+import {
+  TableDensityControl,
+  type TableDensityControlProps,
+} from '@admin/components/TableDensityControl/TableDensityControl';
 
 export interface FilterBarProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
-  onReset?: () => void;
+  children?: ReactNode;
+  pagination?: PaginationProps;
+  density?: TableDensityControlProps;
 }
 
-export function FilterBar({
+// 상태는 화면에서 관리하고, 조회 화면마다 같은 순서로 컨트롤을 배치한다.
+export const FilterBar = ({
   children,
   className,
-  onReset,
+  pagination,
+  density,
   ...props
-}: FilterBarProps) {
+}: FilterBarProps) => {
   return (
     <div
       className={[
-        'relative z-20 flex min-h-12 items-center gap-3 px-3 py-1',
+        'relative z-20 flex min-h-12 flex-wrap items-center gap-3 px-3 py-1',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
       {...props}
     >
-      <div
-        className="flex w-full items-center justify-start gap-3"
-        style={{ gap: 'var(--space-3)' }}
-      >
-        {children}
-        {onReset && <FilterResetButton onClick={onReset} />}
+      {pagination && <Pagination {...pagination} />}
+      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-3">
+        {/* 필터가 길어지면 줄바꿈하되 행 높이 설정은 오른쪽 끝에 유지한다. */}
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+          {children}
+        </div>
+        {density && (
+          <div className="shrink-0">
+            <TableDensityControl {...density} />
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};

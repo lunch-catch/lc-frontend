@@ -1,7 +1,9 @@
 import {
   getStoreRequiredChecks,
   hasAgreedRequiredTerms,
+  isHoursStepComplete,
   isStoreStepComplete,
+  isValidTimeRange,
   ownerTerms,
   type SignupFlowValues,
 } from '@owner/api/signupFlow';
@@ -37,6 +39,20 @@ const getStoreProgressHint = ({ store, business }: SignupFlowValues) => {
     : `필수 항목 ${checks.length}개 중 ${filledCount}개를 입력했어요`;
 };
 
+const getHoursProgressHint = ({ hours }: SignupFlowValues) => {
+  if (hours.openDays.length === 0) {
+    return '영업 요일을 하루 이상 골라주세요';
+  }
+
+  if (!hours.openTime || !hours.closeTime) {
+    return '영업 시작·종료 시간을 입력해주세요';
+  }
+
+  return isValidTimeRange(hours.openTime, hours.closeTime)
+    ? '영업시간을 모두 입력했어요'
+    : '종료 시간을 시작 시간보다 늦게 설정해주세요';
+};
+
 // 배열 순서대로 진행한다. 단계를 추가할 때는 이 배열, SignupFlowValues, 라우터의 단계 화면에 함께 추가한다
 export const signupSteps: SignupStep[] = [
   {
@@ -53,9 +69,41 @@ export const signupSteps: SignupStep[] = [
     canProceed: ({ store, business }) => isStoreStepComplete(store, business),
     progressHint: getStoreProgressHint,
   },
-  { id: 'business', path: 'business', title: '사업자 정보' },
-  { id: 'hours', path: 'hours', title: '영업시간' },
-  { id: 'menu', path: 'menu', title: '가게 이미지·대표 메뉴' },
+  {
+    id: 'location',
+    path: 'location',
+    title: '매장 위치 등록',
+    canProceed: ({ location }) => location.place !== null,
+    progressHint: ({ location }) =>
+      location.place ? '가게 위치를 선택했어요' : '가게 위치를 선택해주세요',
+  },
+  {
+    id: 'hours',
+    path: 'hours',
+    title: '영업시간 설정',
+    canProceed: ({ hours }) => isHoursStepComplete(hours),
+    progressHint: getHoursProgressHint,
+  },
+  {
+    id: 'images',
+    path: 'images',
+    title: '매장 사진 등록',
+    canProceed: ({ images }) => images.logoImage !== null,
+    progressHint: ({ images }) =>
+      images.logoImage
+        ? '대표 이미지를 등록했어요'
+        : '대표 이미지를 등록해주세요',
+  },
+  {
+    id: 'menu',
+    path: 'menu',
+    title: '대표 메뉴 등록',
+    // 선택 단계라 다음 버튼 조건을 두지 않는다
+    progressHint: ({ menu }) =>
+      menu.menus.length > 0
+        ? `대표 메뉴 ${menu.menus.length}개를 등록했어요`
+        : '대표 메뉴는 나중에 등록해도 돼요',
+  },
 ];
 
 export const getSignupStepPath = (step: SignupStep) => `/signup/${step.path}`;

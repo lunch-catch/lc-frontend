@@ -1,4 +1,5 @@
 import { mockDelay } from './mocks/delay';
+import { mockStorePlaces } from './mocks/places';
 import { mockOwnerTerms } from './mocks/terms';
 import type { ApiResult } from './types';
 
@@ -40,11 +41,39 @@ export const hasAgreedRequiredTerms = (terms: TermsStepValues) =>
 // 카카오맵 장소 검색에서 선택한 가게 위치 정보
 export interface StorePlace {
   kakaoPlaceId: string;
+  placeName: string;
   roadAddress: string;
+  // 지번 주소. 도로명 주소 아래에 참고용으로 보여준다
+  address: string;
+  // 카카오맵에 등록된 형식(02-1234-5678) 그대로. 없으면 빈 문자열
   phone: string;
   latitude: number;
   longitude: number;
 }
+
+const normalizeSearchText = (text: string) => text.replace(/\s/g, '');
+
+// 주소나 상호명으로 가게 위치를 찾는다. 검색어가 비어 있거나 결과가 없으면 빈 목록을 돌려준다.
+// API 연동 전까지 mock 장소 목록에서 찾는다. 연동하면 카카오맵 장소 검색(키워드 검색)으로 바꾼다
+export const searchStorePlaces = async (
+  query: string,
+): Promise<ApiResult<StorePlace[]>> => {
+  await mockDelay();
+
+  const keyword = normalizeSearchText(query);
+
+  if (!keyword) {
+    return { ok: true, data: [] };
+  }
+
+  const places = mockStorePlaces.filter((place) =>
+    [place.placeName, place.roadAddress, place.address].some((text) =>
+      normalizeSearchText(text).includes(keyword),
+    ),
+  );
+
+  return { ok: true, data: structuredClone(places) };
+};
 
 export type StoreCategory =
   | 'KOREAN'
@@ -76,6 +105,9 @@ export interface StoreStepValues {
   ownerName: string;
   // 하이픈 없는 숫자
   phone: string;
+}
+
+export interface LocationStepValues {
   place: StorePlace | null;
 }
 
@@ -91,8 +123,7 @@ export const isValidBusinessNumber = (registrationNumber: string) =>
   /^\d{10}$/.test(registrationNumber);
 
 // 가게 기본 정보 필수 항목별 입력 완료 여부.
-// 사업자등록번호는 가게 기본 정보 화면에서 함께 입력받는다.
-// 카카오맵 장소 선택은 아직 화면이 없어 place는 검사하지 않는다
+// 사업자등록번호는 가게 기본 정보 화면에서 함께 입력받는다
 export const getStoreRequiredChecks = (
   store: StoreStepValues,
   business: BusinessStepValues,
@@ -111,38 +142,135 @@ export const isStoreStepComplete = (
 
 export type Weekday = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
 
-export interface DailyBusinessHours {
-  day: Weekday;
-  isClosed: boolean;
-  // HH:mm
+// 영업 요일 칩에 이 순서대로 보여준다
+export const weekdays: { value: Weekday; label: string }[] = [
+  { value: 'MON', label: '월' },
+  { value: 'TUE', label: '화' },
+  { value: 'WED', label: '수' },
+  { value: 'THU', label: '목' },
+  { value: 'FRI', label: '금' },
+  { value: 'SAT', label: '토' },
+  { value: 'SUN', label: '일' },
+];
+
+// 영업일마다 같은 시간을 쓴다. 고르지 않은 요일은 휴무
+export interface HoursStepValues {
+  openDays: Weekday[];
+  // HH:mm. 입력 전에는 빈 문자열
   openTime: string;
   closeTime: string;
 }
 
-export interface HoursStepValues {
-  businessHours: DailyBusinessHours[];
+// 자정을 넘기는 영업은 받지 않으므로 종료 시간이 시작 시간보다 늦어야 한다
+export const isValidTimeRange = (openTime: string, closeTime: string) =>
+  openTime < closeTime;
+
+export const isHoursStepComplete = ({
+  openDays,
+  openTime,
+  closeTime,
+}: HoursStepValues) =>
+  openDays.length > 0 &&
+  openTime !== '' &&
+  closeTime !== '' &&
+  isValidTimeRange(openTime, closeTime);
+
+// API에 보내는 요일별 영업시간. 휴무일에 시각이 있으면 등록할 수 없어 null로 보낸다
+export interface DailyBusinessHours {
+  day: Weekday;
+  isClosed: boolean;
+  openTime: string | null;
+  closeTime: string | null;
 }
 
+export const toDailyBusinessHours = ({
+  openDays,
+  openTime,
+  closeTime,
+}: HoursStepValues): DailyBusinessHours[] =>
+  weekdays.map(({ value: day }) =>
+    openDays.includes(day)
+      ? { day, isClosed: false, openTime, closeTime }
+      : { day, isClosed: true, openTime: null, closeTime: null },
+  );
+
+export const MAX_MENUS = 3;
+export const MENU_NAME_MAX_LENGTH = 20;
+export const MENU_PRICE_MIN = 100;
+export const MENU_PRICE_MAX = 1_000_000;
+
+// 입력 검사를 통과해 목록에 들어간 대표 메뉴. 사진, 메뉴명, 가격 모두 필수
 export interface MenuItemValues {
+  image: File;
+  name: string;
+  // 쉼표 없는 숫자
+  price: string;
+}
+
+// 바텀시트에서 입력 중인 대표 메뉴. 저장 전이라 비어 있을 수 있다
+export interface MenuDraft {
   image: File | null;
   name: string;
   price: string;
-  description: string;
+}
+
+export type MenuField = keyof MenuDraft;
+
+export const getMenuErrors = ({
+  image,
+  name,
+  price,
+}: MenuDraft): Record<MenuField, string | undefined> => {
+  const priceValue = Number(price);
+
+  return {
+    image: image ? undefined : '메뉴 사진을 등록해주세요',
+    name: !name.trim()
+      ? '메뉴명을 입력해주세요'
+      : name.trim().length > MENU_NAME_MAX_LENGTH
+        ? `메뉴명은 ${MENU_NAME_MAX_LENGTH}자 이내로 입력해주세요`
+        : undefined,
+    price: !price
+      ? '가격을 입력해주세요'
+      : priceValue < MENU_PRICE_MIN || priceValue > MENU_PRICE_MAX
+        ? `가격은 ${MENU_PRICE_MIN.toLocaleString()}원 이상 ${MENU_PRICE_MAX.toLocaleString()}원 이하로 입력해주세요`
+        : undefined,
+  };
+};
+
+// 검사를 통과하면 목록에 넣을 메뉴로, 아니면 null로 돌려준다
+export const toMenuItem = (draft: MenuDraft): MenuItemValues | null => {
+  const errors = getMenuErrors(draft);
+
+  if (!draft.image || Object.values(errors).some(Boolean)) {
+    return null;
+  }
+
+  return { image: draft.image, name: draft.name.trim(), price: draft.price };
+};
+
+export const MAX_INTERIOR_IMAGES = 3;
+
+export interface ImagesStepValues {
+  // 가게 대표 이미지(로고). 필수
+  logoImage: File | null;
+  // 매장 이미지. 선택, 최대 MAX_INTERIOR_IMAGES장
+  interiorImages: File[];
 }
 
 export interface MenuStepValues {
-  logoImage: File | null;
-  // 최대 3개
-  interiorImages: File[];
-  // 대표 메뉴 3개
+  // 대표 메뉴. 선택, 최대 MAX_MENUS개
   menus: MenuItemValues[];
 }
 
 export interface SignupFlowValues {
   terms: TermsStepValues;
   store: StoreStepValues;
+  location: LocationStepValues;
+  // 별도 단계 없이 가게 기본 정보 화면에서 함께 입력받는다
   business: BusinessStepValues;
   hours: HoursStepValues;
+  images: ImagesStepValues;
   menu: MenuStepValues;
 }
 

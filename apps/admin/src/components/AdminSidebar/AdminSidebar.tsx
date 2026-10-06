@@ -1,4 +1,5 @@
-import { type ComponentType, type SVGProps, useState } from 'react';
+import { type ComponentType, type SVGProps, useRef, useState } from 'react';
+import type { Theme } from '@repo/ui';
 import {
   CircleDollarSign,
   ClipboardCheck,
@@ -6,8 +7,10 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  Moon,
   ShieldAlert,
   Store,
+  Sun,
   UserCog,
   Users,
   UtensilsCrossed,
@@ -26,6 +29,8 @@ export interface AdminSidebarProps {
   items?: AdminNavigationItem[];
   onItemSelect?: (itemId: string) => void;
   onLogout?: () => void;
+  theme?: Theme;
+  onThemeToggle?: () => void | Promise<void>;
 }
 
 const defaultNavigationItems: AdminNavigationItem[] = [
@@ -45,17 +50,41 @@ export function AdminSidebar({
   items = defaultNavigationItems,
   onItemSelect,
   onLogout,
+  theme = 'light',
+  onThemeToggle,
 }: AdminSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const isThemeTogglePending = useRef(false);
+  const ThemeIcon = theme === 'dark' ? Sun : Moon;
+  const themeToggleLabel =
+    theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환';
+  const handleThemeToggle = async () => {
+    if (isThemeTogglePending.current) return;
+
+    isThemeTogglePending.current = true;
+    try {
+      await onThemeToggle?.();
+    } finally {
+      // 스냅샷이 제거된 다음 프레임의 실제 hover로 펼침 상태를 복원한다.
+      requestAnimationFrame(() => {
+        isThemeTogglePending.current = false;
+        setIsExpanded(sidebarRef.current?.matches(':hover') ?? false);
+      });
+    }
+  };
 
   // 레이아웃 안에서 실제 너비를 차지해 펼칠 때 메인 영역을 덮지 않고 밀어낸다.
   return (
     <aside
+      ref={sidebarRef}
       className={`relative z-30 flex h-dvh shrink-0 flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out motion-reduce:transition-none ${
         isExpanded ? 'w-60 shadow-lg' : 'w-[72px]'
       }`}
       onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
+      onMouseLeave={() => {
+        if (!isThemeTogglePending.current) setIsExpanded(false);
+      }}
     >
       <div className="flex h-10 select-none items-center gap-3 overflow-hidden px-5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-action-primary text-text-inverse">
@@ -84,7 +113,7 @@ export function AdminSidebar({
                   className={[
                     'flex h-10 w-full items-center justify-start gap-3 rounded-md px-[11px] text-left text-body-sm-web font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary',
                     isSelected
-                      ? 'bg-status-info-bg text-action-primary'
+                      ? 'bg-surface-brand text-text-brand'
                       : 'text-text-secondary hover:bg-surface-subtle hover:text-action-primary',
                   ].join(' ')}
                   onClick={() => onItemSelect?.(id)}
@@ -106,7 +135,24 @@ export function AdminSidebar({
       </nav>
       <div className="mt-auto px-4">
         <div className="mb-3 border-t border-border-subtle" />
+        {onThemeToggle && (
+          <button
+            aria-label={themeToggleLabel}
+            title={themeToggleLabel}
+            className="mb-2 flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+            onClick={() => void handleThemeToggle()}
+            type="button"
+          >
+            <ThemeIcon aria-hidden="true" className="size-4 shrink-0" />
+            <span
+              className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ${isExpanded ? 'max-w-48 opacity-100' : 'max-w-0 opacity-0'}`}
+            >
+              {themeToggleLabel}
+            </span>
+          </button>
+        )}
         <button
+          aria-label="로그아웃"
           className="flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:text-status-danger-fg active:text-status-danger-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-status-danger-border"
           onClick={onLogout}
           type="button"

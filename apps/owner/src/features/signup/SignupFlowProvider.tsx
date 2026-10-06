@@ -1,14 +1,11 @@
 import { type ReactNode, useState } from 'react';
 
-import type { SignupFlowValues, Weekday } from '@owner/api/signupFlow';
+import type { SignupFlowValues } from '@owner/api/signupFlow';
 
 import {
   SignupFlowContext,
   type SignupFlowContextValue,
 } from './signupFlowContext';
-
-const weekdays: Weekday[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-const REQUIRED_MENU_COUNT = 3;
 
 const createInitialValues = (): SignupFlowValues => ({
   terms: {
@@ -18,26 +15,12 @@ const createInitialValues = (): SignupFlowValues => ({
     location: false,
     marketing: false,
   },
-  store: { name: '', category: null, ownerName: '', phone: '', place: null },
+  store: { name: '', category: null, ownerName: '', phone: '' },
+  location: { place: null },
   business: { registrationNumber: '' },
-  hours: {
-    businessHours: weekdays.map((day) => ({
-      day,
-      isClosed: false,
-      openTime: '',
-      closeTime: '',
-    })),
-  },
-  menu: {
-    logoImage: null,
-    interiorImages: [],
-    menus: Array.from({ length: REQUIRED_MENU_COUNT }, () => ({
-      image: null,
-      name: '',
-      price: '',
-      description: '',
-    })),
-  },
+  hours: { openDays: [], openTime: '', closeTime: '' },
+  images: { logoImage: null, interiorImages: [] },
+  menu: { menus: [] },
 });
 
 // 회원가입 플로우의 모든 단계 입력값을 한곳에 모아, 단계를 오가도 값이 유지되게 한다
