@@ -8,7 +8,7 @@ import {
 } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 
-import { mockMembers, mockOwners } from '@admin/api/mocks/members';
+import { getMockMembers, mockOwners } from '@admin/api/mocks/members';
 import {
   DataTable,
   type DataTableColumn,
@@ -20,13 +20,16 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
-import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
+import { MemberSuspensionReview } from './MemberSuspensionReview';
 import type { Member, MemberStatus, MemberType, Owner } from './memberTypes';
-import { getMaskedValue, isIncludedInDateRange } from './memberUtils';
+import {
+  getMaskedValue,
+  getMemberDisplayValue,
+  isIncludedInDateRange,
+} from './memberUtils';
 
 interface OwnerSort {
   direction: TableSortDirection;
@@ -69,13 +72,14 @@ const ownerTableColumns: DataTableColumn[] = [
 ];
 
 const memberTableColumns: DataTableColumn[] = [
-  { minWidth: 120, width: '16%' },
-  { minWidth: 150, width: '20%' },
-  { minWidth: 100, width: '12%' },
-  { minWidth: 90, width: '10%' },
-  { minWidth: 100, width: '12%' },
-  { minWidth: 120, width: '15%' },
-  { minWidth: 140, width: '15%' },
+  { minWidth: 120, width: '12%' },
+  { minWidth: 150, width: '16%' },
+  { minWidth: 100, width: '10%' },
+  { minWidth: 90, width: '8%' },
+  { minWidth: 100, width: '10%' },
+  { minWidth: 180, width: '18%' },
+  { minWidth: 120, width: '12%' },
+  { minWidth: 140, width: '14%' },
 ];
 
 const getOwnerSortValue = (owner: Owner, key: keyof Owner) =>
@@ -84,12 +88,31 @@ const getOwnerSortValue = (owner: Owner, key: keyof Owner) =>
     : String(owner[key]);
 
 const getMemberSortValue = (member: Member, key: keyof Member) =>
-  key === 'nickname'
-    ? getMaskedValue(member.nickname, member.status)
+  key === 'nickname' ||
+  key === 'gender' ||
+  key === 'ageGroup' ||
+  key === 'address'
+    ? getMemberDisplayValue(member, key)
     : String(member[key]);
 
-export const MemberManagementContent = () => {
-  const [activeTab, setActiveTab] = useState<MemberType>('owner');
+interface MemberManagementContentProps {
+  initialMemberId?: string;
+  initialTab?: MemberType;
+  onReviewEnd?: (tab: MemberType) => void;
+}
+
+export const MemberManagementContent = ({
+  initialMemberId,
+  initialTab = 'owner',
+  onReviewEnd,
+}: MemberManagementContentProps) => {
+  // 부정 관리에서 넘어온 사용자 ID는 점주 탭이 아닌 사용자 탭에서 바로 검토한다.
+  const [activeTab, setActiveTab] = useState<MemberType>(
+    initialMemberId ? 'member' : initialTab,
+  );
+  const [members, setMembers] = useState(getMockMembers);
+  const [targetMemberId, setTargetMemberId] = useState(initialMemberId);
+  const targetMember = members.find((member) => member.id === targetMemberId);
   const [currentPage, setCurrentPage] = useState(1);
   const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
     useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
@@ -141,13 +164,12 @@ export const MemberManagementContent = () => {
   const filteredMembers = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    const matchedMembers = mockMembers.filter((member) => {
+    const matchedMembers = members.filter((member) => {
       const isMatchedStatus = status === 'ALL' || member.status === status;
-      // 탈퇴 회원의 원본 닉네임은 목록뿐 아니라 검색 대상에서도 제외한다.
-      const searchableValues =
-        member.status === 'WITHDRAWN'
-          ? [member.id]
-          : [member.id, member.nickname];
+      const searchableValues = [
+        member.id,
+        getMemberDisplayValue(member, 'nickname'),
+      ];
       const isMatchedKeyword =
         !normalizedKeyword ||
         searchableValues.some((value) =>
@@ -155,6 +177,7 @@ export const MemberManagementContent = () => {
         );
 
       return (
+        (!targetMemberId || member.id === targetMemberId) &&
         isMatchedStatus &&
         isMatchedKeyword &&
         isIncludedInDateRange(member.joinedAt, startDate, endDate)
@@ -173,7 +196,15 @@ export const MemberManagementContent = () => {
 
       return memberSort.direction === 'asc' ? comparison : -comparison;
     });
-  }, [endDate, keyword, memberSort, startDate, status]);
+  }, [
+    endDate,
+    keyword,
+    members,
+    memberSort,
+    startDate,
+    status,
+    targetMemberId,
+  ]);
 
   const activeList = activeTab === 'owner' ? filteredOwners : filteredMembers;
   const totalPages = Math.ceil(activeList.length / pageSize);
@@ -183,17 +214,10 @@ export const MemberManagementContent = () => {
   );
 
   const handleTabChange = (nextTab: string) => {
+    onReviewEnd?.(nextTab as MemberType);
+    setTargetMemberId(undefined);
+    // 점주와 사용자의 검색 대상이 달라 탭 전환 시 이전 조회 조건을 넘기지 않는다.
     setActiveTab(nextTab as MemberType);
-    setCurrentPage(1);
-    resetSearch();
-    setStatus('ALL');
-    setStartDate('');
-    setEndDate('');
-    setOwnerSort(null);
-    setMemberSort(null);
-  };
-
-  const handleReset = () => {
     setCurrentPage(1);
     resetSearch();
     setStatus('ALL');
@@ -229,6 +253,31 @@ export const MemberManagementContent = () => {
     });
   };
 
+  const pagination = {
+    currentPage,
+    onPageChange: setCurrentPage,
+    onPageSizeChange: (value: number) => {
+      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
+      setCurrentPage(1);
+      setPageSize(value);
+    },
+    pageSize,
+    totalCount: activeList.length,
+    totalPages,
+  };
+
+  const handleShowAllMembers = () => {
+    // 검토 ID를 URL에서도 제거해 새로고침 후 특정 계정으로 다시 좁혀지지 않게 한다.
+    onReviewEnd?.('member');
+    // 전체 목록으로 돌아갈 때 검토 중 입력한 조건 때문에 일부 계정만 남지 않도록 초기화한다.
+    setTargetMemberId(undefined);
+    setCurrentPage(1);
+    resetSearch();
+    setStatus('ALL');
+    setStartDate('');
+    setEndDate('');
+    setMemberSort(null);
+  };
   return (
     <section className="flex flex-col">
       <header className="mb-4 shrink-0">
@@ -246,48 +295,59 @@ export const MemberManagementContent = () => {
         value={activeTab}
       />
 
-      <FilterBar className="mb-2 mt-3 shrink-0">
-        <div className="flex w-full min-w-[860px] items-center justify-between gap-3">
-          <TableDensityControl
-            onValueChange={setTableDensity}
-            value={tableDensity}
+      {targetMemberId && (
+        <MemberSuspensionReview
+          userId={targetMemberId}
+          member={targetMember}
+          statusLabel={
+            targetMember ? statusMeta[targetMember.status].label : undefined
+          }
+          onShowAll={handleShowAllMembers}
+          onSuspended={(updatedMember) =>
+            setMembers((previous) =>
+              previous.map((member) =>
+                member.id === updatedMember.id ? updatedMember : member,
+              ),
+            )
+          }
+        />
+      )}
+      <FilterBar
+        className="mb-2 mt-3 shrink-0"
+        density={{ value: tableDensity, onValueChange: setTableDensity }}
+        pagination={pagination}
+      >
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          value={draftKeyword}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(nextStatus) => {
+            setCurrentPage(1);
+            setStatus(nextStatus);
+          }}
+          options={statusOptions}
+          value={status}
+        />
+        <div className="w-[216px]">
+          <DateRangePicker
+            aria-label="가입일 범위"
+            onValueChange={({
+              endDate: nextEndDate,
+              startDate: nextStartDate,
+            }) => {
+              setCurrentPage(1);
+              setStartDate(nextStartDate);
+              setEndDate(nextEndDate);
+            }}
+            value={{ endDate, startDate }}
           />
-          <div className="flex items-center gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              value={draftKeyword}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(nextStatus) => {
-                setCurrentPage(1);
-                setStatus(nextStatus);
-              }}
-              options={statusOptions}
-              value={status}
-            />
-            <div className="w-[216px]">
-              <DateRangePicker
-                aria-label="가입일 범위"
-                onValueChange={({
-                  endDate: nextEndDate,
-                  startDate: nextStartDate,
-                }) => {
-                  setCurrentPage(1);
-                  setStartDate(nextStartDate);
-                  setEndDate(nextEndDate);
-                }}
-                value={{ endDate, startDate }}
-              />
-            </div>
-            <FilterResetButton onClick={handleReset} />
-          </div>
         </div>
       </FilterBar>
 
       {activeTab === 'owner' ? (
         <MemberTable
-          currentPage={currentPage}
           members={visibleList as Owner[]}
           density={tableDensity}
           onSortChange={(nextKey) =>
@@ -295,19 +355,10 @@ export const MemberManagementContent = () => {
           }
           sortDirection={ownerSort?.direction}
           sortKey={ownerSort?.key}
-          totalCount={filteredOwners.length}
-          totalPages={totalPages}
           type="owner"
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(nextPageSize) => {
-            setCurrentPage(1);
-            setPageSize(nextPageSize);
-          }}
-          pageSize={pageSize}
         />
       ) : (
         <MemberTable
-          currentPage={currentPage}
           members={visibleList as Member[]}
           density={tableDensity}
           onSortChange={(nextKey) =>
@@ -315,48 +366,29 @@ export const MemberManagementContent = () => {
           }
           sortDirection={memberSort?.direction}
           sortKey={memberSort?.key}
-          totalCount={filteredMembers.length}
-          totalPages={totalPages}
           type="member"
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(nextPageSize) => {
-            setCurrentPage(1);
-            setPageSize(nextPageSize);
-          }}
-          pageSize={pageSize}
         />
       )}
+      <PaginationSummary {...pagination} />
     </section>
   );
 };
 
 interface MemberTableProps {
-  currentPage: number;
   density: TableDensity;
   members: Member[] | Owner[];
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
   onSortChange: (key: string) => void;
-  pageSize: number;
   sortDirection?: TableSortDirection;
   sortKey?: string;
-  totalCount: number;
-  totalPages: number;
   type: MemberType;
 }
 
 const MemberTable = ({
-  currentPage,
   density,
   members,
-  onPageChange,
-  onPageSizeChange,
   onSortChange,
-  pageSize,
   sortDirection,
   sortKey,
-  totalCount,
-  totalPages,
   type,
 }: MemberTableProps) => {
   const isOwner = type === 'owner';
@@ -418,6 +450,15 @@ const MemberTable = ({
                 >
                   연령대
                 </TableHeaderCell>
+                <TableHeaderCell
+                  columnIndex={5}
+                  onSortChange={() => onSortChange('address')}
+                  sortDirection={
+                    sortKey === 'address' ? sortDirection : undefined
+                  }
+                >
+                  주소
+                </TableHeaderCell>
               </>
             )}
             {isOwner && (
@@ -434,14 +475,14 @@ const MemberTable = ({
               </TableHeaderCell>
             )}
             <TableHeaderCell
-              columnIndex={isOwner ? 4 : 5}
+              columnIndex={isOwner ? 4 : 6}
               onSortChange={() => onSortChange('joinedAt')}
               sortDirection={sortKey === 'joinedAt' ? sortDirection : undefined}
             >
               가입일
             </TableHeaderCell>
             <TableHeaderCell
-              columnIndex={isOwner ? 5 : 6}
+              columnIndex={isOwner ? 5 : 7}
               onSortChange={() => onSortChange('lastAccessedAt')}
               sortDirection={
                 sortKey === 'lastAccessedAt' ? sortDirection : undefined
@@ -453,9 +494,11 @@ const MemberTable = ({
         </thead>
         <tbody>
           {members.length === 0 && (
-            <TableEmpty colSpan={isOwner ? 6 : 7}>
-              조회된 회원이 없습니다
-            </TableEmpty>
+            <tr>
+              <TableEmpty colSpan={isOwner ? 6 : 8}>
+                조회된 회원이 없습니다
+              </TableEmpty>
+            </tr>
           )}
           {isOwner
             ? (members as Owner[]).map((owner) => {
@@ -499,15 +542,22 @@ const MemberTable = ({
                   <TableRow key={member.id}>
                     <TableCell>{member.id}</TableCell>
                     <TableCell className="font-medium text-text-primary">
-                      {getMaskedValue(member.nickname, member.status)}
+                      {getMemberDisplayValue(member, 'nickname')}
                     </TableCell>
                     <TableCell>
                       <StatusBadge variant={status.variant}>
                         {status.label}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell>{member.gender}</TableCell>
-                    <TableCell>{member.ageGroup}</TableCell>
+                    <TableCell>
+                      {getMemberDisplayValue(member, 'gender')}
+                    </TableCell>
+                    <TableCell>
+                      {getMemberDisplayValue(member, 'ageGroup')}
+                    </TableCell>
+                    <TableCell>
+                      {getMemberDisplayValue(member, 'address')}
+                    </TableCell>
                     <TableCell>{formatDate(member.joinedAt)}</TableCell>
                     <TableCell>
                       {formatDateTime(member.lastAccessedAt)}
@@ -517,16 +567,6 @@ const MemberTable = ({
               })}
         </tbody>
       </DataTable>
-
-      <Pagination
-        currentPage={currentPage}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        pageSize={pageSize}
-        pageSizeOptions={[5, 10, 20, 50]}
-        totalCount={totalCount}
-        totalPages={totalPages}
-      />
     </div>
   );
 };

@@ -273,7 +273,7 @@ export function TableHeaderCell({
           <span>{children}</span>
           <SortIcon
             aria-hidden="true"
-            className={`invisible size-3.5 shrink-0 text-text-tertiary opacity-0 transition-[color,opacity] group-hover/header:visible group-hover/header:opacity-100 ${
+            className={`invisible size-3.5 shrink-0 text-action-primary opacity-0 transition-[color,opacity] group-hover/header:visible group-hover/header:opacity-100 ${
               sortDirection ? 'visible opacity-100' : ''
             }`}
           />

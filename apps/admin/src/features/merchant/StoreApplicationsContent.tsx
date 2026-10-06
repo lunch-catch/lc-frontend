@@ -21,9 +21,7 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
-import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import type { ApplicationStatus, StoreApplication } from './merchantTypes';
@@ -160,11 +158,12 @@ const statusOptions = [
 ];
 
 const applicationTableColumns: DataTableColumn[] = [
-  { minWidth: 100, width: '12.5%' },
-  { minWidth: 160, width: '25%' },
-  { minWidth: 180, width: '23%' },
-  { minWidth: 120, width: '18%' },
-  { minWidth: 140, width: '18%' },
+  { minWidth: 100, width: '10%' },
+  { minWidth: 140, width: '17%' },
+  { minWidth: 220, width: '28%' },
+  { minWidth: 160, width: '18%' },
+  { minWidth: 120, width: '12%' },
+  { minWidth: 140, width: '15%' },
 ];
 
 const statusMeta: Record<
@@ -179,8 +178,9 @@ export const StoreApplicationsContent = ({
   listState = 'success',
 }: StoreApplicationsContentProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
-    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
+    onCommit: () => setCurrentPage(1),
+  });
   const [sort, setSort] = useState<ApplicationSort | null>(null);
   const [status, setStatus] = useState('ALL');
   const [selectedApplicationId, setSelectedApplicationId] = useState<
@@ -200,6 +200,7 @@ export const StoreApplicationsContent = ({
         [
           application.id,
           application.storeName,
+          application.address,
           application.businessNumber,
         ].some((value) => value.toLowerCase().includes(normalizedKeyword));
 
@@ -234,13 +235,6 @@ export const StoreApplicationsContent = ({
     ? { ...storeApplicationDetail, ...selectedApplication }
     : null;
 
-  const handleReset = () => {
-    setCurrentPage(1);
-    resetSearch();
-    setSort(null);
-    setStatus('ALL');
-  };
-
   const handleSortChange = (nextKey: ApplicationSortKey) => {
     setCurrentPage(1);
     setSort((currentSort) => {
@@ -254,6 +248,22 @@ export const StoreApplicationsContent = ({
     });
   };
 
+  // 실제 조회 결과가 준비되기 전에는 목업 데이터의 건수와 페이지를 표시하지 않는다.
+  const isListReady = listState === 'success';
+
+  const pagination = {
+    currentPage,
+    onPageChange: setCurrentPage,
+    onPageSizeChange: (value: number) => {
+      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
+      setCurrentPage(1);
+      setPageSize(value);
+    },
+    pageSize,
+    totalCount: filteredApplications.length,
+    totalPages,
+  };
+
   return (
     <section className="flex flex-col">
       <header className="mb-4 shrink-0">
@@ -265,29 +275,24 @@ export const StoreApplicationsContent = ({
         </p>
       </header>
 
-      <FilterBar className="mb-2 shrink-0">
-        <div className="flex w-full min-w-[700px] items-center justify-between gap-3">
-          <TableDensityControl
-            onValueChange={setTableDensity}
-            value={tableDensity}
-          />
-          <div className="flex items-center gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              value={draftKeyword}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(nextStatus) => {
-                setCurrentPage(1);
-                setStatus(nextStatus);
-              }}
-              options={statusOptions}
-              value={status}
-            />
-            <FilterResetButton onClick={handleReset} />
-          </div>
-        </div>
+      <FilterBar
+        className="mb-2 shrink-0"
+        density={{ value: tableDensity, onValueChange: setTableDensity }}
+        pagination={isListReady ? pagination : undefined}
+      >
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          value={draftKeyword}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(nextStatus) => {
+            setCurrentPage(1);
+            setStatus(nextStatus);
+          }}
+          options={statusOptions}
+          value={status}
+        />
       </FilterBar>
 
       <div className="flex flex-col gap-3">
@@ -317,6 +322,15 @@ export const StoreApplicationsContent = ({
               </TableHeaderCell>
               <TableHeaderCell
                 columnIndex={2}
+                onSortChange={() => handleSortChange('address')}
+                sortDirection={
+                  sort?.key === 'address' ? sort.direction : undefined
+                }
+              >
+                가게 주소
+              </TableHeaderCell>
+              <TableHeaderCell
+                columnIndex={3}
                 onSortChange={() => handleSortChange('businessNumber')}
                 sortDirection={
                   sort?.key === 'businessNumber' ? sort.direction : undefined
@@ -325,7 +339,7 @@ export const StoreApplicationsContent = ({
                 사업자등록번호
               </TableHeaderCell>
               <TableHeaderCell
-                columnIndex={3}
+                columnIndex={4}
                 onSortChange={() => handleSortChange('appliedAt')}
                 sortDirection={
                   sort?.key === 'appliedAt' ? sort.direction : undefined
@@ -334,7 +348,7 @@ export const StoreApplicationsContent = ({
                 신청일
               </TableHeaderCell>
               <TableHeaderCell
-                columnIndex={4}
+                columnIndex={5}
                 onSortChange={() => handleSortChange('status')}
                 sortDirection={
                   sort?.key === 'status' ? sort.direction : undefined
@@ -345,10 +359,16 @@ export const StoreApplicationsContent = ({
             </tr>
           </thead>
           <tbody>
-            {listState === 'loading' && <TableLoading colSpan={5} />}
-            {listState === 'error' && <TableError colSpan={5} />}
+            {listState === 'loading' && (
+              <TableLoading colSpan={applicationTableColumns.length} />
+            )}
+            {listState === 'error' && (
+              <TableError colSpan={applicationTableColumns.length} />
+            )}
             {listState === 'success' && visibleApplications.length === 0 && (
-              <TableEmpty colSpan={5}>검색 결과가 없습니다</TableEmpty>
+              <TableEmpty colSpan={applicationTableColumns.length}>
+                검색 결과가 없습니다
+              </TableEmpty>
             )}
             {listState === 'success' &&
               visibleApplications.map((application) => {
@@ -377,6 +397,9 @@ export const StoreApplicationsContent = ({
                     <TableCell className="font-medium text-text-primary">
                       {application.storeName}
                     </TableCell>
+                    <TableCell title={application.address}>
+                      {application.address}
+                    </TableCell>
                     <TableCell>{application.businessNumber}</TableCell>
                     <TableCell>{formatDate(application.appliedAt)}</TableCell>
                     <TableCell className="relative">
@@ -393,21 +416,7 @@ export const StoreApplicationsContent = ({
               })}
           </tbody>
         </DataTable>
-
-        {listState === 'success' && filteredApplications.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(nextPageSize) => {
-              setCurrentPage(1);
-              setPageSize(nextPageSize);
-            }}
-            pageSize={pageSize}
-            pageSizeOptions={[10, 20, 50]}
-            totalCount={filteredApplications.length}
-            totalPages={totalPages}
-          />
-        )}
+        {isListReady && <PaginationSummary {...pagination} />}
       </div>
 
       <AdminDrawer

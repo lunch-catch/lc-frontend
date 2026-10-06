@@ -3,11 +3,12 @@ import { Rows2, Rows3, Rows4 } from 'lucide-react';
 
 import type { TableDensity } from '@admin/components/DataTable/DataTable';
 
-interface TableDensityControlProps {
+export interface TableDensityControlProps {
   onValueChange: (value: TableDensity) => void;
   value: TableDensity;
 }
 
+// 높이 표시는 DataTable의 compact·normal·comfortable 디자인 토큰과 맞춘다.
 const densityItems: SegmentedControlItem<TableDensity>[] = [
   {
     icon: <Rows4 aria-hidden="true" className="size-4" />,

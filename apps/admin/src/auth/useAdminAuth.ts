@@ -1,28 +1,10 @@
-import { useState } from 'react';
+import { useContext } from 'react';
 
-export interface AdminLoginValues {
-  loginId: string;
-  password: string;
-}
+import { AdminAuthContext } from './adminAuthContext';
 
-export interface AdminAuth {
-  isAuthenticated: boolean;
-  login: (values: AdminLoginValues) => void;
-  logout: () => void;
-}
-
-export const useAdminAuth = (): AdminAuth => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const login = ({ loginId, password }: AdminLoginValues) => {
-    if (loginId && password) {
-      setIsAuthenticated(true);
-    }
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-  };
-
-  return { isAuthenticated, login, logout };
+export const useAdminAuth = () => {
+  const context = useContext(AdminAuthContext);
+  if (!context)
+    throw new Error('useAdminAuth는 AdminAuthProvider 안에서 사용해야 합니다.');
+  return context;
 };

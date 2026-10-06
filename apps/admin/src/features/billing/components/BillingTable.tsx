@@ -16,9 +16,7 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
-import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { inDateRange } from '@admin/features/billing/billingUtils';
 import type {
   BillingColumn,
@@ -66,8 +64,9 @@ export const BillingTable = ({
   }));
   const [sort, setSort] = useState<Sort | null>(null);
   const [page, setPage] = useState(1);
-  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
-    useDebouncedSearch({ onCommit: () => setPage(1) });
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
+    onCommit: () => setPage(1),
+  });
 
   const records = useMemo(
     () => (typeof rows === 'function' ? rows(range) : rows),
@@ -96,67 +95,68 @@ export const BillingTable = ({
       });
   }, [records, range, status, keyword, sort]);
 
-  const resetFilters = () => {
-    resetSearch();
-    setStatus(defaultStatus);
-    setRange({ ...defaultRange });
-    setSort(null);
-    setPage(1);
-  };
+  const totalPages = Math.ceil(filteredRows.length / pageSize);
+  // 다른 탭에서 개수가 바뀌면 실제 목록 페이지를 제한하고, 빈 목록의 상태값은 1로 유지한다.
+  const currentPage = Math.min(page, Math.max(1, totalPages));
 
-  // 다른 탭에서 페이지당 개수가 바뀌어도 현재 목록의 유효 페이지 범위를 지킨다.
-  const currentPage = Math.min(
-    page,
-    Math.max(1, Math.ceil(filteredRows.length / pageSize)),
-  );
+  const pagination = {
+    currentPage,
+    onPageChange: setPage,
+    onPageSizeChange: (value: number) => {
+      // 정산 탭끼리 공유하는 개수가 바뀌면 현재 탭의 페이지는 첫 페이지로 돌린다.
+      setPageSize(value);
+      setPage(1);
+    },
+    pageSize,
+    totalCount: filteredRows.length,
+    totalPages,
+  };
 
   return (
     <>
-      <FilterBar className="!px-0 !py-0">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <TableDensityControl value={density} onValueChange={setDensity} />
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-            {extraFilters ??
-              (showSearch && (
-                <SearchField
-                  value={draftKeyword}
-                  onChange={(event) => setDraftKeyword(event.target.value)}
-                />
-              ))}
-            {statusOptions.length > 0 && (
-              <SelectField
-                aria-label={statusLabel}
-                fitContent
-                value={status}
-                onValueChange={(value) => {
-                  setStatus(value);
-                  setPage(1);
-                }}
-                options={[
-                  { label: '전체', value: 'ALL' },
-                  ...statusOptions.map(([value, label]) => ({
-                    value,
-                    label,
-                  })),
-                ]}
-              />
-            )}
-            {showDateRange && (
-              <div className="w-[216px]">
-                <DateRangePicker
-                  ariaLabel="조회 기간"
-                  placeholder="조회 기간 선택"
-                  value={range}
-                  onValueChange={(value) => {
-                    setRange(value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-            )}
-            <FilterResetButton onClick={resetFilters} />
+      <FilterBar
+        className="!px-0 !py-0"
+        density={{ value: density, onValueChange: setDensity }}
+        pagination={pagination}
+      >
+        {extraFilters ??
+          (showSearch && (
+            <SearchField
+              value={draftKeyword}
+              onChange={(event) => setDraftKeyword(event.target.value)}
+            />
+          ))}
+        {statusOptions.length > 0 && (
+          <SelectField
+            aria-label={statusLabel}
+            fitContent
+            value={status}
+            onValueChange={(value) => {
+              setStatus(value);
+              setPage(1);
+            }}
+            options={[
+              { label: '전체', value: 'ALL' },
+              ...statusOptions.map(([value, label]) => ({
+                value,
+                label,
+              })),
+            ]}
+          />
+        )}
+        {showDateRange && (
+          <div className="w-[216px]">
+            <DateRangePicker
+              ariaLabel="조회 기간"
+              placeholder="조회 기간 선택"
+              value={range}
+              onValueChange={(value) => {
+                setRange(value);
+                setPage(1);
+              }}
+            />
           </div>
-        </div>
+        )}
       </FilterBar>
       <DataTable
         className="table-fixed"
@@ -250,18 +250,7 @@ export const BillingTable = ({
             })}
         </tbody>
       </DataTable>
-      <Pagination
-        currentPage={currentPage}
-        onPageChange={setPage}
-        pageSize={pageSize}
-        pageSizeOptions={[5, 10, 20, 50]}
-        onPageSizeChange={(value) => {
-          setPageSize(value);
-          setPage(1);
-        }}
-        totalCount={filteredRows.length}
-        totalPages={Math.ceil(filteredRows.length / pageSize)}
-      />
+      <PaginationSummary {...pagination} />
     </>
   );
 };

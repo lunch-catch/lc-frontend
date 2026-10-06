@@ -26,6 +26,12 @@ export const mockMembers: Member[] = Array.from({ length: 24 }, (_, index) => {
     number % 10 === 0 ? 'WITHDRAWN' : number % 6 === 0 ? 'SUSPENDED' : 'ACTIVE';
 
   return {
+    address:
+      status === 'WITHDRAWN'
+        ? undefined
+        : ['서울특별시 강남구', '서울특별시 서초구', '서울특별시 송파구'][
+            number % 3
+          ],
     ageGroup: ['20대', '30대', '40대', '50대 이상'][number % 4],
     gender: ['남', '여', '기타'][number % 3],
     id: `MEM-${String(number).padStart(4, '0')}`,
@@ -35,3 +41,19 @@ export const mockMembers: Member[] = Array.from({ length: 24 }, (_, index) => {
     status,
   };
 });
+
+// React 목록 상태에서 변경하더라도 원본을 직접 수정하지 않도록 별도 객체를 반환한다.
+export const getMockMembers = (): Member[] =>
+  mockMembers.map((member) => ({ ...member }));
+
+// 화면을 이동해도 목업 정지 상태를 유지하며, 새로고침하면 원래 데이터로 돌아간다.
+export const suspendMockMember = async (userId: string): Promise<Member> => {
+  const index = mockMembers.findIndex((member) => member.id === userId);
+  const member = mockMembers[index];
+  if (!member || member.status !== 'ACTIVE') {
+    throw new Error('활성 상태의 사용자만 정지할 수 있습니다.');
+  }
+  const updatedMember: Member = { ...member, status: 'SUSPENDED' };
+  mockMembers[index] = updatedMember;
+  return { ...updatedMember };
+};

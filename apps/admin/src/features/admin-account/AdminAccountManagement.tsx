@@ -10,18 +10,19 @@ import {
 import { Plus } from 'lucide-react';
 
 import { initialAdminAccounts } from '@admin/api/mocks/adminAccounts';
+import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import {
   DataTable,
   type DataTableColumn,
   TableCell,
+  type TableDensity,
   TableEmpty,
   TableHeaderCell,
   TableRow,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import type {
@@ -55,7 +56,7 @@ const accountColumns: DataTableColumn[] = [
 
 const issueRoleOptions: { label: string; value: AdminAccountRole }[] = [
   { label: '관리자', value: 'ADMIN' },
-  { label: '운영자', value: 'OPERATOR' },
+  { label: '최고 관리자', value: 'SUPER_ADMIN' },
 ];
 
 const roleOptions = [{ label: '전체 권한', value: 'ALL' }, ...issueRoleOptions];
@@ -68,7 +69,7 @@ const statusOptions = [
 
 const roleMeta: Record<AdminAccountRole, string> = {
   ADMIN: '관리자',
-  OPERATOR: '운영자',
+  SUPER_ADMIN: '최고 관리자',
 };
 
 const statusMeta: Record<
@@ -84,10 +85,12 @@ const emptyForm: AccountForm = {
   name: '',
   password: '',
   passwordConfirmation: '',
-  role: 'OPERATOR',
+  role: 'ADMIN',
 };
 
 export const AdminAccountManagement = () => {
+  const { role: currentRole } = useAdminAuth();
+  const canIssueAccount = currentRole === 'SUPER_ADMIN';
   const [accounts, setAccounts] = useState(initialAdminAccounts);
   const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState<AccountForm>(emptyForm);
@@ -95,9 +98,11 @@ export const AdminAccountManagement = () => {
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [role, setRole] = useState('ALL');
   const [status, setStatus] = useState('ALL');
-  const { draftKeyword, keyword, resetSearch, setDraftKeyword } =
-    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
-  const pageSize = 10;
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
+    onCommit: () => setCurrentPage(1),
+  });
+  const [pageSize, setPageSize] = useState(10);
+  const [density, setDensity] = useState<TableDensity>('normal');
 
   const filteredAccounts = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -115,7 +120,7 @@ export const AdminAccountManagement = () => {
     });
   }, [accounts, keyword, role, status]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / pageSize));
+  const totalPages = Math.ceil(filteredAccounts.length / pageSize);
   const visibleAccounts = filteredAccounts.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
@@ -127,14 +132,9 @@ export const AdminAccountManagement = () => {
     setIsIssueModalOpen(false);
   };
 
-  const handleReset = () => {
-    resetSearch();
-    setCurrentPage(1);
-    setRole('ALL');
-    setStatus('ALL');
-  };
-
   const handleIssue = () => {
+    // 버튼 표시 외에도 처리 시점의 권한을 확인한다. 서버에서도 검증이 필요하다.
+    if (!canIssueAccount) return;
     const nextErrors: AccountFormErrors = {};
     const accountId = form.id.trim().toUpperCase();
     const accountName = form.name.trim();
@@ -190,6 +190,19 @@ export const AdminAccountManagement = () => {
     closeIssueModal();
   };
 
+  const pagination = {
+    currentPage,
+    onPageChange: setCurrentPage,
+    onPageSizeChange: (value: number) => {
+      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
+      setCurrentPage(1);
+      setPageSize(value);
+    },
+    pageSize,
+    totalCount: filteredAccounts.length,
+    totalPages,
+  };
+
   return (
     <section className="flex flex-col">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
@@ -198,53 +211,52 @@ export const AdminAccountManagement = () => {
             계정 관리
           </h2>
           <p className="mt-2 text-body-sm-web text-text-secondary">
-            관리자 계정을 발급하고 권한 및 상태를 조회할 수 있습니다.
+            관리자 권한과 상태를 조회합니다. 계정 발급은 최고 관리자만
+            가능합니다.
           </p>
         </div>
-        <Button
-          leadingIcon={<Plus aria-hidden="true" className="size-4" />}
-          onClick={() => setIsIssueModalOpen(true)}
-        >
-          관리자 계정 발급
-        </Button>
+        {canIssueAccount && (
+          <Button
+            leadingIcon={<Plus aria-hidden="true" className="size-4" />}
+            onClick={() => setIsIssueModalOpen(true)}
+          >
+            관리자 계정 발급
+          </Button>
+        )}
       </header>
 
-      <FilterBar className="mb-4 shrink-0">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-body-sm-web text-text-secondary">
-            총 {filteredAccounts.length}명
-          </p>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              placeholder="관리자 ID 또는 이름 검색"
-              value={draftKeyword}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(value) => {
-                setCurrentPage(1);
-                setRole(value);
-              }}
-              options={roleOptions}
-              value={role}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(value) => {
-                setCurrentPage(1);
-                setStatus(value);
-              }}
-              options={statusOptions}
-              value={status}
-            />
-            <FilterResetButton onClick={handleReset} />
-          </div>
-        </div>
+      <FilterBar
+        className="mb-4 shrink-0"
+        density={{ value: density, onValueChange: setDensity }}
+        pagination={pagination}
+      >
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          placeholder="관리자 ID 또는 이름 검색"
+          value={draftKeyword}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(value) => {
+            setCurrentPage(1);
+            setRole(value);
+          }}
+          options={roleOptions}
+          value={role}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(value) => {
+            setCurrentPage(1);
+            setStatus(value);
+          }}
+          options={statusOptions}
+          value={status}
+        />
       </FilterBar>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <DataTable columns={accountColumns}>
+        <DataTable columns={accountColumns} density={density}>
           <thead>
             <tr>
               <TableHeaderCell columnIndex={0}>관리자 ID</TableHeaderCell>
@@ -280,21 +292,12 @@ export const AdminAccountManagement = () => {
             )}
           </tbody>
         </DataTable>
-
-        {filteredAccounts.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            pageSize={pageSize}
-            totalCount={filteredAccounts.length}
-            totalPages={totalPages}
-          />
-        )}
+        <PaginationSummary {...pagination} />
       </div>
 
       <AdminModal
         onClose={closeIssueModal}
-        open={isIssueModalOpen}
+        open={isIssueModalOpen && canIssueAccount}
         title="관리자 계정 발급"
       >
         <div className="flex flex-col gap-5">

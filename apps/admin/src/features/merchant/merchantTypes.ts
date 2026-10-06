@@ -1,6 +1,7 @@
 export type ApplicationStatus = 'ACTIVE' | 'ONBOARDING';
 
 export interface StoreApplication {
+  address: string;
   appliedAt: string;
   businessNumber: string;
   id: string;

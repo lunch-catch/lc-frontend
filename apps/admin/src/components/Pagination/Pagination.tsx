@@ -1,15 +1,9 @@
 import type { CSSProperties } from 'react';
-import { SelectField } from '@repo/ui';
-import { formatNumber } from '@repo/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface PaginationProps {
   currentPage: number;
   onPageChange?: (page: number) => void;
-  onPageSizeChange?: (pageSize: number) => void;
-  pageSize?: number;
-  pageSizeOptions?: number[];
-  totalCount: number;
   totalPages: number;
 }
 
@@ -19,6 +13,7 @@ const createPageItems = (
   currentPage: number,
   totalPages: number,
 ): PageItem[] => {
+  // 페이지 번호가 많으면 양 끝과 현재 위치만 남겨 필터 바의 폭을 제한한다.
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
   }
@@ -50,27 +45,19 @@ const createPageItems = (
   ];
 };
 
-export function Pagination({
+export const Pagination = ({
   currentPage,
   onPageChange,
-  onPageSizeChange,
-  pageSize = 10,
-  pageSizeOptions,
-  totalCount,
   totalPages,
-}: PaginationProps) {
-  const pageItems = createPageItems(currentPage, totalPages);
-  const isPreviousDisabled = currentPage <= 1;
-  const isNextDisabled = currentPage >= totalPages;
-  const firstItem = totalCount
-    ? Math.min((currentPage - 1) * pageSize + 1, totalCount)
-    : 0;
-  const lastItem = Math.min(currentPage * pageSize, totalCount);
-
-  if (totalPages < 1) {
+}: PaginationProps) => {
+  // 이동할 다른 페이지가 없으면 숨기며, 하단 건수·개수 선택은 독립적으로 유지한다.
+  if (totalPages <= 1) {
     return null;
   }
 
+  const pageItems = createPageItems(currentPage, totalPages);
+  const isPreviousDisabled = currentPage <= 1;
+  const isNextDisabled = currentPage >= totalPages;
   const buttonClassName =
     'inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border border-border-subtle bg-bg-surface px-1 text-caption-web text-text-secondary transition-colors hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50';
   const pageButtonStyle: CSSProperties = {
@@ -82,88 +69,61 @@ export function Pagination({
   return (
     <nav
       aria-label="페이지 이동"
-      className="flex w-full items-center gap-4"
-      style={{ justifyContent: 'space-between', width: '100%' }}
+      className="flex max-w-full flex-wrap items-center gap-1"
     >
-      <div className="flex items-center gap-3">
-        <span className="whitespace-nowrap text-caption-web text-text-secondary">
-          총 {formatNumber(totalCount)}건 중 {formatNumber(firstItem)} -{' '}
-          {formatNumber(lastItem)}건
-        </span>
-        {pageSizeOptions && onPageSizeChange && (
-          <SelectField
-            fitContent
-            menuPlacement="top"
-            onValueChange={(nextPageSize) =>
-              onPageSizeChange(Number(nextPageSize))
-            }
-            options={pageSizeOptions.map((option) => ({
-              label: `${option}개씩 보기`,
-              value: String(option),
-            }))}
-            size="compact"
-            value={String(pageSize)}
-          />
-        )}
-      </div>
-      <div
-        className="flex items-center gap-1"
-        style={{ flexShrink: 0, gap: 'var(--space-1)' }}
+      <button
+        aria-label="이전 페이지"
+        className={buttonClassName}
+        disabled={isPreviousDisabled}
+        onClick={() => onPageChange?.(currentPage - 1)}
+        style={pageButtonStyle}
+        type="button"
       >
-        <button
-          aria-label="이전 페이지"
-          className={buttonClassName}
-          disabled={isPreviousDisabled}
-          onClick={() => onPageChange?.(currentPage - 1)}
-          style={pageButtonStyle}
-          type="button"
-        >
-          <ChevronLeft aria-hidden="true" className="size-4" />
-        </button>
-        {pageItems.map((item, index) => {
-          if (item === 'ellipsis') {
-            return (
-              <span
-                aria-hidden="true"
-                className="inline-flex min-h-8 min-w-8 items-center justify-center text-caption-web text-text-secondary"
-                key={`ellipsis-${index}`}
-                style={pageButtonStyle}
-              >
-                …
-              </span>
-            );
-          }
-
-          const isCurrentPage = item === currentPage;
-
+        <ChevronLeft aria-hidden="true" className="size-4" />
+      </button>
+      {pageItems.map((item, index) => {
+        if (item === 'ellipsis') {
           return (
-            <button
-              aria-current={isCurrentPage ? 'page' : undefined}
-              className={
-                isCurrentPage
-                  ? 'inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border border-action-primary bg-action-primary px-1 text-caption-web text-text-inverse'
-                  : buttonClassName
-              }
-              key={item}
-              onClick={() => onPageChange?.(item)}
+            <span
+              aria-hidden="true"
+              className="inline-flex min-h-8 min-w-8 items-center justify-center text-caption-web text-text-secondary"
+              key={`ellipsis-${index}`}
               style={pageButtonStyle}
-              type="button"
             >
-              {item}
-            </button>
+              …
+            </span>
           );
-        })}
-        <button
-          aria-label="다음 페이지"
-          className={buttonClassName}
-          disabled={isNextDisabled}
-          onClick={() => onPageChange?.(currentPage + 1)}
-          style={pageButtonStyle}
-          type="button"
-        >
-          <ChevronRight aria-hidden="true" className="size-4" />
-        </button>
-      </div>
+        }
+
+        const isCurrentPage = item === currentPage;
+
+        return (
+          <button
+            aria-current={isCurrentPage ? 'page' : undefined}
+            className={
+              isCurrentPage
+                ? 'inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border border-action-primary bg-action-primary px-1 text-caption-web text-text-inverse'
+                : buttonClassName
+            }
+            key={item}
+            onClick={() => onPageChange?.(item)}
+            style={pageButtonStyle}
+            type="button"
+          >
+            {item}
+          </button>
+        );
+      })}
+      <button
+        aria-label="다음 페이지"
+        className={buttonClassName}
+        disabled={isNextDisabled}
+        onClick={() => onPageChange?.(currentPage + 1)}
+        style={pageButtonStyle}
+        type="button"
+      >
+        <ChevronRight aria-hidden="true" className="size-4" />
+      </button>
     </nav>
   );
-}
+};

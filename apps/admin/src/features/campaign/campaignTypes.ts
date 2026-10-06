@@ -1,6 +1,8 @@
 export type CampaignStatus = 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'ENDED';
 
 export interface Campaign {
+  ownerId: string;
+  registeredAt: string;
   ageGroups: string;
   allocationImpressions: number;
   cumulativeSpent: number;
@@ -20,5 +22,12 @@ export interface Campaign {
   status: CampaignStatus;
   storeName: string;
   todaySpent: number;
+  validImpressions: number;
+}
+
+export interface CampaignReport {
+  campaignId: string;
+  confirmedThrough: string;
+  spentPoints: number;
   validImpressions: number;
 }

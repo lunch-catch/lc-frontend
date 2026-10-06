@@ -15,6 +15,7 @@ export interface Owner extends BaseMember {
 }
 
 export interface Member extends BaseMember {
+  address?: string;
   ageGroup: string;
   gender: string;
   nickname: string;
