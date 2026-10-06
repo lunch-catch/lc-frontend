@@ -232,15 +232,12 @@ export const PointPolicyTab = (props: BillingTabProps) => {
                 </li>
               ))}
           </ul>
-          {history.length > historyPageSize && (
-            <Pagination
-              currentPage={historyPage}
-              onPageChange={setHistoryPage}
-              pageSize={historyPageSize}
-              totalCount={history.length}
-              totalPages={Math.ceil(history.length / historyPageSize)}
-            />
-          )}
+          {/* 숨김 여부는 공통 Pagination에서 판단하고 이력의 고정 페이지 크기는 유지한다. */}
+          <Pagination
+            currentPage={historyPage}
+            onPageChange={setHistoryPage}
+            totalPages={Math.ceil(history.length / historyPageSize)}
+          />
         </section>
       </div>
     </>

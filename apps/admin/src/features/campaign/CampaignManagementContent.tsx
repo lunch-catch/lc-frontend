@@ -22,9 +22,7 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
-import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import { CampaignDetailContent } from './CampaignDetailContent';
@@ -86,8 +84,9 @@ export const CampaignManagementContent = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
     null,
   );
-  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
-    useDebouncedSearch({ onCommit: () => setPage(1) });
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
+    onCommit: () => setPage(1),
+  });
 
   const filteredCampaigns = useMemo(() => {
     const query = keyword.trim().toLowerCase();
@@ -133,13 +132,17 @@ export const CampaignManagementContent = () => {
     );
   };
 
-  const handleReset = () => {
-    resetSearch();
-    // 첫 진입은 오늘의 진행 예정/집행 중 항목이며, 초기화는 조건 없는 전체 조회다.
-    setStatuses(Object.keys(campaignStatusMeta) as CampaignStatus[]);
-    setRange({ startDate: '', endDate: '' });
-    setSort(null);
-    setPage(1);
+  const pagination = {
+    currentPage: page,
+    onPageChange: setPage,
+    onPageSizeChange: (value: number) => {
+      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
+      setPageSize(value);
+      setPage(1);
+    },
+    pageSize,
+    totalCount: filteredCampaigns.length,
+    totalPages: Math.ceil(filteredCampaigns.length / pageSize),
   };
 
   return (
@@ -153,37 +156,35 @@ export const CampaignManagementContent = () => {
           사용한 포인트 합계이며, 선택한 조회 기간의 합계가 아닙니다.
         </p>
       </header>
-      <FilterBar className="mb-2">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <TableDensityControl onValueChange={setDensity} value={density} />
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              value={draftKeyword}
-            />
-            <MultiSelectField
-              aria-label="캠페인 상태"
-              fitContent
-              options={statusOptions}
-              onValueChange={(value) => {
-                setStatuses(value as CampaignStatus[]);
-                setPage(1);
-              }}
-              value={statuses}
-            />
-            <div className="w-[216px]">
-              <DateRangePicker
-                ariaLabel="집행 기간 범위"
-                placeholder="집행 기간 선택"
-                value={range}
-                onValueChange={(value) => {
-                  setRange(value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <FilterResetButton onClick={handleReset} />
-          </div>
+      <FilterBar
+        className="mb-2"
+        density={{ value: density, onValueChange: setDensity }}
+        pagination={pagination}
+      >
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          value={draftKeyword}
+        />
+        <MultiSelectField
+          aria-label="캠페인 상태"
+          fitContent
+          options={statusOptions}
+          onValueChange={(value) => {
+            setStatuses(value as CampaignStatus[]);
+            setPage(1);
+          }}
+          value={statuses}
+        />
+        <div className="w-[216px]">
+          <DateRangePicker
+            ariaLabel="집행 기간 범위"
+            placeholder="집행 기간 선택"
+            value={range}
+            onValueChange={(value) => {
+              setRange(value);
+              setPage(1);
+            }}
+          />
         </div>
       </FilterBar>
       <DataTable
@@ -292,20 +293,8 @@ export const CampaignManagementContent = () => {
           })}
         </tbody>
       </DataTable>
-      <div className="mt-3">
-        <Pagination
-          currentPage={page}
-          onPageChange={setPage}
-          onPageSizeChange={(value) => {
-            setPageSize(value);
-            setPage(1);
-          }}
-          pageSize={pageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
-          totalCount={filteredCampaigns.length}
-          totalPages={Math.ceil(filteredCampaigns.length / pageSize)}
-        />
-      </div>
+      <PaginationSummary {...pagination} />
+
       <AdminDrawer
         open={detailOpen}
         onClose={() => setDetailOpen(false)}

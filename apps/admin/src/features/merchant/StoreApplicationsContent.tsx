@@ -21,9 +21,7 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
-import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import type { ApplicationStatus, StoreApplication } from './merchantTypes';
@@ -179,8 +177,9 @@ export const StoreApplicationsContent = ({
   listState = 'success',
 }: StoreApplicationsContentProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
-    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
+    onCommit: () => setCurrentPage(1),
+  });
   const [sort, setSort] = useState<ApplicationSort | null>(null);
   const [status, setStatus] = useState('ALL');
   const [selectedApplicationId, setSelectedApplicationId] = useState<
@@ -234,13 +233,6 @@ export const StoreApplicationsContent = ({
     ? { ...storeApplicationDetail, ...selectedApplication }
     : null;
 
-  const handleReset = () => {
-    setCurrentPage(1);
-    resetSearch();
-    setSort(null);
-    setStatus('ALL');
-  };
-
   const handleSortChange = (nextKey: ApplicationSortKey) => {
     setCurrentPage(1);
     setSort((currentSort) => {
@@ -254,6 +246,22 @@ export const StoreApplicationsContent = ({
     });
   };
 
+  // 실제 조회 결과가 준비되기 전에는 목업 데이터의 건수와 페이지를 표시하지 않는다.
+  const isListReady = listState === 'success';
+
+  const pagination = {
+    currentPage,
+    onPageChange: setCurrentPage,
+    onPageSizeChange: (value: number) => {
+      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
+      setCurrentPage(1);
+      setPageSize(value);
+    },
+    pageSize,
+    totalCount: filteredApplications.length,
+    totalPages,
+  };
+
   return (
     <section className="flex flex-col">
       <header className="mb-4 shrink-0">
@@ -265,29 +273,24 @@ export const StoreApplicationsContent = ({
         </p>
       </header>
 
-      <FilterBar className="mb-2 shrink-0">
-        <div className="flex w-full min-w-[700px] items-center justify-between gap-3">
-          <TableDensityControl
-            onValueChange={setTableDensity}
-            value={tableDensity}
-          />
-          <div className="flex items-center gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              value={draftKeyword}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(nextStatus) => {
-                setCurrentPage(1);
-                setStatus(nextStatus);
-              }}
-              options={statusOptions}
-              value={status}
-            />
-            <FilterResetButton onClick={handleReset} />
-          </div>
-        </div>
+      <FilterBar
+        className="mb-2 shrink-0"
+        density={{ value: tableDensity, onValueChange: setTableDensity }}
+        pagination={isListReady ? pagination : undefined}
+      >
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          value={draftKeyword}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(nextStatus) => {
+            setCurrentPage(1);
+            setStatus(nextStatus);
+          }}
+          options={statusOptions}
+          value={status}
+        />
       </FilterBar>
 
       <div className="flex flex-col gap-3">
@@ -393,21 +396,7 @@ export const StoreApplicationsContent = ({
               })}
           </tbody>
         </DataTable>
-
-        {listState === 'success' && filteredApplications.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(nextPageSize) => {
-              setCurrentPage(1);
-              setPageSize(nextPageSize);
-            }}
-            pageSize={pageSize}
-            pageSizeOptions={[10, 20, 50]}
-            totalCount={filteredApplications.length}
-            totalPages={totalPages}
-          />
-        )}
+        {isListReady && <PaginationSummary {...pagination} />}
       </div>
 
       <AdminDrawer

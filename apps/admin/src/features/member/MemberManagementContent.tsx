@@ -20,9 +20,7 @@ import {
   type TableSortDirection,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
-import { TableDensityControl } from '@admin/components/TableDensityControl/TableDensityControl';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import type { Member, MemberStatus, MemberType, Owner } from './memberTypes';
@@ -183,17 +181,8 @@ export const MemberManagementContent = () => {
   );
 
   const handleTabChange = (nextTab: string) => {
+    // 점주와 사용자의 검색 대상이 달라 탭 전환 시 이전 조회 조건을 넘기지 않는다.
     setActiveTab(nextTab as MemberType);
-    setCurrentPage(1);
-    resetSearch();
-    setStatus('ALL');
-    setStartDate('');
-    setEndDate('');
-    setOwnerSort(null);
-    setMemberSort(null);
-  };
-
-  const handleReset = () => {
     setCurrentPage(1);
     resetSearch();
     setStatus('ALL');
@@ -229,6 +218,19 @@ export const MemberManagementContent = () => {
     });
   };
 
+  const pagination = {
+    currentPage,
+    onPageChange: setCurrentPage,
+    onPageSizeChange: (value: number) => {
+      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
+      setCurrentPage(1);
+      setPageSize(value);
+    },
+    pageSize,
+    totalCount: activeList.length,
+    totalPages,
+  };
+
   return (
     <section className="flex flex-col">
       <header className="mb-4 shrink-0">
@@ -246,48 +248,42 @@ export const MemberManagementContent = () => {
         value={activeTab}
       />
 
-      <FilterBar className="mb-2 mt-3 shrink-0">
-        <div className="flex w-full min-w-[860px] items-center justify-between gap-3">
-          <TableDensityControl
-            onValueChange={setTableDensity}
-            value={tableDensity}
+      <FilterBar
+        className="mb-2 mt-3 shrink-0"
+        density={{ value: tableDensity, onValueChange: setTableDensity }}
+        pagination={pagination}
+      >
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          value={draftKeyword}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(nextStatus) => {
+            setCurrentPage(1);
+            setStatus(nextStatus);
+          }}
+          options={statusOptions}
+          value={status}
+        />
+        <div className="w-[216px]">
+          <DateRangePicker
+            aria-label="가입일 범위"
+            onValueChange={({
+              endDate: nextEndDate,
+              startDate: nextStartDate,
+            }) => {
+              setCurrentPage(1);
+              setStartDate(nextStartDate);
+              setEndDate(nextEndDate);
+            }}
+            value={{ endDate, startDate }}
           />
-          <div className="flex items-center gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              value={draftKeyword}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(nextStatus) => {
-                setCurrentPage(1);
-                setStatus(nextStatus);
-              }}
-              options={statusOptions}
-              value={status}
-            />
-            <div className="w-[216px]">
-              <DateRangePicker
-                aria-label="가입일 범위"
-                onValueChange={({
-                  endDate: nextEndDate,
-                  startDate: nextStartDate,
-                }) => {
-                  setCurrentPage(1);
-                  setStartDate(nextStartDate);
-                  setEndDate(nextEndDate);
-                }}
-                value={{ endDate, startDate }}
-              />
-            </div>
-            <FilterResetButton onClick={handleReset} />
-          </div>
         </div>
       </FilterBar>
 
       {activeTab === 'owner' ? (
         <MemberTable
-          currentPage={currentPage}
           members={visibleList as Owner[]}
           density={tableDensity}
           onSortChange={(nextKey) =>
@@ -295,19 +291,10 @@ export const MemberManagementContent = () => {
           }
           sortDirection={ownerSort?.direction}
           sortKey={ownerSort?.key}
-          totalCount={filteredOwners.length}
-          totalPages={totalPages}
           type="owner"
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(nextPageSize) => {
-            setCurrentPage(1);
-            setPageSize(nextPageSize);
-          }}
-          pageSize={pageSize}
         />
       ) : (
         <MemberTable
-          currentPage={currentPage}
           members={visibleList as Member[]}
           density={tableDensity}
           onSortChange={(nextKey) =>
@@ -315,48 +302,29 @@ export const MemberManagementContent = () => {
           }
           sortDirection={memberSort?.direction}
           sortKey={memberSort?.key}
-          totalCount={filteredMembers.length}
-          totalPages={totalPages}
           type="member"
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(nextPageSize) => {
-            setCurrentPage(1);
-            setPageSize(nextPageSize);
-          }}
-          pageSize={pageSize}
         />
       )}
+      <PaginationSummary {...pagination} />
     </section>
   );
 };
 
 interface MemberTableProps {
-  currentPage: number;
   density: TableDensity;
   members: Member[] | Owner[];
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
   onSortChange: (key: string) => void;
-  pageSize: number;
   sortDirection?: TableSortDirection;
   sortKey?: string;
-  totalCount: number;
-  totalPages: number;
   type: MemberType;
 }
 
 const MemberTable = ({
-  currentPage,
   density,
   members,
-  onPageChange,
-  onPageSizeChange,
   onSortChange,
-  pageSize,
   sortDirection,
   sortKey,
-  totalCount,
-  totalPages,
   type,
 }: MemberTableProps) => {
   const isOwner = type === 'owner';
@@ -517,16 +485,6 @@ const MemberTable = ({
               })}
         </tbody>
       </DataTable>
-
-      <Pagination
-        currentPage={currentPage}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        pageSize={pageSize}
-        pageSizeOptions={[5, 10, 20, 50]}
-        totalCount={totalCount}
-        totalPages={totalPages}
-      />
     </div>
   );
 };

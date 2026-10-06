@@ -15,13 +15,13 @@ import {
   DataTable,
   type DataTableColumn,
   TableCell,
+  type TableDensity,
   TableEmpty,
   TableHeaderCell,
   TableRow,
 } from '@admin/components/DataTable/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import type {
@@ -95,9 +95,11 @@ export const AdminAccountManagement = () => {
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [role, setRole] = useState('ALL');
   const [status, setStatus] = useState('ALL');
-  const { draftKeyword, keyword, resetSearch, setDraftKeyword } =
-    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
-  const pageSize = 10;
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
+    onCommit: () => setCurrentPage(1),
+  });
+  const [pageSize, setPageSize] = useState(10);
+  const [density, setDensity] = useState<TableDensity>('normal');
 
   const filteredAccounts = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -115,7 +117,7 @@ export const AdminAccountManagement = () => {
     });
   }, [accounts, keyword, role, status]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / pageSize));
+  const totalPages = Math.ceil(filteredAccounts.length / pageSize);
   const visibleAccounts = filteredAccounts.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
@@ -125,13 +127,6 @@ export const AdminAccountManagement = () => {
     setForm(emptyForm);
     setFormErrors({});
     setIsIssueModalOpen(false);
-  };
-
-  const handleReset = () => {
-    resetSearch();
-    setCurrentPage(1);
-    setRole('ALL');
-    setStatus('ALL');
   };
 
   const handleIssue = () => {
@@ -190,6 +185,19 @@ export const AdminAccountManagement = () => {
     closeIssueModal();
   };
 
+  const pagination = {
+    currentPage,
+    onPageChange: setCurrentPage,
+    onPageSizeChange: (value: number) => {
+      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
+      setCurrentPage(1);
+      setPageSize(value);
+    },
+    pageSize,
+    totalCount: filteredAccounts.length,
+    totalPages,
+  };
+
   return (
     <section className="flex flex-col">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
@@ -209,42 +217,38 @@ export const AdminAccountManagement = () => {
         </Button>
       </header>
 
-      <FilterBar className="mb-4 shrink-0">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-body-sm-web text-text-secondary">
-            총 {filteredAccounts.length}명
-          </p>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              placeholder="관리자 ID 또는 이름 검색"
-              value={draftKeyword}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(value) => {
-                setCurrentPage(1);
-                setRole(value);
-              }}
-              options={roleOptions}
-              value={role}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(value) => {
-                setCurrentPage(1);
-                setStatus(value);
-              }}
-              options={statusOptions}
-              value={status}
-            />
-            <FilterResetButton onClick={handleReset} />
-          </div>
-        </div>
+      <FilterBar
+        className="mb-4 shrink-0"
+        density={{ value: density, onValueChange: setDensity }}
+        pagination={pagination}
+      >
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          placeholder="관리자 ID 또는 이름 검색"
+          value={draftKeyword}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(value) => {
+            setCurrentPage(1);
+            setRole(value);
+          }}
+          options={roleOptions}
+          value={role}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(value) => {
+            setCurrentPage(1);
+            setStatus(value);
+          }}
+          options={statusOptions}
+          value={status}
+        />
       </FilterBar>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <DataTable columns={accountColumns}>
+        <DataTable columns={accountColumns} density={density}>
           <thead>
             <tr>
               <TableHeaderCell columnIndex={0}>관리자 ID</TableHeaderCell>
@@ -280,16 +284,7 @@ export const AdminAccountManagement = () => {
             )}
           </tbody>
         </DataTable>
-
-        {filteredAccounts.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            pageSize={pageSize}
-            totalCount={filteredAccounts.length}
-            totalPages={totalPages}
-          />
-        )}
+        <PaginationSummary {...pagination} />
       </div>
 
       <AdminModal

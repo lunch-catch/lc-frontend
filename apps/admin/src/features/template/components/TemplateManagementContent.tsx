@@ -4,8 +4,7 @@ import { FilePenLine, Plus } from 'lucide-react';
 
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { FilterResetButton } from '@admin/components/FilterResetButton/FilterResetButton';
-import { Pagination } from '@admin/components/Pagination/Pagination';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import type { PosterTemplate } from '@admin/features/template/templateTypes';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
@@ -52,11 +51,12 @@ export const TemplateManagementContent = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingActivationTemplate, setPendingActivationTemplate] =
     useState<PosterTemplate | null>(null);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState<TemplateSort>('REGISTERED');
   const [status, setStatus] = useState('ALL');
-  const { draftKeyword, keyword, resetSearch, setDraftKeyword } =
-    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
+    onCommit: () => setCurrentPage(1),
+  });
 
   const filteredTemplates = useMemo(() => {
     const query = keyword.trim().toLowerCase();
@@ -93,14 +93,6 @@ export const TemplateManagementContent = ({
     currentPage * pageSize,
   );
 
-  const handleReset = () => {
-    resetSearch();
-    setActivation('ALL');
-    setCurrentPage(1);
-    setSort('REGISTERED');
-    setStatus('ALL');
-  };
-
   const handleConfirmActivation = () => {
     if (!pendingActivationTemplate) return;
 
@@ -120,6 +112,19 @@ export const TemplateManagementContent = ({
   };
 
   const isActivating = pendingActivationTemplate?.isActive === false;
+
+  const pagination = {
+    currentPage,
+    onPageChange: setCurrentPage,
+    onPageSizeChange: (value: number) => {
+      // 카드 목록도 공통 선택지를 사용하며 개수 변경 시 첫 페이지로 돌아간다.
+      setCurrentPage(1);
+      setPageSize(value);
+    },
+    pageSize,
+    totalCount: filteredTemplates.length,
+    totalPages,
+  };
 
   return (
     <section className="flex flex-col">
@@ -150,46 +155,38 @@ export const TemplateManagementContent = ({
         </div>
       </header>
 
-      <FilterBar className="mb-4 shrink-0">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-body-sm-web text-text-secondary">
-            총 {filteredTemplates.length}개 템플릿
-          </p>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <SearchField
-              onChange={(event) => setDraftKeyword(event.target.value)}
-              value={draftKeyword}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(value) => {
-                setCurrentPage(1);
-                setStatus(value);
-              }}
-              options={statusOptions}
-              value={status}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(value) => {
-                setActivation(value);
-                setCurrentPage(1);
-              }}
-              options={activationOptions}
-              value={activation}
-            />
-            <SelectField
-              fitContent
-              onValueChange={(value) => {
-                setCurrentPage(1);
-                setSort(value as TemplateSort);
-              }}
-              options={sortOptions}
-              value={sort}
-            />
-            <FilterResetButton onClick={handleReset} />
-          </div>
-        </div>
+      <FilterBar className="mb-4 shrink-0" pagination={pagination}>
+        <SearchField
+          onChange={(event) => setDraftKeyword(event.target.value)}
+          value={draftKeyword}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(value) => {
+            setCurrentPage(1);
+            setStatus(value);
+          }}
+          options={statusOptions}
+          value={status}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(value) => {
+            setActivation(value);
+            setCurrentPage(1);
+          }}
+          options={activationOptions}
+          value={activation}
+        />
+        <SelectField
+          fitContent
+          onValueChange={(value) => {
+            setCurrentPage(1);
+            setSort(value as TemplateSort);
+          }}
+          options={sortOptions}
+          value={sort}
+        />
       </FilterBar>
 
       {visibleTemplates.length > 0 ? (
@@ -209,22 +206,7 @@ export const TemplateManagementContent = ({
         </div>
       )}
 
-      {filteredTemplates.length > 0 && (
-        <div className="mt-4">
-          <Pagination
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(value) => {
-              setCurrentPage(1);
-              setPageSize(value);
-            }}
-            pageSize={pageSize}
-            pageSizeOptions={[12, 24, 48]}
-            totalCount={filteredTemplates.length}
-            totalPages={totalPages}
-          />
-        </div>
-      )}
+      <PaginationSummary {...pagination} />
 
       <AdminModal
         onClose={() => setPendingActivationTemplate(null)}
