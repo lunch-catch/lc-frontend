@@ -35,6 +35,7 @@ const businessNumbers = [
 
 export const mockStoreApplications: StoreApplication[] = stores.map(
   (storeName, index) => ({
+    address: `서울특별시 강남구 테헤란로 ${152 + index * 2}`,
     appliedAt: `2026.09.${String(29 - index).padStart(2, '0')}`,
     businessNumber: businessNumbers[index],
     id: `APP-${String(12 - index).padStart(3, '0')}`,
@@ -45,9 +46,8 @@ export const mockStoreApplications: StoreApplication[] = stores.map(
 
 export const mockStoreApplicationDetail: Omit<
   StoreApplicationDetail,
-  'appliedAt' | 'businessNumber' | 'id' | 'status' | 'storeName'
+  'address' | 'appliedAt' | 'businessNumber' | 'id' | 'status' | 'storeName'
 > = {
-  address: '서울특별시 강남구 테헤란로 152',
   addressDetail: '역삼동, 런치타워 1층 102호',
   businessDays: '월요일 ~ 일요일',
   businessLicenseRegistered: true,

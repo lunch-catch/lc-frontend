@@ -158,11 +158,12 @@ const statusOptions = [
 ];
 
 const applicationTableColumns: DataTableColumn[] = [
-  { minWidth: 100, width: '12.5%' },
-  { minWidth: 160, width: '25%' },
-  { minWidth: 180, width: '23%' },
-  { minWidth: 120, width: '18%' },
-  { minWidth: 140, width: '18%' },
+  { minWidth: 100, width: '10%' },
+  { minWidth: 140, width: '17%' },
+  { minWidth: 220, width: '28%' },
+  { minWidth: 160, width: '18%' },
+  { minWidth: 120, width: '12%' },
+  { minWidth: 140, width: '15%' },
 ];
 
 const statusMeta: Record<
@@ -199,6 +200,7 @@ export const StoreApplicationsContent = ({
         [
           application.id,
           application.storeName,
+          application.address,
           application.businessNumber,
         ].some((value) => value.toLowerCase().includes(normalizedKeyword));
 
@@ -320,6 +322,15 @@ export const StoreApplicationsContent = ({
               </TableHeaderCell>
               <TableHeaderCell
                 columnIndex={2}
+                onSortChange={() => handleSortChange('address')}
+                sortDirection={
+                  sort?.key === 'address' ? sort.direction : undefined
+                }
+              >
+                가게 주소
+              </TableHeaderCell>
+              <TableHeaderCell
+                columnIndex={3}
                 onSortChange={() => handleSortChange('businessNumber')}
                 sortDirection={
                   sort?.key === 'businessNumber' ? sort.direction : undefined
@@ -328,7 +339,7 @@ export const StoreApplicationsContent = ({
                 사업자등록번호
               </TableHeaderCell>
               <TableHeaderCell
-                columnIndex={3}
+                columnIndex={4}
                 onSortChange={() => handleSortChange('appliedAt')}
                 sortDirection={
                   sort?.key === 'appliedAt' ? sort.direction : undefined
@@ -337,7 +348,7 @@ export const StoreApplicationsContent = ({
                 신청일
               </TableHeaderCell>
               <TableHeaderCell
-                columnIndex={4}
+                columnIndex={5}
                 onSortChange={() => handleSortChange('status')}
                 sortDirection={
                   sort?.key === 'status' ? sort.direction : undefined
@@ -348,10 +359,16 @@ export const StoreApplicationsContent = ({
             </tr>
           </thead>
           <tbody>
-            {listState === 'loading' && <TableLoading colSpan={5} />}
-            {listState === 'error' && <TableError colSpan={5} />}
+            {listState === 'loading' && (
+              <TableLoading colSpan={applicationTableColumns.length} />
+            )}
+            {listState === 'error' && (
+              <TableError colSpan={applicationTableColumns.length} />
+            )}
             {listState === 'success' && visibleApplications.length === 0 && (
-              <TableEmpty colSpan={5}>검색 결과가 없습니다</TableEmpty>
+              <TableEmpty colSpan={applicationTableColumns.length}>
+                검색 결과가 없습니다
+              </TableEmpty>
             )}
             {listState === 'success' &&
               visibleApplications.map((application) => {
@@ -379,6 +396,9 @@ export const StoreApplicationsContent = ({
                     <TableCell>{application.id}</TableCell>
                     <TableCell className="font-medium text-text-primary">
                       {application.storeName}
+                    </TableCell>
+                    <TableCell title={application.address}>
+                      {application.address}
                     </TableCell>
                     <TableCell>{application.businessNumber}</TableCell>
                     <TableCell>{formatDate(application.appliedAt)}</TableCell>
