@@ -1,15 +1,22 @@
+import { useSearchParams } from 'react-router';
+
 import { MemberManagementContent } from '@admin/features/member/MemberManagementContent';
 
-interface MemberManagementPageProps {
-  initialMemberId?: string;
-}
+export const MemberManagementPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialMemberId = searchParams.get('userId')?.trim() || undefined;
+  const initialTab =
+    initialMemberId || searchParams.get('tab') === 'member'
+      ? 'member'
+      : 'owner';
 
-export const MemberManagementPage = ({
-  initialMemberId,
-}: MemberManagementPageProps) => (
-  // 검토 대상이 바뀌거나 일반 메뉴로 돌아오면 이전 사용자 탭·검색 조건을 재사용하지 않는다.
-  <MemberManagementContent
-    key={initialMemberId ?? 'all'}
-    initialMemberId={initialMemberId}
-  />
-);
+  return (
+    <MemberManagementContent
+      // URL의 검토 대상·탭이 바뀌면 이전 목록의 조회 상태를 재사용하지 않는다.
+      key={`${initialTab}:${initialMemberId ?? 'all'}`}
+      initialMemberId={initialMemberId}
+      initialTab={initialTab}
+      onReviewEnd={(tab) => setSearchParams({ tab })}
+    />
+  );
+};

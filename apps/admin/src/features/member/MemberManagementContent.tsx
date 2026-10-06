@@ -89,14 +89,18 @@ const getMemberSortValue = (member: Member, key: keyof Member) =>
 
 interface MemberManagementContentProps {
   initialMemberId?: string;
+  initialTab?: MemberType;
+  onReviewEnd?: (tab: MemberType) => void;
 }
 
 export const MemberManagementContent = ({
   initialMemberId,
+  initialTab = 'owner',
+  onReviewEnd,
 }: MemberManagementContentProps) => {
   // 부정 관리에서 넘어온 사용자 ID는 점주 탭이 아닌 사용자 탭에서 바로 검토한다.
   const [activeTab, setActiveTab] = useState<MemberType>(
-    initialMemberId ? 'member' : 'owner',
+    initialMemberId ? 'member' : initialTab,
   );
   const [members, setMembers] = useState(getMockMembers);
   const [targetMemberId, setTargetMemberId] = useState(initialMemberId);
@@ -203,6 +207,7 @@ export const MemberManagementContent = ({
   );
 
   const handleTabChange = (nextTab: string) => {
+    onReviewEnd?.(nextTab as MemberType);
     setTargetMemberId(undefined);
     // 점주와 사용자의 검색 대상이 달라 탭 전환 시 이전 조회 조건을 넘기지 않는다.
     setActiveTab(nextTab as MemberType);
@@ -255,6 +260,8 @@ export const MemberManagementContent = ({
   };
 
   const handleShowAllMembers = () => {
+    // 검토 ID를 URL에서도 제거해 새로고침 후 특정 계정으로 다시 좁혀지지 않게 한다.
+    onReviewEnd?.('member');
     // 전체 목록으로 돌아갈 때 검토 중 입력한 조건 때문에 일부 계정만 남지 않도록 초기화한다.
     setTargetMemberId(undefined);
     setCurrentPage(1);
