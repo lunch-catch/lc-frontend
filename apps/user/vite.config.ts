@@ -23,8 +23,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: {
-        // 인증 쿠키가 SameSite=Strict이고 경로가 /v1/auth/로 묶여 있어,
-        // 프론트와 같은 주소의 /v1 경로로 부르도록 API 서버에 넘긴다
+        // 개발에서만 쓴다. VITE_API_BASE_URL을 비워 두면 화면이 같은 주소의 /v1로 부르고,
+        // 여기서 API 서버로 넘겨 CORS 설정 없이 쿠키까지 주고받는다. 배포에서는 API 서버를 직접 부른다
         '/v1': {
           target: env.API_PROXY_TARGET || DEFAULT_API_PROXY_TARGET,
           changeOrigin: true,

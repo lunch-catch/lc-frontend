@@ -24,6 +24,13 @@ interface RequestOptions {
   body?: unknown;
 }
 
+// API 서버 주소. 배포에서는 https://api.lunchcatch.com 처럼 다른 주소를 넣고,
+// 개발에서는 비워 두어 같은 주소의 /v1로 부르면 Vite 프록시가 API 서버로 넘긴다 (vite.config.ts)
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(
+  /\/$/,
+  '',
+);
+
 const readEnvelope = async <T>(
   response: Response,
 ): Promise<ResponseEnvelope<T> | null> => {
@@ -41,10 +48,11 @@ export const request = async <T>(
   path: string,
   { body, method = 'GET' }: RequestOptions = {},
 ): Promise<T> => {
-  const response = await fetch(path, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
-    // 프론트와 같은 주소의 /v1 경로로 부르므로 같은 출처의 쿠키만 실으면 된다
-    credentials: 'same-origin',
+    // 배포에서는 API 서버가 다른 주소(api.lunchcatch.com)라 인증 쿠키를 실으려면 include가 필요하다
+    // 같은 사이트(lunchcatch.com)라서 SameSite=Strict 쿠키도 함께 간다
+    credentials: 'include',
     headers:
       body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
