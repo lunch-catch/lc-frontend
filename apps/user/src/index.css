@@ -31,6 +31,39 @@
     }
   }
 
+  /* 기다리는 동안 마스코트가 위아래로 천천히 떠다니는 움직임 */
+  --animate-float: float 1.6s ease-in-out infinite;
+
+  @keyframes float {
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  /* 떠다니는 마스코트 아래 그림자. 마스코트가 올라가면 작고 흐려진다 (float와 같은 박자) */
+  --animate-float-shadow: float-shadow 1.6s ease-in-out infinite;
+
+  @keyframes float-shadow {
+    50% {
+      opacity: 0.5;
+      transform: scaleX(0.75);
+    }
+  }
+
+  /* 진행 중임을 알리는 점이 차례로 깜빡이는 움직임 */
+  --animate-dot-blink: dot-blink 1.2s ease-in-out infinite;
+
+  @keyframes dot-blink {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
   /* 토스트가 위에서 살짝 내려오며 나타나는 움직임 */
   --animate-toast-enter: toast-enter 0.2s ease-out both;
 
