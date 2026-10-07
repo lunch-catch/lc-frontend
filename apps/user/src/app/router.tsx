@@ -15,6 +15,7 @@ import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
 import SplashPage from '@user/pages/SplashPage';
 import SwipePage from '@user/pages/SwipePage';
+import TutorialPage from '@user/pages/TutorialPage';
 import WishlistPage from '@user/pages/WishlistPage';
 
 export const router = createBrowserRouter([
@@ -30,6 +31,9 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth access="onboarding" />,
     children: [
+      // 온보딩의 마지막 단계인 서비스 안내. 상단 바와 하단 고정 버튼 틀(StackLayout) 없이 한 화면을 다 쓴다
+      // 여기서 온보딩을 완료 처리해야, 완료 순간 이 그룹의 가드가 스와이프로 먼저 보내 버리지 않는다
+      { path: '/onboarding/tutorial', element: <TutorialPage /> },
       {
         element: <StackLayout />,
         children: [
