@@ -3,7 +3,6 @@ export const adminNavigationPaths: Record<string, string> = {
   campaign: '/campaigns',
   template: '/templates',
   settlement: '/settlements',
-  merchant: '/store-applications',
   member: '/members',
   fraud: '/fraud',
   review: '/reviews',
