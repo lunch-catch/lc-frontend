@@ -1,8 +1,14 @@
+import { RouterProvider } from 'react-router';
+
+import { AuthProvider } from '@user/auth/AuthProvider';
+
+import { router } from './router';
+
 const App = () => {
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-semibold">런치캐치</h1>
-    </main>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   );
 };
 
