@@ -1,5 +1,5 @@
 export type AdminAccountRole = 'ADMIN' | 'SUPER_ADMIN';
-export type AdminAccountStatus = 'ACTIVE' | 'SUSPENDED';
+export type AdminAccountStatus = 'ACTIVE' | 'DELETED';
 
 export interface AdminAccount {
   createdAt: string;
