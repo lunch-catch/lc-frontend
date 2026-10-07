@@ -64,7 +64,7 @@ const roleOptions = [{ label: '전체 권한', value: 'ALL' }, ...issueRoleOptio
 const statusOptions = [
   { label: '전체 상태', value: 'ALL' },
   { label: '활성', value: 'ACTIVE' },
-  { label: '정지', value: 'SUSPENDED' },
+  { label: '삭제', value: 'DELETED' },
 ];
 
 const roleMeta: Record<AdminAccountRole, string> = {
@@ -74,10 +74,10 @@ const roleMeta: Record<AdminAccountRole, string> = {
 
 const statusMeta: Record<
   AdminAccountStatus,
-  { label: string; variant: 'success' | 'warning' }
+  { label: string; variant: 'success' | 'neutral' }
 > = {
   ACTIVE: { label: '활성', variant: 'success' },
-  SUSPENDED: { label: '정지', variant: 'warning' },
+  DELETED: { label: '삭제', variant: 'neutral' },
 };
 
 const emptyForm: AccountForm = {

@@ -20,7 +20,7 @@ export const initialAdminAccounts: AdminAccount[] = [
     id: 'ADM-003',
     name: '박점검',
     role: 'ADMIN',
-    status: 'SUSPENDED',
+    status: 'DELETED',
   },
   {
     createdAt: '2026-09-25 16:40',
