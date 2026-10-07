@@ -34,7 +34,7 @@ export const WithActions: Story = {
     children: (
       <>
         <ActionButton>찜한 포스터 보기</ActionButton>
-        <ActionButton variant="ghost">처음부터 다시 보기</ActionButton>
+        <ActionButton variant="ghost">주변 가게 둘러보기</ActionButton>
       </>
     ),
   },
