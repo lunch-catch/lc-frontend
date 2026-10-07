@@ -64,6 +64,26 @@
     }
   }
 
+  /* 튜토리얼에서 다음 장이 오른쪽에서 밀려 들어오는 움직임 */
+  --animate-slide-in: slide-in 0.3s ease-out both;
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(32px);
+    }
+  }
+
+  /* 튜토리얼에서 이전 장이 왼쪽에서 밀려 들어오는 움직임 */
+  --animate-slide-in-back: slide-in-back 0.3s ease-out both;
+
+  @keyframes slide-in-back {
+    from {
+      opacity: 0;
+      transform: translateX(-32px);
+    }
+  }
+
   /* 토스트가 위에서 살짝 내려오며 나타나는 움직임 */
   --animate-toast-enter: toast-enter 0.2s ease-out both;
 
