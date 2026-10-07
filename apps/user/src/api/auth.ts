@@ -1,4 +1,4 @@
-import { mockUser } from './mocks/user';
+import { request } from './client';
 
 export interface AuthUser {
   id: string;
@@ -6,16 +6,39 @@ export interface AuthUser {
   isOnboarded: boolean;
 }
 
-const MOCK_DELAY_MS = 800;
+interface KakaoAuthorizationResponse {
+  authorizationUrl: string;
+}
 
-// 카카오 로그인 API가 준비되기 전까지 mock 사용자를 돌려준다
-export const loginWithKakao = async (): Promise<AuthUser> => {
-  await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
+interface LoginResponse {
+  memberId: number;
+  nickname: string;
+  newMember: boolean;
+  onboardingCompleted: boolean;
+}
 
-  // 주소에 ?mockLoginError를 붙이면 로그인 실패 화면을 확인할 수 있다
-  if (new URLSearchParams(window.location.search).has('mockLoginError')) {
-    throw new Error('mock 로그인 실패');
-  }
+// 카카오 로그인 화면 주소. state와 nonce는 서버가 만들어 주소에 넣어 준다
+export const fetchKakaoAuthorizationUrl = async () => {
+  const data = await request<KakaoAuthorizationResponse>(
+    '/v1/auth/kakao/authorize',
+  );
+  return data.authorizationUrl;
+};
 
-  return { ...mockUser };
+// 카카오가 돌려준 인가 코드로 로그인한다. 처음 온 사용자면 서버가 가입까지 한다
+// 토큰은 서버가 HttpOnly 쿠키로 내려주므로 응답에서는 사용자 정보만 받는다
+export const loginWithKakaoCode = async (
+  authorizationCode: string,
+  state: string,
+): Promise<AuthUser> => {
+  const data = await request<LoginResponse>('/v1/auth/tokens', {
+    method: 'POST',
+    body: { authorizationCode, state },
+  });
+
+  return {
+    id: String(data.memberId),
+    nickname: data.nickname,
+    isOnboarded: data.onboardingCompleted,
+  };
 };

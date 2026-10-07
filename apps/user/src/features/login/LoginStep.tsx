@@ -1,39 +1,34 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
 
-import { loginWithKakao } from '@user/api/auth';
 import loginDiscover from '@user/assets/illustrations/login-discover.webp';
-import mascotError from '@user/assets/illustrations/mascot-error.webp';
-import mascotLoading from '@user/assets/illustrations/mascot-loading.webp';
-import { useAuth } from '@user/auth/useAuth';
 import Wordmark from '@user/components/Wordmark/Wordmark';
 
+import { startKakaoLogin } from './kakaoLogin';
 import KakaoLoginButton from './KakaoLoginButton';
+import LoginStatusScreen, { loginScreenClassName } from './LoginStatusScreen';
 
 type LoginStatus = 'idle' | 'loading' | 'error';
 
-// 로그인 중 점 세 개가 차례로 깜빡이도록 시작을 조금씩 늦춘다
-const loadingDotDelays = [
-  '[animation-delay:0ms]',
-  '[animation-delay:200ms]',
-  '[animation-delay:400ms]',
-];
-
-const wrapperClassName =
-  'mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page px-page pt-3 pb-[max(16px,env(safe-area-inset-bottom))]';
-
 const LoginStep = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
   const [status, setStatus] = useState<LoginStatus>('idle');
 
+  // 카카오 화면에서 뒤로 가기로 돌아오면 브라우저가 떠날 때의 화면(로그인 중)을 그대로 되살린다
+  // 그때는 처음 화면으로 되돌려 다시 누를 수 있게 한다
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setStatus('idle');
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
+  // 성공하면 카카오 로그인 화면으로 떠나고, 돌아온 뒤의 처리는 콜백 화면(KakaoCallbackStep)이 한다
   const handleLogin = async () => {
     setStatus('loading');
 
     try {
-      const user = await loginWithKakao();
-      login(user);
-      navigate(user.isOnboarded ? '/swipe' : '/onboarding', { replace: true });
+      await startKakaoLogin();
     } catch {
       setStatus('error');
     }
@@ -41,7 +36,7 @@ const LoginStep = () => {
 
   if (status === 'idle') {
     return (
-      <main className={wrapperClassName}>
+      <main className={loginScreenClassName}>
         <Wordmark />
         <h1 className="mt-6 text-display-mobile leading-snug font-black text-text-primary">
           점심 고민,
@@ -75,81 +70,7 @@ const LoginStep = () => {
     );
   }
 
-  // 로그인 중 화면은 잠깐 지나가므로 글은 작은 상태 문구 한 줄만 두고, 떠다니는 마스코트와 점으로 진행 중임을 보여준다
-  // 움직임 줄이기 설정을 켠 사용자에게는 모두 멈춘 모습으로 보여준다
-  if (status === 'loading') {
-    return (
-      <main className={wrapperClassName}>
-        <Wordmark className="mt-7 text-center" />
-        <div className="flex flex-1 flex-col items-center justify-center py-6">
-          <img
-            alt=""
-            className="size-40 animate-float motion-reduce:animate-none"
-            height={160}
-            src={mascotLoading}
-            width={160}
-          />
-          {/* 그림 아래쪽 여백만큼 끌어올려 마스코트 발밑에 둔다 */}
-          <div
-            aria-hidden="true"
-            className="-mt-7 h-2 w-16 animate-float-shadow rounded-full bg-text-primary/10 motion-reduce:animate-none"
-          />
-          {/* 화면 읽기 프로그램이 로그인 진행을 바로 읽도록 알린다 */}
-          <h1
-            aria-live="polite"
-            className="mt-6 text-h3-mobile font-semibold text-text-primary"
-          >
-            카카오로 로그인 중이에요
-          </h1>
-          <div aria-hidden="true" className="mt-3 flex gap-1.5">
-            {loadingDotDelays.map((delay) => (
-              <span
-                className={`size-1.5 animate-dot-blink rounded-full bg-action-primary motion-reduce:animate-none ${delay}`}
-                key={delay}
-              />
-            ))}
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className={wrapperClassName}>
-      <Wordmark className="mt-7 text-center" />
-      {/* 버튼 위 남는 공간의 세로 가운데에 마스코트와 안내 문구를 둔다. 로그인 중 화면과 같은 크기로 맞추되 움직이지는 않는다 */}
-      <div className="flex flex-1 flex-col items-center justify-center py-6">
-        <img
-          alt=""
-          className="size-40"
-          height={160}
-          src={mascotError}
-          width={160}
-        />
-        {/* 그림 아래쪽 여백만큼 끌어올려 마스코트 발밑에 둔다. 실패 그림은 아래 여백이 로그인 중 그림보다 좁다 */}
-        <div
-          aria-hidden="true"
-          className="-mt-5 h-2 w-16 rounded-full bg-text-primary/10"
-        />
-        {/* 화면 읽기 프로그램이 로그인 실패를 바로 읽도록 알린다 */}
-        <div aria-live="polite" className="mt-6 text-center">
-          {/* 로그인 중 화면에서 그 자리 그대로 바뀌므로 제목 크기와 색을 같게 둔다 */}
-          <h1 className="text-h3-mobile font-semibold text-text-primary">
-            로그인하지 못했어요
-          </h1>
-          {/* 제목(17px)과 크기 차이가 작으면 설명이 제목만큼 무거워 보여 캡션 크기로 둔다 */}
-          <p className="mt-2 text-caption-mobile leading-snug text-text-secondary">
-            네트워크 상태를 확인한 뒤
-            <br />
-            다시 시도해 주세요.
-          </p>
-        </div>
-      </div>
-      <KakaoLoginButton onClick={handleLogin}>
-        카카오로 다시 시도하기
-      </KakaoLoginButton>
-    </main>
-  );
+  return <LoginStatusScreen onRetry={handleLogin} status={status} />;
 };
 
 export default LoginStep;
