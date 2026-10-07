@@ -9,11 +9,11 @@ export const FraudMemberAction = ({
   onManageMember,
 }: FraudMemberActionProps) => (
   <button
-    aria-label={`${userId} 계정 정지 검토`}
+    aria-label={`${userId} 사용자 확인`}
     className="rounded-sm text-action-primary hover:underline focus-visible:outline-2 focus-visible:outline-action-primary"
     onClick={() => onManageMember(userId)}
     type="button"
   >
-    계정 정지 검토
+    사용자 확인
   </button>
 );

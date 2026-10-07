@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Button,
   DateRangePicker,
   SearchField,
   SelectField,
@@ -8,7 +9,7 @@ import {
 } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 
-import { getMockMembers, mockOwners } from '@admin/api/mocks/members';
+import { mockMembers, mockOwners } from '@admin/api/mocks/members';
 import {
   DataTable,
   type DataTableColumn,
@@ -23,7 +24,6 @@ import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
-import { MemberSuspensionReview } from './MemberSuspensionReview';
 import type { Member, MemberStatus, MemberType, Owner } from './memberTypes';
 import {
   getMaskedValue,
@@ -110,9 +110,10 @@ export const MemberManagementContent = ({
   const [activeTab, setActiveTab] = useState<MemberType>(
     initialMemberId ? 'member' : initialTab,
   );
-  const [members, setMembers] = useState(getMockMembers);
   const [targetMemberId, setTargetMemberId] = useState(initialMemberId);
-  const targetMember = members.find((member) => member.id === targetMemberId);
+  const targetMember = mockMembers.find(
+    (member) => member.id === targetMemberId,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
     useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
@@ -164,7 +165,7 @@ export const MemberManagementContent = ({
   const filteredMembers = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    const matchedMembers = members.filter((member) => {
+    const matchedMembers = mockMembers.filter((member) => {
       const isMatchedStatus = status === 'ALL' || member.status === status;
       const searchableValues = [
         member.id,
@@ -196,15 +197,7 @@ export const MemberManagementContent = ({
 
       return memberSort.direction === 'asc' ? comparison : -comparison;
     });
-  }, [
-    endDate,
-    keyword,
-    members,
-    memberSort,
-    startDate,
-    status,
-    targetMemberId,
-  ]);
+  }, [endDate, keyword, memberSort, startDate, status, targetMemberId]);
 
   const activeList = activeTab === 'owner' ? filteredOwners : filteredMembers;
   const totalPages = Math.ceil(activeList.length / pageSize);
@@ -296,21 +289,21 @@ export const MemberManagementContent = ({
       />
 
       {targetMemberId && (
-        <MemberSuspensionReview
-          userId={targetMemberId}
-          member={targetMember}
-          statusLabel={
-            targetMember ? statusMeta[targetMember.status].label : undefined
-          }
-          onShowAll={handleShowAllMembers}
-          onSuspended={(updatedMember) =>
-            setMembers((previous) =>
-              previous.map((member) =>
-                member.id === updatedMember.id ? updatedMember : member,
-              ),
-            )
-          }
-        />
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-subtle bg-bg-surface p-4">
+          <div>
+            <p className="text-body-sm-web text-text-primary">
+              사용자 확인 · {targetMemberId}
+            </p>
+            <p className="mt-1 text-caption-web text-text-secondary">
+              {targetMember
+                ? `현재 상태: ${statusMeta[targetMember.status].label}`
+                : '해당 사용자를 찾을 수 없습니다.'}
+            </p>
+          </div>
+          <Button variant="neutral" onClick={handleShowAllMembers}>
+            전체 사용자 보기
+          </Button>
+        </div>
       )}
       <FilterBar
         className="mb-2 mt-3 shrink-0"
