@@ -8,6 +8,7 @@ import TabLayout from '@user/layout/TabLayout';
 import CouponHistoryPage from '@user/pages/CouponHistoryPage';
 import CouponPage from '@user/pages/CouponPage';
 import ExplorePage from '@user/pages/ExplorePage';
+import KakaoCallbackPage from '@user/pages/KakaoCallbackPage';
 import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
@@ -22,6 +23,8 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <SplashPage /> },
       { path: '/login', element: <LoginPage /> },
+      // 카카오 로그인 뒤 돌아오는 주소. 서버 설정(KAKAO_REDIRECT_URI)과 같아야 한다
+      { path: '/oauth/callback', element: <KakaoCallbackPage /> },
     ],
   },
   {

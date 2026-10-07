@@ -1,47 +1,34 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
 
-import { loginWithKakao } from '@user/api/auth';
 import loginDiscover from '@user/assets/illustrations/login-discover.webp';
-import mascotError from '@user/assets/illustrations/mascot-error.webp';
-import mascotLoading from '@user/assets/illustrations/mascot-loading.webp';
-import { useAuth } from '@user/auth/useAuth';
 import Wordmark from '@user/components/Wordmark/Wordmark';
 
+import { startKakaoLogin } from './kakaoLogin';
 import KakaoLoginButton from './KakaoLoginButton';
+import LoginStatusScreen, { loginScreenClassName } from './LoginStatusScreen';
 
 type LoginStatus = 'idle' | 'loading' | 'error';
 
-const statusContent = {
-  loading: {
-    mascot: mascotLoading,
-    title: '카카오로 로그인하고 있어요',
-    description: ['잠시만 기다려 주세요.', '안전하게 계정을 연결하고 있어요.'],
-    buttonLabel: '카카오 로그인 중...',
-  },
-  error: {
-    mascot: mascotError,
-    title: '로그인하지 못했어요',
-    description: ['네트워크 상태를 확인한 뒤', '다시 시도해 주세요.'],
-    buttonLabel: '카카오로 다시 시도하기',
-  },
-};
-
-const wrapperClassName =
-  'mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page px-page pt-3 pb-[max(16px,env(safe-area-inset-bottom))]';
-
 const LoginStep = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
   const [status, setStatus] = useState<LoginStatus>('idle');
 
+  // 카카오 화면에서 뒤로 가기로 돌아오면 브라우저가 떠날 때의 화면(로그인 중)을 그대로 되살린다
+  // 그때는 처음 화면으로 되돌려 다시 누를 수 있게 한다
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setStatus('idle');
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
+  // 성공하면 카카오 로그인 화면으로 떠나고, 돌아온 뒤의 처리는 콜백 화면(KakaoCallbackStep)이 한다
   const handleLogin = async () => {
     setStatus('loading');
 
     try {
-      const user = await loginWithKakao();
-      login(user);
-      navigate(user.isOnboarded ? '/swipe' : '/onboarding', { replace: true });
+      await startKakaoLogin();
     } catch {
       setStatus('error');
     }
@@ -49,7 +36,7 @@ const LoginStep = () => {
 
   if (status === 'idle') {
     return (
-      <main className={wrapperClassName}>
+      <main className={loginScreenClassName}>
         <Wordmark />
         <h1 className="mt-6 text-display-mobile leading-snug font-black text-text-primary">
           점심 고민,
@@ -83,45 +70,7 @@ const LoginStep = () => {
     );
   }
 
-  const content = statusContent[status];
-
-  return (
-    <main className={wrapperClassName}>
-      <Wordmark className="mt-7 text-center" />
-      {/* 버튼 위 남는 공간의 세로 가운데에 마스코트와 안내 문구를 둔다 */}
-      <div className="flex flex-1 flex-col items-center justify-center py-6">
-        {/* 마스코트 뒤의 원형 배경 */}
-        <div className="relative flex size-52 items-center justify-center rounded-full bg-surface-brand">
-          <div className="size-37 rounded-full bg-action-primary/15" />
-          <img
-            alt=""
-            className="absolute size-42"
-            height={168}
-            src={content.mascot}
-            width={168}
-          />
-        </div>
-        {/* 화면 읽기 프로그램이 로그인 진행과 실패를 바로 읽도록 알린다 */}
-        <div aria-live="polite" className="mt-8 text-center">
-          <h1 className="text-h1 font-bold text-text-primary">
-            {content.title}
-          </h1>
-          <p className="mt-2 text-body-mobile leading-normal text-text-secondary">
-            {content.description[0]}
-            <br />
-            {content.description[1]}
-          </p>
-        </div>
-      </div>
-      <KakaoLoginButton
-        aria-busy={status === 'loading' || undefined}
-        disabled={status === 'loading'}
-        onClick={handleLogin}
-      >
-        {content.buttonLabel}
-      </KakaoLoginButton>
-    </main>
-  );
+  return <LoginStatusScreen onRetry={handleLogin} status={status} />;
 };
 
 export default LoginStep;
