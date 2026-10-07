@@ -119,7 +119,7 @@ const SwipeFeed = () => {
           </div>
         )}
         {status === 'closed' && <SwipeClosed />}
-        {isDone && <SwipeDone onRestart={() => setCurrentIndex(0)} />}
+        {isDone && <SwipeDone />}
         {/* 불러오는 중에는 카드 자리에 회색 틀을 보여준다 */}
         {(status === 'loading' || topCard) && (
           // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다

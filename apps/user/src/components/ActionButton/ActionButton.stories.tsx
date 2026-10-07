@@ -46,7 +46,7 @@ export const Loading: Story = {
 
 export const Ghost: Story = {
   args: {
-    children: '처음부터 다시 보기',
+    children: '주변 가게 둘러보기',
     size: 'medium',
     variant: 'ghost',
   },

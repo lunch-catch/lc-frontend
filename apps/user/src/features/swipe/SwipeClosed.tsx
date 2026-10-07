@@ -18,7 +18,8 @@ const SwipeClosed = () => {
         </>
       }
       image={mascotAlert}
-      title="내일 10시에 만나요"
+      // 10시 전에 열어도 맞도록 '내일'을 넣지 않는다
+      title="10시에 만나요"
     >
       <ActionButton onClick={() => navigate('/coupons/wishlist')}>
         찜한 포스터 보기
