@@ -14,6 +14,7 @@ import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
 import SplashPage from '@user/pages/SplashPage';
+import StoreDetailPage from '@user/pages/StoreDetailPage';
 import SwipePage from '@user/pages/SwipePage';
 import TutorialPage from '@user/pages/TutorialPage';
 import WishlistPage from '@user/pages/WishlistPage';
@@ -60,6 +61,8 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth access="member" />,
     children: [
+      // 하단 탭바 없이 사진부터 한 화면을 다 쓰고, 아래에 쿠폰 버튼을 고정한다
+      { path: '/stores/:storeId', element: <StoreDetailPage /> },
       {
         element: <TabLayout />,
         children: [
