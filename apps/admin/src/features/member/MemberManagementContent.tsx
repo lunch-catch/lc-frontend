@@ -63,23 +63,28 @@ const statusMeta: Record<
 };
 
 const ownerTableColumns: DataTableColumn[] = [
-  { minWidth: 130, width: '16%' },
-  { minWidth: 150, width: '22%' },
-  { minWidth: 120, width: '14%' },
-  { minWidth: 140, width: '18%' },
-  { minWidth: 120, width: '15%' },
-  { minWidth: 140, width: '15%' },
+  { key: 'id', label: '회원 ID', minWidth: 130, width: '16%' },
+  { key: 'storeName', label: '상호', minWidth: 150, width: '22%' },
+  { key: 'status', label: '상태', minWidth: 120, width: '14%' },
+  {
+    key: 'storeRegistrationCompleted',
+    label: '가게 최종 등록',
+    minWidth: 140,
+    width: '18%',
+  },
+  { key: 'joinedAt', label: '가입일', minWidth: 120, width: '15%' },
+  { key: 'lastAccessedAt', label: '최근 접속일', minWidth: 140, width: '15%' },
 ];
 
 const memberTableColumns: DataTableColumn[] = [
-  { minWidth: 120, width: '12%' },
-  { minWidth: 150, width: '16%' },
-  { minWidth: 100, width: '10%' },
-  { minWidth: 90, width: '8%' },
-  { minWidth: 100, width: '10%' },
-  { minWidth: 180, width: '18%' },
-  { minWidth: 120, width: '12%' },
-  { minWidth: 140, width: '14%' },
+  { key: 'id', label: '회원 ID', minWidth: 120, width: '12%' },
+  { key: 'nickname', label: '닉네임', minWidth: 150, width: '16%' },
+  { key: 'status', label: '상태', minWidth: 100, width: '10%' },
+  { key: 'gender', label: '성별', minWidth: 90, width: '8%' },
+  { key: 'ageGroup', label: '연령대', minWidth: 100, width: '10%' },
+  { key: 'address', label: '주소', minWidth: 180, width: '18%' },
+  { key: 'joinedAt', label: '가입일', minWidth: 120, width: '12%' },
+  { key: 'lastAccessedAt', label: '최근 접속일', minWidth: 140, width: '14%' },
 ];
 
 const getOwnerSortValue = (owner: Owner, key: keyof Owner) =>
@@ -306,6 +311,7 @@ export const MemberManagementContent = ({
         </div>
       )}
       <FilterBar
+        tableKey={activeTab === 'owner' ? 'members.owners' : 'members.users'}
         className="mb-2 mt-3 shrink-0"
         density={{ value: tableDensity, onValueChange: setTableDensity }}
         pagination={pagination}
@@ -390,6 +396,7 @@ const MemberTable = ({
     <div className="flex flex-col gap-3">
       <DataTable
         className="table-fixed"
+        personalizationKey={isOwner ? 'members.owners' : 'members.users'}
         columns={isOwner ? ownerTableColumns : memberTableColumns}
         density={density}
         resizableColumns

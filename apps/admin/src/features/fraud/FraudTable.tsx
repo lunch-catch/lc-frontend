@@ -86,7 +86,13 @@ export const FraudTable = ({
             ? 'min-w-[1040px] table-fixed'
             : 'min-w-[480px] table-fixed'
         }
-        columns={headers.map(({ minWidth, width }) => ({ minWidth, width }))}
+        personalizationKey={'fraud.' + tab}
+        columns={headers.map(({ minWidth, width, label, key }) => ({
+          minWidth,
+          width,
+          label,
+          key: key ?? label,
+        }))}
         density={density}
         resizableColumns
       >

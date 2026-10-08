@@ -183,6 +183,7 @@ export const CampaignManagementContent = () => {
         </p>
       </header>
       <FilterBar
+        tableKey="campaigns"
         className="mb-2"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -215,7 +216,12 @@ export const CampaignManagementContent = () => {
       </FilterBar>
       <DataTable
         className="table-fixed"
-        columns={columns}
+        personalizationKey="campaigns"
+        columns={columns.map((column, index) => ({
+          ...column,
+          key: headers[index].key,
+          label: headers[index].label,
+        }))}
         density={density}
         resizableColumns
       >
