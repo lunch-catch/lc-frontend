@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Button,
   DateRangePicker,
   SearchField,
   SelectField,
@@ -8,7 +9,7 @@ import {
 } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 
-import { getMockMembers, mockOwners } from '@admin/api/mocks/members';
+import { mockMembers, mockOwners } from '@admin/api/mocks/members';
 import {
   DataTable,
   type DataTableColumn,
@@ -18,12 +19,11 @@ import {
   TableHeaderCell,
   TableRow,
   type TableSortDirection,
-} from '@admin/components/DataTable/DataTable';
+} from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
-import { MemberSuspensionReview } from './MemberSuspensionReview';
 import type { Member, MemberStatus, MemberType, Owner } from './memberTypes';
 import {
   getMaskedValue,
@@ -63,23 +63,28 @@ const statusMeta: Record<
 };
 
 const ownerTableColumns: DataTableColumn[] = [
-  { minWidth: 130, width: '16%' },
-  { minWidth: 150, width: '22%' },
-  { minWidth: 120, width: '14%' },
-  { minWidth: 140, width: '18%' },
-  { minWidth: 120, width: '15%' },
-  { minWidth: 140, width: '15%' },
+  { key: 'id', label: '회원 ID', minWidth: 130, width: '16%' },
+  { key: 'storeName', label: '상호', minWidth: 150, width: '22%' },
+  { key: 'status', label: '상태', minWidth: 120, width: '14%' },
+  {
+    key: 'storeRegistrationCompleted',
+    label: '가게 최종 등록',
+    minWidth: 140,
+    width: '18%',
+  },
+  { key: 'joinedAt', label: '가입일', minWidth: 120, width: '15%' },
+  { key: 'lastAccessedAt', label: '최근 접속일', minWidth: 140, width: '15%' },
 ];
 
 const memberTableColumns: DataTableColumn[] = [
-  { minWidth: 120, width: '12%' },
-  { minWidth: 150, width: '16%' },
-  { minWidth: 100, width: '10%' },
-  { minWidth: 90, width: '8%' },
-  { minWidth: 100, width: '10%' },
-  { minWidth: 180, width: '18%' },
-  { minWidth: 120, width: '12%' },
-  { minWidth: 140, width: '14%' },
+  { key: 'id', label: '회원 ID', minWidth: 120, width: '12%' },
+  { key: 'nickname', label: '닉네임', minWidth: 150, width: '16%' },
+  { key: 'status', label: '상태', minWidth: 100, width: '10%' },
+  { key: 'gender', label: '성별', minWidth: 90, width: '8%' },
+  { key: 'ageGroup', label: '연령대', minWidth: 100, width: '10%' },
+  { key: 'address', label: '주소', minWidth: 180, width: '18%' },
+  { key: 'joinedAt', label: '가입일', minWidth: 120, width: '12%' },
+  { key: 'lastAccessedAt', label: '최근 접속일', minWidth: 140, width: '14%' },
 ];
 
 const getOwnerSortValue = (owner: Owner, key: keyof Owner) =>
@@ -110,9 +115,10 @@ export const MemberManagementContent = ({
   const [activeTab, setActiveTab] = useState<MemberType>(
     initialMemberId ? 'member' : initialTab,
   );
-  const [members, setMembers] = useState(getMockMembers);
   const [targetMemberId, setTargetMemberId] = useState(initialMemberId);
-  const targetMember = members.find((member) => member.id === targetMemberId);
+  const targetMember = mockMembers.find(
+    (member) => member.id === targetMemberId,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
     useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
@@ -164,7 +170,7 @@ export const MemberManagementContent = ({
   const filteredMembers = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    const matchedMembers = members.filter((member) => {
+    const matchedMembers = mockMembers.filter((member) => {
       const isMatchedStatus = status === 'ALL' || member.status === status;
       const searchableValues = [
         member.id,
@@ -196,15 +202,7 @@ export const MemberManagementContent = ({
 
       return memberSort.direction === 'asc' ? comparison : -comparison;
     });
-  }, [
-    endDate,
-    keyword,
-    members,
-    memberSort,
-    startDate,
-    status,
-    targetMemberId,
-  ]);
+  }, [endDate, keyword, memberSort, startDate, status, targetMemberId]);
 
   const activeList = activeTab === 'owner' ? filteredOwners : filteredMembers;
   const totalPages = Math.ceil(activeList.length / pageSize);
@@ -296,23 +294,24 @@ export const MemberManagementContent = ({
       />
 
       {targetMemberId && (
-        <MemberSuspensionReview
-          userId={targetMemberId}
-          member={targetMember}
-          statusLabel={
-            targetMember ? statusMeta[targetMember.status].label : undefined
-          }
-          onShowAll={handleShowAllMembers}
-          onSuspended={(updatedMember) =>
-            setMembers((previous) =>
-              previous.map((member) =>
-                member.id === updatedMember.id ? updatedMember : member,
-              ),
-            )
-          }
-        />
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-subtle bg-bg-surface p-4">
+          <div>
+            <p className="text-body-sm-web text-text-primary">
+              사용자 확인 · {targetMemberId}
+            </p>
+            <p className="mt-1 text-caption-web text-text-secondary">
+              {targetMember
+                ? `현재 상태: ${statusMeta[targetMember.status].label}`
+                : '해당 사용자를 찾을 수 없습니다.'}
+            </p>
+          </div>
+          <Button variant="neutral" onClick={handleShowAllMembers}>
+            전체 사용자 보기
+          </Button>
+        </div>
       )}
       <FilterBar
+        tableKey={activeTab === 'owner' ? 'members.owners' : 'members.users'}
         className="mb-2 mt-3 shrink-0"
         density={{ value: tableDensity, onValueChange: setTableDensity }}
         pagination={pagination}
@@ -397,6 +396,7 @@ const MemberTable = ({
     <div className="flex flex-col gap-3">
       <DataTable
         className="table-fixed"
+        personalizationKey={isOwner ? 'members.owners' : 'members.users'}
         columns={isOwner ? ownerTableColumns : memberTableColumns}
         density={density}
         resizableColumns

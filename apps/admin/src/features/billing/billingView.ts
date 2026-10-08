@@ -6,7 +6,7 @@ import {
 } from 'react';
 import type { DateRangeValue } from '@repo/ui';
 
-import type { TableDensity } from '@admin/components/DataTable/DataTable';
+import type { TableDensity } from '@admin/components/DataTable';
 
 import type { BillingState } from './billingTypes';
 

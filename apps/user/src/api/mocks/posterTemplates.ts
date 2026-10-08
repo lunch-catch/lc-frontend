@@ -11,6 +11,7 @@ const baseStyle = `
   .photo { flex: 1; min-height: 0; overflow: hidden; }
   .photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .photo img[src=""] { display: none; }
+  .ad-label { position: absolute; top: 12px; right: 12px; z-index: 1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
 `;
 
 const posterTemplates = [
@@ -29,10 +30,12 @@ const posterTemplates = [
   .photo { border-radius: 16px; background: #fde3d2; }
   .footer { display: flex; justify-content: space-between; gap: 8px; color: #6b5d52; font-size: 13px; }
   .store { font-weight: 600; }
+  .ad-label { background: rgba(43, 33, 24, 0.08); color: #6b5d52; }
 </style>
 </head>
 <body>
 <div class="poster">
+  <span class="ad-label">광고</span>
   <span class="badge">LUNCH CATCH SPECIAL</span>
   <p class="discount">{{discountText}}</p>
   <p class="event">{{eventName}}</p>
@@ -55,10 +58,12 @@ const posterTemplates = [
   .photo { align-self: stretch; border: 2px solid #b08a5a; background: #5a4231; }
   .event { font-size: 15px; }
   .period { color: #d8b98a; font-size: 13px; }
+  .ad-label { background: rgba(246, 234, 216, 0.16); color: #f6ead8; }
 </style>
 </head>
 <body>
 <div class="poster">
+  <span class="ad-label">광고</span>
   <p class="store">{{storeName}}</p>
   <p class="discount">{{discountText}}</p>
   <div class="photo"><img src="{{imageUrl}}" alt=""></div>
@@ -75,15 +80,17 @@ const posterTemplates = [
 <style>
   ${baseStyle}
   body { background: #ffd23f; color: #1d1d1d; }
-  .poster { gap: 12px; padding: 20px; }
+  .poster { gap: 12px; padding: 40px 20px 20px; }
   .discount { display: inline-block; align-self: flex-start; padding: 6px 12px; border: 3px solid #1d1d1d; background: #e63946; color: #fff; box-shadow: 4px 4px 0 #1d1d1d; font-size: 26px; font-weight: 900; line-height: 1.2; word-break: keep-all; transform: rotate(-2deg); }
   .event { font-size: 18px; font-weight: 800; }
   .photo { border: 3px solid #1d1d1d; border-radius: 12px; background: #ffb703; box-shadow: 4px 4px 0 #1d1d1d; }
   .footer { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; }
+  .ad-label { border: 2px solid #1d1d1d; background: #fff; color: #1d1d1d; }
 </style>
 </head>
 <body>
 <div class="poster">
+  <span class="ad-label">광고</span>
   <p class="discount">{{discountText}}</p>
   <p class="event">{{eventName}}</p>
   <div class="photo"><img src="{{imageUrl}}" alt=""></div>

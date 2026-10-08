@@ -4,6 +4,39 @@
 /* 앱 폴더 밖에 있는 공통 패키지의 Tailwind 클래스도 빌드에 포함한다 */
 @source '../../../packages/ui/src';
 
+.admin-scrollbar,
+.admin-filter-bar :is([role='listbox'], [role='dialog']) {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--semantic-border-subtle) transparent;
+
+  @supports selector(::-webkit-scrollbar) {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  &::-webkit-scrollbar {
+    width: var(--space-2);
+    height: var(--space-2);
+  }
+
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border: calc(var(--space-1) / 2) solid transparent;
+    border-radius: var(--space-2);
+    background-color: var(--semantic-border-subtle);
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--semantic-text-tertiary);
+  }
+}
+
 /* 테마 전환 중에는 개별 효과를 멈추고 화면 스냅샷 전체를 같은 속도로 전환한다. */
 :root[data-admin-theme-transition] *,
 :root[data-admin-theme-transition] *::before,

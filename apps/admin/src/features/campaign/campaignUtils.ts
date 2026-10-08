@@ -1,6 +1,6 @@
 import type { StatusBadgeVariant } from '@repo/ui';
 
-import type { Campaign, CampaignStatus } from './campaignTypes';
+import type { CampaignStatus } from './campaignTypes';
 
 export const campaignStatusMeta: Record<
   CampaignStatus,
@@ -11,8 +11,3 @@ export const campaignStatusMeta: Record<
   PAUSED: { label: '일시 중단', variant: 'warning' },
   ENDED: { label: '종료', variant: 'danger' },
 };
-
-export const getBudgetProgress = (campaign: Campaign) =>
-  campaign.cumulativeTarget > 0
-    ? (campaign.cumulativeSpent / campaign.cumulativeTarget) * 100
-    : 0;

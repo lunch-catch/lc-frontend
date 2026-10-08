@@ -14,7 +14,7 @@ import {
   TableHeaderCell,
   TableRow,
   type TableSortDirection,
-} from '@admin/components/DataTable/DataTable';
+} from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { inDateRange } from '@admin/features/billing/billingUtils';
@@ -115,6 +115,7 @@ export const BillingTable = ({
   return (
     <>
       <FilterBar
+        tableKey={'billing.' + columns.map((column) => column.label).join('|')}
         className="!px-0 !py-0"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -159,8 +160,15 @@ export const BillingTable = ({
         )}
       </FilterBar>
       <DataTable
+        personalizationKey={
+          'billing.' + columns.map((column) => column.label).join('|')
+        }
         className="table-fixed"
-        columns={columns.map((item) => ({ width: item.width + '%' }))}
+        columns={columns.map((item) => ({
+          key: item.label,
+          label: item.label,
+          width: item.width + '%',
+        }))}
         density={density}
         resizableColumns
       >

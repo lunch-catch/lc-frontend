@@ -12,10 +12,8 @@ import {
   formatNumber,
   formatPoints,
 } from '@repo/utils';
-import { ChevronRight } from 'lucide-react';
 
 import { campaigns, getMockCampaignReports } from '@admin/api/mocks/campaigns';
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import {
   DataTable,
   type DataTableColumn,
@@ -25,14 +23,13 @@ import {
   TableHeaderCell,
   TableRow,
   type TableSortDirection,
-} from '@admin/components/DataTable/DataTable';
+} from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
-import { CampaignDetailContent } from './CampaignDetailContent';
 import type { Campaign, CampaignReport, CampaignStatus } from './campaignTypes';
-import { campaignStatusMeta, getBudgetProgress } from './campaignUtils';
+import { campaignStatusMeta } from './campaignUtils';
 
 type CampaignSortKey =
   | 'id'
@@ -42,9 +39,8 @@ type CampaignSortKey =
   | 'storeName'
   | 'status'
   | 'startDate'
-  | 'todaySpent'
-  | 'cumulativeSpent'
-  | 'progress';
+  | 'dailyBudget'
+  | 'cumulativeSpent';
 interface CampaignSort {
   key: CampaignSortKey;
   direction: TableSortDirection;
@@ -58,7 +54,6 @@ const getCampaignSortValue = (
   campaign: CampaignRegistration,
   key: CampaignSortKey,
 ) => {
-  if (key === 'progress') return getBudgetProgress(campaign);
   if (key === 'cumulativeSpent') return campaign.report?.spentPoints ?? null;
   if (key === 'validImpressions')
     return campaign.report?.validImpressions ?? null;
@@ -77,7 +72,7 @@ const initialStatuses: CampaignStatus[] = [
   'PAUSED',
   'ENDED',
 ];
-const columns: DataTableColumn[] = [9, 9, 12, 8, 14, 12, 9, 9, 8, 10].map(
+const columns: DataTableColumn[] = [10, 10, 13, 9, 15, 11, 11, 10, 11].map(
   (width) => ({
     minWidth: 120,
     width: `${width}%`,
@@ -89,17 +84,14 @@ const headers: { label: string; key: CampaignSortKey }[] = [
   { label: '가게', key: 'storeName' },
   { label: '상태', key: 'status' },
   { label: '등록 시각', key: 'registeredAt' },
-  { label: '오늘 사용 / 하루 한도', key: 'todaySpent' },
+  { label: '하루 예산', key: 'dailyBudget' },
   { label: '누적 소진 포인트', key: 'cumulativeSpent' },
   { label: '누적 유효 노출', key: 'validImpressions' },
-  { label: '예산 사용률', key: 'progress' },
   { label: '집행 기간', key: 'startDate' },
 ];
 
 export const CampaignManagementContent = () => {
   const [statuses, setStatuses] = useState<CampaignStatus[]>(initialStatuses);
-  // 닫힘 애니메이션 중에도 상세 내용이 유지되도록 선택 데이터와 표시 상태를 분리한다.
-  const [detailOpen, setDetailOpen] = useState(false);
   const [range, setRange] = useState<DateRangeValue>({
     startDate: '',
     endDate: '',
@@ -112,9 +104,6 @@ export const CampaignManagementContent = () => {
   const [reports] = useState(getMockCampaignReports);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
-    null,
-  );
   const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
     onCommit: () => setPage(1),
   });
@@ -133,12 +122,9 @@ export const CampaignManagementContent = () => {
       (campaign) =>
         statuses.includes(campaign.status) &&
         (!query ||
-          [
-            campaign.id,
-            campaign.ownerId,
-            campaign.storeName,
-            campaign.posterTitle,
-          ].some((value) => value.toLowerCase().includes(query))) &&
+          [campaign.id, campaign.ownerId, campaign.storeName].some((value) =>
+            value.toLowerCase().includes(query),
+          )) &&
         // 선택 기간과 집행 기간이 하루라도 겹치는 캠페인을 조회한다.
         (!range.startDate || campaign.endDate >= range.startDate) &&
         (!range.endDate || campaign.startDate <= range.endDate),
@@ -193,10 +179,11 @@ export const CampaignManagementContent = () => {
         </h2>
         <p className="mt-2 text-body-sm-web text-text-secondary">
           전체 캠페인을 최신 등록순으로 조회합니다. 누적 소진 포인트와 유효
-          노출은 전일 확정 기준이며, 오늘 사용은 하루 한도와 함께 표시합니다.
+          노출은 전일 확정 기준입니다.
         </p>
       </header>
       <FilterBar
+        tableKey="campaigns"
         className="mb-2"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -229,7 +216,12 @@ export const CampaignManagementContent = () => {
       </FilterBar>
       <DataTable
         className="table-fixed"
-        columns={columns}
+        personalizationKey="campaigns"
+        columns={columns.map((column, index) => ({
+          ...column,
+          key: headers[index].key,
+          label: headers[index].label,
+        }))}
         density={density}
         resizableColumns
       >
@@ -257,116 +249,54 @@ export const CampaignManagementContent = () => {
               </TableEmpty>
             </tr>
           )}
-          {visibleCampaigns.map((campaign) => {
-            const progress = getBudgetProgress(campaign);
-            return (
-              <TableRow
-                className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
-                key={campaign.id}
-                onClick={() => {
-                  setSelectedCampaign(campaign);
-                  setDetailOpen(true);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setSelectedCampaign(campaign);
-                    setDetailOpen(true);
-                  }
-                }}
-                tabIndex={0}
-                aria-label={`${campaign.id} 상세 보기`}
+          {visibleCampaigns.map((campaign) => (
+            <TableRow key={campaign.id}>
+              <TableCell>{campaign.id}</TableCell>
+              <TableCell>{campaign.ownerId}</TableCell>
+              <TableCell title={campaign.storeName}>
+                {campaign.storeName}
+              </TableCell>
+              <TableCell>
+                <StatusBadge
+                  variant={campaignStatusMeta[campaign.status].variant}
+                >
+                  {campaignStatusMeta[campaign.status].label}
+                </StatusBadge>
+              </TableCell>
+              <TableCell>{formatDateTime(campaign.registeredAt)}</TableCell>
+              <TableCell>{formatPoints(campaign.dailyBudget)}</TableCell>
+              <TableCell
+                title={
+                  campaign.report
+                    ? `${campaign.report.confirmedThrough} 확정 기준`
+                    : '리포트 없음'
+                }
               >
-                <TableCell>{campaign.id}</TableCell>
-                <TableCell>{campaign.ownerId}</TableCell>
-                <TableCell title={campaign.storeName}>
-                  {campaign.storeName}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge
-                    variant={campaignStatusMeta[campaign.status].variant}
-                  >
-                    {campaignStatusMeta[campaign.status].label}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell>{formatDateTime(campaign.registeredAt)}</TableCell>
-                <TableCell
-                  title={`오늘 사용 ${formatPoints(campaign.todaySpent)} / 하루 한도 ${formatPoints(campaign.dailyBudget)}`}
-                >
-                  <span>{formatPoints(campaign.todaySpent)}</span>
-                  <span className="text-text-secondary">
-                    {' '}
-                    / {formatPoints(campaign.dailyBudget)}
-                  </span>
-                </TableCell>
-                <TableCell
-                  title={
-                    campaign.report
-                      ? `${campaign.report.confirmedThrough} 확정 기준`
-                      : '리포트 없음'
-                  }
-                >
-                  {campaign.report
-                    ? formatPoints(campaign.report.spentPoints)
-                    : '-'}
-                </TableCell>
-                <TableCell
-                  title={
-                    campaign.report
-                      ? `${campaign.report.confirmedThrough} 확정 기준`
-                      : '리포트 없음'
-                  }
-                >
-                  {campaign.report
-                    ? `${formatNumber(campaign.report.validImpressions)}회`
-                    : '-'}
-                </TableCell>
-                <TableCell title="누적 사용 포인트 ÷ 누적 목표 포인트">
-                  <span>{progress.toFixed(1)}%</span>
-                  <div
-                    aria-label="예산 사용률"
-                    className="mt-1 h-1 overflow-hidden rounded-full bg-surface-subtle"
-                    role="meter"
-                    aria-valuenow={progress}
-                    aria-valuemin={0}
-                    aria-valuemax={Math.max(100, progress)}
-                  >
-                    <div
-                      className="h-full rounded-full bg-action-primary"
-                      style={{ width: `${Math.min(progress, 100)}%` }}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell
-                  className="relative !pr-10"
-                  title={formatDateRange(campaign.startDate, campaign.endDate)}
-                >
-                  {formatDateRange(campaign.startDate, campaign.endDate)}
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                {campaign.report
+                  ? formatPoints(campaign.report.spentPoints)
+                  : '-'}
+              </TableCell>
+              <TableCell
+                title={
+                  campaign.report
+                    ? `${campaign.report.confirmedThrough} 확정 기준`
+                    : '리포트 없음'
+                }
+              >
+                {campaign.report
+                  ? `${formatNumber(campaign.report.validImpressions)}회`
+                  : '-'}
+              </TableCell>
+              <TableCell
+                title={formatDateRange(campaign.startDate, campaign.endDate)}
+              >
+                {formatDateRange(campaign.startDate, campaign.endDate)}
+              </TableCell>
+            </TableRow>
+          ))}
         </tbody>
       </DataTable>
       <PaginationSummary {...pagination} />
-
-      <AdminDrawer
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        title="캠페인 상세"
-        resizable
-      >
-        <CampaignDetailContent
-          campaign={selectedCampaign}
-          report={reports.find(
-            (report) => report.campaignId === selectedCampaign?.id,
-          )}
-        />
-      </AdminDrawer>
     </section>
   );
 };

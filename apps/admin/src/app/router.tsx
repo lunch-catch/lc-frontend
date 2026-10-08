@@ -10,7 +10,6 @@ import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
 import { PendingManagementPage } from '@admin/pages/PendingManagementPage';
 import { PointSettlementPage } from '@admin/pages/PointSettlementPage';
-import { StoreApplicationsPage } from '@admin/pages/StoreApplicationsPage';
 import { TemplateCreatePage } from '@admin/pages/TemplateCreatePage';
 import { TemplateManagementPage } from '@admin/pages/TemplateManagementPage';
 
@@ -36,7 +35,6 @@ export const router = createBrowserRouter([
             element: <TemplateCreatePage />,
           },
           { path: '/settlements', element: <PointSettlementPage /> },
-          { path: '/store-applications', element: <StoreApplicationsPage /> },
           { path: '/members', element: <MemberManagementPage /> },
           { path: '/fraud', element: <FraudManagementPage /> },
           {

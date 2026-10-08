@@ -1,5 +1,7 @@
 import type { FeedCard } from './feed';
+import { mockFeedCards } from './mocks/feed';
 import {
+  addMockWish,
   getMockWishes,
   removeMockWish,
   restoreMockWish,
@@ -53,4 +55,19 @@ export const restoreWish = async (campaignId: string): Promise<void> => {
   await wait(MOCK_DELAY_MS);
 
   restoreMockWish(campaignId);
+};
+
+// 이 캠페인을 찜했는지 (GET /v1/wishlist?campaignId=)
+export const fetchIsWished = async (campaignId: string): Promise<boolean> => {
+  await wait(MOCK_DELAY_MS);
+
+  return getMockWishes().some((wish) => wish.campaignId === campaignId);
+};
+
+// 가게 상세에서 찜한다 (POST /v1/wishlist)
+export const addWish = async (campaignId: string): Promise<void> => {
+  await wait(MOCK_DELAY_MS);
+
+  const card = mockFeedCards.find((item) => item.campaignId === campaignId);
+  if (card) addMockWish(card);
 };

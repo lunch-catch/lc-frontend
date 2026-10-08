@@ -20,7 +20,7 @@ import {
   TableEmpty,
   TableHeaderCell,
   TableRow,
-} from '@admin/components/DataTable/DataTable';
+} from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
@@ -64,7 +64,7 @@ const roleOptions = [{ label: '전체 권한', value: 'ALL' }, ...issueRoleOptio
 const statusOptions = [
   { label: '전체 상태', value: 'ALL' },
   { label: '활성', value: 'ACTIVE' },
-  { label: '정지', value: 'SUSPENDED' },
+  { label: '삭제', value: 'DELETED' },
 ];
 
 const roleMeta: Record<AdminAccountRole, string> = {
@@ -74,10 +74,10 @@ const roleMeta: Record<AdminAccountRole, string> = {
 
 const statusMeta: Record<
   AdminAccountStatus,
-  { label: string; variant: 'success' | 'warning' }
+  { label: string; variant: 'success' | 'neutral' }
 > = {
   ACTIVE: { label: '활성', variant: 'success' },
-  SUSPENDED: { label: '정지', variant: 'warning' },
+  DELETED: { label: '삭제', variant: 'neutral' },
 };
 
 const emptyForm: AccountForm = {
@@ -226,6 +226,7 @@ export const AdminAccountManagement = () => {
       </header>
 
       <FilterBar
+        tableKey="admin-accounts"
         className="mb-4 shrink-0"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -256,7 +257,15 @@ export const AdminAccountManagement = () => {
       </FilterBar>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <DataTable columns={accountColumns} density={density}>
+        <DataTable
+          personalizationKey="admin-accounts"
+          columns={accountColumns.map((column, index) => ({
+            ...column,
+            key: ['id', 'name', 'role', 'status', 'createdAt'][index],
+            label: ['관리자 ID', '이름', '권한', '상태', '발급일'][index],
+          }))}
+          density={density}
+        >
           <thead>
             <tr>
               <TableHeaderCell columnIndex={0}>관리자 ID</TableHeaderCell>
