@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { List, Map as MapIcon, Search, X } from 'lucide-react';
 
 import { getWishCount } from '@user/api/feed';
@@ -34,7 +35,9 @@ const ExploreScreen = () => {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('ALL');
   const [stores, setStores] = useState<StoreListItem[] | null>(null);
-  const [view, setView] = useState<ExploreView>('list');
+  // 가게 상세에 들어갔다 돌아와도 보던 방식이 유지되도록 주소(?view=map)에 둔다
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
   const [wishCount] = useState(getWishCount);
 
   useEffect(() => {
@@ -232,7 +235,12 @@ const ExploreScreen = () => {
       {stores && stores.length > 0 && (
         <button
           className="fixed inset-x-0 bottom-[calc(94px+env(safe-area-inset-bottom))] z-10 mx-auto flex h-10 w-fit items-center gap-1.5 rounded-full bg-text-primary px-4 text-body-sm-mobile font-bold text-text-inverse shadow-lg"
-          onClick={() => setView(view === 'list' ? 'map' : 'list')}
+          onClick={() =>
+            // 보기만 바꾸는 것이라 뒤로 가기 기록을 쌓지 않는다
+            setSearchParams(view === 'list' ? { view: 'map' } : {}, {
+              replace: true,
+            })
+          }
           type="button"
         >
           {view === 'list' ? (
