@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
+import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+
 import { DataTable } from './index';
 
 const meta = {
@@ -46,6 +48,40 @@ export const Default: Story = {
         </DataTable.Row>
       </tbody>
     </DataTable>
+  ),
+};
+
+export const ColumnPersonalization: Story = {
+  render: () => (
+    <>
+      <FilterBar
+        tableKey="storybook.orders"
+        density={{ value: 'normal', onValueChange: () => {} }}
+      />
+      <DataTable
+        personalizationKey="storybook.orders"
+        columns={[
+          { key: 'id', label: '주문 번호', width: '25%' },
+          { key: 'user', label: '사용자', width: '15%' },
+          { key: 'product', label: '상품명', width: '25%' },
+          { key: 'date', label: '주문 일시', width: '20%' },
+          { key: 'status', label: '상태', width: '15%' },
+        ]}
+        resizableColumns
+        className="table-fixed"
+      >
+        {tableHeader}
+        <tbody>
+          <DataTable.Row>
+            <DataTable.Cell>LC-20260923-001</DataTable.Cell>
+            <DataTable.Cell>김런치</DataTable.Cell>
+            <DataTable.Cell>점심 예약 쿠폰</DataTable.Cell>
+            <DataTable.Cell>2026. 09. 23. 12:30</DataTable.Cell>
+            <DataTable.Cell>사용 완료</DataTable.Cell>
+          </DataTable.Row>
+        </tbody>
+      </DataTable>
+    </>
   ),
 };
 

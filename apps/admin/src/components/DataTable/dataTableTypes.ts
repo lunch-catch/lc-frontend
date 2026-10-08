@@ -10,14 +10,22 @@ export type TableDensity = 'compact' | 'normal' | 'comfortable';
 export type TableSortDirection = 'asc' | 'desc';
 
 export interface DataTableColumn {
+  key?: string;
+  label?: string;
   minWidth?: number;
   width?: CSSProperties['width'];
 }
 
 export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
+  personalizationKey?: string;
   columns?: DataTableColumn[];
   density?: TableDensity;
   resizableColumns?: boolean;
+}
+
+export interface TableColumnPreference {
+  key: string;
+  visible: boolean;
 }
 export interface TableHeaderCellProps extends ThHTMLAttributes<HTMLTableCellElement> {
   columnIndex?: number;

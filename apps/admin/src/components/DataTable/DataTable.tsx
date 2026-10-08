@@ -1,14 +1,22 @@
 import type { HTMLAttributes } from 'react';
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 import type {
+  DataTableColumn,
   DataTableProps,
   TableCellProps,
   TableDensity,
   TableHeaderCellProps,
   TableResizeContextValue,
 } from './dataTableTypes';
+import {
+  getTableSettingsId,
+  reorderTableChildren,
+} from './tableColumnPreferences';
+import { TableColumnSettings } from './TableColumnSettings';
+import { useTableColumnPreferences } from './useTableColumnPreferences';
 import { useTableColumnResize } from './useTableColumnResize';
 
 const TableDensityContext = createContext<TableDensity>('normal');
@@ -18,6 +26,106 @@ const TableResizeContext = createContext<TableResizeContextValue>({
 });
 
 export const DataTableRoot = ({
+  personalizationKey,
+  ...props
+}: DataTableProps) => {
+  const fields =
+    props.columns?.map((column) => ({
+      key: column.key ?? column.label ?? '',
+      label: column.label ?? '',
+    })) ?? [];
+  if (
+    !personalizationKey ||
+    !fields.length ||
+    fields.some((field) => !field.key || !field.label) ||
+    new Set(fields.map((field) => field.key)).size !== fields.length
+  ) {
+    return <DataTableView {...props} />;
+  }
+  return (
+    <PersonalizedTable
+      key={personalizationKey + fields.map((field) => field.key).join('|')}
+      {...props}
+      fields={fields}
+      controlsId={getTableSettingsId(personalizationKey)}
+      storageKey={'admin.table.columns.' + personalizationKey}
+    />
+  );
+};
+
+interface PersonalizedTableProps extends DataTableProps {
+  fields: { key: string; label: string }[];
+  storageKey: string;
+  controlsId: string;
+}
+
+const PersonalizedTable = ({
+  fields,
+  storageKey,
+  controlsId,
+  columns = [],
+  children,
+  ...props
+}: PersonalizedTableProps) => {
+  const [controlsContainer, setControlsContainer] =
+    useState<HTMLElement | null>();
+  useEffect(() => {
+    const frame = requestAnimationFrame(() =>
+      setControlsContainer(document.getElementById(controlsId)),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [controlsId]);
+  const { preferences, applyPreferences, storageError } =
+    useTableColumnPreferences(
+      storageKey,
+      fields.map((field) => field.key),
+    );
+  const indexes = preferences
+    .filter((field) => field.visible)
+    .map((field) => fields.findIndex((source) => source.key === field.key));
+  const visibleColumns: DataTableColumn[] = indexes.map(
+    (index) => columns[index],
+  );
+  const transformedChildren = reorderTableChildren(
+    children,
+    indexes,
+    columns.length,
+    TableRow,
+    TableHeaderCell,
+  );
+  const controls = (
+    <TableColumnSettings
+      fields={fields}
+      preferences={preferences}
+      onApply={applyPreferences}
+    />
+  );
+  return (
+    <>
+      {controlsContainer ? (
+        createPortal(controls, controlsContainer)
+      ) : controlsContainer === null ? (
+        <div className="mb-2 flex items-center justify-end gap-3">
+          {controls}
+        </div>
+      ) : null}
+      {storageError && (
+        <p role="status" className="text-caption-web text-text-secondary">
+          {storageError}
+        </p>
+      )}
+      <DataTableView
+        key={indexes.join(',')}
+        {...props}
+        columns={visibleColumns}
+      >
+        {transformedChildren}
+      </DataTableView>
+    </>
+  );
+};
+
+const DataTableView = ({
   children,
   className,
   columns,
