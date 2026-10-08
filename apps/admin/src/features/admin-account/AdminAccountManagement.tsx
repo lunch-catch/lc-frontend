@@ -20,7 +20,7 @@ import {
   TableEmpty,
   TableHeaderCell,
   TableRow,
-} from '@admin/components/DataTable/DataTable';
+} from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
@@ -226,6 +226,7 @@ export const AdminAccountManagement = () => {
       </header>
 
       <FilterBar
+        tableKey="admin-accounts"
         className="mb-4 shrink-0"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -256,7 +257,15 @@ export const AdminAccountManagement = () => {
       </FilterBar>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <DataTable columns={accountColumns} density={density}>
+        <DataTable
+          personalizationKey="admin-accounts"
+          columns={accountColumns.map((column, index) => ({
+            ...column,
+            key: ['id', 'name', 'role', 'status', 'createdAt'][index],
+            label: ['관리자 ID', '이름', '권한', '상태', '발급일'][index],
+          }))}
+          density={density}
+        >
           <thead>
             <tr>
               <TableHeaderCell columnIndex={0}>관리자 ID</TableHeaderCell>

@@ -77,15 +77,7 @@ export const ScrollArea = forwardRef<HTMLDivElement, ScrollAreaProps>(
             : 'overflow-x-auto overflow-y-hidden overscroll-x-contain',
           hideScrollbar
             ? '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
-            : [
-                '[scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--semantic-border-subtle)_transparent]',
-                '[@supports_selector(::-webkit-scrollbar)]:[scrollbar-width:auto] [@supports_selector(::-webkit-scrollbar)]:[scrollbar-color:auto]',
-                '[&::-webkit-scrollbar]:w-[var(--space-2)] [&::-webkit-scrollbar]:h-[var(--space-2)]',
-                '[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-corner]:bg-transparent',
-                '[&::-webkit-scrollbar-thumb]:border-[calc(var(--space-1)/2)] [&::-webkit-scrollbar-thumb]:border-solid [&::-webkit-scrollbar-thumb]:border-transparent',
-                '[&::-webkit-scrollbar-thumb]:rounded-[var(--space-2)] [&::-webkit-scrollbar-thumb]:bg-border-subtle [&::-webkit-scrollbar-thumb]:bg-clip-padding',
-                '[&::-webkit-scrollbar-thumb:hover]:bg-text-tertiary',
-              ].join(' '),
+            : 'admin-scrollbar',
           dragToScroll && 'cursor-grab select-none active:cursor-grabbing',
           className,
         ]

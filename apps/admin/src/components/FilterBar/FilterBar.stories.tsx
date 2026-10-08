@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { SearchField, SelectField } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import type { TableDensity } from '@admin/components/DataTable/DataTable';
+import type { TableDensity } from '@admin/components/DataTable';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 
 import { FilterBar } from './FilterBar';

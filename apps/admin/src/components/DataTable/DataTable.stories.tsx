@@ -1,14 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import {
-  DataTable,
-  TableCell,
-  TableEmpty,
-  TableError,
-  TableHeaderCell,
-  TableLoading,
-  TableRow,
-} from './DataTable';
+import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+
+import { DataTable } from './index';
 
 const meta = {
   title: 'Admin/DataTable',
@@ -22,15 +16,15 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const tableHeader = (
-  <thead>
+  <DataTable.Header>
     <tr>
-      <TableHeaderCell>주문 번호</TableHeaderCell>
-      <TableHeaderCell>사용자</TableHeaderCell>
-      <TableHeaderCell>상품명</TableHeaderCell>
-      <TableHeaderCell>주문 일시</TableHeaderCell>
-      <TableHeaderCell>상태</TableHeaderCell>
+      <DataTable.HeaderCell>주문 번호</DataTable.HeaderCell>
+      <DataTable.HeaderCell>사용자</DataTable.HeaderCell>
+      <DataTable.HeaderCell>상품명</DataTable.HeaderCell>
+      <DataTable.HeaderCell>주문 일시</DataTable.HeaderCell>
+      <DataTable.HeaderCell>상태</DataTable.HeaderCell>
     </tr>
-  </thead>
+  </DataTable.Header>
 );
 
 export const Default: Story = {
@@ -38,22 +32,56 @@ export const Default: Story = {
     <DataTable>
       {tableHeader}
       <tbody>
-        <TableRow>
-          <TableCell>LC-20260923-001</TableCell>
-          <TableCell>김런치</TableCell>
-          <TableCell>점심 예약 쿠폰</TableCell>
-          <TableCell>2026. 09. 23. 12:30</TableCell>
-          <TableCell>사용 완료</TableCell>
-        </TableRow>
-        <TableRow>
-          <TableCell>LC-20260923-002</TableCell>
-          <TableCell>박캐치</TableCell>
-          <TableCell>점심 예약 쿠폰</TableCell>
-          <TableCell>2026. 09. 23. 13:00</TableCell>
-          <TableCell>사용 가능</TableCell>
-        </TableRow>
+        <DataTable.Row>
+          <DataTable.Cell>LC-20260923-001</DataTable.Cell>
+          <DataTable.Cell>김런치</DataTable.Cell>
+          <DataTable.Cell>점심 예약 쿠폰</DataTable.Cell>
+          <DataTable.Cell>2026. 09. 23. 12:30</DataTable.Cell>
+          <DataTable.Cell>사용 완료</DataTable.Cell>
+        </DataTable.Row>
+        <DataTable.Row>
+          <DataTable.Cell>LC-20260923-002</DataTable.Cell>
+          <DataTable.Cell>박캐치</DataTable.Cell>
+          <DataTable.Cell>점심 예약 쿠폰</DataTable.Cell>
+          <DataTable.Cell>2026. 09. 23. 13:00</DataTable.Cell>
+          <DataTable.Cell>사용 가능</DataTable.Cell>
+        </DataTable.Row>
       </tbody>
     </DataTable>
+  ),
+};
+
+export const ColumnPersonalization: Story = {
+  render: () => (
+    <>
+      <FilterBar
+        tableKey="storybook.orders"
+        density={{ value: 'normal', onValueChange: () => {} }}
+      />
+      <DataTable
+        personalizationKey="storybook.orders"
+        columns={[
+          { key: 'id', label: '주문 번호', width: '25%' },
+          { key: 'user', label: '사용자', width: '15%' },
+          { key: 'product', label: '상품명', width: '25%' },
+          { key: 'date', label: '주문 일시', width: '20%' },
+          { key: 'status', label: '상태', width: '15%' },
+        ]}
+        resizableColumns
+        className="table-fixed"
+      >
+        {tableHeader}
+        <tbody>
+          <DataTable.Row>
+            <DataTable.Cell>LC-20260923-001</DataTable.Cell>
+            <DataTable.Cell>김런치</DataTable.Cell>
+            <DataTable.Cell>점심 예약 쿠폰</DataTable.Cell>
+            <DataTable.Cell>2026. 09. 23. 12:30</DataTable.Cell>
+            <DataTable.Cell>사용 완료</DataTable.Cell>
+          </DataTable.Row>
+        </tbody>
+      </DataTable>
+    </>
   ),
 };
 
@@ -71,13 +99,13 @@ export const ColumnWidths: Story = {
     >
       {tableHeader}
       <tbody>
-        <TableRow>
-          <TableCell>LC-20260923-001</TableCell>
-          <TableCell>김런치</TableCell>
-          <TableCell>점심 예약 쿠폰</TableCell>
-          <TableCell>2026. 09. 23. 12:30</TableCell>
-          <TableCell>사용 완료</TableCell>
-        </TableRow>
+        <DataTable.Row>
+          <DataTable.Cell>LC-20260923-001</DataTable.Cell>
+          <DataTable.Cell>김런치</DataTable.Cell>
+          <DataTable.Cell>점심 예약 쿠폰</DataTable.Cell>
+          <DataTable.Cell>2026. 09. 23. 12:30</DataTable.Cell>
+          <DataTable.Cell>사용 완료</DataTable.Cell>
+        </DataTable.Row>
       </tbody>
     </DataTable>
   ),
@@ -96,13 +124,13 @@ export const Densities: Story = {
           <DataTable density={value}>
             {tableHeader}
             <tbody>
-              <TableRow>
-                <TableCell>LC-20260923-001</TableCell>
-                <TableCell>김런치</TableCell>
-                <TableCell>점심 예약 쿠폰</TableCell>
-                <TableCell>2026. 09. 23. 12:30</TableCell>
-                <TableCell>사용 완료</TableCell>
-              </TableRow>
+              <DataTable.Row>
+                <DataTable.Cell>LC-20260923-001</DataTable.Cell>
+                <DataTable.Cell>김런치</DataTable.Cell>
+                <DataTable.Cell>점심 예약 쿠폰</DataTable.Cell>
+                <DataTable.Cell>2026. 09. 23. 12:30</DataTable.Cell>
+                <DataTable.Cell>사용 완료</DataTable.Cell>
+              </DataTable.Row>
             </tbody>
           </DataTable>
         </div>
@@ -117,7 +145,7 @@ export const Empty: Story = {
       {tableHeader}
       <tbody>
         <tr>
-          <TableEmpty colSpan={5} />
+          <DataTable.Empty colSpan={5} />
         </tr>
       </tbody>
     </DataTable>
@@ -130,7 +158,7 @@ export const Loading: Story = {
       {tableHeader}
       <tbody>
         <tr>
-          <TableLoading colSpan={5} />
+          <DataTable.Loading colSpan={5} />
         </tr>
       </tbody>
     </DataTable>
@@ -143,7 +171,7 @@ export const Error: Story = {
       {tableHeader}
       <tbody>
         <tr>
-          <TableError colSpan={5} />
+          <DataTable.Error colSpan={5} />
         </tr>
       </tbody>
     </DataTable>

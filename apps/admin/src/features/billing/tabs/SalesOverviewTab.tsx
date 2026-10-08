@@ -7,7 +7,7 @@ import {
   TableCell,
   TableHeaderCell,
   TableRow,
-} from '@admin/components/DataTable/DataTable';
+} from '@admin/components/DataTable';
 import type { DailyCache } from '@admin/features/billing/billingTypes';
 import {
   aggregateLedger,

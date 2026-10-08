@@ -7,7 +7,7 @@ import {
   TableCell,
   TableHeaderCell,
   TableRow,
-} from '@admin/components/DataTable/DataTable';
+} from '@admin/components/DataTable';
 
 import { DashboardSection } from './DashboardSection';
 import type {
@@ -139,6 +139,14 @@ export const DashboardBreakdown = ({
       </p>
       <div className="overflow-x-auto">
         <DataTable
+          personalizationKey={'dashboard.' + dimension}
+          columns={[
+            ...columns.map((column) => ({
+              key: String(column.value),
+              label: column.label,
+            })),
+            { key: 'changeRate', label: '사용 증감률' },
+          ]}
           aria-label={`${dimension === 'region' ? '지역' : '카테고리'}별 이용 현황`}
         >
           <thead>

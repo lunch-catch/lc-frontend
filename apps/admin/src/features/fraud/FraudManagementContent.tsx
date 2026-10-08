@@ -143,6 +143,7 @@ export const FraudManagementContent = ({
       )}
       <Tabs items={tabs} value={tab} onValueChange={changeTab} />
       <FilterBar
+        tableKey={'fraud.' + tab}
         className="mb-2 mt-3"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
