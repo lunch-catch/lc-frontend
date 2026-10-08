@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import type { TableDensity } from '@admin/components/DataTable/DataTable';
+import type { TableDensity } from '@admin/components/DataTable';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
 import type {

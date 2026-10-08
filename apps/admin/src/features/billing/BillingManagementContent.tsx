@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Tabs } from '@repo/ui';
 
 import { createMockBillingState } from '@admin/api/mocks/billing';
-import type { TableDensity } from '@admin/components/DataTable/DataTable';
+import type { TableDensity } from '@admin/components/DataTable';
 
 import { createDailyCache, getKoreaDate } from './billingUtils';
 import { PaymentHistoryTab } from './tabs/PaymentHistoryTab';

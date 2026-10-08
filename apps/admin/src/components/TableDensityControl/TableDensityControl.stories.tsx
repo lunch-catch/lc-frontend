@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import type { TableDensity } from '@admin/components/DataTable/DataTable';
+import type { TableDensity } from '@admin/components/DataTable';
 
 import { TableDensityControl } from './TableDensityControl';
 

@@ -1,7 +1,7 @@
 import { SegmentedControl, type SegmentedControlItem } from '@repo/ui';
 import { Rows2, Rows3, Rows4 } from 'lucide-react';
 
-import type { TableDensity } from '@admin/components/DataTable/DataTable';
+import type { TableDensity } from '@admin/components/DataTable';
 
 export interface TableDensityControlProps {
   onValueChange: (value: TableDensity) => void;
