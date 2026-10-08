@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
@@ -19,43 +20,48 @@ const FeaturedStoreCard = ({ store }: FeaturedStoreCardProps) => {
     .join(' · ');
 
   return (
-    <li className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
-      <div className="relative h-44 bg-surface-subtle">
-        {store.thumbnailUrl ? (
-          <img
-            alt=""
-            className="size-full object-cover"
-            height={176}
-            src={store.thumbnailUrl}
-            width={350}
-          />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="flex size-full items-center justify-center text-text-tertiary"
-          >
-            <Store className="size-10" />
-          </div>
-        )}
-        <span className="absolute top-3 left-3 rounded-full bg-action-primary px-2.5 py-1 text-caption-mobile font-bold text-text-inverse">
-          가장 가까운 쿠폰
-        </span>
-      </div>
-      <div className="flex items-end justify-between gap-3 p-4">
-        <div className="min-w-0">
-          <p className="truncate text-h3-mobile font-bold text-text-primary">
-            {store.name}
-          </p>
-          <p className="mt-1 truncate text-caption-mobile text-text-secondary">
-            {meta}
-          </p>
+    <li>
+      <Link
+        className="block overflow-hidden rounded-xl border border-border-subtle bg-bg-surface focus-visible:outline-2 focus-visible:outline-action-primary"
+        to={`/stores/${store.storeId}`}
+      >
+        <div className="relative h-44 bg-surface-subtle">
+          {store.thumbnailUrl ? (
+            <img
+              alt=""
+              className="size-full object-cover"
+              height={176}
+              src={store.thumbnailUrl}
+              width={350}
+            />
+          ) : (
+            <div
+              aria-hidden="true"
+              className="flex size-full items-center justify-center text-text-tertiary"
+            >
+              <Store className="size-10" />
+            </div>
+          )}
+          <span className="absolute top-3 left-3 rounded-full bg-action-primary px-2.5 py-1 text-caption-mobile font-bold text-text-inverse">
+            가장 가까운 쿠폰
+          </span>
         </div>
-        {store.activeCampaign && (
-          <p className="shrink-0 text-h3-mobile font-bold text-text-brand">
-            {formatDiscount(store.activeCampaign)}
-          </p>
-        )}
-      </div>
+        <div className="flex items-end justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <p className="truncate text-h3-mobile font-bold text-text-primary">
+              {store.name}
+            </p>
+            <p className="mt-1 truncate text-caption-mobile text-text-secondary">
+              {meta}
+            </p>
+          </div>
+          {store.activeCampaign && (
+            <p className="shrink-0 text-h3-mobile font-bold text-text-brand">
+              {formatDiscount(store.activeCampaign)}
+            </p>
+          )}
+        </div>
+      </Link>
     </li>
   );
 };
