@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Button,
   Input,
@@ -7,9 +7,11 @@ import {
   SelectField,
   StatusBadge,
 } from '@repo/ui';
+import { formatDateTime } from '@repo/utils';
 import { Plus } from 'lucide-react';
 
-import { initialAdminAccounts } from '@admin/api/mocks/adminAccounts';
+import { issueAdminAccount } from '@admin/api/adminAccounts';
+import { ApiError } from '@admin/api/client';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import {
@@ -24,27 +26,16 @@ import {
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
 
 import type {
   AdminAccount,
+  AdminAccountForm,
+  AdminAccountFormErrors,
   AdminAccountRole,
   AdminAccountStatus,
 } from './adminAccountTypes';
-
-interface AccountForm {
-  id: string;
-  name: string;
-  password: string;
-  passwordConfirmation: string;
-  role: AdminAccountRole;
-}
-
-interface AccountFormErrors {
-  id?: string;
-  name?: string;
-  password?: string;
-  passwordConfirmation?: string;
-}
+import { validateAdminAccount } from './adminAccountValidation';
 
 const accountColumns: DataTableColumn[] = [
   { minWidth: 140, width: '22%' },
@@ -80,7 +71,7 @@ const statusMeta: Record<
   DELETED: { label: '삭제', variant: 'neutral' },
 };
 
-const emptyForm: AccountForm = {
+const emptyForm: AdminAccountForm = {
   id: '',
   name: '',
   password: '',
@@ -91,10 +82,15 @@ const emptyForm: AccountForm = {
 export const AdminAccountManagement = () => {
   const { role: currentRole } = useAdminAuth();
   const canIssueAccount = currentRole === 'SUPER_ADMIN';
-  const [accounts, setAccounts] = useState(initialAdminAccounts);
+  const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [form, setForm] = useState<AccountForm>(emptyForm);
-  const [formErrors, setFormErrors] = useState<AccountFormErrors>({});
+  const [form, setForm] = useState<AdminAccountForm>(emptyForm);
+  const [formErrors, setFormErrors] = useState<AdminAccountFormErrors>({});
+  const [isIssuing, setIsIssuing] = useState(false);
+  const issuingRef = useRef(false);
+  const [notice, setNotice] = useState('');
+  const { errorMessage, isWaiting, reportError, clearError } =
+    useRequestFeedback();
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [role, setRole] = useState('ALL');
   const [status, setStatus] = useState('ALL');
@@ -127,67 +123,58 @@ export const AdminAccountManagement = () => {
   );
 
   const closeIssueModal = () => {
+    if (issuingRef.current) return;
     setForm(emptyForm);
     setFormErrors({});
+    clearError();
     setIsIssueModalOpen(false);
   };
 
-  const handleIssue = () => {
+  const handleIssue = async () => {
     // 버튼 표시 외에도 처리 시점의 권한을 확인한다. 서버에서도 검증이 필요하다.
-    if (!canIssueAccount) return;
-    const nextErrors: AccountFormErrors = {};
-    const accountId = form.id.trim().toUpperCase();
-    const accountName = form.name.trim();
-
-    if (!accountId) {
-      nextErrors.id = '관리자 ID를 입력해 주세요.';
-    } else if (!/^[A-Z0-9-]{4,20}$/.test(accountId)) {
-      nextErrors.id = '영문 대문자, 숫자, 하이픈 4~20자로 입력해 주세요.';
-    } else if (accounts.some((account) => account.id === accountId)) {
-      nextErrors.id = '이미 사용 중인 관리자 ID입니다.';
-    }
-
-    if (!accountName) {
-      nextErrors.name = '관리자 이름을 입력해 주세요.';
-    }
-
-    if (form.password.length < 8) {
-      nextErrors.password = '비밀번호는 8자 이상으로 입력해 주세요.';
-    }
-
-    if (!form.passwordConfirmation) {
-      nextErrors.passwordConfirmation = '비밀번호를 다시 입력해 주세요.';
-    } else if (form.password !== form.passwordConfirmation) {
-      nextErrors.passwordConfirmation = '비밀번호가 일치하지 않습니다.';
-    }
+    if (!canIssueAccount || issuingRef.current || isWaiting) return;
+    const nextErrors = validateAdminAccount(form);
+    setFormErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
       setFormErrors(nextErrors);
       return;
     }
 
-    const createdAt = new Intl.DateTimeFormat('sv-SE', {
-      hour: '2-digit',
-      hour12: false,
-      minute: '2-digit',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-      .format(new Date())
-      .replace('T', ' ');
-
-    const issuedAccount: AdminAccount = {
-      createdAt,
-      id: accountId,
-      name: accountName,
-      role: form.role,
-      status: 'ACTIVE',
-    };
-
-    setAccounts((currentAccounts) => [issuedAccount, ...currentAccounts]);
-    setCurrentPage(1);
-    closeIssueModal();
+    issuingRef.current = true;
+    setIsIssuing(true);
+    clearError();
+    setNotice('');
+    try {
+      const issued = await issueAdminAccount(form);
+      // 발급 응답에는 생성 시각이 없으므로 클라이언트 시각을 발급일로 만들지 않는다.
+      setAccounts((current) => [
+        {
+          id: issued.loginId,
+          name: issued.name,
+          role: issued.role,
+          status: 'ACTIVE',
+          createdAt: '',
+        },
+        ...current,
+      ]);
+      setCurrentPage(1);
+      setForm(emptyForm);
+      setFormErrors({});
+      setIsIssueModalOpen(false);
+      setNotice('관리자 계정이 발급되었습니다.');
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.status === 409 &&
+        error.code === 'ADMIN-001'
+      )
+        setFormErrors({ id: error.message });
+      reportError(error);
+    } finally {
+      issuingRef.current = false;
+      setIsIssuing(false);
+    }
   };
 
   const pagination = {
@@ -224,6 +211,19 @@ export const AdminAccountManagement = () => {
           </Button>
         )}
       </header>
+
+      <p className="mb-4 text-caption-web text-text-secondary">
+        관리자 목록 조회 API는 아직 연결되지 않았습니다. 이 화면에서 발급한
+        계정만 표시합니다.
+      </p>
+      {notice && (
+        <p
+          role="status"
+          className="mb-4 text-body-sm-web text-status-success-fg"
+        >
+          {notice}
+        </p>
+      )}
 
       <FilterBar
         tableKey="admin-accounts"
@@ -294,7 +294,7 @@ export const AdminAccountManagement = () => {
                         {accountStatus.label}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell>{account.createdAt}</TableCell>
+                    <TableCell>{formatDateTime(account.createdAt)}</TableCell>
                   </TableRow>
                 );
               })
@@ -309,7 +309,7 @@ export const AdminAccountManagement = () => {
         open={isIssueModalOpen && canIssueAccount}
         title="관리자 계정 발급"
       >
-        <div className="flex flex-col gap-5">
+        <fieldset disabled={isIssuing} className="flex flex-col gap-5">
           <p className="text-body-sm-web text-text-secondary">
             발급한 계정은 기본적으로 활성 상태로 등록됩니다.
           </p>
@@ -408,9 +408,20 @@ export const AdminAccountManagement = () => {
             <Button onClick={closeIssueModal} variant="neutral">
               취소
             </Button>
-            <Button onClick={handleIssue}>발급</Button>
+            <Button
+              onClick={handleIssue}
+              isLoading={isIssuing}
+              disabled={isWaiting}
+            >
+              {isWaiting ? '재시도 대기 중' : '발급'}
+            </Button>
           </div>
-        </div>
+          {errorMessage && (
+            <p role="alert" className="text-caption-web text-status-danger-fg">
+              {errorMessage}
+            </p>
+          )}
+        </fieldset>
       </AdminModal>
     </section>
   );
