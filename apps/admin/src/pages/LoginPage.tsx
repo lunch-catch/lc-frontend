@@ -18,7 +18,9 @@ export const LoginPage = () => {
   if (isAuthenticated) return <Navigate replace to={destination} />;
   return (
     <LoginContent
-      onLogin={(loginId, password) => login({ loginId, password })}
+      onLogin={async (loginId, password) => {
+        await login({ loginId, password });
+      }}
     />
   );
 };

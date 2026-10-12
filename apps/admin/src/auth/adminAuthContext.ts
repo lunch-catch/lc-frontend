@@ -8,10 +8,17 @@ export interface AdminLoginValues {
 }
 
 export interface AdminAuth {
+  admin: AdminInfo | null;
   role: AdminAccountRole | null;
   isAuthenticated: boolean;
-  login: (values: AdminLoginValues) => void;
+  login: (values: AdminLoginValues) => Promise<void>;
   logout: () => void;
+}
+
+export interface AdminInfo {
+  adminId: number;
+  name: string;
+  role: AdminAccountRole;
 }
 
 export const AdminAuthContext = createContext<AdminAuth | null>(null);

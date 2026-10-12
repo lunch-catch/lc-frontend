@@ -1,30 +1,50 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import { Button, Input } from '@repo/ui';
 import { LockKeyhole, UserRound } from 'lucide-react';
 
+import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
+
 export interface LoginContentProps {
-  onLogin: (loginId: string, password: string) => void;
+  onLogin: (loginId: string, password: string) => Promise<void>;
 }
 
 export const LoginContent = ({ onLogin }: LoginContentProps) => {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const { errorMessage, isWaiting, reportError, clearError } =
+    useRequestFeedback();
 
   const loginIdError =
-    hasSubmitted && !loginId ? '관리자 ID를 입력해 주세요.' : undefined;
+    hasSubmitted && (!loginId.trim() || loginId.trim().length > 50)
+      ? '관리자 ID는 1~50자로 입력해 주세요.'
+      : undefined;
   const passwordError =
-    hasSubmitted && !password ? '비밀번호를 입력해 주세요.' : undefined;
+    hasSubmitted && !password.trim() ? '비밀번호를 입력해 주세요.' : undefined;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current || isWaiting) return;
     setHasSubmitted(true);
 
-    if (!loginId || !password) {
+    if (!loginId.trim() || loginId.trim().length > 50 || !password.trim()) {
       return;
     }
 
-    onLogin(loginId, password);
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    clearError();
+    try {
+      await onLogin(loginId.trim(), password);
+      setPassword('');
+    } catch (error) {
+      reportError(error);
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -44,6 +64,8 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <Input
+            autoComplete="username"
+            disabled={isSubmitting}
             errorMessage={loginIdError}
             label="관리자 ID"
             leadingIcon={<UserRound className="size-4" />}
@@ -52,6 +74,8 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
             value={loginId}
           />
           <Input
+            autoComplete="current-password"
+            disabled={isSubmitting}
             errorMessage={passwordError}
             label="비밀번호"
             leadingIcon={<LockKeyhole className="size-4" />}
@@ -60,8 +84,18 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
             type="password"
             value={password}
           />
-          <Button className="mt-1 w-full" type="submit">
-            로그인
+          {errorMessage && (
+            <p role="alert" className="text-caption-web text-status-danger-fg">
+              {errorMessage}
+            </p>
+          )}
+          <Button
+            className="mt-1 w-full"
+            type="submit"
+            isLoading={isSubmitting}
+            disabled={isWaiting}
+          >
+            {isWaiting ? '재시도 대기 중' : '로그인'}
           </Button>
         </form>
       </section>
