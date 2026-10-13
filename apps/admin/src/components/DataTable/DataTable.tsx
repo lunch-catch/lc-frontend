@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from 'react';
 import { createContext, useContext } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from 'lucide-react';
 
 import type {
   DataTableColumn,
@@ -10,6 +10,7 @@ import type {
   TableDensity,
   TableHeaderCellProps,
   TableResizeContextValue,
+  TableRowProps,
 } from './dataTableTypes';
 import { reorderTableChildren } from './tableColumnPreferences';
 import { TableColumnSettings } from './TableColumnSettings';
@@ -17,6 +18,7 @@ import { useTableColumnResize } from './useTableColumnResize';
 import { useTableColumnSettings } from './useTableColumnSettings';
 
 const TableDensityContext = createContext<TableDensity>('normal');
+const TableDetailArrowContext = createContext(false);
 const TableResizeContext = createContext<TableResizeContextValue>({
   columns: [],
   resizableColumns: false,
@@ -263,12 +265,14 @@ export const TableCell = ({
   ...props
 }: TableCellProps) => {
   const density = useContext(TableDensityContext);
+  const showDetailArrow = useContext(TableDetailArrowContext);
 
   return (
     <td
       className={[
         tableCellHeightClassName[density],
         'overflow-hidden whitespace-nowrap px-4 text-ellipsis text-caption-web text-table-body-text transition-[height] duration-200 ease-out motion-reduce:transition-none',
+        showDetailArrow && 'relative [&:last-child]:!pr-12',
         className,
       ]
         .filter(Boolean)
@@ -276,6 +280,12 @@ export const TableCell = ({
       {...props}
     >
       {children}
+      {showDetailArrow && (
+        <ChevronRight
+          aria-hidden="true"
+          className="pointer-events-none absolute right-[var(--space-6)] top-1/2 hidden size-4 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [td:last-child_&]:block"
+        />
+      )}
     </td>
   );
 };
@@ -283,19 +293,23 @@ export const TableCell = ({
 export const TableRow = ({
   children,
   className,
+  showDetailArrow = false,
   ...props
-}: HTMLAttributes<HTMLTableRowElement>) => {
+}: TableRowProps) => {
   return (
-    <tr
-      className={[
-        'group border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-surface-subtle last:border-b-0 last:[&>td:first-child]:rounded-bl-md last:[&>td:last-child]:rounded-br-md motion-reduce:transition-none',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      {...props}
-    >
-      {children}
-    </tr>
+    // 마지막 DOM 셀을 기준으로 표시하므로 열 숨김·재배치 후에도 화살표는 행 끝에 남는다.
+    <TableDetailArrowContext.Provider value={showDetailArrow}>
+      <tr
+        className={[
+          'group border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-surface-subtle last:border-b-0 last:[&>td:first-child]:rounded-bl-md last:[&>td:last-child]:rounded-br-md motion-reduce:transition-none',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        {...props}
+      >
+        {children}
+      </tr>
+    </TableDetailArrowContext.Provider>
   );
 };

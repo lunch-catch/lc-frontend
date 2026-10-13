@@ -34,6 +34,7 @@ export type {
   TableDensity,
   TableErrorProps,
   TableHeaderCellProps,
+  TableRowProps,
   TableSortDirection,
   TableStateProps,
 } from './dataTableTypes';
