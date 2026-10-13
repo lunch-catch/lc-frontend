@@ -115,17 +115,19 @@ export const AdminDrawer = ({
     }
     const frame = window.requestAnimationFrame(() => {
       // 화면 밖 초기 위치가 먼저 그려져야 진입 transition이 실행된다.
-      nextFrame = window.requestAnimationFrame(() => setVisible(open));
-      if (!open) {
-        // 퇴장 transition 동안 dialog를 유지하고, 동작 줄이기 설정에서는 즉시 닫는다.
-        const reducedMotion = window.matchMedia(
-          '(prefers-reduced-motion: reduce)',
-        ).matches;
-        closeTimer = window.setTimeout(
-          () => dialog.close(),
-          reducedMotion ? 0 : 200,
-        );
-      }
+      nextFrame = window.requestAnimationFrame(() => {
+        setVisible(open);
+        if (!open) {
+          // 배경과 패널의 퇴장 transition이 시작된 뒤부터 닫기까지 같은 시간을 확보한다.
+          const reducedMotion = window.matchMedia(
+            '(prefers-reduced-motion: reduce)',
+          ).matches;
+          closeTimer = window.setTimeout(
+            () => dialog.close(),
+            reducedMotion ? 0 : 200,
+          );
+        }
+      });
     });
     return () => {
       window.cancelAnimationFrame(frame);
@@ -134,10 +136,11 @@ export const AdminDrawer = ({
     };
   }, [open]);
 
+  // showModal() 직후에는 투명하게 유지하고 패널 진입과 함께 배경을 어둡게 한다.
   return (
     <dialog
       aria-labelledby={titleId}
-      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-hidden border-0 bg-transparent p-0 text-text-primary backdrop:bg-black/40"
+      className={`fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-hidden border-0 bg-transparent p-0 text-text-primary backdrop:bg-black/40 backdrop:transition-opacity backdrop:duration-200 backdrop:ease-out motion-reduce:backdrop:transition-none ${visible ? 'backdrop:opacity-100' : 'backdrop:opacity-0'}`}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
