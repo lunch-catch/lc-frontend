@@ -11,7 +11,7 @@ import { adminNavigationPaths, getActiveAdminItem } from './adminNavigation';
 export const AdminLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAdminAuth();
+  const { admin, logout } = useAdminAuth();
   const [theme, setCurrentTheme] = useState(getTheme);
   const isThemeTransitioning = useRef(false);
   const handleThemeToggle = async () => {
@@ -49,6 +49,7 @@ export const AdminLayout = () => {
   return (
     <div className="relative flex h-dvh overflow-hidden bg-bg-page">
       <AdminSidebar
+        admin={admin ?? undefined}
         theme={theme}
         onThemeToggle={handleThemeToggle}
         activeItemId={getActiveAdminItem(pathname)}

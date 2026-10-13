@@ -16,20 +16,32 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
   const submittingRef = useRef(false);
   const { errorMessage, isWaiting, reportError, clearError } =
     useRequestFeedback();
+  // BCrypt의 72바이트 제한은 글자 수와 다르므로 한글과 이모지도 UTF-8로 인코딩한 길이를 검사한다.
+  const isPasswordTooLong = new TextEncoder().encode(password).length > 72;
 
   const loginIdError =
     hasSubmitted && (!loginId.trim() || loginId.trim().length > 50)
       ? '관리자 ID는 1~50자로 입력해 주세요.'
       : undefined;
-  const passwordError =
-    hasSubmitted && !password.trim() ? '비밀번호를 입력해 주세요.' : undefined;
+  const passwordError = !hasSubmitted
+    ? undefined
+    : !password.trim()
+      ? '비밀번호를 입력해 주세요.'
+      : isPasswordTooLong
+        ? '비밀번호가 너무 깁니다. 더 짧게 입력해 주세요.'
+        : undefined;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submittingRef.current || isWaiting) return;
     setHasSubmitted(true);
 
-    if (!loginId.trim() || loginId.trim().length > 50 || !password.trim()) {
+    if (
+      !loginId.trim() ||
+      loginId.trim().length > 50 ||
+      !password.trim() ||
+      isPasswordTooLong
+    ) {
       return;
     }
 
@@ -69,7 +81,12 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
             errorMessage={loginIdError}
             label="관리자 ID"
             leadingIcon={<UserRound className="size-4" />}
-            onChange={(event) => setLoginId(event.target.value)}
+            onChange={(event) => {
+              setLoginId(event.target.value);
+              // 이전 입력의 오류만 숨기고 Retry-After 대기는 유지하며 다음 제출에서 다시 검사한다.
+              setHasSubmitted(false);
+              clearError();
+            }}
             placeholder="관리자 ID를 입력해 주세요"
             value={loginId}
           />
@@ -79,7 +96,12 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
             errorMessage={passwordError}
             label="비밀번호"
             leadingIcon={<LockKeyhole className="size-4" />}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              // 이전 입력의 오류만 숨기고 Retry-After 대기는 유지하며 다음 제출에서 다시 검사한다.
+              setHasSubmitted(false);
+              clearError();
+            }}
             placeholder="비밀번호를 입력해 주세요"
             type="password"
             value={password}
