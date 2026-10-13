@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 
 import type { CampaignIssueStatus } from '@user/api/coupon';
 import type { WishItem } from '@user/api/wishlist';
@@ -43,7 +43,7 @@ const WishCard = ({
     available: `발급 가능 · ${remaining}`,
     soldOut: '마감 · 수량 소진',
     limitReached: `발급 제한 · 오늘 ${dailyLimit}개 완료`,
-    issued: '발급 완료 · 쿠폰함에서 확인',
+    issued: '받았어요',
   };
 
   return (
@@ -74,11 +74,21 @@ const WishCard = ({
           <p className="truncate text-caption-mobile text-text-secondary">
             {wish.offerTitle}
           </p>
+          {/* 받은 카드는 자리를 지키므로, 받았다는 걸 초록 체크로 분명하게 보여준다 */}
           <p
-            className={`truncate text-caption-mobile font-medium ${
-              state === 'issued' ? 'text-text-brand' : 'text-text-secondary'
+            className={`flex items-center gap-1 truncate text-caption-mobile font-medium ${
+              state === 'issued'
+                ? 'text-status-success-fg'
+                : 'text-text-secondary'
             }`}
           >
+            {state === 'issued' && (
+              <Check
+                aria-hidden="true"
+                className="size-3.5 shrink-0"
+                strokeWidth={3}
+              />
+            )}
             {statusTextByState[state]}
           </p>
         </div>

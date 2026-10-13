@@ -33,6 +33,37 @@ const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   limitReached: '오늘 받을 수 있는 쿠폰을 모두 받았어요',
 };
 
+// 찜마다 발급 상태를 붙이고 카드 상태를 정한다
+const toEntries = (
+  wishes: WishItem[],
+  { campaigns, dailyRemaining }: IssueStatusResponse,
+  isOpen: boolean,
+) =>
+  wishes.flatMap((wish) => {
+    const status = campaigns.find(
+      (campaign) => campaign.campaignId === wish.campaignId,
+    );
+    if (!status) return [];
+
+    const state = getWishState({
+      dailyRemaining,
+      isIssued: status.isIssued,
+      isOpen,
+      remainingCount: status.remainingCount,
+    });
+    return [{ state, status, wish }];
+  });
+
+// 받을 수 있는 카드가 위로 오는 순서 (캠페인 ID 목록)
+const getSortedIds = (
+  wishes: WishItem[],
+  issueStatus: IssueStatusResponse,
+  isOpen: boolean,
+) =>
+  toEntries(wishes, issueStatus, isOpen)
+    .sort((a, b) => WISH_STATE_ORDER[a.state] - WISH_STATE_ORDER[b.state])
+    .map(({ wish }) => wish.campaignId);
+
 const WishlistScreen = () => {
   const [wishes, setWishes] = useState<WishItem[]>([]);
   const [issueStatus, setIssueStatus] = useState<IssueStatusResponse | null>(
@@ -47,6 +78,17 @@ const WishlistScreen = () => {
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 카드가 받기로 바뀐다
   const { isOpen, remainingMs } = useOpenCountdown();
+  // 카드 순서. 화면을 열 때와 11:00 오픈 순간에만 정하고, 보는 동안은 바꾸지 않는다
+  // 받기를 누른 카드가 바로 아래로 내려가면 손가락 아래로 다음 카드가 올라와
+  // 받았는지 알 수 없고, 다시 누르면 원하지 않은 쿠폰을 받게 된다
+  const [order, setOrder] = useState<{
+    isOpen: boolean;
+    ids: string[];
+  } | null>(null);
+
+  if (issueStatus && order?.isOpen !== isOpen) {
+    setOrder({ isOpen, ids: getSortedIds(wishes, issueStatus, isOpen) });
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -169,27 +211,16 @@ const WishlistScreen = () => {
     return '선착순 발급이 열렸어요';
   };
 
-  // 찜마다 발급 상태를 붙이고 카드 상태를 정한 뒤, 받을 수 있는 카드가 위로 오게 정렬한다
-  const getSortedEntries = ({
-    campaigns,
-    dailyRemaining,
-  }: IssueStatusResponse) =>
-    wishes
-      .flatMap((wish) => {
-        const status = campaigns.find(
-          (campaign) => campaign.campaignId === wish.campaignId,
-        );
-        if (!status) return [];
-
-        const state = getWishState({
-          dailyRemaining,
-          isIssued: status.isIssued,
-          isOpen,
-          remainingCount: status.remainingCount,
-        });
-        return [{ state, status, wish }];
-      })
-      .sort((a, b) => WISH_STATE_ORDER[a.state] - WISH_STATE_ORDER[b.state]);
+  // 정해 둔 순서대로 놓는다. 순서를 정한 뒤 다시 넣은 카드는 맨 뒤에 둔다
+  const getOrderedEntries = (status: IssueStatusResponse) => {
+    const rank = (campaignId: string) => {
+      const index = order?.ids.indexOf(campaignId) ?? -1;
+      return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+    };
+    return toEntries(wishes, status, isOpen).sort(
+      (a, b) => rank(a.wish.campaignId) - rank(b.wish.campaignId),
+    );
+  };
 
   const isEmpty = issueStatus !== null && wishes.length === 0;
 
@@ -223,7 +254,7 @@ const WishlistScreen = () => {
                 title={getSummaryTitle(issueStatus.dailyRemaining)}
               />
               <ul className="flex flex-col gap-4">
-                {getSortedEntries(issueStatus).map(
+                {getOrderedEntries(issueStatus).map(
                   ({ state, status, wish }) => (
                     <WishCard
                       dailyLimit={issueStatus.dailyLimit}
