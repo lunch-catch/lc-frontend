@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@repo/ui';
 import { Eye, EyeOff, GripVertical, SlidersHorizontal } from 'lucide-react';
@@ -33,6 +33,18 @@ const SettingsEditor = ({
   ]);
   const [error, setError] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
+  const pendingFocusKeyRef = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const key = pendingFocusKeyRef.current;
+    if (key === null) return;
+    // 구역을 옮기면 기존 버튼이 제거되므로 새 DOM이 반영된 직후 같은 필드에 포커스를 돌린다.
+    const row = Array.from(
+      contentRef.current?.querySelectorAll<HTMLElement>('[data-column-key]') ??
+        [],
+    ).find((element) => element.dataset.columnKey === key);
+    row?.querySelector<HTMLButtonElement>('button')?.focus();
+    pendingFocusKeyRef.current = null;
+  }, [draft]);
   const labels = new Map(fields.map((field) => [field.key, field.label]));
   const visibleCount = draft.filter((field) => field.visible).length;
   const move = (key: string, target: FieldDropTarget) => {
@@ -199,13 +211,14 @@ const SettingsEditor = ({
                             const destinationVisible =
                               event.key === 'ArrowLeft';
                             if (destinationVisible !== visible) {
-                              move(item.key, {
+                              const moved = move(item.key, {
                                 visible: destinationVisible,
                                 index: draft.filter(
                                   (field) =>
                                     field.visible === destinationVisible,
                                 ).length,
                               });
+                              if (moved) pendingFocusKeyRef.current = item.key;
                             }
                             return;
                           }
