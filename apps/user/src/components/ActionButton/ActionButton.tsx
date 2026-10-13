@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 export type ActionButtonSize = 'medium' | 'large';
-export type ActionButtonVariant = 'brand' | 'ghost';
+export type ActionButtonVariant = 'brand' | 'soft' | 'ghost';
 
 export interface ActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ActionButtonSize;
@@ -18,9 +18,11 @@ const sizeClassNames: Record<ActionButtonSize, string> = {
 };
 
 // brand: 주요 행동, ghost: 배경 없이 글자만 있는 보조 행동
+// soft: 목록처럼 같은 버튼이 여러 번 나올 때 쓰는 연한 주요 행동. 주황이 화면을 덮지 않게 한다
 const variantClassNames: Record<ActionButtonVariant, string> = {
   brand:
     'bg-action-primary text-text-inverse active:bg-action-primary-hover disabled:bg-action-primary-disabled disabled:text-text-tertiary',
+  soft: 'bg-surface-brand text-text-brand active:bg-brand-200 disabled:bg-action-primary-disabled disabled:text-text-tertiary',
   ghost:
     'bg-transparent text-text-secondary active:bg-surface-subtle disabled:text-text-disabled',
 };

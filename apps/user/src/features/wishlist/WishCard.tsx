@@ -107,12 +107,14 @@ const WishCard = ({
           disabled={isIssueBlocked && !isIssuing}
           loading={isIssuing}
           onClick={onIssue}
+          // 오픈 뒤에는 모든 카드에 받기가 생겨 진한 주황이면 목록이 주황으로 덮인다
+          variant="soft"
         >
           받기
         </ActionButton>
       )}
       {state === 'issued' && (
-        <ActionButton onClick={() => navigate('/coupons')}>
+        <ActionButton onClick={() => navigate('/coupons')} variant="ghost">
           쿠폰함에서 보기
         </ActionButton>
       )}
