@@ -13,10 +13,3 @@ export interface Owner extends BaseMember {
   storeName: string;
   storeRegistrationCompleted: boolean;
 }
-
-export interface Member extends BaseMember {
-  address?: string;
-  ageGroup: string;
-  gender: string;
-  nickname: string;
-}
