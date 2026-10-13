@@ -7,7 +7,7 @@ export const validateAdminAccount = (
   form: AdminAccountForm,
 ): AdminAccountFormErrors => {
   const errors: AdminAccountFormErrors = {};
-  if (!/^[A-Za-z0-9._-]{1,50}$/.test(form.id.trim()))
+  if (!/^[A-Za-z0-9._-]{1,50}$/.test(form.id))
     errors.id = '영문, 숫자, 마침표, 밑줄, 하이픈 1~50자로 입력해 주세요.';
   if (
     !form.name.trim() ||
@@ -20,7 +20,6 @@ export const validateAdminAccount = (
   if (
     form.password.length < 10 ||
     form.password.length > 72 ||
-    new TextEncoder().encode(form.password).length > 72 ||
     /\s/.test(form.password) ||
     !/[A-Z]/.test(form.password) ||
     !/[a-z]/.test(form.password) ||
@@ -28,7 +27,10 @@ export const validateAdminAccount = (
     !/[^A-Za-z0-9\s]/.test(form.password)
   )
     errors.password =
-      '공백 없이 10~72자, UTF-8 72바이트 이하이며 대·소문자, 숫자, 특수문자를 포함해야 합니다.';
+      '공백 없이 10~72자로 대·소문자, 숫자, 특수문자를 포함해 주세요.';
+  else if (new TextEncoder().encode(form.password).length > 72)
+    errors.password =
+      '비밀번호가 너무 깁니다. 한글이나 특수문자를 줄여 주세요.';
   if (!form.passwordConfirmation)
     errors.passwordConfirmation = '비밀번호를 다시 입력해 주세요.';
   else if (form.password !== form.passwordConfirmation)
