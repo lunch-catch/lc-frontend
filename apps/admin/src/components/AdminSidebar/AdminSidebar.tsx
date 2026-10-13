@@ -33,6 +33,7 @@ export interface AdminSidebarProps {
   items?: AdminNavigationItem[];
   onItemSelect?: (itemId: string) => void;
   onLogout?: () => void;
+  logoutDisabled?: boolean;
   theme?: Theme;
   onThemeToggle?: () => void | Promise<void>;
 }
@@ -54,6 +55,7 @@ export function AdminSidebar({
   items = defaultNavigationItems,
   onItemSelect,
   onLogout,
+  logoutDisabled = false,
   theme = 'light',
   onThemeToggle,
 }: AdminSidebarProps) {
@@ -177,6 +179,7 @@ export function AdminSidebar({
         )}
         <button
           aria-label="로그아웃"
+          disabled={logoutDisabled}
           className="flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:text-status-danger-fg active:text-status-danger-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-status-danger-border"
           onClick={onLogout}
           type="button"

@@ -46,3 +46,7 @@ export const CampaignSelected: Story = {
 export const DarkThemeToggle: Story = {
   render: () => <AdminSidebarExample initialTheme="dark" />,
 };
+
+export const LogoutDisabled: Story = {
+  args: { logoutDisabled: true },
+};
