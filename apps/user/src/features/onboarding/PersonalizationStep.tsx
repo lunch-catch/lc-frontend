@@ -80,7 +80,7 @@ const PersonalizationStep = () => {
       <TopBar onBack={() => navigate(-1)} title="맞춤 쿠폰 설정" />
       <section className="flex flex-col gap-6 px-page py-5">
         <div className="flex flex-col gap-2">
-          <h2 className="text-h1 leading-9 font-bold text-text-primary">
+          <h2 className="text-h2-mobile leading-snug font-bold text-text-primary">
             내게 맞는 점심 혜택
           </h2>
           <p className="text-body-sm-mobile leading-normal text-text-secondary">
