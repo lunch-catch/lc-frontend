@@ -18,6 +18,9 @@ import {
 
 type NavigationIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
+const footerButtonClassName =
+  'flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary active:bg-surface-subtle active:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary disabled:pointer-events-none disabled:opacity-50';
+
 export interface AdminNavigationItem {
   icon: NavigationIcon;
   id: string;
@@ -165,7 +168,7 @@ export function AdminSidebar({
           <button
             aria-label={themeToggleLabel}
             title={themeToggleLabel}
-            className="mb-2 flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+            className={`mb-2 ${footerButtonClassName}`}
             onClick={() => void handleThemeToggle()}
             type="button"
           >
@@ -180,7 +183,7 @@ export function AdminSidebar({
         <button
           aria-label="로그아웃"
           disabled={logoutDisabled}
-          className="flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:text-status-danger-fg active:text-status-danger-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-status-danger-border"
+          className={footerButtonClassName}
           onClick={onLogout}
           type="button"
         >
