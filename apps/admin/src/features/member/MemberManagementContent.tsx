@@ -13,11 +13,13 @@ import {
   DataTable,
   type DataTableColumn,
   TableCell,
+  type TableColumnSettingsState,
   type TableDensity,
   TableEmpty,
   TableHeaderCell,
   TableRow,
   type TableSortDirection,
+  useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
@@ -74,18 +76,19 @@ const getOwnerSortValue = (owner: Owner, key: keyof Owner) =>
 
 interface MemberManagementContentProps {
   initialMemberId?: string;
-  initialTab?: MemberType;
+  // URL을 기준으로 제어해 뒤로 가기·앞으로 가기에서도 선택 탭이 일치하도록 한다.
+  activeTab?: MemberType;
   onReviewEnd?: (tab: MemberType) => void;
 }
 
 export const MemberManagementContent = ({
   initialMemberId,
-  initialTab = 'owner',
+  activeTab = 'owner',
   onReviewEnd,
 }: MemberManagementContentProps) => {
-  // 부정 관리에서 넘어온 사용자 ID는 점주 탭이 아닌 사용자 탭에서 바로 검토한다.
-  const [activeTab, setActiveTab] = useState<MemberType>(
-    initialMemberId ? 'member' : initialTab,
+  const columnSettings = useTableColumnSettings(
+    'members.owners',
+    ownerTableColumns,
   );
   const [targetMemberId, setTargetMemberId] = useState(initialMemberId);
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,10 +146,10 @@ export const MemberManagementContent = ({
   );
 
   const handleTabChange = (nextTab: string) => {
+    if (nextTab === activeTab) return;
     onReviewEnd?.(nextTab as MemberType);
     setTargetMemberId(undefined);
     // 점주와 사용자의 검색 대상이 달라 탭 전환 시 이전 조회 조건을 넘기지 않는다.
-    setActiveTab(nextTab as MemberType);
     setCurrentPage(1);
     resetSearch();
     setStatus('ALL');
@@ -201,9 +204,7 @@ export const MemberManagementContent = ({
       {activeTab === 'owner' ? (
         <>
           <FilterBar
-            tableKey={
-              activeTab === 'owner' ? 'members.owners' : 'members.users'
-            }
+            columnSettings={columnSettings}
             className="mb-2 mt-3 shrink-0"
             density={{ value: tableDensity, onValueChange: setTableDensity }}
             pagination={pagination}
@@ -236,6 +237,7 @@ export const MemberManagementContent = ({
           </FilterBar>
 
           <OwnerTable
+            columnSettings={columnSettings}
             members={visibleList}
             density={tableDensity}
             onSortChange={(key) => handleOwnerSortChange(key as keyof Owner)}
@@ -258,6 +260,7 @@ export const MemberManagementContent = ({
 };
 
 interface OwnerTableProps {
+  columnSettings: TableColumnSettingsState;
   density: TableDensity;
   members: Owner[];
   onSortChange: (key: string) => void;
@@ -265,6 +268,7 @@ interface OwnerTableProps {
   sortKey?: string;
 }
 const OwnerTable = ({
+  columnSettings,
   density,
   members,
   onSortChange,
@@ -273,7 +277,7 @@ const OwnerTable = ({
 }: OwnerTableProps) => (
   <DataTable
     className="table-fixed"
-    personalizationKey="members.owners"
+    columnSettings={columnSettings}
     columns={ownerTableColumns}
     density={density}
     resizableColumns

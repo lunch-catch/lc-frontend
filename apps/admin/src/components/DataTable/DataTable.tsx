@@ -1,23 +1,20 @@
 import type { HTMLAttributes } from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createContext, useContext } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 import type {
   DataTableColumn,
   DataTableProps,
   TableCellProps,
+  TableColumnSettingsState,
   TableDensity,
   TableHeaderCellProps,
   TableResizeContextValue,
 } from './dataTableTypes';
-import {
-  getTableSettingsId,
-  reorderTableChildren,
-} from './tableColumnPreferences';
+import { reorderTableChildren } from './tableColumnPreferences';
 import { TableColumnSettings } from './TableColumnSettings';
-import { useTableColumnPreferences } from './useTableColumnPreferences';
 import { useTableColumnResize } from './useTableColumnResize';
+import { useTableColumnSettings } from './useTableColumnSettings';
 
 const TableDensityContext = createContext<TableDensity>('normal');
 const TableResizeContext = createContext<TableResizeContextValue>({
@@ -27,8 +24,12 @@ const TableResizeContext = createContext<TableResizeContextValue>({
 
 export const DataTableRoot = ({
   personalizationKey,
+  columnSettings,
   ...props
 }: DataTableProps) => {
+  if (columnSettings) {
+    return <ConfiguredTable {...props} settings={columnSettings} />;
+  }
   const fields =
     props.columns?.map((column) => ({
       key: column.key ?? column.label ?? '',
@@ -46,40 +47,47 @@ export const DataTableRoot = ({
     <PersonalizedTable
       key={personalizationKey + fields.map((field) => field.key).join('|')}
       {...props}
-      fields={fields}
-      controlsId={getTableSettingsId(personalizationKey)}
-      storageKey={'admin.table.columns.' + personalizationKey}
+      tableKey={personalizationKey}
     />
   );
 };
 
 interface PersonalizedTableProps extends DataTableProps {
-  fields: { key: string; label: string }[];
-  storageKey: string;
-  controlsId: string;
+  tableKey: string;
 }
 
+// 필터바가 없는 테이블은 자체 설정 버튼을 표시한다.
 const PersonalizedTable = ({
-  fields,
-  storageKey,
-  controlsId,
+  tableKey,
+  columns = [],
+  ...props
+}: PersonalizedTableProps) => {
+  const settings = useTableColumnSettings(tableKey, columns);
+  return (
+    <>
+      <div className="mb-2 flex items-center justify-end gap-3">
+        <TableColumnSettings
+          fields={settings.fields}
+          preferences={settings.preferences}
+          onApply={settings.applyPreferences}
+        />
+      </div>
+      <ConfiguredTable {...props} columns={columns} settings={settings} />
+    </>
+  );
+};
+
+interface ConfiguredTableProps extends DataTableProps {
+  settings: TableColumnSettingsState;
+}
+
+const ConfiguredTable = ({
+  settings,
   columns = [],
   children,
   ...props
-}: PersonalizedTableProps) => {
-  const [controlsContainer, setControlsContainer] =
-    useState<HTMLElement | null>();
-  useEffect(() => {
-    const frame = requestAnimationFrame(() =>
-      setControlsContainer(document.getElementById(controlsId)),
-    );
-    return () => cancelAnimationFrame(frame);
-  }, [controlsId]);
-  const { preferences, applyPreferences, storageError } =
-    useTableColumnPreferences(
-      storageKey,
-      fields.map((field) => field.key),
-    );
+}: ConfiguredTableProps) => {
+  const { fields, preferences, storageError } = settings;
   const indexes = preferences
     .filter((field) => field.visible)
     .map((field) => fields.findIndex((source) => source.key === field.key));
@@ -93,22 +101,8 @@ const PersonalizedTable = ({
     TableRow,
     TableHeaderCell,
   );
-  const controls = (
-    <TableColumnSettings
-      fields={fields}
-      preferences={preferences}
-      onApply={applyPreferences}
-    />
-  );
   return (
     <>
-      {controlsContainer ? (
-        createPortal(controls, controlsContainer)
-      ) : controlsContainer === null ? (
-        <div className="mb-2 flex items-center justify-end gap-3">
-          {controls}
-        </div>
-      ) : null}
       {storageError && (
         <p role="status" className="text-caption-web text-text-secondary">
           {storageError}

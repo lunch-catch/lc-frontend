@@ -30,9 +30,11 @@ export type {
   DataTableColumn,
   DataTableProps,
   TableCellProps,
+  TableColumnSettingsState,
   TableDensity,
   TableErrorProps,
   TableHeaderCellProps,
   TableSortDirection,
   TableStateProps,
 } from './dataTableTypes';
+export { useTableColumnSettings } from './useTableColumnSettings';

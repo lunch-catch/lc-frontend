@@ -9,11 +9,13 @@ import {
 import { formatNumber } from '@repo/utils';
 
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
+import { useTableColumnSettings } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 
 import { FraudCampaignDetail } from './FraudCampaignDetail';
 import { FraudTable } from './FraudTable';
+import { impressionHeaders, requestHeaders } from './fraudTableColumns';
 import { invalidReasonDescriptions } from './fraudUtils';
 import { useFraudManagement } from './useFraudManagement';
 
@@ -57,6 +59,11 @@ export const FraudManagementContent = ({
     changeReason,
     changePeriod,
   } = useFraudManagement();
+  const headers = tab === 'impressions' ? impressionHeaders : requestHeaders;
+  const columnSettings = useTableColumnSettings(
+    'fraud.' + tab,
+    headers.map(({ key, label }) => ({ key: key ?? label, label })),
+  );
   const summaryCards = [
     {
       label: 'EXPIRED_OR_UNKNOWN',
@@ -143,7 +150,7 @@ export const FraudManagementContent = ({
       )}
       <Tabs items={tabs} value={tab} onValueChange={changeTab} />
       <FilterBar
-        tableKey={'fraud.' + tab}
+        columnSettings={columnSettings}
         className="mb-2 mt-3"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -184,6 +191,7 @@ export const FraudManagementContent = ({
           : '기간·사용자별 합산 결과입니다. 사용자 ID로 검색하며 무효 사유 조건은 적용하지 않습니다.'}
       </p>
       <FraudTable
+        columnSettings={columnSettings}
         tab={tab}
         rows={visibleRows}
         campaigns={view?.campaigns ?? []}

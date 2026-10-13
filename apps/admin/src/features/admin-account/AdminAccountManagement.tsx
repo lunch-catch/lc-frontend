@@ -22,6 +22,7 @@ import {
   TableEmpty,
   TableHeaderCell,
   TableRow,
+  useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
@@ -80,6 +81,10 @@ const emptyForm: AdminAccountForm = {
 };
 
 export const AdminAccountManagement = () => {
+  const columnSettings = useTableColumnSettings(
+    'admin-accounts',
+    accountColumns,
+  );
   const { role: currentRole } = useAdminAuth();
   const canIssueAccount = currentRole === 'SUPER_ADMIN';
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
@@ -226,7 +231,7 @@ export const AdminAccountManagement = () => {
       )}
 
       <FilterBar
-        tableKey="admin-accounts"
+        columnSettings={columnSettings}
         className="mb-4 shrink-0"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -258,7 +263,7 @@ export const AdminAccountManagement = () => {
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
         <DataTable
-          personalizationKey="admin-accounts"
+          columnSettings={columnSettings}
           columns={accountColumns.map((column, index) => ({
             ...column,
             key: ['id', 'name', 'role', 'status', 'createdAt'][index],

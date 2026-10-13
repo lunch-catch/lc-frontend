@@ -14,6 +14,7 @@ import {
   TableHeaderCell,
   TableRow,
   type TableSortDirection,
+  useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
@@ -57,6 +58,15 @@ export const BillingTable = ({
   onRowClick,
   preferences,
 }: BillingTableProps) => {
+  const tableColumns = columns.map((item) => ({
+    key: item.label,
+    label: item.label,
+    width: item.width + '%',
+  }));
+  const columnSettings = useTableColumnSettings(
+    'billing.' + columns.map((column) => column.label).join('|'),
+    tableColumns,
+  );
   const { density, setDensity, pageSize, setPageSize } = preferences;
   const [status, setStatus] = useState(defaultStatus);
   const [range, setRange] = useState<DateRangeValue>(() => ({
@@ -115,7 +125,7 @@ export const BillingTable = ({
   return (
     <>
       <FilterBar
-        tableKey={'billing.' + columns.map((column) => column.label).join('|')}
+        columnSettings={columnSettings}
         className="!px-0 !py-0"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -158,15 +168,9 @@ export const BillingTable = ({
         )}
       </FilterBar>
       <DataTable
-        personalizationKey={
-          'billing.' + columns.map((column) => column.label).join('|')
-        }
+        columnSettings={columnSettings}
         className="table-fixed"
-        columns={columns.map((item) => ({
-          key: item.label,
-          label: item.label,
-          width: item.width + '%',
-        }))}
+        columns={tableColumns}
         density={density}
         resizableColumns
       >

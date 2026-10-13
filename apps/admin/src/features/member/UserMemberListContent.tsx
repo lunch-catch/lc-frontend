@@ -25,6 +25,7 @@ import {
   TableLoading,
   TableRow,
   type TableSortDirection,
+  useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
@@ -52,6 +53,7 @@ export const UserMemberListContent = ({
   initialMemberId,
   onReviewEnd,
 }: UserMemberListContentProps) => {
+  const columnSettings = useTableColumnSettings('members.users', columns);
   const [targetId, setTargetId] = useState(initialMemberId);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(20);
@@ -169,7 +171,7 @@ export const UserMemberListContent = ({
         </div>
       )}
       <FilterBar
-        tableKey="members.users"
+        columnSettings={columnSettings}
         className="mb-2 mt-3"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -206,7 +208,7 @@ export const UserMemberListContent = ({
       </FilterBar>
       <DataTable
         className="table-fixed"
-        personalizationKey="members.users"
+        columnSettings={columnSettings}
         columns={columns}
         density={density}
         resizableColumns
