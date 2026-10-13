@@ -202,17 +202,15 @@ export const CampaignManagementContent = () => {
           }}
           value={statuses}
         />
-        <div className="w-[216px]">
-          <DateRangePicker
-            ariaLabel="집행 기간 범위"
-            placeholder="집행 기간 선택"
-            value={range}
-            onValueChange={(value) => {
-              setRange(value);
-              setPage(1);
-            }}
-          />
-        </div>
+        <DateRangePicker
+          ariaLabel="집행 기간 범위"
+          placeholder="집행 기간 선택"
+          value={range}
+          onValueChange={(value) => {
+            setRange(value);
+            setPage(1);
+          }}
+        />
       </FilterBar>
       <DataTable
         className="table-fixed"

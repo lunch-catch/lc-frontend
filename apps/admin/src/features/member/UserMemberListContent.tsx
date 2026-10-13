@@ -64,7 +64,6 @@ export const UserMemberListContent = ({
     key: MemberSortKey;
     direction: TableSortDirection;
   } | null>(null);
-  const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<{
     key: string;
     data?: MemberPage;
@@ -86,8 +85,6 @@ export const UserMemberListContent = ({
     query.set('sortDir', sort.direction);
   }
   const queryString = query.toString();
-  // 같은 조건으로 재시도해도 별도 요청으로 구분해 이전 오류 대신 로딩 상태를 표시한다.
-  const requestKey = `${queryString}:${retry}`;
   const validationError =
     dates.startDate && dates.endDate && dates.startDate > dates.endDate
       ? '가입일 시작 날짜는 종료 날짜보다 늦을 수 없습니다.'
@@ -99,31 +96,30 @@ export const UserMemberListContent = ({
     // 조건이 바뀌거나 화면을 떠나면 이전 요청을 취소해 늦은 응답이 새 목록을 덮지 않게 한다.
     void getMembers(queryString, controller.signal).then(
       (data) => {
-        if (!controller.signal.aborted) setResult({ key: requestKey, data });
+        if (!controller.signal.aborted) setResult({ key: queryString, data });
       },
       (error: unknown) => {
-        if (!controller.signal.aborted)
-          setResult({
-            key: requestKey,
-            error:
-              error instanceof ApiError
-                ? error.message
-                : '서버에 연결하지 못했습니다. 다시 시도해 주세요.',
-          });
+        if (controller.signal.aborted) return;
+        setResult({
+          key: queryString,
+          error:
+            error instanceof ApiError
+              ? error.message
+              : '서버에 연결하지 못했습니다. 다시 시도해 주세요.',
+        });
       },
     );
     return () => controller.abort();
-  }, [queryString, requestKey, validationError]);
+  }, [queryString, validationError]);
 
   // 현재 조건에 해당하는 응답만 표시해 새 검색을 기다리는 동안 이전 목록을 새 결과처럼 보여 주지 않는다.
-  const currentResult = result?.key === requestKey ? result : null;
+  const currentResult = result?.key === queryString ? result : null;
   const error = validationError ?? currentResult?.error;
   const loading = !validationError && !currentResult;
   const data = currentResult?.data;
   const pagination = {
     currentPage: page,
     pageSize: size,
-    // 현재 페이지 항목 수가 아닌 서버 전체 건수로 페이지 수를 계산한다.
     totalCount: data?.totalElements ?? 0,
     totalPages: Math.ceil((data?.totalElements ?? 0) / size),
     onPageChange: setPage,
@@ -199,16 +195,14 @@ export const UserMemberListContent = ({
             setStatus(value);
           }}
         />
-        <div className="w-[216px]">
-          <DateRangePicker
-            aria-label="가입일 범위"
-            value={dates}
-            onValueChange={(value) => {
-              setPage(1);
-              setDates(value);
-            }}
-          />
-        </div>
+        <DateRangePicker
+          aria-label="가입일 범위"
+          value={dates}
+          onValueChange={(value) => {
+            setPage(1);
+            setDates(value);
+          }}
+        />
       </FilterBar>
       <DataTable
         className="table-fixed"
@@ -277,15 +271,6 @@ export const UserMemberListContent = ({
           )}
         </tbody>
       </DataTable>
-      {error && !validationError && (
-        <Button
-          className="mt-3 self-start"
-          variant="neutral"
-          onClick={() => setRetry((value) => value + 1)}
-        >
-          다시 시도
-        </Button>
-      )}
       <PaginationSummary {...pagination} />
     </>
   );

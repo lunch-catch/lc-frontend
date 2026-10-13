@@ -172,13 +172,11 @@ export const FraudManagementContent = ({
             onValueChange={changeReason}
           />
         )}
-        <div className="w-[216px]">
-          <DateRangePicker
-            aria-label="집계 기간"
-            value={period}
-            onValueChange={changePeriod}
-          />
-        </div>
+        <DateRangePicker
+          aria-label="집계 기간"
+          value={period}
+          onValueChange={changePeriod}
+        />
       </FilterBar>
       <p className="mb-3 px-3 text-caption-web text-text-secondary">
         {tab === 'impressions'

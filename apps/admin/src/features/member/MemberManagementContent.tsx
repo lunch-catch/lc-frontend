@@ -221,20 +221,18 @@ export const MemberManagementContent = ({
               options={statusOptions}
               value={status}
             />
-            <div className="w-[216px]">
-              <DateRangePicker
-                aria-label="가입일 범위"
-                onValueChange={({
-                  endDate: nextEndDate,
-                  startDate: nextStartDate,
-                }) => {
-                  setCurrentPage(1);
-                  setStartDate(nextStartDate);
-                  setEndDate(nextEndDate);
-                }}
-                value={{ endDate, startDate }}
-              />
-            </div>
+            <DateRangePicker
+              aria-label="가입일 범위"
+              onValueChange={({
+                endDate: nextEndDate,
+                startDate: nextStartDate,
+              }) => {
+                setCurrentPage(1);
+                setStartDate(nextStartDate);
+                setEndDate(nextEndDate);
+              }}
+              value={{ endDate, startDate }}
+            />
           </FilterBar>
 
           <OwnerTable

@@ -146,17 +146,15 @@ export const BillingTable = ({
           />
         )}
         {showDateRange && (
-          <div className="w-[216px]">
-            <DateRangePicker
-              ariaLabel="조회 기간"
-              placeholder="조회 기간 선택"
-              value={range}
-              onValueChange={(value) => {
-                setRange(value);
-                setPage(1);
-              }}
-            />
-          </div>
+          <DateRangePicker
+            ariaLabel="조회 기간"
+            placeholder="조회 기간 선택"
+            value={range}
+            onValueChange={(value) => {
+              setRange(value);
+              setPage(1);
+            }}
+          />
         )}
       </FilterBar>
       <DataTable
