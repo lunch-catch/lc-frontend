@@ -11,3 +11,18 @@ export interface MyProfile {
 }
 
 export const fetchMyProfile = () => request<MyProfile>('/v1/members/me');
+
+export interface OnboardingInput {
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  ageGroup: 'AGE_20S' | 'AGE_30S' | 'AGE_40S' | 'AGE_50_PLUS';
+  locationOptIn: boolean;
+  notificationOptIn: boolean;
+}
+
+// 온보딩 완료 (PUT /v1/members/me/onboarding). 서버가 완료로 저장해야 피드를 쓸 수 있다
+// 성별과 연령대는 이후 수정하는 API가 없다
+export const completeOnboarding = (input: OnboardingInput) =>
+  request<MyProfile>('/v1/members/me/onboarding', {
+    method: 'PUT',
+    body: input,
+  });
