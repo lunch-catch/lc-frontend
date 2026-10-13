@@ -37,6 +37,11 @@
   }
 }
 
+/* 스크롤이 없는 드롭다운은 오른쪽 스크롤바 공간을 예약하지 않아 양쪽 여백을 맞춘다. */
+.admin-filter-bar [role='listbox'] {
+  scrollbar-gutter: auto;
+}
+
 /* 테마 전환 중에는 개별 효과를 멈추고 화면 스냅샷 전체를 같은 속도로 전환한다. */
 :root[data-admin-theme-transition] *,
 :root[data-admin-theme-transition] *::before,
