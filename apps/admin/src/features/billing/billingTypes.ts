@@ -71,13 +71,6 @@ export interface BillingState {
   policyHistory: PointPolicy[];
 }
 
-export interface LedgerRow extends LedgerEntry {
-  beforeBalance: number;
-  afterBalance: number;
-  beforeReserved: number;
-  afterReserved: number;
-}
-
 export interface Totals {
   charge: number;
   reserve: number;
