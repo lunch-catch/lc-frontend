@@ -12,9 +12,9 @@ const SwipeClosed = () => {
     <EmptyState
       description={
         <>
-          피드는 매일 10:00–12:59에 열려요.
+          피드는 매일 10:00–12:59에 열려요
           <br />
-          찜한 캠페인과 받은 쿠폰은 계속 확인할 수 있어요.
+          찜한 캠페인과 받은 쿠폰은 계속 확인할 수 있어요
         </>
       }
       image={mascotAlert}

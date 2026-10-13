@@ -84,8 +84,8 @@ const PersonalizationStep = () => {
             내게 맞는 점심 혜택
           </h2>
           <p className="text-body-sm-mobile leading-normal text-text-secondary">
-            성별과 연령대는 맞춤 쿠폰 노출에 사용해요.
-            <br />두 항목을 선택하면 계속할 수 있어요.
+            성별과 연령대는 맞춤 쿠폰 노출에 사용해요
+            <br />두 항목을 선택하면 계속할 수 있어요
           </p>
         </div>
 
@@ -128,7 +128,7 @@ const PersonalizationStep = () => {
         </fieldset>
 
         <p className="text-caption-mobile text-text-secondary">
-          선택 정보는 카카오에서 가져오지 않아요.
+          선택 정보는 카카오에서 가져오지 않아요
         </p>
       </section>
       <FixedBottom>

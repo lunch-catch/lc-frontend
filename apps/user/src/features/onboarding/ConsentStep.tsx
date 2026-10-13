@@ -49,7 +49,7 @@ const ConsentStep = () => {
             약관에 동의해 주세요
           </h2>
           <p className="text-body-sm-mobile leading-normal text-text-secondary">
-            필수 항목에 동의하면 시작할 수 있어요.
+            필수 항목에 동의하면 시작할 수 있어요
           </p>
         </div>
         <div className="flex flex-col rounded-xl border border-border-subtle bg-bg-surface px-4 py-2">
@@ -93,7 +93,7 @@ const ConsentStep = () => {
           })}
         </div>
         <p className="text-center text-caption-mobile text-text-secondary">
-          위치정보 미동의 시 피드와 지도는 이용할 수 없어요.
+          위치정보 미동의 시 피드와 지도는 이용할 수 없어요
         </p>
       </section>
       <FixedBottom>
