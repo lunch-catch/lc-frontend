@@ -5,30 +5,37 @@ import { LockKeyhole, UserRound } from 'lucide-react';
 import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
 
 export interface LoginContentProps {
+  authNotice?: string | null;
   onLogin: (loginId: string, password: string) => Promise<void>;
 }
 
-export const LoginContent = ({ onLogin }: LoginContentProps) => {
+export const LoginContent = ({ onLogin, authNotice }: LoginContentProps) => {
+  const [isNoticeDismissed, setIsNoticeDismissed] = useState(false);
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
-  const { errorMessage, isWaiting, reportError, clearError } =
-    useRequestFeedback();
+  const {
+    errorMessage,
+    isWaiting,
+    retryAfterSeconds,
+    reportError,
+    clearError,
+  } = useRequestFeedback();
   // BCrypt의 72바이트 제한은 글자 수와 다르므로 한글과 이모지도 UTF-8로 인코딩한 길이를 검사한다.
   const isPasswordTooLong = new TextEncoder().encode(password).length > 72;
 
   const loginIdError =
-    hasSubmitted && (!loginId.trim() || loginId.trim().length > 50)
-      ? '관리자 ID는 1~50자로 입력해 주세요.'
+    hasSubmitted && (!loginId || loginId.length > 50 || /\s/u.test(loginId))
+      ? '관리자 ID는 공백 없이 1~50자로 입력해 주세요.'
       : undefined;
   const passwordError = !hasSubmitted
     ? undefined
     : !password.trim()
       ? '비밀번호를 입력해 주세요.'
       : isPasswordTooLong
-        ? '비밀번호가 너무 깁니다. 더 짧게 입력해 주세요.'
+        ? '아이디 또는 비밀번호가 올바르지 않습니다.'
         : undefined;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -37,8 +44,9 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
     setHasSubmitted(true);
 
     if (
-      !loginId.trim() ||
-      loginId.trim().length > 50 ||
+      !loginId ||
+      loginId.length > 50 ||
+      /\s/u.test(loginId) ||
       !password.trim() ||
       isPasswordTooLong
     ) {
@@ -49,7 +57,7 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
     setIsSubmitting(true);
     clearError();
     try {
-      await onLogin(loginId.trim(), password);
+      await onLogin(loginId, password);
       setPassword('');
     } catch (error) {
       reportError(error);
@@ -75,6 +83,11 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
         </div>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          {authNotice && !isNoticeDismissed && (
+            <p role="alert" className="text-caption-web text-status-danger-fg">
+              {authNotice}
+            </p>
+          )}
           <Input
             autoComplete="username"
             disabled={isSubmitting}
@@ -83,6 +96,7 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
             leadingIcon={<UserRound className="size-4" />}
             onChange={(event) => {
               setLoginId(event.target.value);
+              setIsNoticeDismissed(true);
               // 이전 입력의 오류만 숨기고 Retry-After 대기는 유지하며 다음 제출에서 다시 검사한다.
               setHasSubmitted(false);
               clearError();
@@ -98,6 +112,7 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
             leadingIcon={<LockKeyhole className="size-4" />}
             onChange={(event) => {
               setPassword(event.target.value);
+              setIsNoticeDismissed(true);
               // 이전 입력의 오류만 숨기고 Retry-After 대기는 유지하며 다음 제출에서 다시 검사한다.
               setHasSubmitted(false);
               clearError();
@@ -117,7 +132,7 @@ export const LoginContent = ({ onLogin }: LoginContentProps) => {
             isLoading={isSubmitting}
             disabled={isWaiting}
           >
-            {isWaiting ? '재시도 대기 중' : '로그인'}
+            {isWaiting ? `${retryAfterSeconds}초 후 로그인` : '로그인'}
           </Button>
         </form>
       </section>

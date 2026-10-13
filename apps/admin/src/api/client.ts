@@ -49,7 +49,19 @@ const getErrorMessage = (status: number, code?: string) => {
   return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
 };
 
-export const request = async (
+interface AuthRecovery {
+  getVersion: () => number;
+  refresh: () => Promise<unknown>;
+  expire: () => void;
+}
+
+let authRecovery: AuthRecovery | undefined;
+// 요청 모듈이 인증 Store를 직접 import하지 않도록 복구 동작을 주입받는다.
+export const registerAuthRecovery = (recovery: AuthRecovery) => {
+  authRecovery = recovery;
+};
+
+const sendRequest = async (
   path: string,
   options: Omit<RequestInit, 'credentials'> = {},
 ): Promise<Response> => {
@@ -91,6 +103,43 @@ export const request = async (
   }
 
   return response;
+};
+
+export const request = async (
+  path: string,
+  options: Omit<RequestInit, 'credentials'> = {},
+): Promise<Response> => {
+  const recovery = authRecovery;
+  const version = recovery?.getVersion();
+  try {
+    return await sendRequest(path, options);
+  } catch (error) {
+    // 로그인·재발급·로그아웃은 재시도하지 않는다. 권한 오류도 재발급 대상이 아니다.
+    if (
+      !recovery ||
+      !path.startsWith('/v1/admin/') ||
+      path.startsWith('/v1/admin/auth/') ||
+      !(error instanceof ApiError) ||
+      error.code !== 'AUTH-005' ||
+      error.status !== 401
+    )
+      throw error;
+    options.signal?.throwIfAborted();
+    // 이전 쿠키로 보낸 요청이 늦게 실패해도 이미 완료된 재발급을 반복하지 않는다.
+    if (version === recovery.getVersion()) await recovery.refresh();
+    options.signal?.throwIfAborted();
+    try {
+      return await sendRequest(path, options);
+    } catch (retryError) {
+      if (
+        retryError instanceof ApiError &&
+        retryError.status === 401 &&
+        retryError.code === 'AUTH-005'
+      )
+        recovery.expire();
+      throw retryError;
+    }
+  }
 };
 
 export const requestData = async <T>(

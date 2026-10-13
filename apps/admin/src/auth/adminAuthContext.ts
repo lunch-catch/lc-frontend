@@ -8,11 +8,12 @@ export interface AdminLoginValues {
 }
 
 export interface AdminAuth {
+  authNotice: string | null;
   admin: AdminInfo | null;
   role: AdminAccountRole | null;
   isAuthenticated: boolean;
   login: (values: AdminLoginValues) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export interface AdminInfo {

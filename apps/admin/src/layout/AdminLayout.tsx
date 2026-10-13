@@ -5,6 +5,7 @@ import { getTheme, setTheme } from '@repo/ui';
 
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import { AdminSidebar } from '@admin/components/AdminSidebar/AdminSidebar';
+import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
 
 import { adminNavigationPaths, getActiveAdminItem } from './adminNavigation';
 
@@ -12,6 +13,25 @@ export const AdminLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { admin, logout } = useAdminAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const loggingOutRef = useRef(false);
+  const { errorMessage, isWaiting, reportError, clearError } =
+    useRequestFeedback();
+  const handleLogout = async () => {
+    if (loggingOutRef.current || isWaiting) return;
+    loggingOutRef.current = true;
+    setIsLoggingOut(true);
+    clearError();
+    try {
+      await logout();
+      void navigate('/login', { replace: true });
+    } catch (error) {
+      reportError(error);
+    } finally {
+      loggingOutRef.current = false;
+      setIsLoggingOut(false);
+    }
+  };
   const [theme, setCurrentTheme] = useState(getTheme);
   const isThemeTransitioning = useRef(false);
   const handleThemeToggle = async () => {
@@ -57,9 +77,9 @@ export const AdminLayout = () => {
           const path = adminNavigationPaths[itemId];
           if (path) void navigate(path);
         }}
+        logoutDisabled={isLoggingOut || isWaiting}
         onLogout={() => {
-          logout();
-          void navigate('/login', { replace: true });
+          void handleLogout();
         }}
       />
       <div className="flex h-full min-w-0 flex-1 flex-col">
@@ -68,6 +88,14 @@ export const AdminLayout = () => {
           className="admin-scrollbar min-h-0 flex-1 overflow-auto overscroll-y-contain p-6"
           key={pathname}
         >
+          {errorMessage && (
+            <p
+              role="alert"
+              className="mb-4 text-body-sm-web text-status-danger-fg"
+            >
+              {errorMessage}
+            </p>
+          )}
           <Outlet />
         </main>
       </div>
