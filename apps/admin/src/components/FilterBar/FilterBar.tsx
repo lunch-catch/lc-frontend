@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
-import { getTableSettingsId } from '@admin/components/DataTable/tableColumnPreferences';
+import type { TableColumnSettingsState } from '@admin/components/DataTable/dataTableTypes';
+import { TableColumnSettings } from '@admin/components/DataTable/TableColumnSettings';
 import {
   Pagination,
   type PaginationProps,
@@ -14,7 +15,7 @@ export interface FilterBarProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
   pagination?: PaginationProps;
   density?: TableDensityControlProps;
-  tableKey?: string;
+  columnSettings?: TableColumnSettingsState;
 }
 
 // 상태는 화면에서 관리하고, 조회 화면마다 같은 순서로 컨트롤을 배치한다.
@@ -23,7 +24,7 @@ export const FilterBar = ({
   className,
   pagination,
   density,
-  tableKey,
+  columnSettings,
   ...props
 }: FilterBarProps) => {
   return (
@@ -42,8 +43,14 @@ export const FilterBar = ({
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
           {children}
         </div>
-        {tableKey && (
-          <div id={getTableSettingsId(tableKey)} className="shrink-0" />
+        {columnSettings && (
+          <div className="shrink-0">
+            <TableColumnSettings
+              fields={columnSettings.fields}
+              preferences={columnSettings.preferences}
+              onApply={columnSettings.applyPreferences}
+            />
+          </div>
         )}
         {density && (
           <div className="shrink-0">

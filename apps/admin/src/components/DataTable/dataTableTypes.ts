@@ -17,6 +17,7 @@ export interface DataTableColumn {
 }
 
 export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
+  columnSettings?: TableColumnSettingsState;
   personalizationKey?: string;
   columns?: DataTableColumn[];
   density?: TableDensity;
@@ -26,6 +27,13 @@ export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
 export interface TableColumnPreference {
   key: string;
   visible: boolean;
+}
+
+export interface TableColumnSettingsState {
+  fields: { key: string; label: string }[];
+  preferences: TableColumnPreference[];
+  applyPreferences: (next: TableColumnPreference[]) => void;
+  storageError: string;
 }
 export interface TableHeaderCellProps extends ThHTMLAttributes<HTMLTableCellElement> {
   columnIndex?: number;

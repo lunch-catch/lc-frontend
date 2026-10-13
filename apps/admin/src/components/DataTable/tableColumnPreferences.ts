@@ -3,9 +3,6 @@ import { Children, cloneElement, Fragment, isValidElement } from 'react';
 
 import type { TableColumnPreference } from './dataTableTypes';
 
-export const getTableSettingsId = (key: string) =>
-  'table-settings-' + encodeURIComponent(key);
-
 export const normalizeColumnPreferences = (
   keys: string[],
   saved: unknown,

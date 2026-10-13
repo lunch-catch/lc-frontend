@@ -22,6 +22,7 @@ import {
   TableEmpty,
   TableHeaderCell,
   TableRow,
+  useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
@@ -80,6 +81,10 @@ const emptyForm: AdminAccountForm = {
 };
 
 export const AdminAccountManagement = () => {
+  const columnSettings = useTableColumnSettings(
+    'admin-accounts',
+    accountColumns,
+  );
   const { role: currentRole } = useAdminAuth();
   const canIssueAccount = currentRole === 'SUPER_ADMIN';
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
@@ -226,7 +231,7 @@ export const AdminAccountManagement = () => {
       )}
 
       <FilterBar
-        tableKey="admin-accounts"
+        columnSettings={columnSettings}
         className="mb-4 shrink-0"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -258,7 +263,7 @@ export const AdminAccountManagement = () => {
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
         <DataTable
-          personalizationKey="admin-accounts"
+          columnSettings={columnSettings}
           columns={accountColumns.map((column, index) => ({
             ...column,
             key: ['id', 'name', 'role', 'status', 'createdAt'][index],
@@ -348,6 +353,15 @@ export const AdminAccountManagement = () => {
             autoComplete="new-password"
             errorMessage={formErrors.password}
             label="비밀번호"
+            onBlur={() => {
+              // 확인란을 아직 입력하지 않았다면 원본 비밀번호에서 이동할 때 불일치 오류를 표시하지 않는다.
+              if (!form.passwordConfirmation) return;
+              setFormErrors((currentErrors) => ({
+                ...currentErrors,
+                passwordConfirmation:
+                  validateAdminAccount(form).passwordConfirmation,
+              }));
+            }}
             onChange={(event) => {
               setForm((currentForm) => ({
                 ...currentForm,
@@ -356,6 +370,8 @@ export const AdminAccountManagement = () => {
               setFormErrors((currentErrors) => ({
                 ...currentErrors,
                 password: undefined,
+                // 원본 비밀번호가 바뀌면 기존 불일치 결과도 숨기고 blur 또는 제출에서 다시 검사한다.
+                passwordConfirmation: undefined,
               }));
             }}
             type="password"
@@ -365,6 +381,14 @@ export const AdminAccountManagement = () => {
             autoComplete="new-password"
             errorMessage={formErrors.passwordConfirmation}
             label="비밀번호 확인"
+            onBlur={() => {
+              // 입력 중에는 숨긴 확인 오류를 입력란에서 벗어날 때 현재 두 비밀번호로 다시 판단한다.
+              setFormErrors((currentErrors) => ({
+                ...currentErrors,
+                passwordConfirmation:
+                  validateAdminAccount(form).passwordConfirmation,
+              }));
+            }}
             onChange={(event) => {
               setForm((currentForm) => ({
                 ...currentForm,

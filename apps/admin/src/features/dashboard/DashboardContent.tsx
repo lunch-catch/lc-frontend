@@ -64,14 +64,12 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                 { label: '월별', value: 'month' },
               ]}
             />
-            <div className="w-64 max-w-full">
-              <DateRangePicker
-                ariaLabel="대시보드 조회 기간"
-                value={range}
-                onValueChange={setRange}
-                placeholder="조회 기간 선택"
-              />
-            </div>
+            <DateRangePicker
+              ariaLabel="대시보드 조회 기간"
+              value={range}
+              onValueChange={setRange}
+              placeholder="조회 기간 선택"
+            />
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3 text-caption-web text-text-secondary">

@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react';
 
 import { loginAdmin } from '@admin/api/auth';
+import { TableSettingsAccountContext } from '@admin/components/DataTable/tableSettingsAccountContext';
 
 import {
   AdminAuthContext,
@@ -32,7 +33,10 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
       }}
     >
-      {children}
+      {/* 계정 변경을 테이블 설정에 전달하되 저장된 설정은 로그아웃 후에도 보관한다. */}
+      <TableSettingsAccountContext value={admin?.adminId ?? null}>
+        {children}
+      </TableSettingsAccountContext>
     </AdminAuthContext>
   );
 };

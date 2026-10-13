@@ -23,6 +23,7 @@ import {
   TableHeaderCell,
   TableRow,
   type TableSortDirection,
+  useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
@@ -91,6 +92,7 @@ const headers: { label: string; key: CampaignSortKey }[] = [
 ];
 
 export const CampaignManagementContent = () => {
+  const columnSettings = useTableColumnSettings('campaigns', columns);
   const [statuses, setStatuses] = useState<CampaignStatus[]>(initialStatuses);
   const [range, setRange] = useState<DateRangeValue>({
     startDate: '',
@@ -183,7 +185,7 @@ export const CampaignManagementContent = () => {
         </p>
       </header>
       <FilterBar
-        tableKey="campaigns"
+        columnSettings={columnSettings}
         className="mb-2"
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
@@ -202,21 +204,19 @@ export const CampaignManagementContent = () => {
           }}
           value={statuses}
         />
-        <div className="w-[216px]">
-          <DateRangePicker
-            ariaLabel="집행 기간 범위"
-            placeholder="집행 기간 선택"
-            value={range}
-            onValueChange={(value) => {
-              setRange(value);
-              setPage(1);
-            }}
-          />
-        </div>
+        <DateRangePicker
+          ariaLabel="집행 기간 범위"
+          placeholder="집행 기간 선택"
+          value={range}
+          onValueChange={(value) => {
+            setRange(value);
+            setPage(1);
+          }}
+        />
       </FilterBar>
       <DataTable
         className="table-fixed"
-        personalizationKey="campaigns"
+        columnSettings={columnSettings}
         columns={columns.map((column, index) => ({
           ...column,
           key: headers[index].key,

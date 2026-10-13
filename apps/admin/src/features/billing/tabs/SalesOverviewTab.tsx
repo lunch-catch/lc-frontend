@@ -33,7 +33,8 @@ const columns = [
   { label: '집계 상태', width: 14 },
 ];
 // 첫 셀은 날짜 필드와 좌우 패딩만 확보하고, 금액 열은 남은 공간을 균등하게 나눈다.
-const summaryDateColumnWidth = 'calc(216px + var(--space-6) + var(--space-4))';
+const summaryDateColumnWidth =
+  'calc(var(--layout-date-range-picker-width) + var(--space-6) + var(--space-4))';
 const summaryAmountColumnWidth = `calc((100% - ${summaryDateColumnWidth}) / 5)`;
 const summaryColumns = [
   { label: '조회 기간', width: summaryDateColumnWidth },
@@ -155,14 +156,12 @@ export const SalesOverviewTab = ({
                 className="relative z-20"
                 style={{ overflow: 'visible' }}
               >
-                <div className="w-[216px]">
-                  <DateRangePicker
-                    ariaLabel="합계 조회 기간"
-                    placeholder="전체 기간"
-                    value={summaryRange}
-                    onValueChange={setSummaryRange}
-                  />
-                </div>
+                <DateRangePicker
+                  ariaLabel="합계 조회 기간"
+                  placeholder="전체 기간"
+                  value={summaryRange}
+                  onValueChange={setSummaryRange}
+                />
               </TableCell>
               {summaryAmounts.map((amount, index) => (
                 <TableCell key={summaryColumns[index + 1].label}>
