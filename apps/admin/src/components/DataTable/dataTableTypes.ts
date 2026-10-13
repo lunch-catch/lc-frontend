@@ -1,5 +1,6 @@
 import type {
   CSSProperties,
+  HTMLAttributes,
   PointerEvent,
   TableHTMLAttributes,
   TdHTMLAttributes,
@@ -41,6 +42,11 @@ export interface TableHeaderCellProps extends ThHTMLAttributes<HTMLTableCellElem
   sortDirection?: TableSortDirection;
 }
 export type TableCellProps = TdHTMLAttributes<HTMLTableCellElement>;
+
+export interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
+  /** 상세 패널을 여는 행의 마지막 표시 셀에 화살표를 표시한다. */
+  showDetailArrow?: boolean;
+}
 
 export interface TableStateProps extends TdHTMLAttributes<HTMLTableCellElement> {
   colSpan: number;

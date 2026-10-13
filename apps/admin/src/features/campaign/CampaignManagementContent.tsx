@@ -73,12 +73,6 @@ const initialStatuses: CampaignStatus[] = [
   'PAUSED',
   'ENDED',
 ];
-const columns: DataTableColumn[] = [10, 10, 13, 9, 15, 11, 11, 10, 11].map(
-  (width) => ({
-    minWidth: 120,
-    width: `${width}%`,
-  }),
-);
 const headers: { label: string; key: CampaignSortKey }[] = [
   { label: '캠페인 ID', key: 'id' },
   { label: '점주 ID', key: 'ownerId' },
@@ -90,6 +84,13 @@ const headers: { label: string; key: CampaignSortKey }[] = [
   { label: '누적 유효 노출', key: 'validImpressions' },
   { label: '집행 기간', key: 'startDate' },
 ];
+const columnWidths = [10, 10, 13, 9, 15, 11, 11, 10, 11];
+// 설정과 테이블에 동일한 식별자·이름을 전달해야 열 숨김과 순서 변경이 일치한다.
+const columns: DataTableColumn[] = headers.map((header, index) => ({
+  ...header,
+  minWidth: 120,
+  width: `${columnWidths[index]}%`,
+}));
 
 export const CampaignManagementContent = () => {
   const columnSettings = useTableColumnSettings('campaigns', columns);
@@ -217,11 +218,7 @@ export const CampaignManagementContent = () => {
       <DataTable
         className="table-fixed"
         columnSettings={columnSettings}
-        columns={columns.map((column, index) => ({
-          ...column,
-          key: headers[index].key,
-          label: headers[index].label,
-        }))}
+        columns={columns}
         density={density}
         resizableColumns
       >

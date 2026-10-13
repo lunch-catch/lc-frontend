@@ -5,7 +5,6 @@ import {
   SearchField,
   SelectField,
 } from '@repo/ui';
-import { ChevronRight } from 'lucide-react';
 
 import {
   DataTable,
@@ -214,6 +213,7 @@ export const BillingTable = ({
               return (
                 <TableRow
                   key={record.id}
+                  showDetailArrow={clickable}
                   className={
                     clickable
                       ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary'
@@ -237,22 +237,8 @@ export const BillingTable = ({
                   }
                 >
                   {record.cells.map((item, index) => (
-                    <TableCell
-                      key={index}
-                      title={item.title}
-                      className={
-                        index === record.cells.length - 1 && clickable
-                          ? 'relative !pr-10'
-                          : undefined
-                      }
-                    >
+                    <TableCell key={index} title={item.title}>
                       {item.content}
-                      {index === record.cells.length - 1 && clickable && (
-                        <ChevronRight
-                          aria-hidden="true"
-                          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-                        />
-                      )}
                     </TableCell>
                   ))}
                 </TableRow>

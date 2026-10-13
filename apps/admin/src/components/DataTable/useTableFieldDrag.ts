@@ -5,20 +5,26 @@ import type { TableColumnPreference } from './dataTableTypes';
 
 export interface FieldDropTarget {
   visible: boolean;
+  /** 이동 중인 필드를 제외한 대상 구역 목록의 삽입 위치. */
   index: number;
 }
 
 interface DragSession {
   key: string;
+  startX: number;
   startY: number;
   sourceVisible: boolean;
   groupTops: { visible: number; hidden: number };
+  groupScrollTops: { visible: number; hidden: number };
+  sourceRect: { top: number; left: number; width: number };
   stride: number;
   moved: boolean;
   rows: { key: string; visible: boolean; center: number }[];
   target: FieldDropTarget | null;
 }
 
+// data-field-group은 이동 구역, data-field-scroll은 해당 구역의 스크롤 영역,
+// data-column-key·data-visible은 필드의 식별자와 표시 상태를 나타낸다.
 export const useTableFieldDrag = (
   fields: TableColumnPreference[],
   onDrop: (key: string, target: FieldDropTarget) => boolean,
@@ -26,22 +32,13 @@ export const useTableFieldDrag = (
   const containerRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<DragSession | null>(null);
   const previousPositions = useRef(new Map<string, number>());
-  const [listHeight, setListHeight] = useState<number>();
-  const [heightRevision, setHeightRevision] = useState(0);
   const [drag, setDrag] = useState<{
     key: string;
     offset: number;
     stride: number;
     target: FieldDropTarget | null;
+    preview: { top: number; left: number; width: number };
   } | null>(null);
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const initialHeight = container.scrollHeight;
-    const frame = requestAnimationFrame(() => setListHeight(initialHeight));
-    return () => cancelAnimationFrame(frame);
-  }, [heightRevision]);
 
   useLayoutEffect(() => {
     const rows =
@@ -70,12 +67,14 @@ export const useTableFieldDrag = (
     sessionRef.current = null;
     setDrag(null);
   };
-  const resetListHeight = () => {
+  const resetScroll = () => {
     cancel();
     previousPositions.current.clear();
-    setListHeight(undefined);
-    setHeightRevision((revision) => revision + 1);
-    if (containerRef.current) containerRef.current.scrollTop = 0;
+    containerRef.current
+      ?.querySelectorAll<HTMLElement>('[data-field-scroll]')
+      .forEach((list) => {
+        list.scrollTop = 0;
+      });
   };
   const start = (key: string, event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
@@ -87,6 +86,7 @@ export const useTableFieldDrag = (
     );
     const source = elements.find((row) => row.dataset.columnKey === key);
     if (!source) return;
+    // 드래그 중 행이 밀리는 애니메이션을 기준 좌표에 다시 반영하면 삽입 위치가 흔들리므로 시작 위치를 저장한다.
     const rows = elements.map((row) => {
       const rect = row.getBoundingClientRect();
       return {
@@ -98,10 +98,25 @@ export const useTableFieldDrag = (
     const groupRows = rows.filter(
       (row) => row.visible === (source.dataset.visible === 'true'),
     );
+    const sourceRect = source.getBoundingClientRect();
     sessionRef.current = {
       key,
+      startX: event.clientX,
       startY: event.clientY,
       sourceVisible: source.dataset.visible === 'true',
+      sourceRect: {
+        top: sourceRect.top,
+        left: sourceRect.left,
+        width: sourceRect.width,
+      },
+      groupScrollTops: {
+        visible:
+          container.querySelector<HTMLElement>('[data-field-scroll="visible"]')
+            ?.scrollTop ?? 0,
+        hidden:
+          container.querySelector<HTMLElement>('[data-field-scroll="hidden"]')
+            ?.scrollTop ?? 0,
+      },
       groupTops: {
         visible: container
           .querySelector('[data-field-group="visible"]')!
@@ -122,20 +137,21 @@ export const useTableFieldDrag = (
   const update = (event: PointerEvent<HTMLButtonElement>) => {
     const session = sessionRef.current;
     const container = containerRef.current;
-    if (!session || !container || Math.abs(event.clientY - session.startY) < 4)
+    if (!session || !container) return;
+    // 좌우 구역 이동도 시작할 수 있게 수평·수직 거리를 함께 검사한다.
+    if (
+      !session.moved &&
+      Math.hypot(
+        event.clientX - session.startX,
+        event.clientY - session.startY,
+      ) < 4
+    )
       return;
     session.moved = true;
-    const bounds = container.getBoundingClientRect();
-    if (event.clientY < bounds.top + 24) container.scrollTop -= 8;
-    else if (event.clientY > bounds.bottom - 24) container.scrollTop += 8;
     const sourceGroupName = session.sourceVisible ? 'visible' : 'hidden';
     const sourceGroup = container.querySelector(
       `[data-field-group="${sourceGroupName}"]`,
     );
-    const sourceLayoutOffset =
-      (sourceGroup?.getBoundingClientRect().top ??
-        session.groupTops[sourceGroupName]) -
-      session.groupTops[sourceGroupName];
     const group = Array.from(
       container.querySelectorAll<HTMLElement>('[data-field-group]'),
     )
@@ -151,8 +167,29 @@ export const useTableFieldDrag = (
       });
     const targetGroupName =
       group?.dataset.fieldGroup === 'visible' ? 'visible' : 'hidden';
+    const targetScroll = group?.querySelector<HTMLElement>(
+      '[data-field-scroll]',
+    );
+    if (targetScroll) {
+      const bounds = targetScroll.getBoundingClientRect();
+      if (event.clientY < bounds.top + 24) targetScroll.scrollTop -= 8;
+      else if (event.clientY > bounds.bottom - 24) targetScroll.scrollTop += 8;
+    }
+    // 각 구역이 독립적으로 스크롤되므로 드래그 시작 후의 스크롤 차이를 좌표에 반영한다.
+    const sourceScroll = sourceGroup?.querySelector<HTMLElement>(
+      '[data-field-scroll]',
+    );
+    const sourceLayoutOffset =
+      (sourceGroup?.getBoundingClientRect().top ??
+        session.groupTops[sourceGroupName]) -
+      session.groupTops[sourceGroupName] -
+      ((sourceScroll?.scrollTop ?? 0) -
+        session.groupScrollTops[sourceGroupName]);
     const targetLayoutOffset = group
-      ? group.getBoundingClientRect().top - session.groupTops[targetGroupName]
+      ? group.getBoundingClientRect().top -
+        session.groupTops[targetGroupName] -
+        ((targetScroll?.scrollTop ?? 0) -
+          session.groupScrollTops[targetGroupName])
       : 0;
     session.target = group
       ? {
@@ -170,6 +207,12 @@ export const useTableFieldDrag = (
       offset: event.clientY - session.startY - sourceLayoutOffset,
       stride: session.stride,
       target: session.target,
+      // 포털 미리보기는 뷰포트 좌표로 이동하고, 목록 내부의 스크롤 보정과는 분리한다.
+      preview: {
+        ...session.sourceRect,
+        left: session.sourceRect.left + event.clientX - session.startX,
+        top: session.sourceRect.top + event.clientY - session.startY,
+      },
     });
   };
   const finish = () => {
@@ -227,8 +270,7 @@ export const useTableFieldDrag = (
   };
   return {
     containerRef,
-    listHeight,
-    resetListHeight,
+    resetScroll,
     drag,
     start,
     update,
