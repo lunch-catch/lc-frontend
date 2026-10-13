@@ -61,7 +61,7 @@ const MyPageScreen = () => {
             {menuItems.map(({ label, to }) => (
               <li key={to}>
                 <Link
-                  className="flex h-14 items-center justify-between px-4 text-body-mobile text-text-primary active:bg-surface-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action-primary"
+                  className="flex h-13 items-center justify-between px-4 text-body-sm-mobile font-medium text-text-primary active:bg-surface-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action-primary"
                   to={to}
                 >
                   {label}
