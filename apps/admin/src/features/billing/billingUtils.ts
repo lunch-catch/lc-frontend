@@ -2,7 +2,6 @@ import type {
   BillingState,
   DailyCache,
   LedgerEntry,
-  LedgerRow,
   LedgerType,
   RefundRequest,
   RefundStatus,
@@ -45,30 +44,6 @@ export const getKoreaDate = (date = new Date()) =>
 export const inDateRange = (timestamp: string, start: string, end: string) =>
   (!start || timestamp.slice(0, 10) >= start) &&
   (!end || timestamp.slice(0, 10) <= end);
-
-export const getLedgerRows = (ledger: LedgerEntry[]): LedgerRow[] => {
-  const balances = new Map<string, { balance: number; reserved: number }>();
-  return [...ledger]
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((entry) => {
-      const previous = balances.get(entry.ownerId) ?? {
-        balance: 0,
-        reserved: 0,
-      };
-      const next = {
-        balance: previous.balance + entry.balanceDelta,
-        reserved: previous.reserved + entry.reservedDelta,
-      };
-      balances.set(entry.ownerId, next);
-      return {
-        ...entry,
-        beforeBalance: previous.balance,
-        afterBalance: next.balance,
-        beforeReserved: previous.reserved,
-        afterReserved: next.reserved,
-      };
-    });
-};
 
 export const getBalance = (
   ledger: LedgerEntry[],

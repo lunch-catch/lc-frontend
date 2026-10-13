@@ -63,7 +63,9 @@ export const BillingManagementContent = () => {
       </div>
       {activeTab === 'payments' && <PaymentHistoryTab {...props} />}
       {activeTab === 'refunds' && <RefundRequestsTab {...props} />}
-      {activeTab === 'ledger' && <PointLedgerTab {...props} />}
+      {activeTab === 'ledger' && (
+        <PointLedgerTab today={today} preferences={preferences} />
+      )}
       {activeTab === 'sales' && (
         <SalesOverviewTab {...props} dailyCache={dailyCache} />
       )}
