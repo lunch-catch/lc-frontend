@@ -31,6 +31,8 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(
   '',
 );
 
+const REFRESH_PATH = '/v1/auth/tokens:refresh';
+
 const readEnvelope = async <T>(
   response: Response,
 ): Promise<ResponseEnvelope<T> | null> => {
@@ -41,12 +43,10 @@ const readEnvelope = async <T>(
   }
 };
 
-// API 서버에 요청하고 봉투를 벗긴 data를 돌려준다
-// 인증 토큰은 서버가 HttpOnly 쿠키로 주고받으므로 따로 싣지 않는다
-// 네트워크가 끊겨 응답을 못 받으면 fetch가 던진 오류가 그대로 올라간다
-export const request = async <T>(
+// 요청을 한 번 보내고 봉투를 벗긴 data를 돌려준다
+const send = async <T>(
   path: string,
-  { body, method = 'GET' }: RequestOptions = {},
+  { body, method = 'GET' }: RequestOptions,
 ): Promise<T> => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
@@ -72,4 +72,65 @@ export const request = async <T>(
   }
 
   return envelope.data;
+};
+
+// 다시 로그인해야 하는 상태가 됐을 때 알릴 곳 (AuthProvider가 로그인 정보를 지운다)
+const sessionExpiredListeners = new Set<() => void>();
+
+export const onSessionExpired = (listener: () => void) => {
+  sessionExpiredListeners.add(listener);
+  return () => {
+    sessionExpiredListeners.delete(listener);
+  };
+};
+
+// 진행 중인 재발급. 여러 요청이 동시에 401을 받아도 재발급은 한 번만 보낸다
+// 같은 Refresh Token이 두 번 가면 서버가 재사용으로 보고 모든 로그인을 끊는다 (AUTH-004)
+let refreshing: Promise<boolean> | null = null;
+
+// 재발급에 성공하면 true, 다시 로그인해야 하면 false
+// 서버가 잠시 처리하지 못한 경우(503)나 네트워크 오류는 로그인을 끊지 않고 오류를 그대로 올린다
+const refreshTokens = () => {
+  refreshing ??= send<void>(REFRESH_PATH, { method: 'POST' })
+    .then(() => true)
+    .catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 401) {
+        sessionExpiredListeners.forEach((listener) => listener());
+        return false;
+      }
+      throw error;
+    })
+    .finally(() => {
+      refreshing = null;
+    });
+
+  return refreshing;
+};
+
+// 로그인 전에 부르는 요청은 Access Token이 없어 401이어도 재발급하지 않는다
+const needsSession = (path: string, method: RequestOptions['method']) =>
+  path !== REFRESH_PATH &&
+  path !== '/v1/auth/kakao/authorize' &&
+  !(path === '/v1/auth/tokens' && method === 'POST');
+
+// API 서버에 요청하고 봉투를 벗긴 data를 돌려준다
+// 인증 토큰은 서버가 HttpOnly 쿠키로 주고받으므로 따로 싣지 않는다
+// Access Token(30분)이 만료돼 401이 오면 Refresh Token으로 재발급하고 한 번 더 보낸다
+// 네트워크가 끊겨 응답을 못 받으면 fetch가 던진 오류가 그대로 올라간다
+export const request = async <T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> => {
+  try {
+    return await send<T>(path, options);
+  } catch (error) {
+    const isExpired =
+      error instanceof ApiError &&
+      error.status === 401 &&
+      error.code === 'AUTH-005';
+    if (!isExpired || !needsSession(path, options.method)) throw error;
+
+    if (!(await refreshTokens())) throw error;
+    return send<T>(path, options);
+  }
 };

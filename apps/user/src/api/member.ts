@@ -6,6 +6,7 @@ export interface MyProfile {
   memberId: number;
   nickname: string;
   profileImageUrl: string | null;
+  onboardingCompleted: boolean;
   createdAt: string;
 }
 

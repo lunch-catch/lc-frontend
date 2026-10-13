@@ -1,6 +1,8 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import type { AuthUser } from '@user/api/auth';
+import { onSessionExpired } from '@user/api/client';
+import { fetchMyProfile } from '@user/api/member';
 
 import { AuthContext } from './authContext';
 
@@ -33,6 +35,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // 저장소를 쓸 수 없으면 화면 상태만 유지한다
     }
   };
+
+  // 재발급까지 실패해 다시 로그인해야 하면 로그인 정보를 지운다. 접근 제어가 첫 화면으로 보낸다
+  useEffect(() => onSessionExpired(() => saveUser(null)), []);
+
+  // 저장해 둔 로그인 정보는 쿠키가 만료돼도 남아 있어서, 앱을 열 때 서버에 한 번 확인한다
+  // 로그인이 끊겼으면 위의 onSessionExpired가 정리하고, 네트워크 오류는 그대로 둔다
+  useEffect(() => {
+    if (!readStoredUser()) return;
+
+    fetchMyProfile()
+      .then((profile) =>
+        saveUser({
+          id: String(profile.memberId),
+          nickname: profile.nickname,
+          isOnboarded: profile.onboardingCompleted,
+        }),
+      )
+      .catch(() => {});
+  }, []);
 
   return (
     <AuthContext
