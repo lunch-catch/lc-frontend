@@ -13,14 +13,21 @@ import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
 import { useHeaderLocationName } from '@user/features/location/useMyLocation';
 
 import GestureRail from './GestureRail';
+import OpenCountdown from './OpenCountdown';
 import PosterCard from './PosterCard';
 import PosterSkeleton from './PosterSkeleton';
 import SwipeClosed from './SwipeClosed';
 import SwipeDone from './SwipeDone';
+import SwipeHint from './SwipeHint';
 import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
 const TOAST_DURATION_MS = 2500;
+// 오픈 안내 줄의 높이와 위아래로 띄울 최소 여백
+const COUNTDOWN_HEIGHT = 32;
+const COUNTDOWN_MIN_GAP = 16;
+// 카드 영역 위쪽 안쪽 여백 (pt-2)
+const CARD_AREA_PADDING_TOP = 8;
 const FIRST_WISH_STORAGE_KEY = 'launch-catch-first-wish-date';
 
 // 오늘 처음 찜했는지 확인하고, 처음이면 오늘 날짜를 기록한다
@@ -50,7 +57,10 @@ const SwipeFeed = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // 같은 카드의 노출이 두 번 기록되지 않도록 보낸 serveId를 기억한다
   const impressedServeIds = useRef(new Set<string>());
-  const [setCardArea, cardMaxWidth] = usePosterFitWidth();
+  const [setCardArea, cardMaxWidth, spareHeight] = usePosterFitWidth();
+  // 카드 묶음이 세로 가운데에 있어서 남는 높이의 절반이 카드 위에 빈다
+  const spareTop = spareHeight / 2;
+  const showCountdown = spareTop >= COUNTDOWN_HEIGHT + COUNTDOWN_MIN_GAP * 2;
 
   useEffect(() => {
     let ignore = false;
@@ -125,9 +135,22 @@ const SwipeFeed = () => {
         {(status === 'loading' || topCard) && (
           // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
           <section
-            className="flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-3"
+            className="relative flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-3"
             ref={setCardArea}
           >
+            {/* 큰 화면에서 카드 위가 비면 그 가운데에 오픈까지 남은 시간을 둔다 */}
+            {/* 겹쳐 두어서 안내가 생겨도 카드 크기 계산이 바뀌지 않는다 */}
+            {showCountdown && (
+              <div
+                className="absolute inset-x-0 flex justify-center"
+                style={{
+                  top:
+                    CARD_AREA_PADDING_TOP + (spareTop - COUNTDOWN_HEIGHT) / 2,
+                }}
+              >
+                <OpenCountdown />
+              </div>
+            )}
             {/* 카드와 버튼을 한 묶음으로 남는 높이의 세로 가운데에 둔다 */}
             {/* PC처럼 화면이 낮으면 포스터가 3:4를 지키도록 묶음 폭을 줄인다 */}
             <div
@@ -184,10 +207,7 @@ const SwipeFeed = () => {
                 onWish={() => swipe('wish')}
                 storeName={topCard?.storeName}
               />
-              {/* 로딩 중에도 보여서 카드가 뜰 때 위치가 들썩이지 않게 한다 */}
-              <p className="mt-1 text-center text-caption-mobile text-text-secondary">
-                찜은 발급 전 단계예요 · 11:00부터 찜 목록에서 받기
-              </p>
+              <SwipeHint />
             </div>
           </section>
         )}

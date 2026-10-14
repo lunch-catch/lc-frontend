@@ -94,23 +94,15 @@ export interface IssuanceLimit {
 export const fetchIssuanceLimit = () =>
   request<IssuanceLimit>('/v1/coupons/issuance-limit');
 
-// 찜 목록에서 받은 캠페인 ID를 보내 각 캠페인의 발급 상태를 한 번에 받는다
-// 캠페인별 상태(:getStatus)는 아직 서버에 없어 mock이고, 하루 한도만 쿠폰 API를 쓸 수 있다
+// 오늘 받은 쿠폰 수와 하루 한도. 발급 API가 나오기 전에는 mock 값을 쓴다
 // 주소에 ?mockDailyLimit를 붙이면 하루 한도에 닿은 상태를 확인할 수 있다
-export const fetchIssueStatus = async (
-  campaignIds: string[],
-): Promise<IssueStatusResponse> => {
-  const campaigns = campaignIds
-    .map(getMockIssueStatus)
-    .filter((status) => status !== undefined);
-
+export const fetchTodayIssuance = async (): Promise<{
+  issuedCount: number;
+  dailyLimit: number;
+}> => {
   if (USE_COUPON_API) {
-    const limit = await fetchIssuanceLimit();
-    return {
-      campaigns,
-      dailyLimit: limit.dailyLimit,
-      dailyRemaining: Math.max(0, limit.dailyLimit - limit.issuedCount),
-    };
+    const { dailyLimit, issuedCount } = await fetchIssuanceLimit();
+    return { dailyLimit, issuedCount };
   }
 
   await wait(MOCK_DELAY_MS);
@@ -121,10 +113,23 @@ export const fetchIssueStatus = async (
     ? MOCK_DAILY_ISSUE_LIMIT
     : getMockIssuedCount();
 
+  return { dailyLimit: MOCK_DAILY_ISSUE_LIMIT, issuedCount };
+};
+
+// 찜 목록에서 받은 캠페인 ID를 보내 각 캠페인의 발급 상태를 한 번에 받는다
+// 캠페인별 상태(:getStatus)는 아직 서버에 없어 mock이고, 하루 한도만 쿠폰 API를 쓸 수 있다
+export const fetchIssueStatus = async (
+  campaignIds: string[],
+): Promise<IssueStatusResponse> => {
+  const campaigns = campaignIds
+    .map(getMockIssueStatus)
+    .filter((status) => status !== undefined);
+  const { dailyLimit, issuedCount } = await fetchTodayIssuance();
+
   return {
     campaigns,
-    dailyLimit: MOCK_DAILY_ISSUE_LIMIT,
-    dailyRemaining: MOCK_DAILY_ISSUE_LIMIT - issuedCount,
+    dailyLimit,
+    dailyRemaining: Math.max(0, dailyLimit - issuedCount),
   };
 };
 
