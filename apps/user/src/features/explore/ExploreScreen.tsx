@@ -12,6 +12,7 @@ import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import AppHeader from '@user/components/AppHeader/AppHeader';
 import EmptyState from '@user/components/EmptyState/EmptyState';
+import { useHeaderLocationName } from '@user/features/location/useMyLocation';
 
 import CategoryIconRow, { type CategoryFilter } from './CategoryIconRow';
 import FeaturedStoreCard from './FeaturedStoreCard';
@@ -21,7 +22,9 @@ import StoreMap, { type MapCenter } from './StoreMap';
 
 type ExploreView = 'list' | 'map';
 
-// 위치 설정(#14) 전까지 쓰는 현재 위치 (강남역)
+// 지도 중심으로 쓰는 고정 위치 (강남역)
+// 가게 목록이 아직 강남역 주변 mock이라, 저장한 위치를 쓰면 핀이 한쪽으로 몰린다
+// 가게 API가 생기면 저장한 위치(useMyLocation)로 바꾼다
 const MOCK_CURRENT_LOCATION: MapCenter = {
   latitude: 37.4979,
   longitude: 127.0276,
@@ -39,6 +42,7 @@ const ExploreScreen = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
   const [wishCount] = useState(getWishCount);
+  const locationName = useHeaderLocationName();
 
   useEffect(() => {
     let ignore = false;
@@ -176,8 +180,7 @@ const ExploreScreen = () => {
 
   return (
     <>
-      {/* 위치 설정(#14) 전까지는 고정 위치를 보여준다 */}
-      <AppHeader locationName="강남역 주변" wishCount={wishCount} />
+      <AppHeader locationName={locationName} wishCount={wishCount} />
       {/* 목록에서는 마지막 카드가 떠 있는 전환 버튼에 가리지 않도록 아래를 더 비운다 */}
       <div
         className={`flex flex-1 flex-col gap-3 px-page pt-2 ${

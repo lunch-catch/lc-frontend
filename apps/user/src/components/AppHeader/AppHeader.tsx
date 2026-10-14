@@ -1,10 +1,11 @@
 import { Link } from 'react-router';
-import { Bell, MapPin } from 'lucide-react';
+import { Bell, ChevronRight, MapPin } from 'lucide-react';
 
 import Wordmark from '@user/components/Wordmark/Wordmark';
 
 export interface AppHeaderProps {
-  locationName: string;
+  // 내 위치 문구. 불러오는 중이면 비워 두고 자리만 차지한다
+  locationName?: string;
   // 넘기면 찜 목록 옆에 개수를 보여준다
   wishCount?: number;
 }
@@ -15,10 +16,18 @@ const AppHeader = ({ locationName, wishCount = 0 }: AppHeaderProps) => {
     <header className="flex items-center justify-between bg-bg-page px-page py-1.5">
       <div>
         <Wordmark size="sm" />
-        <p className="mt-0.5 flex items-center gap-1 text-caption-mobile text-text-secondary">
-          <MapPin aria-hidden="true" className="size-3" />
-          {locationName}
-        </p>
+        {/* 위치를 누르면 위치 설정으로 간다. 글자가 작아 아래로 누를 자리를 넓힌다 */}
+        <Link
+          aria-label={locationName ? `위치 설정, ${locationName}` : '위치 설정'}
+          className="-mb-1 flex items-center gap-1 pt-0.5 pb-1 text-caption-mobile text-text-secondary"
+          to="/my/location"
+        >
+          <MapPin aria-hidden="true" className="size-3 shrink-0" />
+          <span className="min-w-0 truncate">{locationName ?? '\u00a0'}</span>
+          {locationName && (
+            <ChevronRight aria-hidden="true" className="size-3 shrink-0" />
+          )}
+        </Link>
       </div>
       <nav aria-label="바로가기" className="flex items-center gap-1">
         <Link
