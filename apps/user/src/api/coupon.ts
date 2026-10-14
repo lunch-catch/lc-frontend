@@ -1,3 +1,4 @@
+import { request } from './client';
 import { getNow } from './clock';
 import {
   getMockCoupons,
@@ -86,6 +87,17 @@ export const fetchCoupons = async (): Promise<Coupon[]> => {
 
   return getMockCoupons().sort((a, b) => b.issuedAt.localeCompare(a.issuedAt));
 };
+
+// 마이페이지 쿠폰 요약 (GET /v1/coupons/summary). 지금까지 쌓인 누적 값이다
+export interface CouponSummary {
+  receivedCouponCount: number;
+  usedCouponCount: number;
+  // 사용할 때 확정한 할인액의 합계(원)
+  totalDiscountAmount: number;
+}
+
+export const fetchCouponSummary = () =>
+  request<CouponSummary>('/v1/coupons/summary');
 
 // 매장에서 보여줄 1회용 QR 토큰
 export interface QrToken {

@@ -28,7 +28,7 @@ const WishlistSummary = ({
       </p>
       {showNotice && (
         <p className="text-caption-mobile text-text-secondary">
-          찜은 발급을 보장하지 않아요. 오픈 후 선착순이에요.
+          찜은 발급을 보장하지 않고, 오픈 후 선착순이에요
         </p>
       )}
     </section>

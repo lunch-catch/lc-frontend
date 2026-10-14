@@ -46,7 +46,7 @@ const LoginStep = () => {
         <p className="mt-2 text-body-mobile leading-snug text-text-secondary">
           근처 맛집을 발견하고
           <br />
-          오늘만의 점심 쿠폰을 받아보세요.
+          오늘만의 점심 쿠폰을 받아보세요
         </p>
         {/* 버튼 위 남는 공간을 모두 쓰고 그 가운데에 일러스트를 둔다 */}
         <div className="flex flex-1 items-center justify-center py-6">

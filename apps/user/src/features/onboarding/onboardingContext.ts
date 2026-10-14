@@ -1,6 +1,8 @@
 import { createContext } from 'react';
 
-export type ConsentKey = 'terms' | 'privacy' | 'location' | 'marketing';
+import type { ConsentKey } from '@user/api/terms';
+
+export type { ConsentKey };
 export type Gender = 'male' | 'female' | 'other';
 export type AgeGroup = '20s' | '30s' | '40s' | '50s+';
 

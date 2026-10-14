@@ -87,7 +87,7 @@ const LoginStatusScreen = ({ onRetry, status }: LoginStatusScreenProps) => {
           <p className="mt-2 text-caption-mobile leading-snug text-text-secondary">
             네트워크 상태를 확인한 뒤
             <br />
-            다시 시도해 주세요.
+            다시 시도해 주세요
           </p>
         </div>
       </div>

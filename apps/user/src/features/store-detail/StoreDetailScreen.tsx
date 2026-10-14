@@ -196,7 +196,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     try {
       await addWish(campaign.campaignId);
       setWished(true);
-      setToast({ message: '찜했어요. 10:50에 오픈 알림을 보내드려요' });
+      setToast({ message: '찜했어요, 10:50에 오픈 알림을 보내드릴게요' });
     } catch {
       setToast({ message: '찜하지 못했어요', tone: 'error' });
     } finally {
@@ -243,7 +243,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
 
       setToast(
         result === 'issued'
-          ? { message: '쿠폰을 받았어요. 쿠폰함에서 확인하세요' }
+          ? { message: '쿠폰함에 쿠폰을 담았어요' }
           : { message: ISSUE_FAIL_MESSAGES[result], tone: 'error' },
       );
     } catch {

@@ -12,17 +12,17 @@ const pages = [
   {
     image: tutorialBrowse,
     title: ['왼쪽은 패스,', '오른쪽은 찜'],
-    description: ['주변 가게의 캠페인을 보고', '관심 없는 카드는 패스해요.'],
+    description: ['주변 가게의 캠페인을 보고', '관심 없는 카드는 패스해요'],
   },
   {
     image: tutorialLike,
     title: ['마음에 드는', '캠페인은 찜하기'],
-    description: ['찜은 11시 선착순 발급에', '참여하기 위한 단계예요.'],
+    description: ['찜은 11시 선착순 발급에', '참여하기 위한 단계예요'],
   },
   {
     image: tutorialCoupon,
     title: ['11시에', '쿠폰 받기'],
-    description: ['찜 목록에서 쿠폰을 받은 뒤', '매장에서 QR로 사용하세요.'],
+    description: ['찜 목록에서 쿠폰을 받은 뒤', '매장에서 QR로 사용하세요'],
   },
 ];
 
