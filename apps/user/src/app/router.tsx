@@ -14,6 +14,7 @@ import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
+import SettingsPage from '@user/pages/SettingsPage';
 import SplashPage from '@user/pages/SplashPage';
 import StoreDetailPage from '@user/pages/StoreDetailPage';
 import SwipePage from '@user/pages/SwipePage';
@@ -66,7 +67,10 @@ export const router = createBrowserRouter([
       { path: '/stores/:storeId', element: <StoreDetailPage /> },
       {
         element: <StackLayout />,
-        children: [{ path: '/my/location', element: <LocationSettingsPage /> }],
+        children: [
+          { path: '/my/location', element: <LocationSettingsPage /> },
+          { path: '/my/settings', element: <SettingsPage /> },
+        ],
       },
       {
         element: <TabLayout />,
