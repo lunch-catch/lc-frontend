@@ -8,10 +8,16 @@ export interface AppHeaderProps {
   locationName?: string;
   // 넘기면 찜 목록 옆에 개수를 보여준다
   wishCount?: number;
+  // 안 읽은 알림이 있으면 알림 아이콘에 점을 찍는다
+  hasUnreadNotifications?: boolean;
 }
 
 // 스와이프, 탐색 탭 상단의 로고, 현재 위치, 찜 목록, 알림
-const AppHeader = ({ locationName, wishCount = 0 }: AppHeaderProps) => {
+const AppHeader = ({
+  hasUnreadNotifications = false,
+  locationName,
+  wishCount = 0,
+}: AppHeaderProps) => {
   return (
     <header className="bg-bg-page px-page pt-1.5 pb-1">
       {/* 로고는 찜 목록, 알림과 같은 줄 가운데에 두고 위치는 그 아래 줄에 둔다 */}
@@ -36,11 +42,20 @@ const AppHeader = ({ locationName, wishCount = 0 }: AppHeaderProps) => {
             )}
           </Link>
           <Link
-            aria-label="알림"
-            className="flex size-11 items-center justify-center text-text-primary"
+            aria-label={
+              hasUnreadNotifications ? '알림, 안 읽은 알림 있음' : '알림'
+            }
+            className="relative flex size-11 items-center justify-center text-text-primary"
             to="/notifications"
           >
             <Bell aria-hidden="true" className="size-5" />
+            {hasUnreadNotifications && (
+              // 종 오른쪽 위에 겹치고, 바탕색 테두리로 아이콘 선과 떨어뜨린다
+              <span
+                aria-hidden="true"
+                className="absolute top-2.5 right-2.5 size-2 rounded-full bg-action-primary ring-2 ring-bg-page"
+              />
+            )}
           </Link>
         </nav>
       </div>

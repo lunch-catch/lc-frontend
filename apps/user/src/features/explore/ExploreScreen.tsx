@@ -13,6 +13,7 @@ import ActionButton from '@user/components/ActionButton/ActionButton';
 import AppHeader from '@user/components/AppHeader/AppHeader';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 import { useHeaderLocationName } from '@user/features/location/useMyLocation';
+import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 
 import CategoryIconRow, { type CategoryFilter } from './CategoryIconRow';
 import FeaturedStoreCard from './FeaturedStoreCard';
@@ -43,6 +44,7 @@ const ExploreScreen = () => {
   const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
   const [wishCount] = useState(getWishCount);
   const locationName = useHeaderLocationName();
+  const hasUnreadNotifications = useHasUnreadNotifications();
 
   useEffect(() => {
     let ignore = false;
@@ -180,7 +182,11 @@ const ExploreScreen = () => {
 
   return (
     <>
-      <AppHeader locationName={locationName} wishCount={wishCount} />
+      <AppHeader
+        hasUnreadNotifications={hasUnreadNotifications}
+        locationName={locationName}
+        wishCount={wishCount}
+      />
       {/* 목록에서는 마지막 카드가 떠 있는 전환 버튼에 가리지 않도록 아래를 더 비운다 */}
       <div
         className={`flex flex-1 flex-col gap-3 px-page pt-2 ${

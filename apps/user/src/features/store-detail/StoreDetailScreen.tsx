@@ -288,15 +288,9 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
         couponState ? 'pb-[calc(124px+env(safe-area-inset-bottom))]' : 'pb-10'
       }`}
     >
-      {toast && (
-        // 사진 위 버튼을 가리지 않도록 하단 버튼 바로 위에 띄운다
-        <div
-          className={`fixed inset-x-0 z-30 mx-auto max-w-mobile px-page ${
-            couponState
-              ? 'bottom-[calc(132px+env(safe-area-inset-bottom))]'
-              : 'bottom-[max(16px,env(safe-area-inset-bottom))]'
-          }`}
-        >
+      {/* 하단 쿠폰 버튼이 있으면 그 바로 위에 띄운다 (CouponCta). 없으면 화면 아래에 띄운다 */}
+      {toast && !couponState && (
+        <div className="fixed inset-x-0 bottom-[max(16px,env(safe-area-inset-bottom))] z-30 mx-auto max-w-mobile px-page">
           <FeedbackToast {...toast} />
         </div>
       )}
@@ -430,6 +424,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           onWish={handleWish}
           remainingMs={remainingMs}
           state={couponState}
+          toast={toast}
         />
       )}
     </div>
