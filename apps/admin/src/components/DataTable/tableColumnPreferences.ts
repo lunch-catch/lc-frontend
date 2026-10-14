@@ -1,7 +1,12 @@
-import type { ComponentType, ReactElement, ReactNode } from 'react';
+import type {
+  ComponentType,
+  CSSProperties,
+  ReactElement,
+  ReactNode,
+} from 'react';
 import { Children, cloneElement, Fragment, isValidElement } from 'react';
 
-import type { TableColumnPreference } from './dataTableTypes';
+import type { DataTableColumn, TableColumnPreference } from './dataTableTypes';
 
 export const normalizeColumnPreferences = (
   keys: string[],
@@ -32,6 +37,7 @@ export const normalizeColumnPreferences = (
 };
 
 interface TableChildProps {
+  style?: CSSProperties;
   children?: ReactNode;
   columnIndex?: number;
   colSpan?: number;
@@ -44,6 +50,27 @@ const flattenChildren = (children: ReactNode): ReactNode[] =>
       : [child],
   );
 
+export const alignTableCells = (
+  children: ReactNode,
+  columns: DataTableColumn[],
+): ReactNode => {
+  if (!columns.some((column) => column.align)) return children;
+  const cells = flattenChildren(children);
+  if (cells.length !== columns.length) return children;
+  return cells.map((cell, index) => {
+    const align = columns[index]?.align;
+    if (
+      !align ||
+      !isValidElement<TableChildProps>(cell) ||
+      cell.props.colSpan !== undefined
+    )
+      return cell;
+    return cloneElement(cell, {
+      style: { ...cell.props.style, textAlign: align },
+    });
+  });
+};
+
 // 원래 셀 순서를 기준으로 헤더와 데이터를 함께 바꿔 정렬 이벤트와 표시값을 유지한다.
 export const reorderTableChildren = (
   children: ReactNode,
@@ -51,6 +78,7 @@ export const reorderTableChildren = (
   columnCount: number,
   rowType: ComponentType<TableChildProps>,
   headerCellType: ComponentType<TableChildProps>,
+  columns?: DataTableColumn[],
 ): ReactNode =>
   flattenChildren(children).map((child) => {
     if (!isValidElement<TableChildProps>(child)) return child;
@@ -74,10 +102,17 @@ export const reorderTableChildren = (
         {},
         indexes.map((originalIndex, visibleIndex) => {
           const cell = cells[originalIndex];
-          return isValidElement<TableChildProps>(cell) &&
-            cell.type === headerCellType
-            ? cloneElement(cell, { columnIndex: visibleIndex })
-            : cell;
+          if (!isValidElement<TableChildProps>(cell)) return cell;
+          const align = columns?.[originalIndex]?.align;
+          // 정렬은 표시 순서에 맞는 열에서 읽으며 전체 열을 합친 상태 안내 행에는 적용하지 않는다.
+          return cloneElement(cell, {
+            ...(cell.type === headerCellType
+              ? { columnIndex: visibleIndex }
+              : {}),
+            ...(align
+              ? { style: { ...cell.props.style, textAlign: align } }
+              : {}),
+          });
         }),
       );
     }
@@ -92,6 +127,7 @@ export const reorderTableChildren = (
             columnCount,
             rowType,
             headerCellType,
+            columns,
           ),
         );
   });

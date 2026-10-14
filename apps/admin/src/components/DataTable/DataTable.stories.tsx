@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 
-import { DataTable } from './index';
+import { DataTable, type DataTableColumn } from './index';
 import { useTableColumnSettings } from './useTableColumnSettings';
 
 const meta = {
@@ -50,6 +50,67 @@ export const Default: Story = {
       </tbody>
     </DataTable>
   ),
+};
+
+export const InternalScroll: Story = {
+  render: () => (
+    <div>
+      <DataTable scrollMaxHeight="15rem">
+        {tableHeader}
+        <tbody>
+          {Array.from({ length: 20 }, (_, index) => (
+            <DataTable.Row key={index}>
+              <DataTable.Cell>{index + 1}</DataTable.Cell>
+              <DataTable.Cell>김런치</DataTable.Cell>
+              <DataTable.Cell>점심 예약 쿠폰</DataTable.Cell>
+              <DataTable.Cell>2026. 10. 14. 12:30</DataTable.Cell>
+              <DataTable.Cell>사용 가능</DataTable.Cell>
+            </DataTable.Row>
+          ))}
+        </tbody>
+      </DataTable>
+    </div>
+  ),
+};
+
+export const ColumnAlignment: Story = {
+  render: function ColumnAlignmentExample() {
+    const columns: DataTableColumn[] = [
+      { key: 'id', label: '점주 ID', align: 'left', width: '30%' },
+      { key: 'status', label: '상태', align: 'center', width: '30%' },
+      { key: 'amount', label: '충전 포인트', align: 'right', width: '40%' },
+    ];
+    const settings = useTableColumnSettings(
+      'storybook.column-alignment',
+      columns,
+    );
+    return (
+      <>
+        <FilterBar columnSettings={settings} />
+        <DataTable columns={columns} columnSettings={settings}>
+          <DataTable.Header>
+            <tr>
+              <DataTable.HeaderCell>점주 ID</DataTable.HeaderCell>
+              <DataTable.HeaderCell>상태</DataTable.HeaderCell>
+              <DataTable.HeaderCell
+                onSortChange={() => {}}
+                sortDirection="desc"
+              >
+                충전 포인트
+              </DataTable.HeaderCell>
+            </tr>
+          </DataTable.Header>
+          <tbody>
+            <DataTable.Row>
+              <DataTable.Cell>123</DataTable.Cell>
+              <DataTable.Cell>활성</DataTable.Cell>
+              <DataTable.Cell>10,000 P</DataTable.Cell>
+            </DataTable.Row>
+          </tbody>
+        </DataTable>
+      </>
+    );
+  },
 };
 
 export const ColumnPersonalization: Story = {

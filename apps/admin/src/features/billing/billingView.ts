@@ -6,7 +6,10 @@ import {
 } from 'react';
 import type { DateRangeValue } from '@repo/ui';
 
-import type { TableDensity } from '@admin/components/DataTable';
+import type {
+  DataTableColumn,
+  TableDensity,
+} from '@admin/components/DataTable';
 
 import type { BillingState } from './billingTypes';
 
@@ -43,6 +46,7 @@ export interface BillingRecord {
   cells: BillingCell[];
 }
 export interface BillingColumn {
+  align?: DataTableColumn['align'];
   label: string;
   width: number;
 }
