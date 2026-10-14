@@ -2,13 +2,20 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { CircleCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
-import { getNow, getTodayAt } from '@user/api/clock';
+import { getNow } from '@user/api/clock';
 import {
   type Coupon,
   QR_TOKEN_LIFETIME_MS,
   type QrToken,
 } from '@user/api/coupon';
 
+import {
+  formatClock,
+  formatDiscount,
+  formatPrice,
+  formatTarget,
+  formatUsableTime,
+} from './couponFormat';
 import { getQrState, type QrState } from './qrState';
 import { useQrToken } from './useQrToken';
 
@@ -17,8 +24,6 @@ const TICK_MS = 1000;
 const QR_SIZE = 278;
 // 스캐너가 QR 경계를 찾을 수 있도록 둘레에 QR 칸 4개만큼 빈 여백을 둔다 (QR 표준 권장값)
 const QR_QUIET_ZONE = 4;
-
-const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
 
 // 남은 시간을 00:52 모양으로 바꾼다. 마지막 1초까지 보이도록 올림한다
 const formatSeconds = (remainingMs: number) => {
@@ -82,13 +87,13 @@ const QrPanel = ({ coupon, now, state, token }: QrPanelProps) => {
     },
     beforeUse: {
       title: '사용 시작 전',
-      value: coupon.usableFrom,
-      description: `${coupon.usableFrom}부터 QR을 볼 수 있어요`,
+      value: formatClock(coupon.usableStartTime),
+      description: `${formatClock(coupon.usableStartTime)}부터 QR을 볼 수 있어요`,
     },
     used: {
       title: '사용 완료!',
-      description: coupon.usedAt
-        ? `${formatDateTime(coupon.usedAt)} 사용 · 다시 사용할 수 없어요`
+      description: coupon.useTime
+        ? `${formatDateTime(coupon.useTime)} 사용 · 다시 사용할 수 없어요`
         : '사용한 쿠폰은 다시 사용할 수 없어요',
     },
     expired: {
@@ -170,10 +175,10 @@ const CouponQr = ({ coupon }: CouponQrProps) => {
   }, []);
 
   const canShowQr =
-    coupon.status === 'available' &&
-    now >= getTodayAt(coupon.usableFrom, now) &&
-    now < Date.parse(coupon.expiresAt);
-  const { isOnline, token } = useQrToken(coupon.issueId, canShowQr, now);
+    coupon.state === 'ISSUED' &&
+    now >= Date.parse(coupon.usableStartTime) &&
+    now < Date.parse(coupon.usableEndTime);
+  const { isOnline, token } = useQrToken(coupon.memberCouponId, canShowQr, now);
   const state = getQrState({ coupon, isOnline, now, token });
 
   return (
@@ -185,21 +190,28 @@ const CouponQr = ({ coupon }: CouponQrProps) => {
             {coupon.storeName}
           </p>
           <p className="truncate text-caption-mobile text-text-secondary">
-            {coupon.offerTitle}
+            {formatTarget(coupon)}
           </p>
         </div>
-        <p className="flex shrink-0 flex-col items-end">
-          <del className="text-caption-mobile text-text-secondary">
-            {formatPrice(coupon.originalPrice)}
-          </del>
-          <strong className="text-body-mobile font-bold text-text-primary">
-            {formatPrice(coupon.salePrice)}
+        {/* 메뉴 할인은 할인 전·후 가격을, 전 메뉴 할인은 할인액을 보여준다 */}
+        {coupon.targetMenu ? (
+          <p className="flex shrink-0 flex-col items-end">
+            <del className="text-caption-mobile text-text-secondary">
+              {formatPrice(coupon.targetMenu.price)}
+            </del>
+            <strong className="text-body-mobile font-bold text-text-primary">
+              {formatPrice(coupon.targetMenu.discountedPrice)}
+            </strong>
+          </p>
+        ) : (
+          <strong className="shrink-0 text-body-mobile font-bold text-text-brand">
+            {formatDiscount(coupon)}
           </strong>
-        </p>
+        )}
       </div>
       <QrPanel coupon={coupon} now={now} state={state} token={token} />
       <p className="text-center text-caption-mobile font-medium text-text-brand">
-        오늘 사용 시간 {coupon.usableFrom}–{coupon.usableTo}
+        오늘 사용 시간 {formatUsableTime(coupon)}
       </p>
     </div>
   );

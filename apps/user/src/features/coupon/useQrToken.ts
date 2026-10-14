@@ -4,7 +4,11 @@ import { fetchQrToken, type QrToken } from '@user/api/coupon';
 
 // QR을 보여줄 수 있는 동안 60초짜리 QR 토큰을 받고, 시간이 다 되면 새로 받는다
 // 연결이 끊긴 동안에는 받지 않고 마지막 토큰을 그대로 둔다
-export const useQrToken = (issueId: string, enabled: boolean, now: number) => {
+export const useQrToken = (
+  memberCouponId: number,
+  enabled: boolean,
+  now: number,
+) => {
   const [token, setToken] = useState<QrToken | null>(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
@@ -26,7 +30,7 @@ export const useQrToken = (issueId: string, enabled: boolean, now: number) => {
     if (!needsToken) return;
 
     let ignore = false;
-    fetchQrToken(issueId).then((nextToken) => {
+    fetchQrToken(memberCouponId).then((nextToken) => {
       if (!ignore) setToken(nextToken);
     });
 
@@ -34,7 +38,7 @@ export const useQrToken = (issueId: string, enabled: boolean, now: number) => {
     return () => {
       ignore = true;
     };
-  }, [issueId, needsToken]);
+  }, [memberCouponId, needsToken]);
 
   return { isOnline, token };
 };
