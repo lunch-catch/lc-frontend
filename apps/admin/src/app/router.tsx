@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+﻿import { createBrowserRouter, Navigate } from 'react-router';
 
 import { RequireAdminAuth } from '@admin/auth/RequireAdminAuth';
 import { AdminLayout } from '@admin/layout/AdminLayout';
@@ -30,6 +30,7 @@ export const router = createBrowserRouter([
           { path: '/campaigns', element: <CampaignManagementPage /> },
           { path: '/templates', element: <TemplateManagementPage /> },
           { path: '/templates/new', element: <TemplateCreatePage /> },
+          { path: '/templates/:templateId', element: <TemplateCreatePage /> },
           {
             path: '/templates/drafts/:templateId/edit',
             element: <TemplateCreatePage />,
