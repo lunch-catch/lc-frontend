@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { User } from 'lucide-react';
 
 import { type CouponSummary, fetchCouponSummary } from '@user/api/coupon';
 import type { MyProfile } from '@user/api/member';
+import { useAuth } from '@user/auth/useAuth';
 
+import NicknameSheet from './NicknameSheet';
 import { type Loaded, useLoad } from './useLoad';
 
 const formatJoinedDate = (iso: string) => {
@@ -35,7 +38,13 @@ const LoadError = ({
   </div>
 );
 
-const ProfileCard = ({ profile }: { profile: MyProfile }) => (
+const ProfileCard = ({
+  onEdit,
+  profile,
+}: {
+  onEdit: () => void;
+  profile: MyProfile;
+}) => (
   <section className={`flex items-center gap-4 p-4 ${cardClassName}`}>
     {profile.profileImageUrl ? (
       <img
@@ -53,7 +62,7 @@ const ProfileCard = ({ profile }: { profile: MyProfile }) => (
         <User className="size-6" />
       </div>
     )}
-    <div className="min-w-0">
+    <div className="min-w-0 flex-1">
       <p className="truncate text-h3-mobile font-bold text-text-primary">
         {profile.nickname}
       </p>
@@ -61,6 +70,15 @@ const ProfileCard = ({ profile }: { profile: MyProfile }) => (
         카카오 계정 · {formatJoinedDate(profile.createdAt)}
       </p>
     </div>
+    {/* 프로필 사진은 카카오에서 가져와서 바꿀 수 없고, 닉네임만 바꾼다 */}
+    <button
+      aria-label="닉네임 바꾸기"
+      className="h-9 shrink-0 rounded-lg px-2 text-body-sm-mobile font-bold text-text-secondary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+      onClick={onEdit}
+      type="button"
+    >
+      수정
+    </button>
   </section>
 );
 
@@ -95,6 +113,15 @@ const CouponStats = ({ coupons }: { coupons: CouponSummary }) => {
 // 내 정보는 아래 설정에서도 쓰여서 마이 탭이 한 번 불러와 넘겨준다
 const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
   const coupons = useLoad(fetchCouponSummary);
+  const auth = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+
+  // 바꾼 닉네임은 화면의 내 정보와 저장해 둔 로그인 정보에 함께 반영한다
+  const handleNicknameSaved = (updated: MyProfile) => {
+    profile.setData(updated);
+    if (auth.user) auth.login({ ...auth.user, nickname: updated.nickname });
+    setIsEditing(false);
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -110,7 +137,16 @@ const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
           onRetry={profile.retry}
         />
       )}
-      {profile.data && <ProfileCard profile={profile.data} />}
+      {profile.data && (
+        <ProfileCard onEdit={() => setIsEditing(true)} profile={profile.data} />
+      )}
+      {profile.data && isEditing && (
+        <NicknameSheet
+          nickname={profile.data.nickname}
+          onClose={() => setIsEditing(false)}
+          onSaved={handleNicknameSaved}
+        />
+      )}
 
       {coupons.data === undefined && (
         <div

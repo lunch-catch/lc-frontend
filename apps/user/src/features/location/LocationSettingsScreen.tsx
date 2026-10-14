@@ -16,11 +16,11 @@ import FeedbackToast, {
   type FeedbackToastTone,
 } from '@user/components/FeedbackToast/FeedbackToast';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
+import HintInput from '@user/components/HintInput/HintInput';
 import TopBar from '@user/components/TopBar/TopBar';
 
 import AddressSearchResults from './AddressSearchResults';
 import { getCurrentPosition, PositionError } from './currentPosition';
-import HintInput from './HintInput';
 import LocationNameSheet from './LocationNameSheet';
 import { useAddressSearch } from './useAddressSearch';
 import { getLocationLabel, rememberMyLocation } from './useMyLocation';
