@@ -3,11 +3,14 @@ import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 
 import { logout } from '@user/api/auth';
+import { fetchMyProfile } from '@user/api/member';
 import { useAuth } from '@user/auth/useAuth';
 import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
 import TopBar from '@user/components/TopBar/TopBar';
 
+import ConsentSettings from './ConsentSettings';
 import ProfileSummary from './ProfileSummary';
+import { useLoad } from './useLoad';
 
 const TOAST_DURATION_MS = 2500;
 
@@ -18,9 +21,10 @@ const menuItems = [
   { label: '위치 설정', to: '/my/location' },
 ];
 
-// 마이 탭. 프로필과 쿠폰 요약, 바로가기, 로그아웃
+// 마이 탭. 프로필과 쿠폰 요약, 바로가기, 알림·위치 설정, 로그아웃
 const MyPageScreen = () => {
   const auth = useAuth();
+  const profile = useLoad(fetchMyProfile);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [hasError, setHasError] = useState(false);
 
@@ -51,7 +55,7 @@ const MyPageScreen = () => {
     <div className="flex flex-1 flex-col">
       <TopBar title="마이페이지" tone="page" />
       <div className="flex flex-1 flex-col gap-3 px-page pt-2 pb-6">
-        <ProfileSummary />
+        <ProfileSummary profile={profile} />
         <nav aria-label="바로가기">
           <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
             {menuItems.map(({ label, to }) => (
@@ -70,6 +74,15 @@ const MyPageScreen = () => {
             ))}
           </ul>
         </nav>
+        {/* 내 정보를 받은 뒤에 보여준다. 못 받으면 위 프로필 자리에서 다시 시도한다 */}
+        {profile.data && (
+          <div className="mt-3">
+            <ConsentSettings
+              consents={profile.data.consents}
+              onSaved={profile.setData}
+            />
+          </div>
+        )}
         {/* 메뉴가 적어도 로그아웃은 화면 아래쪽에 둔다 */}
         <div className="flex-1" />
         <div className="relative">

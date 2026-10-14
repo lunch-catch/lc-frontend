@@ -1,47 +1,14 @@
-import { useEffect, useState } from 'react';
 import { User } from 'lucide-react';
 
 import { type CouponSummary, fetchCouponSummary } from '@user/api/coupon';
-import { fetchMyProfile, type MyProfile } from '@user/api/member';
+import type { MyProfile } from '@user/api/member';
+
+import { type Loaded, useLoad } from './useLoad';
 
 const formatJoinedDate = (iso: string) => {
   const date = new Date(iso);
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} 가입`;
-};
-
-// 요청 하나를 불러오고, 실패하면 다시 시도할 수 있게 한다
-// data가 undefined면 불러오는 중, null이면 실패
-const useLoad = <T,>(fetcher: () => Promise<T>) => {
-  const [data, setData] = useState<T | null | undefined>();
-  // 다시 시도할 때마다 올려서 요청을 새로 보낸다
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let ignore = false;
-
-    fetcher()
-      .then((result) => {
-        if (!ignore) setData(result);
-      })
-      .catch(() => {
-        if (!ignore) setData(null);
-      });
-
-    // 응답 전에 화면을 벗어나면 결과를 버린다
-    return () => {
-      ignore = true;
-    };
-    // fetcher는 바뀌지 않는 API 함수라 다시 시도할 때만 새로 부른다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attempt]);
-
-  const retry = () => {
-    setData(undefined);
-    setAttempt((current) => current + 1);
-  };
-
-  return { data, retry };
 };
 
 const cardClassName = 'rounded-xl border border-border-subtle bg-bg-surface';
@@ -125,8 +92,8 @@ const CouponStats = ({ coupons }: { coupons: CouponSummary }) => {
 
 // 마이 탭 위쪽의 프로필과 쿠폰 요약
 // 두 API를 따로 받아서, 하나가 실패해도 받은 쪽은 보여주고 실패한 쪽만 다시 시도하게 한다
-const ProfileSummary = () => {
-  const profile = useLoad(fetchMyProfile);
+// 내 정보는 아래 설정에서도 쓰여서 마이 탭이 한 번 불러와 넘겨준다
+const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
   const coupons = useLoad(fetchCouponSummary);
 
   return (

@@ -17,6 +17,17 @@ export interface MyProfile {
 
 export const fetchMyProfile = () => request<MyProfile>('/v1/members/me');
 
+// 내 정보 수정 (PATCH /v1/members/me). 바꿀 값만 보낸다
+// 닉네임은 1~20자이고 공백만은 안 된다. 프로필 이미지는 바꿀 수 없다
+export interface MyProfileUpdate {
+  nickname?: string;
+  notificationOptIn?: boolean;
+  locationOptIn?: boolean;
+}
+
+export const updateMyProfile = (update: MyProfileUpdate) =>
+  request<MyProfile>('/v1/members/me', { method: 'PATCH', body: update });
+
 export interface OnboardingInput {
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   ageGroup: 'AGE_20S' | 'AGE_30S' | 'AGE_40S' | 'AGE_50_PLUS';
