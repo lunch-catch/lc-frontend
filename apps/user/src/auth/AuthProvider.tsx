@@ -45,13 +45,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!readStoredUser()) return;
 
     fetchMyProfile()
-      .then((profile) =>
+      .then((profile) => {
+        // 응답을 기다리는 사이 로그아웃했으면 지운 로그인 정보를 되살리지 않는다
+        if (!readStoredUser()) return;
+
         saveUser({
           id: String(profile.memberId),
           nickname: profile.nickname,
           isOnboarded: profile.onboardingCompleted,
-        }),
-      )
+        });
+      })
       .catch(() => {});
   }, []);
 
