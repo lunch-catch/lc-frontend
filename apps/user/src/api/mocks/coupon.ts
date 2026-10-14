@@ -1,7 +1,8 @@
+import { getNow } from '@user/api/clock';
 import type {
   CampaignIssueStatus,
   Coupon,
-  CouponStatus,
+  CouponState,
   IssueResult,
 } from '@user/api/coupon';
 import type { FeedCard } from '@user/api/feed';
@@ -39,42 +40,76 @@ const dateAt = (dayOffset: number, time: string) => {
 const isToday = (isoString: string) =>
   new Date(isoString).toDateString() === new Date().toDateString();
 
-let lastIssueNumber = 0;
+let lastCouponId = 1000;
+
+// 쿠폰이 어느 캠페인에서 받은 것인지 mock 안에서만 기억한다 (실제 응답에는 캠페인 ID가 없다)
+type MockCoupon = Coupon & { campaignId: string };
 
 interface CreateCouponOptions {
   // 오늘 기준 며칠 전에 받았는지. 0이면 오늘
   dayOffset?: number;
-  issuedAt?: Date;
-  status?: CouponStatus;
+  issueTime?: Date;
+  state?: CouponState;
   usedTime?: string;
 }
+
+// 피드 카드의 할인을 쿠폰 명세 모양으로 바꾼다
+// "전 메뉴"로 시작하는 카드는 전 메뉴 정액 할인, 나머지는 메뉴 정액 할인으로 둔다
+const toDiscount = (card: FeedCard, storeIndex: number) => {
+  const discount = card.originalPrice - card.salePrice;
+  if (card.offerTitle.startsWith('전 메뉴')) {
+    return {
+      discountTargetType: 'ALL' as const,
+      discountType: 'AMOUNT' as const,
+      discountValue: discount,
+      targetMenu: null,
+    };
+  }
+  return {
+    discountTargetType: 'MENU' as const,
+    discountType: 'AMOUNT' as const,
+    discountValue: discount,
+    targetMenu: {
+      menuId: 700 + storeIndex,
+      name: card.offerTitle,
+      price: card.originalPrice,
+      discountedPrice: card.salePrice,
+    },
+  };
+};
 
 const createCoupon = (
   card: FeedCard,
   {
     dayOffset = 0,
-    issuedAt = dateAt(dayOffset, card.issueOpenTime),
-    status = 'available',
+    issueTime = dateAt(dayOffset, card.issueOpenTime),
+    state = 'ISSUED',
     usedTime,
   }: CreateCouponOptions = {},
-): Coupon => {
-  lastIssueNumber += 1;
+): MockCoupon => {
+  lastCouponId += 1;
+  const storeIndex = mockFeedCards.indexOf(card);
+  const discount = toDiscount(card, storeIndex);
+  const discountAmount =
+    discount.targetMenu === null
+      ? discount.discountValue
+      : discount.targetMenu.price - discount.targetMenu.discountedPrice;
 
   return {
-    issueId: `issue-${lastIssueNumber}`,
+    memberCouponId: lastCouponId,
     campaignId: card.campaignId,
+    storeId: 10 + storeIndex,
     storeName: card.storeName,
-    imageUrl: card.imageUrl,
-    offerTitle: card.offerTitle,
-    originalPrice: card.originalPrice,
-    salePrice: card.salePrice,
-    usableFrom: card.usableFrom,
-    usableTo: card.usableTo,
-    issuedAt: issuedAt.toISOString(),
-    // 쿠폰은 받은 날 캠페인 사용 시간이 끝나면 만료된다
-    expiresAt: dateAt(dayOffset, card.usableTo).toISOString(),
-    usedAt: usedTime ? dateAt(dayOffset, usedTime).toISOString() : undefined,
-    status,
+    storeImageUrl: card.imageUrl,
+    ...discount,
+    state,
+    usable: false,
+    issueTime: issueTime.toISOString(),
+    // 쿠폰은 받은 날 캠페인 사용 시간 안에만 쓸 수 있다
+    usableStartTime: dateAt(dayOffset, card.usableFrom).toISOString(),
+    usableEndTime: dateAt(dayOffset, card.usableTo).toISOString(),
+    useTime: usedTime ? dateAt(dayOffset, usedTime).toISOString() : null,
+    discountAmount: state === 'USED' ? discountAmount : null,
   };
 };
 
@@ -87,19 +122,19 @@ const initialCoupons: (CreateCouponOptions & { campaignId: string })[] = [
   {
     campaignId: 'campaign-6',
     dayOffset: -1,
-    status: 'used',
+    state: 'USED',
     usedTime: '12:34',
   },
-  { campaignId: 'campaign-8', dayOffset: -1, status: 'expired' },
+  { campaignId: 'campaign-8', dayOffset: -1, state: 'EXPIRED' },
   {
-    campaignId: 'campaign-7',
+    campaignId: 'campaign-katsu',
     dayOffset: -3,
-    status: 'used',
+    state: 'USED',
     usedTime: '12:05',
   },
 ];
 
-const coupons: Coupon[] = initialCoupons.flatMap(
+const coupons: MockCoupon[] = initialCoupons.flatMap(
   ({ campaignId, ...options }) => {
     const card = findCard(campaignId);
     return card ? [createCoupon(card, options)] : [];
@@ -108,10 +143,26 @@ const coupons: Coupon[] = initialCoupons.flatMap(
 
 const findTodayCoupon = (campaignId: string) =>
   coupons.find(
-    (coupon) => coupon.campaignId === campaignId && isToday(coupon.issuedAt),
+    (coupon) => coupon.campaignId === campaignId && isToday(coupon.issueTime),
   );
 
-export const getMockCoupons = () => coupons.map((coupon) => ({ ...coupon }));
+// 서버처럼 조회 시점에 사용 시간이 지난 쿠폰은 만료로 바꾸고, 지금 쓸 수 있는지 계산한다
+export const getMockCoupons = (now: number): Coupon[] =>
+  coupons.map((mockCoupon) => {
+    // mock 안에서만 쓰는 캠페인 ID는 응답에서 뺀다
+    const coupon: Coupon & { campaignId?: string } = { ...mockCoupon };
+    delete coupon.campaignId;
+
+    const start = Date.parse(coupon.usableStartTime);
+    const end = Date.parse(coupon.usableEndTime);
+    const state =
+      coupon.state === 'ISSUED' && now >= end ? 'EXPIRED' : coupon.state;
+    return {
+      ...coupon,
+      state,
+      usable: state === 'ISSUED' && now >= start && now < end,
+    };
+  });
 
 export const getMockIssueStatus = (
   campaignId: string,
@@ -128,7 +179,7 @@ export const getMockIssueStatus = (
 
 // 오늘 받은 쿠폰 수. 하루 한도는 받은 날 기준이다
 export const getMockIssuedCount = () =>
-  coupons.filter((coupon) => isToday(coupon.issuedAt)).length;
+  coupons.filter((coupon) => isToday(coupon.issueTime)).length;
 
 export const issueMockCoupon = (campaignId: string): IssueResult => {
   const campaign = campaigns.get(campaignId);
@@ -140,7 +191,8 @@ export const issueMockCoupon = (campaignId: string): IssueResult => {
   if (getMockIssuedCount() >= MOCK_DAILY_ISSUE_LIMIT) return 'limitReached';
 
   campaign.remainingCount -= 1;
-  coupons.unshift(createCoupon(card, { issuedAt: new Date() }));
+  // 주소의 ?mockTime과 맞도록 앱 시계로 받은 시각을 남긴다
+  coupons.unshift(createCoupon(card, { issueTime: new Date(getNow()) }));
 
   return 'issued';
 };

@@ -8,6 +8,7 @@ import ActionButton from '@user/components/ActionButton/ActionButton';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 
 import CouponCard from './CouponCard';
+import { formatUsableTime } from './couponFormat';
 import CouponListSkeleton from './CouponListSkeleton';
 import CouponQr from './CouponQr';
 
@@ -21,9 +22,9 @@ const AvailableCoupons = () => {
   useEffect(() => {
     let ignore = false;
 
-    fetchCoupons().then((items) => {
-      if (ignore) return;
-      setCoupons(items.filter((coupon) => coupon.status === 'available'));
+    // 사용 시작 전 쿠폰도 여기서 보여주고 QR 화면에서 시작 시각을 알려 준다
+    fetchCoupons('issued').then((items) => {
+      if (!ignore) setCoupons(items);
     });
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
@@ -67,8 +68,8 @@ const AvailableCoupons = () => {
               }
               coupon={coupon}
               // 쿠폰은 받은 날 사용 시간 안에만 쓸 수 있다
-              detail={`사용 ${coupon.usableFrom}–${coupon.usableTo} · 오늘`}
-              key={coupon.issueId}
+              detail={`사용 ${formatUsableTime(coupon)} · 오늘`}
+              key={coupon.memberCouponId}
               label={`${coupon.storeName} 쿠폰 QR 보기`}
               onClick={() => setSelectedCoupon(coupon)}
             />

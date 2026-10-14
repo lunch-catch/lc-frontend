@@ -17,8 +17,8 @@ export const mockStores: (StoreListItem & { menuNames: string[] })[] = [
     hasActiveCampaign: true,
     activeCampaign: {
       discountTargetType: 'ALL',
-      discountType: 'PERCENT',
-      discountValue: 20,
+      discountType: 'AMOUNT',
+      discountValue: 2200,
     },
     thumbnailUrl: photo('1504674900247-0877df9cc836'),
     menuNames: ['수제 치즈 돈까스', '로스카츠', '냉모밀'],
@@ -80,7 +80,7 @@ export const mockStores: (StoreListItem & { menuNames: string[] })[] = [
     distanceMeters: 620,
     hasActiveCampaign: true,
     activeCampaign: {
-      discountTargetType: 'ALL',
+      discountTargetType: 'MENU',
       discountType: 'PERCENT',
       discountValue: 30,
     },

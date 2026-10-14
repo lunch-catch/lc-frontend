@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
+import { Store } from 'lucide-react';
 
 import type { Coupon } from '@user/api/coupon';
+
+import { formatDiscount, formatTarget } from './couponFormat';
 
 interface CouponCardProps {
   coupon: Coupon;
@@ -16,8 +19,6 @@ interface CouponCardProps {
   label?: string;
 }
 
-const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
-
 // 쿠폰함의 받은 쿠폰 한 장
 const CouponCard = ({
   action,
@@ -29,15 +30,25 @@ const CouponCard = ({
 }: CouponCardProps) => {
   const content = (
     <>
-      <img
-        alt=""
-        className={`size-18 shrink-0 rounded-lg bg-surface-subtle object-cover ${
-          dimmed ? 'opacity-60 grayscale' : ''
-        }`}
-        height={72}
-        src={coupon.imageUrl}
-        width={72}
-      />
+      {coupon.storeImageUrl ? (
+        <img
+          alt=""
+          className={`size-18 shrink-0 rounded-lg bg-surface-subtle object-cover ${
+            dimmed ? 'opacity-60 grayscale' : ''
+          }`}
+          height={72}
+          src={coupon.storeImageUrl}
+          width={72}
+        />
+      ) : (
+        // 가게 사진이 없으면 회색 바탕에 가게 아이콘을 둔다
+        <div
+          aria-hidden="true"
+          className="flex size-18 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"
+        >
+          <Store className="size-6" />
+        </div>
+      )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <h3 className="truncate text-body-mobile font-bold text-text-primary">
           {coupon.storeName}
@@ -45,9 +56,9 @@ const CouponCard = ({
         {/* 공간이 좁아 글자가 잘리면 메뉴 이름 쪽이 잘리도록 할인 금액을 앞에 둔다 */}
         <p className="truncate text-caption-mobile text-text-secondary">
           <strong className="font-bold text-text-primary">
-            {formatPrice(coupon.originalPrice - coupon.salePrice)} 할인
+            {formatDiscount(coupon)}
           </strong>{' '}
-          · {coupon.offerTitle}
+          · {formatTarget(coupon)}
         </p>
         <p className="truncate text-caption-mobile font-medium text-text-secondary">
           {detail}

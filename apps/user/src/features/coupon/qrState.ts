@@ -1,4 +1,3 @@
-import { getTodayAt } from '@user/api/clock';
 import type { Coupon, QrToken } from '@user/api/coupon';
 
 // QR 화면이 보여줄 상태
@@ -28,11 +27,11 @@ export const getQrState = ({
   now,
   token,
 }: QrStateInput): QrState => {
-  if (coupon.status === 'used') return 'used';
-  if (coupon.status === 'expired' || now >= Date.parse(coupon.expiresAt)) {
+  if (coupon.state === 'USED') return 'used';
+  if (coupon.state === 'EXPIRED' || now >= Date.parse(coupon.usableEndTime)) {
     return 'expired';
   }
-  if (now < getTodayAt(coupon.usableFrom, now)) return 'beforeUse';
+  if (now < Date.parse(coupon.usableStartTime)) return 'beforeUse';
   // 연결이 끊기면 새 QR을 받을 수 없어 마지막 QR의 남은 시간만 보여준다
   if (!isOnline) return 'offline';
   if (!token || token.expiresAt <= now) return 'refreshing';

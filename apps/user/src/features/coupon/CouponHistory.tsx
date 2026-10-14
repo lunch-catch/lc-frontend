@@ -6,6 +6,7 @@ import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 
 import CouponCard from './CouponCard';
+import { formatClock } from './couponFormat';
 import CouponListSkeleton from './CouponListSkeleton';
 
 type HistoryFilter = 'all' | 'used' | 'expired';
@@ -17,6 +18,11 @@ const filterOptions: { value: HistoryFilter; label: string }[] = [
   { value: 'expired', label: '만료' },
 ];
 
+const filterStates: Record<Exclude<HistoryFilter, 'all'>, Coupon['state']> = {
+  used: 'USED',
+  expired: 'EXPIRED',
+};
+
 const filterEmptyMessages: Record<HistoryFilter, string> = {
   all: '사용 내역이 없어요',
   used: '사용한 쿠폰이 없어요',
@@ -25,20 +31,15 @@ const filterEmptyMessages: Record<HistoryFilter, string> = {
 
 // 사용 완료는 사용한 시각, 만료는 만료된 시각을 기준으로 묶고 정렬한다
 const getEventAt = (coupon: Coupon) =>
-  coupon.status === 'used' && coupon.usedAt ? coupon.usedAt : coupon.expiresAt;
+  coupon.state === 'USED' && coupon.useTime
+    ? coupon.useTime
+    : coupon.usableEndTime;
 
 const formatDate = (isoString: string) =>
   new Date(isoString).toLocaleDateString('ko-KR', {
     day: 'numeric',
     month: 'long',
     weekday: 'short',
-  });
-
-const formatTime = (isoString: string) =>
-  new Date(isoString).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
   });
 
 // 최근 것이 위로 오게 정렬한 뒤 같은 날짜끼리 묶는다
@@ -71,7 +72,7 @@ const CouponHistory = () => {
 
     fetchCoupons().then((items) => {
       if (ignore) return;
-      setCoupons(items.filter((coupon) => coupon.status !== 'available'));
+      setCoupons(items.filter((coupon) => coupon.state !== 'ISSUED'));
     });
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
@@ -91,10 +92,11 @@ const CouponHistory = () => {
   }
 
   const usedCount =
-    coupons?.filter((coupon) => coupon.status === 'used').length ?? 0;
+    coupons?.filter((coupon) => coupon.state === 'USED').length ?? 0;
   const filteredCoupons =
-    coupons?.filter((coupon) => filter === 'all' || coupon.status === filter) ??
-    [];
+    coupons?.filter(
+      (coupon) => filter === 'all' || coupon.state === filterStates[filter],
+    ) ?? [];
 
   return (
     <div className="flex flex-col gap-4 px-page pt-3 pb-6">
@@ -144,12 +146,12 @@ const CouponHistory = () => {
                   <CouponCard
                     coupon={coupon}
                     detail={
-                      coupon.status === 'used'
-                        ? `사용 완료 · ${formatTime(getEventAt(coupon))}`
-                        : `만료 · ${formatTime(getEventAt(coupon))}`
+                      coupon.state === 'USED'
+                        ? `사용 완료 · ${formatClock(getEventAt(coupon))}`
+                        : `만료 · ${formatClock(getEventAt(coupon))}`
                     }
                     dimmed
-                    key={coupon.issueId}
+                    key={coupon.memberCouponId}
                   />
                 ))}
               </ul>
