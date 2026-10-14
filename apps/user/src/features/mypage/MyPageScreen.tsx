@@ -10,6 +10,7 @@ import TopBar from '@user/components/TopBar/TopBar';
 
 import ConsentSettings from './ConsentSettings';
 import ProfileSummary from './ProfileSummary';
+import ThemeSettings from './ThemeSettings';
 import { useLoad } from './useLoad';
 
 const TOAST_DURATION_MS = 2500;
@@ -21,7 +22,7 @@ const menuItems = [
   { label: '위치 설정', to: '/my/location' },
 ];
 
-// 마이 탭. 프로필과 쿠폰 요약, 바로가기, 알림·위치 설정, 로그아웃
+// 마이 탭. 프로필과 쿠폰 요약, 바로가기, 알림·위치 설정, 화면 모드, 로그아웃
 const MyPageScreen = () => {
   const auth = useAuth();
   const profile = useLoad(fetchMyProfile);
@@ -83,6 +84,9 @@ const MyPageScreen = () => {
             />
           </div>
         )}
+        <div className="mt-3">
+          <ThemeSettings />
+        </div>
         {/* 메뉴가 적어도 로그아웃은 화면 아래쪽에 둔다 */}
         <div className="flex-1" />
         <div className="relative">
