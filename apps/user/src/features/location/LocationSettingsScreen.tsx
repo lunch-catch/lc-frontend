@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { CircleAlert, MapPin } from 'lucide-react';
+import { CircleAlert, MapPin, Search, X } from 'lucide-react';
 
-import { findAddress } from '@user/api/kakao';
+import { type AddressResult, findAddress } from '@user/api/kakao';
 import {
   deleteMyLocation,
   fetchMyLocation,
@@ -18,8 +18,10 @@ import FeedbackToast, {
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
 import TopBar from '@user/components/TopBar/TopBar';
 
+import AddressSearchResults from './AddressSearchResults';
 import { getCurrentPosition, PositionError } from './currentPosition';
 import LocationNameSheet from './LocationNameSheet';
+import { useAddressSearch } from './useAddressSearch';
 import { getLocationLabel, rememberMyLocation } from './useMyLocation';
 
 const TOAST_DURATION_MS = 2500;
@@ -30,11 +32,14 @@ interface LocationSettings {
   locationOptIn: boolean;
 }
 
-// GPS로 찾은 위치와 그 주소
-interface FoundLocation {
+// 저장하기 전에 고른 위치. GPS로 찾았거나 검색 결과에서 골랐다
+interface PickedLocation {
+  source: 'gps' | 'search';
   latitude: number;
   longitude: number;
   address: string | null;
+  // 검색 결과의 장소 이름. 이름 칸에 미리 채운다
+  placeName: string | null;
 }
 
 interface Toast {
@@ -61,7 +66,7 @@ const getPositionErrorMessage = (error: unknown) =>
     : '현재 위치를 찾지 못했어요';
 
 // 위치 설정. 피드와 탐색에서 주변 가게를 찾을 기준 위치를 하나 정한다
-// 지금은 GPS로 찾은 현재 위치만 저장할 수 있다
+// GPS로 찾은 현재 위치나, 주소 검색으로 고른 위치를 저장한다
 const LocationSettingsScreen = () => {
   const navigate = useNavigate();
   // undefined면 불러오는 중, null이면 실패
@@ -71,8 +76,9 @@ const LocationSettingsScreen = () => {
   const [pending, setPending] = useState<'locate' | 'save' | 'delete' | null>(
     null,
   );
-  // GPS로 찾았지만 아직 저장하지 않은 위치. 있으면 이름을 붙이는 시트를 연다
-  const [found, setFound] = useState<FoundLocation | null>(null);
+  // 골랐지만 아직 저장하지 않은 위치. 있으면 이름을 붙이는 시트를 연다
+  const [picked, setPicked] = useState<PickedLocation | null>(null);
+  const addressSearch = useAddressSearch();
   const [saveError, setSaveError] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -122,7 +128,7 @@ const LocationSettingsScreen = () => {
         position.latitude,
         position.longitude,
       ).catch(() => null);
-      setFound({ ...position, address });
+      setPicked({ ...position, address, placeName: null, source: 'gps' });
     } catch (error) {
       setToast({ message: getPositionErrorMessage(error), tone: 'error' });
     } finally {
@@ -130,21 +136,34 @@ const LocationSettingsScreen = () => {
     }
   };
 
+  const handleSelectResult = (result: AddressResult) => {
+    setSaveError(null);
+    setPicked({ ...result, source: 'search' });
+  };
+
   const handleSave = async (locationNickname: string | undefined) => {
-    if (pending || !settings || !found) return;
+    if (pending || !settings || !picked) return;
 
     setPending('save');
     try {
       const location = await saveMyLocation({
-        latitude: found.latitude,
-        longitude: found.longitude,
-        roadAddress: found.address ?? undefined,
+        latitude: picked.latitude,
+        longitude: picked.longitude,
+        roadAddress: picked.address ?? undefined,
         locationNickname,
       });
       rememberMyLocation(location);
       setSettings({ ...settings, location });
-      setFound(null);
-      setToast({ message: '현재 위치로 설정했어요', tone: 'success' });
+      setPicked(null);
+      // 저장했으면 검색을 닫고 저장한 위치 카드를 보여준다
+      addressSearch.changeQuery('');
+      setToast({
+        message:
+          picked.source === 'gps'
+            ? '현재 위치로 설정했어요'
+            : '선택한 위치로 설정했어요',
+        tone: 'success',
+      });
     } catch {
       setSaveError('위치를 저장하지 못했어요');
     } finally {
@@ -175,15 +194,54 @@ const LocationSettingsScreen = () => {
         <p className="text-body-sm-mobile text-text-secondary">
           설정한 위치 주변 가게의 쿠폰을 보여드려요
         </p>
+        {/* 2글자 이상 입력하면 아래에 저장한 위치 대신 검색 결과를 보여준다. 위치 동의와 상관없이 쓸 수 있다 */}
+        <div
+          className="flex h-12 items-center gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 focus-within:border-action-primary"
+          role="search"
+        >
+          <Search
+            aria-hidden="true"
+            className="size-4.5 shrink-0 text-text-secondary"
+          />
+          {/* iOS가 입력할 때 화면을 확대하지 않도록 글자를 16px로 둔다 */}
+          <input
+            aria-label="회사, 건물 이름이나 주소로 찾기"
+            autoComplete="off"
+            className="h-full min-w-0 flex-1 bg-transparent text-body-mobile text-text-primary placeholder:text-text-tertiary focus:outline-none"
+            enterKeyHint="search"
+            onChange={(event) => addressSearch.changeQuery(event.target.value)}
+            placeholder="회사, 건물 이름이나 주소로 찾기"
+            spellCheck={false}
+            value={addressSearch.query}
+          />
+          {addressSearch.query && (
+            <button
+              aria-label="검색어 지우기"
+              className="-mr-2 flex size-9 shrink-0 items-center justify-center text-text-tertiary"
+              onClick={() => addressSearch.changeQuery('')}
+              type="button"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          )}
+        </div>
 
-        {settings === undefined && (
+        {addressSearch.isSearching && (
+          <AddressSearchResults
+            onRetry={addressSearch.retry}
+            onSelect={handleSelectResult}
+            search={addressSearch.search}
+          />
+        )}
+
+        {!addressSearch.isSearching && settings === undefined && (
           <div
             aria-hidden="true"
             className="h-13 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
           />
         )}
 
-        {settings === null && (
+        {!addressSearch.isSearching && settings === null && (
           <div
             className={`flex min-h-13 items-center justify-between gap-3 px-4 py-2 ${cardClassName}`}
           >
@@ -200,7 +258,7 @@ const LocationSettingsScreen = () => {
           </div>
         )}
 
-        {settings && (
+        {!addressSearch.isSearching && settings && (
           <section
             aria-label="설정한 위치"
             className={`flex min-h-13 items-center gap-3 px-4 py-2 ${cardClassName}`}
@@ -242,7 +300,7 @@ const LocationSettingsScreen = () => {
           </section>
         )}
 
-        {settings?.locationOptIn === false && (
+        {!addressSearch.isSearching && settings?.locationOptIn === false && (
           <p className="flex items-start gap-1.5 text-caption-mobile text-text-secondary">
             <CircleAlert
               aria-hidden="true"
@@ -253,28 +311,33 @@ const LocationSettingsScreen = () => {
         )}
       </div>
 
-      <FixedBottom>
-        {/* 결과는 누른 버튼 바로 위에 띄운다. 위쪽에 띄우면 설명과 위치 카드를 가린다 */}
-        {toast && (
-          <div className="absolute inset-x-0 bottom-full px-page pb-2">
-            <FeedbackToast message={toast.message} tone={toast.tone} />
-          </div>
-        )}
-        <ActionButton
-          disabled={!settings?.locationOptIn}
-          loading={pending === 'locate'}
-          onClick={handleLocate}
-          size="large"
-        >
-          현재 위치로 설정
-        </ActionButton>
-      </FixedBottom>
+      {/* 검색하는 동안에는 키보드 위로 올라와 결과를 가리지 않도록 숨긴다 */}
+      {!addressSearch.isSearching && (
+        <FixedBottom>
+          {/* 결과는 누른 버튼 바로 위에 띄운다. 위쪽에 띄우면 설명과 위치 카드를 가린다 */}
+          {toast && (
+            <div className="absolute inset-x-0 bottom-full px-page pb-2">
+              <FeedbackToast message={toast.message} tone={toast.tone} />
+            </div>
+          )}
+          <ActionButton
+            disabled={!settings?.locationOptIn}
+            loading={pending === 'locate'}
+            onClick={handleLocate}
+            size="large"
+          >
+            현재 위치로 설정
+          </ActionButton>
+        </FixedBottom>
+      )}
 
-      {found && (
+      {picked && (
         <LocationNameSheet
-          address={found.address}
+          address={picked.address}
+          initialNickname={picked.placeName ?? undefined}
+          title={picked.source === 'gps' ? '현재 위치' : '선택한 위치'}
           errorMessage={saveError}
-          onClose={() => setFound(null)}
+          onClose={() => setPicked(null)}
           onSave={handleSave}
           saving={pending === 'save'}
         />
