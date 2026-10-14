@@ -28,6 +28,25 @@ export interface MyProfileUpdate {
 export const updateMyProfile = (update: MyProfileUpdate) =>
   request<MyProfile>('/v1/members/me', { method: 'PATCH', body: update });
 
+// 회원 탈퇴 (POST /v1/members/me:withdraw). 카카오 재인증에서 받은 인가 코드와 state를 보낸다
+// 사유는 서버가 저장하지 않고 처리 뒤 버린다. 성공하면 서버가 인증 쿠키를 지운다
+// 이미 탈퇴한 회원(MEMBER-001)은 실패가 아니라 이미 끝난 것으로 본다
+export const withdrawMember = async (input: {
+  authorizationCode: string;
+  state: string;
+  reason?: string;
+}) => {
+  try {
+    await request<void>('/v1/members/me:withdraw', {
+      method: 'POST',
+      body: input,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'MEMBER-001') return;
+    throw error;
+  }
+};
+
 export interface OnboardingInput {
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   ageGroup: 'AGE_20S' | 'AGE_30S' | 'AGE_40S' | 'AGE_50_PLUS';

@@ -27,10 +27,11 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <SplashPage /> },
       { path: '/login', element: <LoginPage /> },
-      // 카카오 로그인 뒤 돌아오는 주소. 서버 설정(KAKAO_REDIRECT_URI)과 같아야 한다
-      { path: '/oauth/callback', element: <KakaoCallbackPage /> },
     ],
   },
+  // 카카오에서 돌아오는 주소. 서버 설정(KAKAO_REDIRECT_URI)과 같아야 한다
+  // 로그인뿐 아니라 로그인한 회원의 탈퇴 재인증도 여기로 돌아와서 접근 제어 밖에 둔다
+  { path: '/oauth/callback', element: <KakaoCallbackPage /> },
   {
     element: <RequireAuth access="onboarding" />,
     children: [

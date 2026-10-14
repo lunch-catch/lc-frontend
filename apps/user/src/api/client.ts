@@ -110,7 +110,7 @@ const refreshTokens = () => {
 // 로그인 전에 부르는 요청은 Access Token이 없어 401이어도 재발급하지 않는다
 const needsSession = (path: string, method: RequestOptions['method']) =>
   path !== REFRESH_PATH &&
-  path !== '/v1/auth/kakao/authorize' &&
+  !path.startsWith('/v1/auth/kakao/authorize') &&
   !(path === '/v1/auth/tokens' && method === 'POST');
 
 // API 서버에 요청하고 봉투를 벗긴 data를 돌려준다
