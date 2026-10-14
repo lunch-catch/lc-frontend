@@ -325,6 +325,8 @@ export const TableCell = ({
       className={[
         tableCellHeightClassName[density],
         'overflow-hidden whitespace-nowrap px-4 text-ellipsis text-caption-web text-table-body-text transition-[height] duration-200 ease-out motion-reduce:transition-none',
+        // 뱃지는 텍스트와 달리 자체 배경을 가진 요소이므로 뒤에 말줄임표를 덧붙이지 않는다.
+        '[&:has([data-status-badge])]:text-clip',
         showDetailArrow && 'relative [&:last-child]:!pr-12',
         className,
       ]
