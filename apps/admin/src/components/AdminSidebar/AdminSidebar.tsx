@@ -52,6 +52,12 @@ const defaultNavigationItems: AdminNavigationItem[] = [
   { icon: UserCog, id: 'account', label: '계정 관리' },
 ];
 
+/**
+ * 관리자 탐색 메뉴와 계정·테마·로그아웃 버튼을 표시하는 사이드바입니다.
+ * 로그아웃 확인과 서버 요청은 onLogout을 통해 상위 화면에 위임합니다.
+ * @param props 메뉴 선택 상태, 관리자 정보 및 하단 버튼의 동작과 비활성화 설정
+ * @returns 마우스 진입 시 펼쳐지는 관리자 사이드바
+ */
 export function AdminSidebar({
   admin,
   activeItemId = 'dashboard',

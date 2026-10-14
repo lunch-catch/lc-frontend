@@ -23,6 +23,8 @@ let state: AuthState = {
 };
 // JWT의 서버 발급 순번과는 별개로, 요청 이후 인증 상태가 바뀌었는지 구분하는 값이다.
 let authVersion = 0;
+// 토큰 갱신은 같은 세션이지만 로그인·로그아웃은 기존 요청의 소유권을 끊는다.
+let sessionId = 0;
 // 로그인과 재발급이 같은 요청 제한을 공유하므로 대기 시간도 함께 관리한다.
 let retryUntil = 0;
 let refreshPromise: Promise<AdminInfo> | undefined;
@@ -41,6 +43,7 @@ export const subscribeAuth = (listener: () => void) => {
   };
 };
 const expire = (authNotice: string | null = null) => {
+  sessionId += 1;
   authVersion += 1;
   publish({ admin: null, authNotice, isRestoring: false, restoreError: null });
 };
@@ -72,6 +75,7 @@ export const refreshAdmin = (): Promise<AdminInfo> => {
     try {
       checkCooldown();
       const admin = await requestAdminRefresh();
+      if (state.admin?.adminId !== admin.adminId) sessionId += 1;
       authVersion += 1;
       publish({
         admin,
@@ -119,6 +123,7 @@ export const loginAdmin = (values: AdminLoginValues): Promise<void> => {
   if (logoutPromise)
     return Promise.reject(new ApiError('로그아웃 처리 중입니다.', 0));
   if (loginPromise) return loginPromise;
+  sessionId += 1;
   loginPromise = (async () => {
     // 쿠키를 회전하는 복원이 끝난 뒤 로그인해 응답 순서에 따른 계정 변경을 막는다.
     await refreshPromise?.catch(() => undefined);
@@ -144,6 +149,7 @@ export const loginAdmin = (values: AdminLoginValues): Promise<void> => {
 
 export const logoutAdmin = (): Promise<void> => {
   if (logoutPromise) return logoutPromise;
+  sessionId += 1;
   logoutPromise = (async () => {
     // 진행 중인 인증 응답의 쿠키를 받은 후 삭제해 늦은 응답이 로그아웃을 되돌리지 않게 한다.
     await Promise.allSettled([refreshPromise, loginPromise]);
@@ -168,7 +174,11 @@ export const logoutAdmin = (): Promise<void> => {
 
 registerAuthRecovery({
   getVersion: () => authVersion,
+  getSessionId: () =>
+    state.admin && !loginPromise && !logoutPromise ? sessionId : null,
   refresh: refreshAdmin,
-  expire: () =>
-    expire('로그인 상태를 확인할 수 없습니다. 다시 로그인해 주세요.'),
+  expire: (requestSessionId) => {
+    if (requestSessionId === sessionId && !loginPromise && !logoutPromise)
+      expire('로그인 상태를 확인할 수 없습니다. 다시 로그인해 주세요.');
+  },
 });

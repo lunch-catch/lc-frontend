@@ -51,8 +51,9 @@ const getErrorMessage = (status: number, code?: string) => {
 
 interface AuthRecovery {
   getVersion: () => number;
+  getSessionId: () => number | null;
   refresh: () => Promise<unknown>;
-  expire: () => void;
+  expire: (sessionId: number) => void;
 }
 
 let authRecovery: AuthRecovery | undefined;
@@ -111,12 +112,31 @@ export const request = async (
 ): Promise<Response> => {
   const recovery = authRecovery;
   const version = recovery?.getVersion();
+  const isProtected =
+    path.startsWith('/v1/admin/') && !path.startsWith('/v1/admin/auth/');
+  const sessionId = isProtected ? recovery?.getSessionId() : undefined;
+  const assertSession = () => {
+    if (
+      isProtected &&
+      recovery &&
+      (sessionId == null || sessionId !== recovery.getSessionId())
+    )
+      throw new ApiError(
+        '로그인 상태가 변경되어 요청을 중단했습니다. 다시 시도해 주세요.',
+        0,
+      );
+  };
+  assertSession();
   try {
-    return await sendRequest(path, options);
+    const response = await sendRequest(path, options);
+    assertSession();
+    return response;
   } catch (error) {
+    assertSession();
     // 로그인·재발급·로그아웃은 재시도하지 않는다. 권한 오류도 재발급 대상이 아니다.
     if (
       !recovery ||
+      sessionId == null ||
       !path.startsWith('/v1/admin/') ||
       path.startsWith('/v1/admin/auth/') ||
       !(error instanceof ApiError) ||
@@ -127,16 +147,20 @@ export const request = async (
     options.signal?.throwIfAborted();
     // 이전 쿠키로 보낸 요청이 늦게 실패해도 이미 완료된 재발급을 반복하지 않는다.
     if (version === recovery.getVersion()) await recovery.refresh();
+    assertSession();
     options.signal?.throwIfAborted();
     try {
-      return await sendRequest(path, options);
+      const response = await sendRequest(path, options);
+      assertSession();
+      return response;
     } catch (retryError) {
+      assertSession();
       if (
         retryError instanceof ApiError &&
         retryError.status === 401 &&
         retryError.code === 'AUTH-005'
       )
-        recovery.expire();
+        recovery.expire(sessionId);
       throw retryError;
     }
   }
