@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router';
 
 import ActionButton from '@user/components/ActionButton/ActionButton';
+import FeedbackToast, {
+  type FeedbackToastProps,
+} from '@user/components/FeedbackToast/FeedbackToast';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
 import { formatCountdown } from '@user/features/wishlist/useOpenCountdown';
 
@@ -15,6 +18,8 @@ interface CouponCtaProps {
   isPending: boolean;
   onWish: () => void;
   onIssue: () => void;
+  // 하단 버튼 바로 위에 띄울 안내
+  toast: FeedbackToastProps | null;
 }
 
 // 하단 고정 버튼. 쿠폰 상태마다 지금 할 수 있는 일 하나만 보여준다
@@ -26,6 +31,7 @@ const CouponCta = ({
   onWish,
   remainingMs,
   state,
+  toast,
 }: CouponCtaProps) => {
   const navigate = useNavigate();
 
@@ -95,6 +101,12 @@ const CouponCta = ({
 
   return (
     <FixedBottom>
+      {/* 안내 문구가 있든 없든 하단 영역 바로 위에 붙어서 버튼과 간격이 일정하다 */}
+      {toast && (
+        <div className="absolute inset-x-0 bottom-full z-30 px-page pb-2">
+          <FeedbackToast {...toast} />
+        </div>
+      )}
       {notice && (
         <p className="mb-2 text-center text-caption-mobile text-text-secondary">
           {notice}
