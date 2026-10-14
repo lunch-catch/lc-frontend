@@ -1,0 +1,178 @@
+﻿import { ApiError, requestData } from './client';
+
+export type TemplateStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface TemplateRecord {
+  templateId: number;
+  name: string;
+  status: TemplateStatus;
+  active: boolean;
+  createdAt: string;
+  activatedBy: number | null;
+  activatedAt: string | null;
+  lastModifiedBy: number | null;
+  lastModifiedAt: string | null;
+  html: string;
+}
+
+export interface TemplateVersionRecord {
+  versionNumber: number;
+  requestPrompt: string;
+  createdAt: string;
+  html: string;
+}
+
+export interface TemplateVersionPage {
+  items: TemplateVersionRecord[];
+  nextPageToken: string | null;
+}
+
+export interface TemplateGeneration {
+  templateId: number;
+  name: string;
+  versionNumber: number;
+  status: 'DRAFT';
+  html: string;
+  removedElements: string[];
+}
+
+const basePath = '/v1/admin/templates';
+const jsonOptions = (method: 'POST' | 'PATCH', body: object) => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+const assertTemplate = (data: TemplateRecord) => {
+  if (
+    !data ||
+    !Number.isSafeInteger(data.templateId) ||
+    data.templateId <= 0 ||
+    typeof data.name !== 'string' ||
+    typeof data.html !== 'string' ||
+    typeof data.active !== 'boolean' ||
+    typeof data.createdAt !== 'string' ||
+    !['DRAFT', 'PUBLISHED'].includes(data.status)
+  )
+    throw new ApiError('템플릿 응답 형식을 확인할 수 없습니다.', 200);
+  return data;
+};
+
+export const getTemplates = async (signal?: AbortSignal) => {
+  const data = await requestData<TemplateRecord[]>(basePath, { signal }, 200);
+  if (!Array.isArray(data))
+    throw new ApiError('템플릿 목록 응답 형식을 확인할 수 없습니다.', 200);
+  return data.map(assertTemplate);
+};
+
+export const getTemplate = async (id: string, signal?: AbortSignal) =>
+  assertTemplate(
+    await requestData<TemplateRecord>(
+      `${basePath}/${encodeURIComponent(id)}`,
+      { signal },
+      200,
+    ),
+  );
+
+export const getTemplateVersions = async (
+  id: string,
+  pageToken?: string,
+  signal?: AbortSignal,
+) => {
+  const query = new URLSearchParams({ pageSize: '20' });
+  if (pageToken) query.set('pageToken', pageToken);
+  const data = await requestData<TemplateVersionPage>(
+    `${basePath}/${encodeURIComponent(id)}/versions?${query}`,
+    { signal },
+    200,
+  );
+  if (
+    !Array.isArray(data.items) ||
+    (data.nextPageToken !== null && typeof data.nextPageToken !== 'string') ||
+    data.items.some(
+      (item) =>
+        !item ||
+        !Number.isSafeInteger(item.versionNumber) ||
+        item.versionNumber <= 0 ||
+        typeof item.html !== 'string' ||
+        typeof item.requestPrompt !== 'string' ||
+        typeof item.createdAt !== 'string',
+    )
+  )
+    throw new ApiError('템플릿 버전 응답 형식을 확인할 수 없습니다.', 200);
+  return data;
+};
+
+/** 같은 생성·수정 요청의 재시도에는 requestId를 그대로 전달해 중복 버전을 방지한다. */
+export const generateTemplate = async (
+  values: { name: string; requestPrompt: string; requestId: string },
+  id?: string,
+) => {
+  const path = id ? `${basePath}/${encodeURIComponent(id)}/versions` : basePath;
+  // 수정 API는 이름 변경을 지원하지 않아 생성 요청과 본문 구성이 다르다.
+  const body = id
+    ? { requestPrompt: values.requestPrompt, requestId: values.requestId }
+    : values;
+  const data = await requestData<TemplateGeneration>(
+    path,
+    jsonOptions('POST', body),
+    201,
+  );
+  if (
+    !Number.isSafeInteger(data.templateId) ||
+    data.templateId <= 0 ||
+    !Number.isSafeInteger(data.versionNumber) ||
+    data.versionNumber <= 0 ||
+    data.status !== 'DRAFT' ||
+    typeof data.name !== 'string' ||
+    typeof data.html !== 'string' ||
+    !Array.isArray(data.removedElements) ||
+    data.removedElements.some((item) => typeof item !== 'string')
+  )
+    throw new ApiError('템플릿 생성 응답 형식을 확인할 수 없습니다.', 201);
+  return data;
+};
+
+export const publishTemplate = async (id: string, versionNumber: number) => {
+  const data = await requestData<{
+    templateId: number;
+    name: string;
+    status: 'PUBLISHED';
+    html: string;
+    publishedAt: string;
+  }>(
+    `${basePath}/${encodeURIComponent(id)}/publish`,
+    jsonOptions('POST', { versionNumber }),
+    200,
+  );
+  if (
+    String(data.templateId) !== id ||
+    data.status !== 'PUBLISHED' ||
+    typeof data.html !== 'string' ||
+    typeof data.name !== 'string' ||
+    typeof data.publishedAt !== 'string'
+  )
+    throw new ApiError('템플릿 게시 응답 형식을 확인할 수 없습니다.', 200);
+  return data;
+};
+
+export const changeTemplateActive = async (id: string, active: boolean) => {
+  const data = await requestData<{
+    templateId: number;
+    active: boolean;
+    activatedBy: number;
+    activatedAt: string;
+  }>(
+    `${basePath}/${encodeURIComponent(id)}/active`,
+    jsonOptions('PATCH', { active }),
+    200,
+  );
+  if (
+    String(data.templateId) !== id ||
+    data.active !== active ||
+    !Number.isSafeInteger(data.activatedBy) ||
+    typeof data.activatedAt !== 'string'
+  )
+    throw new ApiError('템플릿 활성 상태 응답 형식을 확인할 수 없습니다.', 200);
+  return data;
+};
