@@ -22,6 +22,8 @@ import {
   getMonthRange,
 } from '@admin/features/billing/billingView';
 import { PointLedgerDetails } from '@admin/features/billing/components/PointLedgerDetails';
+import { PointSummarySection } from '@admin/features/billing/components/PointSummarySection';
+import { isPositivePointId } from '@admin/features/billing/pointSummaryUtils';
 import { usePointLedger } from '@admin/features/billing/usePointLedger';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
@@ -35,11 +37,6 @@ const columns: DataTableColumn[] = [
   { key: 'amount', label: '거래 금액', width: '12%' },
   { key: 'balanceAfter', label: '사용 가능 잔액 (후)', width: '14%' },
 ];
-// 숫자로 정규화할 때 ID가 반올림되지 않도록 JavaScript가 정확히 표현할 수 있는 정수만 받는다.
-const isPositiveId = (value: string) =>
-  /^\d+$/.test(value) &&
-  Number.isSafeInteger(Number(value)) &&
-  Number(value) > 0;
 
 const getValidationError = (
   owner: string,
@@ -47,8 +44,8 @@ const getValidationError = (
   from: string,
   to: string,
 ) => {
-  if (!isPositiveId(owner)) return '점주 ID를 숫자로 입력해 주세요.';
-  if (campaign && !isPositiveId(campaign))
+  if (!isPositivePointId(owner)) return '점주 ID를 숫자로 입력해 주세요.';
+  if (campaign && !isPositivePointId(campaign))
     return '캠페인 ID를 숫자로 입력해 주세요.';
   // 서버는 KST 양 끝 날짜를 포함해 최대 31일까지 받는다. 날짜 문자열의 차이로 일수를 계산한다.
   const days = (Date.parse(to) - Date.parse(from)) / 86_400_000 + 1;
@@ -78,9 +75,14 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
   const [range, setRange] = useState(() => getMonthRange(today));
   const owner = ownerSearch.keyword.trim();
   const campaign = campaignSearch.keyword.trim();
+  const ownerInputPending = ownerSearch.draftKeyword !== ownerSearch.keyword;
+  // 두 조회가 동일한 점주를 사용하도록 디바운스와 ID 정규화를 한 번만 적용한다.
+  const selectedOwnerId =
+    !ownerInputPending && isPositivePointId(owner)
+      ? String(Number(owner))
+      : null;
   const inputPending =
-    ownerSearch.draftKeyword !== ownerSearch.keyword ||
-    campaignSearch.draftKeyword !== campaignSearch.keyword;
+    ownerInputPending || campaignSearch.draftKeyword !== campaignSearch.keyword;
   // 필수 ID가 비어 있거나 입력 중이면 오류 대신 입력 안내를 표시한다.
   const validationError =
     inputPending || !owner
@@ -89,9 +91,9 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
   // 입력 중에는 기존 요청도 취소하고, 필수 조건이 유효해진 뒤에만 조회한다.
   const ledger = usePointLedger(
     pageSize,
-    !inputPending && owner && !validationError
+    !inputPending && selectedOwnerId && !validationError
       ? {
-          ownerId: String(Number(owner)),
+          ownerId: selectedOwnerId,
           campaignId: campaign ? String(Number(campaign)) : '',
           type,
           from: range.startDate,
@@ -101,192 +103,213 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
   );
 
   return (
-    <>
-      <p className="text-caption-web leading-5 text-text-secondary">
-        점주 ID와 조회 기간을 입력하면 자동으로 조회됩니다. 사용 가능 잔액에는
-        예약 중 포인트가 포함되지 않습니다. 소진은 예약 포인트에서 차감되므로
-        사용 가능 잔액의 전후 금액이 같을 수 있습니다.
-      </p>
-      <FilterBar
-        columnSettings={columnSettings}
-        className="!px-0 !py-0"
-        density={{ value: density, onValueChange: setDensity }}
-      >
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-body-sm-web font-medium text-text-primary">
+          조회할 점주 ID
+        </span>
         <SearchField
           aria-label="점주 ID"
           placeholder="점주 ID를 입력하세요"
           inputMode="numeric"
           value={ownerSearch.draftKeyword}
-          onChange={(event) => {
-            ownerSearch.setDraftKeyword(event.target.value);
-          }}
-        />
-        <SearchField
-          aria-label="캠페인 ID"
-          placeholder="캠페인 ID (선택)"
-          inputMode="numeric"
-          value={campaignSearch.draftKeyword}
-          onChange={(event) => {
-            campaignSearch.setDraftKeyword(event.target.value);
-          }}
-        />
-        <SelectField
-          aria-label="변동 유형"
-          fitContent
-          value={type}
-          options={[
-            { label: '전체', value: 'ALL' },
-            ...Object.entries(ledgerTypeLabels).map(([value, label]) => ({
-              value,
-              label,
-            })),
-          ]}
-          onValueChange={(value) => {
-            setSelected(null);
-            setType(value as PointLedgerType | 'ALL');
-          }}
-        />
-        <DateRangePicker
-          ariaLabel="조회 기간"
-          placeholder="조회 기간 선택"
-          value={range}
-          onValueChange={(value) => {
-            setRange(value);
-            setSelected(null);
-          }}
-        />
-      </FilterBar>
-      {validationError && (
-        <p role="alert" className="text-caption-web text-status-danger-fg">
-          {validationError}
-        </p>
-      )}
-      <DataTable
-        columnSettings={columnSettings}
-        columns={columns}
-        density={density}
-        resizableColumns
-        className="table-fixed"
-      >
-        <thead>
-          <tr>
-            {columns.map((column, index) => (
-              <TableHeaderCell
-                key={column.key}
-                columnIndex={index}
-                onSortChange={
-                  column.key === 'createdAt'
-                    ? () => {
-                        setSelected(null);
-                        ledger.changeSort();
-                      }
-                    : undefined
-                }
-                sortDirection={
-                  column.key === 'createdAt' ? ledger.sortDir : undefined
-                }
-              >
-                {column.label}
-              </TableHeaderCell>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {!ledger.enabled ? (
-            <tr>
-              <TableEmpty colSpan={columns.length}>
-                {inputPending
-                  ? '입력이 끝나면 자동으로 조회됩니다'
-                  : '점주 ID와 조회 기간을 입력해 주세요'}
-              </TableEmpty>
-            </tr>
-          ) : ledger.loading && !ledger.data ? (
-            <tr>
-              <TableLoading colSpan={columns.length} />
-            </tr>
-          ) : ledger.error && !ledger.data ? (
-            <tr>
-              <TableError colSpan={columns.length} description={ledger.error} />
-            </tr>
-          ) : !ledger.data?.items.length ? (
-            <tr>
-              <TableEmpty colSpan={columns.length}>
-                조회된 포인트 변동 내역이 없습니다
-              </TableEmpty>
-            </tr>
-          ) : (
-            ledger.data.items.map((item) => (
-              <TableRow
-                key={item.ledgerId}
-                showDetailArrow
-                className="cursor-pointer"
-                onClick={() => setSelected(item)}
-              >
-                <TableCell>
-                  <button
-                    type="button"
-                    className="text-left hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
-                    aria-label={`원장 ${item.ledgerId} 상세 보기`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelected(item);
-                    }}
-                  >
-                    {formatDateTime(item.createdAt)}
-                  </button>
-                </TableCell>
-                <TableCell>{item.ledgerId}</TableCell>
-                <TableCell>{item.ownerId}</TableCell>
-                <TableCell>{item.campaignId ?? '-'}</TableCell>
-                <TableCell>{ledgerTypeLabels[item.entryType]}</TableCell>
-                {/* 필터·커서로 일부 행만 받은 상태에서는 잔액을 재계산하지 않고 서버의 누적값을 표시한다. */}
-                <TableCell>{formatPoints(item.balanceBefore)}</TableCell>
-                <TableCell>{formatPoints(item.amount)}</TableCell>
-                <TableCell>{formatPoints(item.balanceAfter)}</TableCell>
-              </TableRow>
-            ))
-          )}
-        </tbody>
-      </DataTable>
-      {ledger.data && ledger.error && (
-        <p role="alert" className="mt-3 text-caption-web text-status-danger-fg">
-          {ledger.error}
-        </p>
-      )}
-      {ledger.data && ledger.hasNext && (
-        <div className="mt-3 flex justify-center">
-          <Button
-            variant="neutral"
-            disabled={ledger.loading}
-            onClick={ledger.loadMore}
-          >
-            {ledger.loading ? '불러오는 중…' : '더보기'}
-          </Button>
-        </div>
-      )}
-      <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-        {/* 커서 응답에는 전체 건수가 없으므로 현재 받은 항목 수만 안내한다. */}
-        {ledger.data && (
-          <span className="text-caption-web text-text-secondary">
-            불러온 내역 {ledger.data.items.length}건
-          </span>
-        )}
-        <SelectField
-          aria-label="한 번에 불러올 항목 수"
-          fitContent
-          menuPlacement="top"
-          size="compact"
-          value={String(pageSize)}
-          options={[5, 10, 20, 50].map((value) => ({
-            label: `${value}개씩 불러오기`,
-            value: String(value),
-          }))}
-          onValueChange={(value) => {
-            setSelected(null);
-            setPageSize(Number(value));
-          }}
+          onChange={(event) => ownerSearch.setDraftKeyword(event.target.value)}
         />
       </div>
+      <PointSummarySection
+        ownerId={selectedOwnerId}
+        today={today}
+        preferences={preferences}
+      />
+      <section
+        aria-label="개별 포인트 변동 내역"
+        className="flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-1">
+          <h3 className="text-heading-sm-web font-semibold text-text-primary">
+            개별 포인트 변동 내역
+          </h3>
+          <p className="text-caption-web leading-5 text-text-secondary">
+            점주 ID와 조회 기간을 입력하면 자동으로 조회됩니다. 사용 가능
+            잔액에는 예약 중 포인트가 포함되지 않습니다. 소진은 예약 포인트에서
+            차감되므로 사용 가능 잔액의 전후 금액이 같을 수 있습니다.
+          </p>
+        </div>
+        <FilterBar
+          columnSettings={columnSettings}
+          className="!px-0 !py-0"
+          density={{ value: density, onValueChange: setDensity }}
+        >
+          <SearchField
+            aria-label="캠페인 ID"
+            placeholder="캠페인 ID (선택)"
+            inputMode="numeric"
+            value={campaignSearch.draftKeyword}
+            onChange={(event) => {
+              campaignSearch.setDraftKeyword(event.target.value);
+            }}
+          />
+          <SelectField
+            aria-label="변동 유형"
+            fitContent
+            value={type}
+            options={[
+              { label: '전체', value: 'ALL' },
+              ...Object.entries(ledgerTypeLabels).map(([value, label]) => ({
+                value,
+                label,
+              })),
+            ]}
+            onValueChange={(value) => {
+              setSelected(null);
+              setType(value as PointLedgerType | 'ALL');
+            }}
+          />
+          <DateRangePicker
+            ariaLabel="조회 기간"
+            placeholder="조회 기간 선택"
+            value={range}
+            onValueChange={(value) => {
+              setRange(value);
+              setSelected(null);
+            }}
+          />
+        </FilterBar>
+        {validationError && (
+          <p role="alert" className="text-caption-web text-status-danger-fg">
+            {validationError}
+          </p>
+        )}
+        <DataTable
+          columnSettings={columnSettings}
+          columns={columns}
+          density={density}
+          resizableColumns
+          className="table-fixed"
+        >
+          <thead>
+            <tr>
+              {columns.map((column, index) => (
+                <TableHeaderCell
+                  key={column.key}
+                  columnIndex={index}
+                  onSortChange={
+                    column.key === 'createdAt'
+                      ? () => {
+                          setSelected(null);
+                          ledger.changeSort();
+                        }
+                      : undefined
+                  }
+                  sortDirection={
+                    column.key === 'createdAt' ? ledger.sortDir : undefined
+                  }
+                >
+                  {column.label}
+                </TableHeaderCell>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {!ledger.enabled ? (
+              <tr>
+                <TableEmpty colSpan={columns.length}>
+                  {inputPending
+                    ? '입력이 끝나면 자동으로 조회됩니다'
+                    : '점주 ID와 조회 기간을 입력해 주세요'}
+                </TableEmpty>
+              </tr>
+            ) : ledger.loading && !ledger.data ? (
+              <tr>
+                <TableLoading colSpan={columns.length} />
+              </tr>
+            ) : ledger.error && !ledger.data ? (
+              <tr>
+                <TableError
+                  colSpan={columns.length}
+                  description={ledger.error}
+                />
+              </tr>
+            ) : !ledger.data?.items.length ? (
+              <tr>
+                <TableEmpty colSpan={columns.length}>
+                  조회된 포인트 변동 내역이 없습니다
+                </TableEmpty>
+              </tr>
+            ) : (
+              ledger.data.items.map((item) => (
+                <TableRow
+                  key={item.ledgerId}
+                  showDetailArrow
+                  className="cursor-pointer"
+                  onClick={() => setSelected(item)}
+                >
+                  <TableCell>
+                    <button
+                      type="button"
+                      className="text-left hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
+                      aria-label={`원장 ${item.ledgerId} 상세 보기`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelected(item);
+                      }}
+                    >
+                      {formatDateTime(item.createdAt)}
+                    </button>
+                  </TableCell>
+                  <TableCell>{item.ledgerId}</TableCell>
+                  <TableCell>{item.ownerId}</TableCell>
+                  <TableCell>{item.campaignId ?? '-'}</TableCell>
+                  <TableCell>{ledgerTypeLabels[item.entryType]}</TableCell>
+                  {/* 필터·커서로 일부 행만 받은 상태에서는 잔액을 재계산하지 않고 서버의 누적값을 표시한다. */}
+                  <TableCell>{formatPoints(item.balanceBefore)}</TableCell>
+                  <TableCell>{formatPoints(item.amount)}</TableCell>
+                  <TableCell>{formatPoints(item.balanceAfter)}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </tbody>
+        </DataTable>
+        {ledger.data && ledger.error && (
+          <p role="alert" className="text-caption-web text-status-danger-fg">
+            {ledger.error}
+          </p>
+        )}
+        {ledger.data && ledger.hasNext && (
+          <div className="flex justify-center">
+            <Button
+              variant="neutral"
+              disabled={ledger.loading}
+              onClick={ledger.loadMore}
+            >
+              {ledger.loading ? '불러오는 중…' : '더보기'}
+            </Button>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {/* 커서 응답에는 전체 건수가 없으므로 현재 받은 항목 수만 안내한다. */}
+          {ledger.data && (
+            <span className="text-caption-web text-text-secondary">
+              불러온 내역 {ledger.data.items.length}건
+            </span>
+          )}
+          <SelectField
+            aria-label="한 번에 불러올 항목 수"
+            fitContent
+            menuPlacement="top"
+            size="compact"
+            value={String(pageSize)}
+            options={[5, 10, 20, 50].map((value) => ({
+              label: `${value}개씩 불러오기`,
+              value: String(value),
+            }))}
+            onValueChange={(value) => {
+              setSelected(null);
+              setPageSize(Number(value));
+            }}
+          />
+        </div>
+      </section>
       <AdminDrawer
         open={selected !== null}
         onClose={() => setSelected(null)}
@@ -298,6 +321,6 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
           <PointLedgerDetails key={selected.ledgerId} item={selected} />
         )}
       </AdminDrawer>
-    </>
+    </div>
   );
 };
