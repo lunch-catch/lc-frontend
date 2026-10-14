@@ -283,13 +283,13 @@ const LocationSettingsScreen = () => {
                   <MapPin className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-body-mobile font-medium text-text-primary">
+                  <p className="truncate text-body-sm-mobile font-medium text-text-primary">
                     {getLocationName(settings.location)}
                   </p>
                   {/* 이름을 붙였으면 주소를 아래에 함께 보여준다 */}
                   {settings.location.locationNickname &&
                     settings.location.roadAddress && (
-                      <p className="truncate text-body-sm-mobile text-text-secondary">
+                      <p className="mt-0.5 truncate text-caption-mobile text-text-secondary">
                         {settings.location.roadAddress}
                       </p>
                     )}
