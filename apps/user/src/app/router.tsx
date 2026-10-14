@@ -20,6 +20,7 @@ import StoreDetailPage from '@user/pages/StoreDetailPage';
 import SwipePage from '@user/pages/SwipePage';
 import TutorialPage from '@user/pages/TutorialPage';
 import WishlistPage from '@user/pages/WishlistPage';
+import WithdrawPage from '@user/pages/WithdrawPage';
 
 export const router = createBrowserRouter([
   {
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/my/location', element: <LocationSettingsPage /> },
           { path: '/my/settings', element: <SettingsPage /> },
+          { path: '/my/withdraw', element: <WithdrawPage /> },
         ],
       },
       {

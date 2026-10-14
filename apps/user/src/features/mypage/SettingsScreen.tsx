@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { ChevronRight } from 'lucide-react';
 
 import { logout } from '@user/api/auth';
 import { fetchMyProfile } from '@user/api/member';
@@ -85,6 +86,18 @@ const SettingsScreen = () => {
               >
                 {isLoggingOut ? '로그아웃하는 중' : '로그아웃'}
               </button>
+            </li>
+            <li>
+              <Link
+                className="flex h-13 items-center justify-between px-4 text-body-sm-mobile font-medium text-text-secondary active:bg-surface-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action-primary"
+                to="/my/withdraw"
+              >
+                회원 탈퇴
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-5 text-text-tertiary"
+                />
+              </Link>
             </li>
           </ul>
           {hasLogoutError && (
