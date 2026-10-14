@@ -5,12 +5,30 @@ import mascotDefault from '@user/assets/illustrations/mascot-default.webp';
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 
+// 탈퇴하지 못한 이유
+// cancelled: 카카오 화면에서 취소했거나 다른 탭에서 시작함, reauth: 다른 카카오 계정으로 확인함, server: 서버 오류
+export type WithdrawFailure = 'cancelled' | 'reauth' | 'server';
+
+// 첫 줄은 무슨 일인지, 둘째 줄은 어떻게 하면 되는지
+const failureDescriptions: Record<WithdrawFailure, [string, string]> = {
+  cancelled: ['카카오 계정 확인이 끝나지 않았어요', '다시 시도해 주세요'],
+  reauth: [
+    '카카오 계정 확인에 실패했어요',
+    '지금 로그인한 계정으로 다시 확인해 주세요',
+  ],
+  server: ['지금은 탈퇴할 수 없어요', '잠시 후 다시 시도해 주세요'],
+};
+
 interface WithdrawStatusScreenProps {
   status: 'loading' | 'error';
+  failure: WithdrawFailure;
 }
 
 // 카카오 재인증에서 돌아와 탈퇴를 처리하는 동안과 실패했을 때 보여주는 화면
-const WithdrawStatusScreen = ({ status }: WithdrawStatusScreenProps) => {
+const WithdrawStatusScreen = ({
+  failure,
+  status,
+}: WithdrawStatusScreenProps) => {
   const navigate = useNavigate();
 
   if (status === 'loading') {
@@ -28,7 +46,13 @@ const WithdrawStatusScreen = ({ status }: WithdrawStatusScreenProps) => {
   return (
     <div className="mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page">
       <EmptyState
-        description="카카오 계정 확인이 끝나지 않았어요 · 다시 시도해 주세요"
+        description={
+          <>
+            {failureDescriptions[failure][0]}
+            <br />
+            {failureDescriptions[failure][1]}
+          </>
+        }
         image={mascotAlert}
         title="탈퇴하지 못했어요"
       >
