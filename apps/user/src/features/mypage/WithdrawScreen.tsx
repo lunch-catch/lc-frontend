@@ -95,12 +95,25 @@ const WithdrawScreen = () => {
           </div>
         </fieldset>
 
-        <Checkbox
-          checked={hasConfirmed}
-          label="안내를 모두 확인했어요"
-          onChange={(event) => setHasConfirmed(event.target.checked)}
-          size="md"
-        />
+        {/* 공통 Checkbox는 글자가 16px라 안내 문구(14px)보다 커서, 상자만 쓰고 문구는 따로 둔다 */}
+        <div className="flex items-center gap-2">
+          <Checkbox
+            aria-labelledby="withdraw-confirm-label"
+            checked={hasConfirmed}
+            className="cursor-pointer"
+            id="withdraw-confirm"
+            label=""
+            onChange={(event) => setHasConfirmed(event.target.checked)}
+            size="md"
+          />
+          <label
+            className="cursor-pointer text-body-sm-mobile font-medium text-text-primary"
+            htmlFor="withdraw-confirm"
+            id="withdraw-confirm-label"
+          >
+            안내를 모두 확인했어요
+          </label>
+        </div>
       </div>
 
       <FixedBottom>
