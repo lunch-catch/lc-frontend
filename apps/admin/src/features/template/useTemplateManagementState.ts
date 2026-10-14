@@ -1,77 +1,92 @@
-import { useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 
-import { initialPosterTemplates } from '@admin/api/mocks/template';
+import { changeTemplateActive, getTemplates } from '@admin/api/templates';
+import { useAdminAuth } from '@admin/auth/useAdminAuth';
 
 import type { PosterTemplate } from './templateTypes';
+import { getTemplateError } from './templateUtils';
 
 export interface TemplateManagement {
   hasDraft: boolean;
-  saveTemplate: (template: PosterTemplate) => boolean;
-  saveTemporaryTemplate: (template: PosterTemplate) => boolean;
   templates: PosterTemplate[];
-  updateTemplates: (templates: PosterTemplate[]) => void;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+  changeActive: (template: PosterTemplate) => Promise<void>;
 }
 
-const isDraftTemplate = (template: PosterTemplate) =>
-  template.id.startsWith('TPL-DRAFT');
+interface TemplateListResult {
+  adminId: number;
+  revision: number;
+  templates: PosterTemplate[];
+  error: string | null;
+}
 
-// 화면 선택은 URL이 담당하고 이 훅은 목록·작성 화면이 공유하는 데이터만 유지한다.
 export const useTemplateManagementState = (): TemplateManagement => {
-  const [templates, setTemplates] = useState<PosterTemplate[]>(
-    initialPosterTemplates,
-  );
-  const [draftTemplates, setDraftTemplates] = useState<PosterTemplate[]>([]);
-  const canAddTemplate = (isNewTemplate: boolean) =>
-    !isNewTemplate || templates.length + draftTemplates.length < 10;
+  const { admin } = useAdminAuth();
+  const adminId = admin?.adminId;
+  // 재조회마다 키를 바꿔 이전 요청의 응답을 현재 목록으로 표시하지 않는다.
+  const [revision, setRevision] = useState(0);
+  const [result, setResult] = useState<TemplateListResult | null>(null);
+  const refresh = useCallback(() => setRevision((current) => current + 1), []);
 
-  const saveTemplate = (template: PosterTemplate) => {
-    const isNewTemplate =
-      isDraftTemplate(template) &&
-      !draftTemplates.some((item) => item.id === template.id);
-    if (!canAddTemplate(isNewTemplate)) return false;
-    setTemplates((currentTemplates) => [
-      {
-        ...template,
-        id: isDraftTemplate(template)
-          ? `TPL-${String(currentTemplates.length + 1).padStart(4, '0')}`
-          : template.id,
+  useEffect(() => {
+    if (adminId === undefined) return;
+    const controller = new AbortController();
+    void getTemplates(controller.signal).then(
+      (templates) => {
+        if (!controller.signal.aborted)
+          setResult({ adminId, revision, templates, error: null });
       },
-      ...currentTemplates.filter((item) => item.id !== template.id),
-    ]);
-    setDraftTemplates((currentTemplates) =>
-      currentTemplates.filter((item) => item.id !== template.id),
+      (error: unknown) => {
+        if (!controller.signal.aborted)
+          setResult({
+            adminId,
+            revision,
+            templates: [],
+            error: getTemplateError(error),
+          });
+      },
     );
-    return true;
-  };
+    return () => controller.abort();
+  }, [adminId, revision]);
 
-  const saveTemporaryTemplate = (template: PosterTemplate) => {
-    const isNewTemplate = !draftTemplates.some(
-      (item) => item.id === template.id,
+  // 로그아웃·계정 변경 직후에는 이전 계정의 목록을 표시하지 않는다.
+  const current =
+    result?.adminId === adminId && result?.revision === revision
+      ? result
+      : null;
+  const templates = current?.templates ?? [];
+  const changeActive = async (template: PosterTemplate) => {
+    const response = await changeTemplateActive(
+      String(template.templateId),
+      !template.active,
     );
-    if (!canAddTemplate(isNewTemplate)) return false;
-    setDraftTemplates((currentTemplates) => [
-      template,
-      ...currentTemplates.filter((item) => item.id !== template.id),
-    ]);
-    return true;
-  };
-
-  const updateTemplates = (nextTemplates: PosterTemplate[]) => {
-    setTemplates((currentTemplates) =>
-      currentTemplates.map(
-        (template) =>
-          nextTemplates.find(
-            (nextTemplate) => nextTemplate.id === template.id,
-          ) ?? template,
-      ),
+    setResult((previous) =>
+      previous && previous.adminId === adminId
+        ? {
+            ...previous,
+            templates: previous.templates.map((item) =>
+              item.templateId === response.templateId
+                ? {
+                    ...item,
+                    active: response.active,
+                    activatedBy: response.activatedBy,
+                    activatedAt: response.activatedAt,
+                  }
+                : item,
+            ),
+          }
+        : previous,
     );
   };
 
   return {
-    hasDraft: draftTemplates.length > 0,
-    saveTemplate,
-    saveTemporaryTemplate,
-    templates: [...draftTemplates, ...templates],
-    updateTemplates,
+    templates,
+    hasDraft: templates.some((item) => item.status === 'DRAFT'),
+    loading: adminId !== undefined && !current,
+    error: current?.error ?? null,
+    refresh,
+    changeActive,
   };
 };

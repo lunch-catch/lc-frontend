@@ -1,18 +1,17 @@
-import { Button, StatusBadge, Toggle } from '@repo/ui';
+﻿import { Button, StatusBadge, Toggle } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
 
 import type { PosterTemplate } from '@admin/features/template/templateTypes';
-import { getTemplatePreviewHtml } from '@admin/features/template/templateUtils';
 
 export interface TemplatePreviewCardProps {
   onActivationRequest: (template: PosterTemplate) => void;
-  onEditDraft?: (template: PosterTemplate) => void;
+  onOpenTemplate?: (template: PosterTemplate) => void;
   template: PosterTemplate;
 }
 
 export const TemplatePreviewCard = ({
   onActivationRequest,
-  onEditDraft,
+  onOpenTemplate,
   template,
 }: TemplatePreviewCardProps) => {
   const canChangeActivation = template.status === 'PUBLISHED';
@@ -25,7 +24,7 @@ export const TemplatePreviewCard = ({
             {template.name}
           </h3>
           <p className="mt-1 text-caption-web text-text-secondary">
-            {template.id}
+            {template.templateId}
           </p>
         </div>
         <StatusBadge variant={canChangeActivation ? 'info' : 'warning'}>
@@ -36,9 +35,19 @@ export const TemplatePreviewCard = ({
       <iframe
         className="mt-4 aspect-[210/297] w-full rounded-lg border border-border-subtle bg-bg-page"
         sandbox=""
-        srcDoc={getTemplatePreviewHtml(template)}
+        srcDoc={template.html}
         title={`${template.name} 미리보기`}
       />
+
+      {canChangeActivation && (
+        <Button
+          className="mt-3 !min-h-8"
+          variant="tertiary"
+          onClick={() => onOpenTemplate?.(template)}
+        >
+          상세보기
+        </Button>
+      )}
 
       <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-caption-web">
         <div>
@@ -50,7 +59,7 @@ export const TemplatePreviewCard = ({
         <div>
           <dt className="text-text-secondary">최종 수정</dt>
           <dd className="mt-1 font-medium text-text-primary">
-            {formatDateTime(template.updatedAt)}
+            {formatDateTime(template.lastModifiedAt ?? template.createdAt)}
           </dd>
         </div>
       </dl>
@@ -58,21 +67,21 @@ export const TemplatePreviewCard = ({
       <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3">
         <span className="text-caption-web text-text-secondary">
           {canChangeActivation
-            ? template.isActive
+            ? template.active
               ? '점주에게 노출 중'
               : '점주에게 미노출'
             : '게시 후 설정 가능'}
         </span>
         {canChangeActivation ? (
           <Toggle
-            checked={template.isActive}
-            label={template.isActive ? '활성' : '비활성'}
+            checked={template.active}
+            label={template.active ? '활성' : '비활성'}
             onChange={() => onActivationRequest(template)}
           />
         ) : (
           <Button
             className="!min-h-8 !px-2 text-caption-web"
-            onClick={() => onEditDraft?.(template)}
+            onClick={() => onOpenTemplate?.(template)}
             variant="neutral"
           >
             수정

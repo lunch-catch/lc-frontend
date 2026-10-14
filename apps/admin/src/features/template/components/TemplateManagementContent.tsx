@@ -1,17 +1,17 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useRef, useState } from 'react';
 import { Button, SearchField, SelectField } from '@repo/ui';
 import { FilePenLine, Plus } from 'lucide-react';
 
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import type { PosterTemplate } from '@admin/features/template/templateTypes';
+import { getTemplateError } from '@admin/features/template/templateUtils';
 import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
+import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
 
-type TemplateSort =
-  'ACTIVE_FIRST' | 'INACTIVE_FIRST' | 'POPULAR' | 'REGISTERED';
+type TemplateSort = 'ACTIVE_FIRST' | 'INACTIVE_FIRST' | 'REGISTERED';
 
 const activationOptions = [
   { label: '활성 여부 전체', value: 'ALL' },
@@ -25,49 +25,52 @@ const statusOptions = [
 ];
 const sortOptions = [
   { label: '최신 등록순', value: 'REGISTERED' },
-  { label: '인기순', value: 'POPULAR' },
   { label: '활성 템플릿 우선', value: 'ACTIVE_FIRST' },
   { label: '비활성 템플릿 우선', value: 'INACTIVE_FIRST' },
 ];
 
 export interface TemplateManagementContentProps {
-  onCreate: () => void;
-  onEditDraft: (template: PosterTemplate) => void;
+  onCreate: (name: string) => void;
+  onOpenTemplate: (template: PosterTemplate) => void;
   onLoadDraft: () => void;
-  onTemplatesChange: (templates: PosterTemplate[]) => void;
+  changeActive: (template: PosterTemplate) => Promise<void>;
+  loading: boolean;
+  error: string | null;
   hasDraft: boolean;
   templates: PosterTemplate[];
 }
 
 export const TemplateManagementContent = ({
   onCreate,
-  onEditDraft,
+  onOpenTemplate,
   onLoadDraft,
-  onTemplatesChange,
+  changeActive,
+  loading,
+  error,
   hasDraft,
   templates,
 }: TemplateManagementContentProps) => {
   const [activation, setActivation] = useState('ALL');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [nameModalOpen, setNameModalOpen] = useState(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
+  const [changingActive, setChangingActive] = useState(false);
+  const activationLock = useRef(false);
   const [pendingActivationTemplate, setPendingActivationTemplate] =
     useState<PosterTemplate | null>(null);
-  const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState<TemplateSort>('REGISTERED');
   const [status, setStatus] = useState('ALL');
-  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
-    onCommit: () => setCurrentPage(1),
-  });
+  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch();
 
   const filteredTemplates = useMemo(() => {
     const query = keyword.trim().toLowerCase();
     const result = templates.filter((template) => {
       const matchesActivation =
         activation === 'ALL' ||
-        (activation === 'ACTIVE' ? template.isActive : !template.isActive);
+        (activation === 'ACTIVE' ? template.active : !template.active);
       const matchesStatus = status === 'ALL' || template.status === status;
       const matchesKeyword =
         !query ||
-        [template.id, template.name].some((value) =>
+        [String(template.templateId), template.name].some((value) =>
           value.toLowerCase().includes(query),
         );
 
@@ -75,56 +78,33 @@ export const TemplateManagementContent = ({
     });
 
     return [...result].sort((first, second) => {
-      if (sort === 'POPULAR') return second.usageCount - first.usageCount;
       if (sort === 'ACTIVE_FIRST') {
-        return Number(second.isActive) - Number(first.isActive);
+        return Number(second.active) - Number(first.active);
       }
       if (sort === 'INACTIVE_FIRST') {
-        return Number(first.isActive) - Number(second.isActive);
+        return Number(first.active) - Number(second.active);
       }
 
       return second.createdAt.localeCompare(first.createdAt);
     });
   }, [activation, keyword, sort, status, templates]);
 
-  const totalPages = Math.ceil(filteredTemplates.length / pageSize);
-  const visibleTemplates = filteredTemplates.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
-
-  const handleConfirmActivation = () => {
-    if (!pendingActivationTemplate) return;
-
-    onTemplatesChange(
-      templates.map((template) =>
-        template.id === pendingActivationTemplate.id
-          ? {
-              ...template,
-              isActive: !template.isActive,
-              updatedAt: '2026-10-02 10:00',
-              updatedBy: 'ADM-001',
-            }
-          : template,
-      ),
-    );
-    setPendingActivationTemplate(null);
+  const handleConfirmActivation = async () => {
+    if (!pendingActivationTemplate || activationLock.current) return;
+    activationLock.current = true;
+    setChangingActive(true);
+    setActivationError(null);
+    try {
+      await changeActive(pendingActivationTemplate);
+      setPendingActivationTemplate(null);
+    } catch (cause) {
+      setActivationError(getTemplateError(cause));
+    } finally {
+      activationLock.current = false;
+      setChangingActive(false);
+    }
   };
-
-  const isActivating = pendingActivationTemplate?.isActive === false;
-
-  const pagination = {
-    currentPage,
-    onPageChange: setCurrentPage,
-    onPageSizeChange: (value: number) => {
-      // 카드 목록도 공통 선택지를 사용하며 개수 변경 시 첫 페이지로 돌아간다.
-      setCurrentPage(1);
-      setPageSize(value);
-    },
-    pageSize,
-    totalCount: filteredTemplates.length,
-    totalPages,
-  };
+  const isActivating = pendingActivationTemplate?.active === false;
 
   return (
     <section className="flex flex-col">
@@ -148,14 +128,14 @@ export const TemplateManagementContent = ({
           </Button>
           <Button
             leadingIcon={<Plus aria-hidden="true" className="size-4" />}
-            onClick={onCreate}
+            onClick={() => setNameModalOpen(true)}
           >
             템플릿 생성
           </Button>
         </div>
       </header>
 
-      <FilterBar className="mb-4 shrink-0" pagination={pagination}>
+      <FilterBar className="mb-4 shrink-0">
         <SearchField
           onChange={(event) => setDraftKeyword(event.target.value)}
           value={draftKeyword}
@@ -163,7 +143,6 @@ export const TemplateManagementContent = ({
         <SelectField
           fitContent
           onValueChange={(value) => {
-            setCurrentPage(1);
             setStatus(value);
           }}
           options={statusOptions}
@@ -173,7 +152,6 @@ export const TemplateManagementContent = ({
           fitContent
           onValueChange={(value) => {
             setActivation(value);
-            setCurrentPage(1);
           }}
           options={activationOptions}
           value={activation}
@@ -181,7 +159,6 @@ export const TemplateManagementContent = ({
         <SelectField
           fitContent
           onValueChange={(value) => {
-            setCurrentPage(1);
             setSort(value as TemplateSort);
           }}
           options={sortOptions}
@@ -189,13 +166,23 @@ export const TemplateManagementContent = ({
         />
       </FilterBar>
 
-      {visibleTemplates.length > 0 ? (
+      {loading || error ? (
+        <div
+          className="rounded-xl border border-border-subtle bg-bg-surface py-20 text-center text-body-sm-web text-text-secondary"
+          role={error ? 'alert' : 'status'}
+        >
+          {error ?? '템플릿을 불러오는 중입니다.'}
+        </div>
+      ) : filteredTemplates.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
-          {visibleTemplates.map((template) => (
+          {filteredTemplates.map((template) => (
             <TemplatePreviewCard
-              key={template.id}
-              onActivationRequest={setPendingActivationTemplate}
-              onEditDraft={onEditDraft}
+              key={template.templateId}
+              onActivationRequest={(template) => {
+                setActivationError(null);
+                setPendingActivationTemplate(template);
+              }}
+              onOpenTemplate={onOpenTemplate}
               template={template}
             />
           ))}
@@ -206,10 +193,19 @@ export const TemplateManagementContent = ({
         </div>
       )}
 
-      <PaginationSummary {...pagination} />
-
+      {nameModalOpen && (
+        <TemplateNameModal
+          onClose={() => setNameModalOpen(false)}
+          onStart={(name) => {
+            setNameModalOpen(false);
+            onCreate(name);
+          }}
+        />
+      )}
       <AdminModal
-        onClose={() => setPendingActivationTemplate(null)}
+        onClose={() => {
+          if (!changingActive) setPendingActivationTemplate(null);
+        }}
         open={pendingActivationTemplate !== null}
         title={`템플릿 ${isActivating ? '활성화' : '비활성화'}`}
       >
@@ -221,14 +217,23 @@ export const TemplateManagementContent = ({
               ? ' 활성화하면 점주가 템플릿을 선택할 수 있습니다.'
               : ' 비활성화하면 점주에게 더 이상 노출되지 않습니다.'}
           </p>
+          {activationError && (
+            <p role="alert" className="text-caption-web text-status-danger-fg">
+              {activationError}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <Button
+              disabled={changingActive}
               onClick={() => setPendingActivationTemplate(null)}
               variant="secondary"
             >
               취소
             </Button>
-            <Button onClick={handleConfirmActivation}>
+            <Button
+              disabled={changingActive}
+              onClick={() => void handleConfirmActivation()}
+            >
               {isActivating ? '활성화' : '비활성화'}
             </Button>
           </div>
