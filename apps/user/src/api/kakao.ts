@@ -47,7 +47,8 @@ interface KakaoServices {
 declare global {
   interface Window {
     kakao?: {
-      maps: {
+      // 스크립트가 비정상으로 내려오면 kakao만 있고 maps가 없을 수 있다
+      maps?: {
         load: (callback: () => void) => void;
         services: KakaoServices;
       };
@@ -74,12 +75,13 @@ export const loadKakaoServices = () => {
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&libraries=services&autoload=false`;
     script.async = true;
     script.onload = () => {
-      const kakao = window.kakao;
-      if (!kakao) {
+      // maps가 없으면 load를 부르다 오류가 나고 promise가 끝나지 않아서, 먼저 실패로 돌려준다
+      const maps = window.kakao?.maps;
+      if (!maps) {
         reject(new Error('카카오 지도 SDK를 불러오지 못했습니다'));
         return;
       }
-      kakao.maps.load(() => resolve(kakao.maps.services));
+      maps.load(() => resolve(maps.services));
     };
     script.onerror = () =>
       reject(new Error('카카오 지도 SDK를 불러오지 못했습니다'));
