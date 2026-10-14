@@ -4,6 +4,8 @@ import { MapPin } from 'lucide-react';
 
 import ActionButton from '@user/components/ActionButton/ActionButton';
 
+import HintInput from './HintInput';
+
 // 서버가 받는 위치 이름의 최대 길이
 const NICKNAME_MAX_LENGTH = 50;
 
@@ -55,18 +57,18 @@ const LocationNameSheet = ({
           <span className="text-body-sm-mobile text-text-secondary">
             이름 (선택)
           </span>
-          {/* iOS가 입력할 때 화면을 확대하지 않도록 글자를 16px로 둔다 */}
-          <input
-            autoComplete="off"
-            className="h-12 rounded-lg border border-border-subtle bg-bg-surface px-3 text-body-mobile text-text-primary placeholder:text-text-tertiary focus:border-action-primary focus:outline-none"
-            maxLength={NICKNAME_MAX_LENGTH}
-            onChange={(event) => setNickname(event.target.value)}
-            placeholder="예: 회사"
-            value={nickname}
-          />
+          <span className="flex h-12 rounded-lg border border-border-subtle bg-bg-surface px-3 focus-within:border-action-primary">
+            <HintInput
+              autoComplete="off"
+              hint="예: 회사"
+              maxLength={NICKNAME_MAX_LENGTH}
+              onChange={(event) => setNickname(event.target.value)}
+              value={nickname}
+            />
+          </span>
         </label>
         {errorMessage && (
-          <p className="text-caption-mobile text-status-danger-fg" role="alert">
+          <p className="text-body-sm-mobile text-status-danger-fg" role="alert">
             {errorMessage}
           </p>
         )}

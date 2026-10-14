@@ -20,6 +20,7 @@ import TopBar from '@user/components/TopBar/TopBar';
 
 import AddressSearchResults from './AddressSearchResults';
 import { getCurrentPosition, PositionError } from './currentPosition';
+import HintInput from './HintInput';
 import LocationNameSheet from './LocationNameSheet';
 import { useAddressSearch } from './useAddressSearch';
 import { getLocationLabel, rememberMyLocation } from './useMyLocation';
@@ -205,14 +206,12 @@ const LocationSettingsScreen = () => {
             aria-hidden="true"
             className="size-4.5 shrink-0 text-text-secondary"
           />
-          {/* iOS가 입력할 때 화면을 확대하지 않도록 글자를 16px로 둔다 */}
-          <input
+          <HintInput
             aria-label="회사, 건물 이름이나 주소로 찾기"
             autoComplete="off"
-            className="h-full min-w-0 flex-1 bg-transparent text-body-mobile text-text-primary placeholder:text-text-tertiary focus:outline-none"
             enterKeyHint="search"
+            hint="회사, 건물 이름이나 주소로 찾기"
             onChange={(event) => addressSearch.changeQuery(event.target.value)}
-            placeholder="회사, 건물 이름이나 주소로 찾기"
             spellCheck={false}
             value={addressSearch.query}
           />
@@ -238,51 +237,58 @@ const LocationSettingsScreen = () => {
           </div>
         )}
 
-        {!addressSearch.isSearching && settings === undefined && (
-          <div
-            aria-hidden="true"
-            className="h-13 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
-          />
-        )}
-
-        {!addressSearch.isSearching && settings === null && (
-          <div
-            className={`flex min-h-13 items-center justify-between gap-3 px-4 py-2 ${cardClassName}`}
-          >
-            <p className="text-body-sm-mobile text-text-secondary">
-              위치 정보를 불러오지 못했어요
-            </p>
-            <button
-              className="h-9 shrink-0 rounded-lg border border-border-subtle px-3 text-body-sm-mobile font-bold text-text-primary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
-              onClick={retry}
-              type="button"
+        {/* 검색창과 같은 흰 상자가 이어지면 입력칸처럼 보여서, 제목을 붙여 다른 영역임을 보여준다 */}
+        {!addressSearch.isSearching && (
+          <section aria-labelledby="my-location-title" className="mt-3">
+            <h2
+              className="mb-2 text-body-sm-mobile font-bold text-text-primary"
+              id="my-location-title"
             >
-              다시 시도
-            </button>
-          </div>
-        )}
+              내 위치
+            </h2>
 
-        {!addressSearch.isSearching && settings && (
-          <section
-            aria-label="설정한 위치"
-            className={`flex min-h-13 items-center gap-3 px-4 py-2 ${cardClassName}`}
-          >
-            <div
-              aria-hidden="true"
-              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-brand text-text-brand"
-            >
-              <MapPin className="size-4" />
-            </div>
-            {hasLocation(settings.location) ? (
-              <>
+            {settings === undefined && (
+              <div
+                aria-hidden="true"
+                className="h-13 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
+              />
+            )}
+
+            {settings === null && (
+              <div
+                className={`flex min-h-13 items-center justify-between gap-3 px-4 py-2 ${cardClassName}`}
+              >
+                <p className="text-body-sm-mobile text-text-secondary">
+                  위치 정보를 불러오지 못했어요
+                </p>
+                <button
+                  className="h-9 shrink-0 rounded-lg border border-border-subtle px-3 text-body-sm-mobile font-bold text-text-primary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+                  onClick={retry}
+                  type="button"
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+
+            {settings && hasLocation(settings.location) && (
+              <div
+                className={`flex min-h-13 items-center gap-3 px-4 py-2 ${cardClassName}`}
+              >
+                <div
+                  aria-hidden="true"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-brand text-text-brand"
+                >
+                  <MapPin className="size-4" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-body-sm-mobile font-medium text-text-primary">
+                  <p className="truncate text-body-mobile font-medium text-text-primary">
                     {getLocationName(settings.location)}
                   </p>
                   {/* 이름을 붙였으면 주소를 아래에 함께 보여준다 */}
                   {settings.location.locationNickname &&
                     settings.location.roadAddress && (
-                      <p className="truncate text-caption-mobile text-text-secondary">
+                      <p className="truncate text-body-sm-mobile text-text-secondary">
                         {settings.location.roadAddress}
                       </p>
                     )}
@@ -295,9 +301,12 @@ const LocationSettingsScreen = () => {
                 >
                   {pending === 'delete' ? '삭제하는 중' : '삭제'}
                 </button>
-              </>
-            ) : (
-              <p className="min-w-0 flex-1 text-body-sm-mobile text-text-secondary">
+              </div>
+            )}
+
+            {/* 저장한 위치가 없으면 흰 카드 대신 점선으로 비어 있는 자리처럼 보여준다 */}
+            {settings && !hasLocation(settings.location) && (
+              <p className="flex min-h-13 items-center justify-center rounded-xl border border-dashed border-border-subtle px-4 text-body-sm-mobile text-text-tertiary">
                 아직 설정한 위치가 없어요
               </p>
             )}
@@ -305,12 +314,12 @@ const LocationSettingsScreen = () => {
         )}
 
         {!addressSearch.isSearching && settings?.locationOptIn === false && (
-          <p className="flex items-start gap-1.5 text-caption-mobile text-text-secondary">
+          <p className="flex items-start gap-1.5 text-body-sm-mobile break-keep text-text-secondary">
             <CircleAlert
               aria-hidden="true"
-              className="mt-0.5 size-3.5 shrink-0"
+              className="mt-0.5 size-4 shrink-0"
             />
-            위치 정보 이용에 동의하지 않아 현재 위치를 찾을 수 없어요
+            위치 이용에 동의하지 않아 현재 위치를 쓸 수 없어요
           </p>
         )}
       </div>

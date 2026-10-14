@@ -89,11 +89,11 @@ const AddressSearchResults = ({
             onClick={() => onSelect(result)}
             type="button"
           >
-            <span className="w-full truncate text-body-sm-mobile font-medium text-text-primary">
+            <span className="w-full truncate text-body-mobile font-medium text-text-primary">
               {highlight(result.placeName ?? result.address, search.keyword)}
             </span>
             {result.placeName && (
-              <span className="mt-0.5 w-full truncate text-caption-mobile text-text-secondary">
+              <span className="mt-0.5 w-full truncate text-body-sm-mobile text-text-secondary">
                 {result.address}
               </span>
             )}
