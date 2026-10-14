@@ -4,6 +4,9 @@
 /* 앱 폴더 밖에 있는 공통 패키지의 Tailwind 클래스도 빌드에 포함한다 */
 @source '../../../packages/ui/src';
 
+/* 다크 모드에서만 쓰는 스타일 (dark:). 테마는 시스템 설정이 아니라 html의 data-theme을 따른다 */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
   /* 카카오 로그인 버튼 색 (카카오 디자인 가이드에서 정한 고정 값) */
   --color-kakao: #fee500;
