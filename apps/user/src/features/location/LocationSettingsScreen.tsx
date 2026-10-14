@@ -16,11 +16,11 @@ import FeedbackToast, {
   type FeedbackToastTone,
 } from '@user/components/FeedbackToast/FeedbackToast';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
+import HintInput from '@user/components/HintInput/HintInput';
 import TopBar from '@user/components/TopBar/TopBar';
 
 import AddressSearchResults from './AddressSearchResults';
 import { getCurrentPosition, PositionError } from './currentPosition';
-import HintInput from './HintInput';
 import LocationNameSheet from './LocationNameSheet';
 import { useAddressSearch } from './useAddressSearch';
 import { getLocationLabel, rememberMyLocation } from './useMyLocation';
@@ -283,13 +283,13 @@ const LocationSettingsScreen = () => {
                   <MapPin className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-body-mobile font-medium text-text-primary">
+                  <p className="truncate text-body-sm-mobile font-medium text-text-primary">
                     {getLocationName(settings.location)}
                   </p>
                   {/* 이름을 붙였으면 주소를 아래에 함께 보여준다 */}
                   {settings.location.locationNickname &&
                     settings.location.roadAddress && (
-                      <p className="truncate text-body-sm-mobile text-text-secondary">
+                      <p className="mt-0.5 truncate text-caption-mobile text-text-secondary">
                         {settings.location.roadAddress}
                       </p>
                     )}

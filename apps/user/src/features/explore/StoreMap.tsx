@@ -111,10 +111,11 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
           <button
             aria-label={`${store.name} ${formatPinLabel(store)} 할인`}
             aria-pressed={isSelected}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2.5 py-1 text-caption-mobile font-bold whitespace-nowrap text-text-inverse shadow-md transition-transform ${
+            // 고르지 않은 핀은 반전 색(라이트는 검정 바탕, 다크는 흰 바탕)으로 둔다
+            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2.5 py-1 text-caption-mobile font-bold whitespace-nowrap shadow-md transition-transform ${
               isSelected
-                ? 'z-10 scale-110 bg-action-primary'
-                : 'bg-text-primary'
+                ? 'z-10 scale-110 bg-action-primary text-text-inverse'
+                : 'bg-bg-inverse text-text-on-inverse'
             }`}
             key={store.storeId}
             onClick={() => setSelectedStoreId(store.storeId)}

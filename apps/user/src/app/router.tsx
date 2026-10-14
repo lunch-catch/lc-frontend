@@ -14,11 +14,13 @@ import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
+import SettingsPage from '@user/pages/SettingsPage';
 import SplashPage from '@user/pages/SplashPage';
 import StoreDetailPage from '@user/pages/StoreDetailPage';
 import SwipePage from '@user/pages/SwipePage';
 import TutorialPage from '@user/pages/TutorialPage';
 import WishlistPage from '@user/pages/WishlistPage';
+import WithdrawPage from '@user/pages/WithdrawPage';
 
 export const router = createBrowserRouter([
   {
@@ -26,10 +28,11 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <SplashPage /> },
       { path: '/login', element: <LoginPage /> },
-      // 카카오 로그인 뒤 돌아오는 주소. 서버 설정(KAKAO_REDIRECT_URI)과 같아야 한다
-      { path: '/oauth/callback', element: <KakaoCallbackPage /> },
     ],
   },
+  // 카카오에서 돌아오는 주소. 서버 설정(KAKAO_REDIRECT_URI)과 같아야 한다
+  // 로그인뿐 아니라 로그인한 회원의 탈퇴 재인증도 여기로 돌아와서 접근 제어 밖에 둔다
+  { path: '/oauth/callback', element: <KakaoCallbackPage /> },
   {
     element: <RequireAuth access="onboarding" />,
     children: [
@@ -66,7 +69,11 @@ export const router = createBrowserRouter([
       { path: '/stores/:storeId', element: <StoreDetailPage /> },
       {
         element: <StackLayout />,
-        children: [{ path: '/my/location', element: <LocationSettingsPage /> }],
+        children: [
+          { path: '/my/location', element: <LocationSettingsPage /> },
+          { path: '/my/settings', element: <SettingsPage /> },
+          { path: '/my/withdraw', element: <WithdrawPage /> },
+        ],
       },
       {
         element: <TabLayout />,

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 
 import loginDiscover from '@user/assets/illustrations/login-discover.webp';
+import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
 import Wordmark from '@user/components/Wordmark/Wordmark';
 
 import { startKakaoLogin } from './kakaoLogin';
@@ -9,8 +11,31 @@ import LoginStatusScreen, { loginScreenClassName } from './LoginStatusScreen';
 
 type LoginStatus = 'idle' | 'loading' | 'error';
 
+const WITHDRAWN_TOAST_DURATION_MS = 4000;
+
 const LoginStep = () => {
   const [status, setStatus] = useState<LoginStatus>('idle');
+  const location = useLocation();
+  const navigate = useNavigate();
+  // 회원 탈퇴를 마치고 온 경우 (KakaoCallbackStep이 넘겨준다)
+  const [showWithdrawn, setShowWithdrawn] = useState(
+    () =>
+      (location.state as { withdrawn?: boolean } | null)?.withdrawn === true,
+  );
+
+  useEffect(() => {
+    if (!showWithdrawn) return;
+
+    // 새로고침해도 안내가 다시 뜨지 않도록 넘겨받은 표시를 지운다
+    navigate(location.pathname, { replace: true, state: null });
+    const timer = setTimeout(
+      () => setShowWithdrawn(false),
+      WITHDRAWN_TOAST_DURATION_MS,
+    );
+    return () => clearTimeout(timer);
+    // 처음 들어왔을 때 한 번만 처리한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showWithdrawn]);
 
   // 카카오 화면에서 뒤로 가기로 돌아오면 브라우저가 떠날 때의 화면(로그인 중)을 그대로 되살린다
   // 그때는 처음 화면으로 되돌려 다시 누를 수 있게 한다
@@ -58,7 +83,13 @@ const LoginStep = () => {
             width={330}
           />
         </div>
-        <div className="flex flex-col items-center gap-4">
+        <div className="relative flex flex-col items-center gap-4">
+          {/* 탈퇴 안내는 다른 화면처럼 버튼 바로 위에 띄워 제목과 일러스트를 가리지 않게 한다 */}
+          {showWithdrawn && (
+            <div className="absolute inset-x-0 bottom-full z-20 pb-3">
+              <FeedbackToast message="탈퇴했어요 · 그동안 이용해 주셔서 고마워요" />
+            </div>
+          )}
           <KakaoLoginButton onClick={handleLogin}>
             카카오로 10초 만에 시작하기
           </KakaoLoginButton>
