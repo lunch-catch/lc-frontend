@@ -27,3 +27,16 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+// 저장한 위치를 불러오는 중. 위치 줄은 비워 두고 자리만 차지한다
+export const LocationLoading: Story = {
+  args: {
+    locationName: undefined,
+  },
+};
+
+export const WithWishCount: Story = {
+  args: {
+    wishCount: 3,
+  },
+};

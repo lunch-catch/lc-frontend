@@ -18,9 +18,14 @@ interface LoginResponse {
 }
 
 // 카카오 로그인 화면 주소. state와 nonce는 서버가 만들어 주소에 넣어 준다
-export const fetchKakaoAuthorizationUrl = async () => {
+// reauth면 이미 로그인한 카카오 계정이어도 다시 로그인하게 한다 (탈퇴 재인증)
+export const fetchKakaoAuthorizationUrl = async ({
+  reauth = false,
+}: { reauth?: boolean } = {}) => {
   const data = await request<KakaoAuthorizationResponse>(
-    '/v1/auth/kakao/authorize',
+    reauth
+      ? '/v1/auth/kakao/authorize?reauth=true'
+      : '/v1/auth/kakao/authorize',
   );
   return data.authorizationUrl;
 };

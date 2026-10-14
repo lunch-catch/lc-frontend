@@ -237,7 +237,7 @@ const ExploreScreen = () => {
       {/* 목록을 내리는 중에도 엄지가 닿는 아래에 있다. 보여줄 가게가 없으면 숨긴다 */}
       {stores && stores.length > 0 && (
         <button
-          className="fixed inset-x-0 bottom-[calc(94px+env(safe-area-inset-bottom))] z-10 mx-auto flex h-10 w-fit items-center gap-1.5 rounded-full bg-text-primary px-4 text-body-sm-mobile font-bold text-text-inverse shadow-lg"
+          className="fixed inset-x-0 bottom-[calc(94px+env(safe-area-inset-bottom))] z-10 mx-auto flex h-10 w-fit items-center gap-1.5 rounded-full bg-bg-inverse px-4 text-body-sm-mobile font-bold text-text-on-inverse shadow-lg"
           onClick={() =>
             // 보기만 바꾸는 것이라 뒤로 가기 기록을 쌓지 않는다
             setSearchParams(view === 'list' ? { view: 'map' } : {}, {
