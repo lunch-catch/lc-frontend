@@ -11,6 +11,8 @@ export type TableDensity = 'compact' | 'normal' | 'comfortable';
 export type TableSortDirection = 'asc' | 'desc';
 
 export interface DataTableColumn {
+  /** 값의 자료형과 관계없이 헤더와 셀에 적용할 정렬 방향. 기본값은 left. */
+  align?: 'left' | 'center' | 'right';
   key?: string;
   label?: string;
   minWidth?: number;
@@ -18,6 +20,10 @@ export interface DataTableColumn {
 }
 
 export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
+  /** 외곽 테두리를 고정하고 안쪽 내용만 스크롤할 때 사용할 최대 높이. */
+  scrollMaxHeight?: CSSProperties['maxHeight'];
+  /** 내부 스크롤 테이블은 0, 페이지 스크롤 테이블은 기본 오프셋을 사용한다. */
+  stickyHeaderOffset?: CSSProperties['top'];
   columnSettings?: TableColumnSettingsState;
   personalizationKey?: string;
   columns?: DataTableColumn[];

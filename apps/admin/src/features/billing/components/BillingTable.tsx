@@ -58,6 +58,7 @@ export const BillingTable = ({
   preferences,
 }: BillingTableProps) => {
   const tableColumns = columns.map((item) => ({
+    align: item.align,
     key: item.label,
     label: item.label,
     width: item.width + '%',

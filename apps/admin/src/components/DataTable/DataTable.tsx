@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from 'react';
+import type { CSSProperties, HTMLAttributes } from 'react';
 import { createContext, useContext } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from 'lucide-react';
 
@@ -12,8 +12,12 @@ import type {
   TableResizeContextValue,
   TableRowProps,
 } from './dataTableTypes';
-import { reorderTableChildren } from './tableColumnPreferences';
+import {
+  alignTableCells,
+  reorderTableChildren,
+} from './tableColumnPreferences';
 import { TableColumnSettings } from './TableColumnSettings';
+import { TableScrollViewport } from './TableScrollViewport';
 import { useTableColumnResize } from './useTableColumnResize';
 import { useTableColumnSettings } from './useTableColumnSettings';
 
@@ -124,6 +128,9 @@ const ConfiguredTable = ({
 const DataTableView = ({
   children,
   className,
+  style,
+  stickyHeaderOffset,
+  scrollMaxHeight,
   columns,
   density = 'normal',
   resizableColumns = false,
@@ -131,6 +138,9 @@ const DataTableView = ({
 }: DataTableProps) => {
   const { tableRef, tableColumns, resizedColumnWidths, handleResizeStart } =
     useTableColumnResize(columns);
+  const internalScroll = scrollMaxHeight !== undefined;
+  const headerOffset =
+    stickyHeaderOffset ?? (internalScroll ? 0 : 'calc(var(--space-6) * -1)');
 
   return (
     <TableDensityContext.Provider value={density}>
@@ -141,31 +151,58 @@ const DataTableView = ({
           resizableColumns,
         }}
       >
-        <div className="overflow-visible rounded-md border border-table-border bg-bg-surface">
-          <table
-            className={[
-              'w-full border-collapse text-left [&_thead]:sticky [&_thead]:top-[calc(var(--space-6)*-1)] [&_thead]:z-10 [&_thead]:bg-surface-subtle [&_td:first-child]:pl-[var(--space-6)] [&_td:last-child]:pr-[var(--space-6)] [&_th:first-child]:pl-[var(--space-6)] [&_th:last-child]:pr-[var(--space-6)]',
-              className,
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            ref={tableRef}
-            {...props}
-          >
-            {columns && (
-              <colgroup>
-                {columns.map((column, index) => (
-                  <col
-                    key={index}
-                    style={{
-                      width: resizedColumnWidths?.[index] ?? column.width,
-                    }}
-                  />
-                ))}
-              </colgroup>
-            )}
-            {children}
-          </table>
+        <div
+          className={`${internalScroll ? 'overflow-hidden' : 'overflow-visible'} rounded-md border border-table-border bg-bg-surface`}
+        >
+          <TableScrollViewport maxHeight={scrollMaxHeight}>
+            <table
+              className={[
+                // 실제 데이터 셀이 있을 때만 헤더를 고정한다. 빈 상태·로딩·오류 행은 제외한다.
+                'w-full text-left [&_thead]:static [&:has(tbody_[data-table-cell])_thead]:sticky [&_thead]:top-[var(--table-header-offset)] [&_thead]:z-10 [&_thead]:bg-surface-subtle [&_td:first-child]:pl-[var(--space-6)] [&_td:last-child]:pr-[var(--space-6)] [&_th:first-child]:pl-[var(--space-6)] [&_th:last-child]:pr-[var(--space-6)]',
+                // 내부 스크롤에서는 병합 테두리의 sticky 겹침을 피하고 모서리는 바깥 프레임에서 자른다.
+                internalScroll
+                  ? 'border-separate border-spacing-0 [&_th:first-child]:rounded-none [&_th:last-child]:rounded-none [&_tbody_td]:border-b [&_tbody_td]:border-table-divider [&_tbody_tr:last-child_td]:border-b-0'
+                  : 'border-collapse',
+                className,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              ref={tableRef}
+              style={
+                {
+                  ...style,
+                  '--table-header-offset':
+                    typeof headerOffset === 'number'
+                      ? `${headerOffset}px`
+                      : headerOffset,
+                } as CSSProperties
+              }
+              {...props}
+            >
+              {columns && (
+                <colgroup>
+                  {columns.map((column, index) => (
+                    <col
+                      key={index}
+                      style={{
+                        width: resizedColumnWidths?.[index] ?? column.width,
+                      }}
+                    />
+                  ))}
+                </colgroup>
+              )}
+              {columns?.some((column) => column.align)
+                ? reorderTableChildren(
+                    children,
+                    columns.map((_, index) => index),
+                    columns.length,
+                    TableRow,
+                    TableHeaderCell,
+                    columns,
+                  )
+                : children}
+            </table>
+          </TableScrollViewport>
         </div>
       </TableResizeContext.Provider>
     </TableDensityContext.Provider>
@@ -182,6 +219,7 @@ export const TableHeaderCell = ({
   columnIndex,
   onSortChange,
   sortDirection,
+  style,
   ...props
 }: TableHeaderCellProps) => {
   const { columns, onResizeStart, resizableColumns } =
@@ -215,6 +253,7 @@ export const TableHeaderCell = ({
         .filter(Boolean)
         .join(' ')}
       scope="col"
+      style={style}
       {...props}
     >
       {onSortChange ? (
@@ -226,7 +265,20 @@ export const TableHeaderCell = ({
                 ? '오름차순 정렬'
                 : '내림차순 정렬'
           }`}
-          className="flex h-full cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action-primary"
+          className="flex h-full w-full cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-action-primary"
+          style={
+            style?.textAlign
+              ? {
+                  textAlign: style.textAlign,
+                  justifyContent:
+                    style.textAlign === 'right'
+                      ? 'flex-end'
+                      : style.textAlign === 'center'
+                        ? 'center'
+                        : 'flex-start',
+                }
+              : undefined
+          }
           onClick={onSortChange}
           type="button"
         >
@@ -269,9 +321,12 @@ export const TableCell = ({
 
   return (
     <td
+      data-table-cell=""
       className={[
         tableCellHeightClassName[density],
         'overflow-hidden whitespace-nowrap px-4 text-ellipsis text-caption-web text-table-body-text transition-[height] duration-200 ease-out motion-reduce:transition-none',
+        // 뱃지는 텍스트와 달리 자체 배경을 가진 요소이므로 뒤에 말줄임표를 덧붙이지 않는다.
+        '[&:has([data-status-badge])]:text-clip',
         showDetailArrow && 'relative [&:last-child]:!pr-12',
         className,
       ]
@@ -296,6 +351,8 @@ export const TableRow = ({
   showDetailArrow = false,
   ...props
 }: TableRowProps) => {
+  const { columns } = useContext(TableResizeContext);
+  // 부모가 아직 렌더링되지 않은 하위 컴포넌트의 셀을 못 찾더라도 행에서 정렬을 적용한다.
   return (
     // 마지막 DOM 셀을 기준으로 표시하므로 열 숨김·재배치 후에도 화살표는 행 끝에 남는다.
     <TableDetailArrowContext.Provider value={showDetailArrow}>
@@ -308,7 +365,7 @@ export const TableRow = ({
           .join(' ')}
         {...props}
       >
-        {children}
+        {alignTableCells(children, columns)}
       </tr>
     </TableDetailArrowContext.Provider>
   );
