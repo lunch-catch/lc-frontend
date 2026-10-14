@@ -9,6 +9,7 @@ import CouponHistoryPage from '@user/pages/CouponHistoryPage';
 import CouponPage from '@user/pages/CouponPage';
 import ExplorePage from '@user/pages/ExplorePage';
 import KakaoCallbackPage from '@user/pages/KakaoCallbackPage';
+import LocationSettingsPage from '@user/pages/LocationSettingsPage';
 import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
@@ -63,6 +64,10 @@ export const router = createBrowserRouter([
     children: [
       // 하단 탭바 없이 사진부터 한 화면을 다 쓰고, 아래에 쿠폰 버튼을 고정한다
       { path: '/stores/:storeId', element: <StoreDetailPage /> },
+      {
+        element: <StackLayout />,
+        children: [{ path: '/my/location', element: <LocationSettingsPage /> }],
+      },
       {
         element: <TabLayout />,
         children: [

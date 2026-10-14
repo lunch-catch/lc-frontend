@@ -15,6 +15,7 @@ const TOAST_DURATION_MS = 2500;
 const menuItems = [
   { label: '찜 목록', to: '/coupons/wishlist' },
   { label: '쿠폰 사용 내역', to: '/coupons/history' },
+  { label: '위치 설정', to: '/my/location' },
 ];
 
 // 마이 탭. 프로필과 쿠폰 요약, 바로가기, 로그아웃
@@ -47,16 +48,11 @@ const MyPageScreen = () => {
   };
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <TopBar title="마이페이지" tone="page" />
-      {hasError && (
-        <div className="absolute inset-x-0 top-14 z-20 px-page">
-          <FeedbackToast message="로그아웃하지 못했어요" tone="error" />
-        </div>
-      )}
       <div className="flex flex-1 flex-col gap-3 px-page pt-2 pb-6">
         <ProfileSummary />
-        <nav aria-label="내 쿠폰">
+        <nav aria-label="바로가기">
           <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
             {menuItems.map(({ label, to }) => (
               <li key={to}>
@@ -76,14 +72,22 @@ const MyPageScreen = () => {
         </nav>
         {/* 메뉴가 적어도 로그아웃은 화면 아래쪽에 둔다 */}
         <div className="flex-1" />
-        <button
-          aria-busy={isLoggingOut || undefined}
-          className="h-12 w-full rounded-lg border border-border-subtle bg-bg-surface text-body-sm-mobile font-bold text-text-secondary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary aria-busy:cursor-progress aria-busy:opacity-60"
-          onClick={handleLogout}
-          type="button"
-        >
-          {isLoggingOut ? '로그아웃하는 중' : '로그아웃'}
-        </button>
+        <div className="relative">
+          {/* 실패 안내는 누른 버튼 바로 위에 띄운다. 위쪽에 띄우면 프로필을 가린다 */}
+          {hasError && (
+            <div className="absolute inset-x-0 bottom-full z-20 pb-2">
+              <FeedbackToast message="로그아웃하지 못했어요" tone="error" />
+            </div>
+          )}
+          <button
+            aria-busy={isLoggingOut || undefined}
+            className="h-12 w-full rounded-lg border border-border-subtle bg-bg-surface text-body-sm-mobile font-bold text-text-secondary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary aria-busy:cursor-progress aria-busy:opacity-60"
+            onClick={handleLogout}
+            type="button"
+          >
+            {isLoggingOut ? '로그아웃하는 중' : '로그아웃'}
+          </button>
+        </div>
       </div>
     </div>
   );
