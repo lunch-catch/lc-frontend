@@ -48,9 +48,10 @@ const KakaoCallbackStep = () => {
           state,
           reason: intent.reason,
         });
-        // 서버가 인증 쿠키를 지웠으니 화면의 로그인 정보도 지우고 첫 화면으로 보낸다
+        // 서버가 인증 쿠키를 지웠으니 화면의 로그인 정보도 지운다
+        // 스플래시를 건너뛰고 로그인 화면으로 보내 탈퇴했다는 안내를 띄운다
         auth.logout();
-        navigate('/', { replace: true });
+        navigate('/login', { replace: true, state: { withdrawn: true } });
         return;
       }
 
