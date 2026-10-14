@@ -1,3 +1,4 @@
+﻿import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 
 import { TemplateManagementContent } from '@admin/features/template/components/TemplateManagementContent';
@@ -6,21 +7,31 @@ import { useTemplateManagement } from '@admin/features/template/useTemplateManag
 
 export const TemplateManagementPage = () => {
   const navigate = useNavigate();
-  const { hasDraft, templates, updateTemplates } = useTemplateManagement();
-  const openDraft = (template: PosterTemplate) => {
-    void navigate(`/templates/drafts/${encodeURIComponent(template.id)}/edit`);
+  const management = useTemplateManagement();
+  const { refresh } = management;
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+  const openTemplate = (template: PosterTemplate) => {
+    void navigate(
+      template.status === 'DRAFT'
+        ? `/templates/drafts/${template.templateId}/edit`
+        : `/templates/${template.templateId}`,
+    );
   };
 
   return (
     <TemplateManagementContent
-      hasDraft={hasDraft}
-      templates={templates}
-      onTemplatesChange={updateTemplates}
-      onCreate={() => void navigate('/templates/new')}
-      onEditDraft={openDraft}
+      {...management}
+      onCreate={(name) =>
+        void navigate('/templates/new', { state: { templateName: name } })
+      }
+      onOpenTemplate={openTemplate}
       onLoadDraft={() => {
-        const draft = templates.find((template) => template.status === 'DRAFT');
-        if (draft) openDraft(draft);
+        const draft = management.templates.find(
+          (template) => template.status === 'DRAFT',
+        );
+        if (draft) openTemplate(draft);
       }}
     />
   );
