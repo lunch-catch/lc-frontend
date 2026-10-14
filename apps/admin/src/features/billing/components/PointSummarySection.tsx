@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { DateRangePicker, SelectField } from '@repo/ui';
+import {
+  DateRangePicker,
+  type DateRangeSelectionMode,
+  getDateRangeUnit,
+  SelectField,
+} from '@repo/ui';
 import { formatPoints } from '@repo/utils';
 
 import type {
@@ -44,6 +49,12 @@ const columns: DataTableColumn[] = [
     width: `${80 / 6}%`,
   })),
 ];
+
+const selectionModes: Record<PointSummaryPeriod, DateRangeSelectionMode> = {
+  DAILY: 'day',
+  WEEKLY: 'week',
+  MONTHLY: 'month',
+};
 
 interface PointSummarySectionProps {
   ownerId: string | null;
@@ -101,9 +112,24 @@ export const PointSummarySection = ({
           fitContent
           value={period}
           options={pointSummaryPeriods}
-          onValueChange={(value) => setPeriod(value as PointSummaryPeriod)}
+          onValueChange={(value) => {
+            const nextPeriod = value as PointSummaryPeriod;
+            const mode = selectionModes[nextPeriod];
+            // 조회 단위 변경과 날짜 보정을 함께 반영해 부분 주·월 범위로 요청하지 않는다.
+            setRange((current) => ({
+              startDate: current.startDate
+                ? getDateRangeUnit(current.startDate, mode).startDate
+                : '',
+              endDate: current.endDate
+                ? getDateRangeUnit(current.endDate, mode).endDate
+                : '',
+            }));
+            setPeriod(nextPeriod);
+          }}
         />
         <DateRangePicker
+          key={period}
+          selectionMode={selectionModes[period]}
           ariaLabel="합계 조회 기간"
           placeholder="합계 조회 기간 선택"
           value={range}
