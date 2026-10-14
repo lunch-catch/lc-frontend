@@ -51,3 +51,12 @@ export const Ghost: Story = {
     variant: 'ghost',
   },
 };
+
+// 찜 목록처럼 같은 버튼이 여러 번 나올 때 쓰는 연한 주요 행동
+export const Soft: Story = {
+  args: {
+    children: '받기',
+    size: 'medium',
+    variant: 'soft',
+  },
+};
