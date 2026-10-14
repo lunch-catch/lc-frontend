@@ -188,9 +188,11 @@ const LocationSettingsScreen = () => {
   };
 
   return (
-    <div className="flex flex-col">
+    // 화면 높이에 맞춰 두고 검색 결과만 안에서 스크롤해, 페이지 전체가 길어지지 않게 한다
+    // 틀(StackLayout)이 하단 버튼 자리로 비워 둔 아래 여백만큼 당겨 화면 높이를 딱 맞춘다
+    <div className="-mb-[calc(76px+env(safe-area-inset-bottom))] flex h-dvh flex-col">
       <TopBar onBack={() => navigate(-1)} title="위치 설정" />
-      <div className="flex flex-col gap-3 px-page pt-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-page pt-4">
         <p className="text-body-sm-mobile text-text-secondary">
           설정한 위치 주변 가게의 쿠폰을 보여드려요
         </p>
@@ -227,11 +229,13 @@ const LocationSettingsScreen = () => {
         </div>
 
         {addressSearch.isSearching && (
-          <AddressSearchResults
-            onRetry={addressSearch.retry}
-            onSelect={handleSelectResult}
-            search={addressSearch.search}
-          />
+          <div className="-mx-page min-h-0 flex-1 overflow-y-auto overscroll-contain px-page pb-4">
+            <AddressSearchResults
+              onRetry={addressSearch.retry}
+              onSelect={handleSelectResult}
+              search={addressSearch.search}
+            />
+          </div>
         )}
 
         {!addressSearch.isSearching && settings === undefined && (
