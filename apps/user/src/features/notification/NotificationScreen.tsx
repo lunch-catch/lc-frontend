@@ -5,6 +5,8 @@ import { Bell } from 'lucide-react';
 import { getNow } from '@user/api/clock';
 import {
   fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
   type UserNotification,
 } from '@user/api/notification';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
@@ -61,6 +63,38 @@ const NotificationScreen = () => {
     setAttempt((current) => current + 1);
   };
 
+  const hasUnread = notifications?.some(
+    (notification) => notification.readAt === null,
+  );
+
+  // 읽음 표시는 화면에 먼저 반영한다. 서버에 알리지 못해도 다음에 다시 안 읽음으로 보일 뿐이라 막지 않는다
+  const markReadOnScreen = (isTarget: (item: UserNotification) => boolean) => {
+    const now = new Date(getNow()).toISOString();
+    setNotifications((current) =>
+      current?.map((item) =>
+        item.readAt === null && isTarget(item)
+          ? { ...item, readAt: now }
+          : item,
+      ),
+    );
+  };
+
+  // 알림 하나가 가게 하나의 이야기라 그 가게 상세로 보낸다. 거기서 오픈을 기다리거나 바로 쿠폰을 받는다
+  const handleOpen = (notification: UserNotification) => {
+    if (notification.readAt === null) {
+      markReadOnScreen(
+        (item) => item.notificationId === notification.notificationId,
+      );
+      markNotificationRead(notification.notificationId).catch(() => {});
+    }
+    navigate(`/stores/${notification.storeId}`);
+  };
+
+  const handleReadAll = () => {
+    markReadOnScreen(() => true);
+    markAllNotificationsRead().catch(() => {});
+  };
+
   const renderContent = () => {
     if (notifications === undefined) {
       return (
@@ -111,40 +145,44 @@ const NotificationScreen = () => {
           const isUnread = notification.readAt === null;
 
           return (
-            <li
-              className={`flex gap-3 px-page py-4 ${isUnread ? 'bg-surface-brand/40' : ''}`}
-              key={notification.notificationId}
-            >
-              <span
-                aria-hidden="true"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-brand text-text-brand"
+            <li key={notification.notificationId}>
+              <button
+                className={`flex w-full gap-3 px-page py-4 text-left active:bg-surface-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action-primary ${isUnread ? 'bg-surface-brand/40' : ''}`}
+                onClick={() => handleOpen(notification)}
+                type="button"
               >
-                <Bell className="size-4" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center justify-between gap-2">
-                  <span
-                    className={`text-body-sm-mobile ${isUnread ? 'font-bold text-text-primary' : 'font-medium text-text-secondary'}`}
-                  >
-                    10분 뒤 쿠폰이 열려요
-                    {isUnread && <span className="sr-only">, 안 읽음</span>}
-                  </span>
-                  <span className="shrink-0 text-caption-mobile text-text-tertiary">
-                    {formatSentAt(notification.sentAt)}
-                  </span>
-                </p>
-                <p
-                  className={`mt-0.5 text-body-sm-mobile break-keep ${isUnread ? 'text-text-primary' : 'text-text-secondary'}`}
-                >
-                  찜한 {notification.storeName} 쿠폰이 11:00에 선착순으로 열려요
-                </p>
-              </div>
-              {isUnread && (
                 <span
                   aria-hidden="true"
-                  className="mt-1.5 size-2 shrink-0 rounded-full bg-action-primary"
-                />
-              )}
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-brand text-text-brand"
+                >
+                  <Bell className="size-4" />
+                </span>
+                <span className="block min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-body-sm-mobile ${isUnread ? 'font-bold text-text-primary' : 'font-medium text-text-secondary'}`}
+                    >
+                      10분 뒤 쿠폰이 열려요
+                      {isUnread && <span className="sr-only">, 안 읽음</span>}
+                    </span>
+                    <span className="shrink-0 text-caption-mobile text-text-tertiary">
+                      {formatSentAt(notification.sentAt)}
+                    </span>
+                  </span>
+                  <span
+                    className={`mt-0.5 block text-body-sm-mobile break-keep ${isUnread ? 'text-text-primary' : 'text-text-secondary'}`}
+                  >
+                    찜한 {notification.storeName} 쿠폰이 11:00에 선착순으로
+                    열려요
+                  </span>
+                </span>
+                {isUnread && (
+                  <span
+                    aria-hidden="true"
+                    className="mt-1.5 size-2 shrink-0 rounded-full bg-action-primary"
+                  />
+                )}
+              </button>
             </li>
           );
         })}
@@ -154,7 +192,22 @@ const NotificationScreen = () => {
 
   return (
     <div className="flex min-h-[calc(100dvh-76px)] flex-col">
-      <TopBar onBack={() => navigate(-1)} title="알림" />
+      <TopBar
+        action={
+          // 안 읽은 알림이 있을 때만 보여준다
+          hasUnread && (
+            <button
+              className="h-11 px-2.5 text-body-sm-mobile font-bold text-text-secondary active:text-text-primary focus-visible:outline-2 focus-visible:outline-action-primary"
+              onClick={handleReadAll}
+              type="button"
+            >
+              모두 읽음
+            </button>
+          )
+        }
+        onBack={() => navigate(-1)}
+        title="알림"
+      />
       {renderContent()}
     </div>
   );
