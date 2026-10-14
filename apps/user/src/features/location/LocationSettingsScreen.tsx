@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CircleAlert, MapPin } from 'lucide-react';
 
+import { findAddress } from '@user/api/kakao';
 import {
   deleteMyLocation,
   fetchMyLocation,
@@ -19,6 +20,7 @@ import TopBar from '@user/components/TopBar/TopBar';
 
 import { getCurrentPosition, PositionError } from './currentPosition';
 import LocationNameSheet from './LocationNameSheet';
+import { getLocationLabel, rememberMyLocation } from './useMyLocation';
 
 const TOAST_DURATION_MS = 2500;
 
@@ -28,9 +30,11 @@ interface LocationSettings {
   locationOptIn: boolean;
 }
 
-interface Coordinates {
+// GPS로 찾은 위치와 그 주소
+interface FoundLocation {
   latitude: number;
   longitude: number;
+  address: string | null;
 }
 
 interface Toast {
@@ -40,9 +44,16 @@ interface Toast {
 
 const cardClassName = 'rounded-xl border border-border-subtle bg-bg-surface';
 
-// 주소를 찾는 카카오 지도가 붙기 전에는 GPS로 저장한 위치에 이름과 주소가 없다
+// 이름도 주소도 없는 위치는 주소를 못 찾았거나 주소 변환 전에 저장한 위치다
 const getLocationName = (location: MemberLocation) =>
-  location.locationNickname ?? location.roadAddress ?? 'GPS로 찾은 위치';
+  getLocationLabel(location) ?? 'GPS로 찾은 위치';
+
+const emptyLocation: MemberLocation = {
+  locationNickname: null,
+  roadAddress: null,
+  latitude: null,
+  longitude: null,
+};
 
 const getPositionErrorMessage = (error: unknown) =>
   error instanceof PositionError && error.reason === 'denied'
@@ -50,7 +61,7 @@ const getPositionErrorMessage = (error: unknown) =>
     : '현재 위치를 찾지 못했어요';
 
 // 위치 설정. 피드와 탐색에서 주변 가게를 찾을 기준 위치를 하나 정한다
-// 지금은 GPS로 찾은 현재 위치만 저장할 수 있고, 주소 검색은 카카오 지도를 붙인 뒤에 더한다
+// 지금은 GPS로 찾은 현재 위치만 저장할 수 있다
 const LocationSettingsScreen = () => {
   const navigate = useNavigate();
   // undefined면 불러오는 중, null이면 실패
@@ -61,7 +72,7 @@ const LocationSettingsScreen = () => {
     null,
   );
   // GPS로 찾았지만 아직 저장하지 않은 위치. 있으면 이름을 붙이는 시트를 연다
-  const [found, setFound] = useState<Coordinates | null>(null);
+  const [found, setFound] = useState<FoundLocation | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -71,6 +82,7 @@ const LocationSettingsScreen = () => {
     Promise.all([fetchMyProfile(), fetchMyLocation()])
       .then(([profile, location]) => {
         if (ignore) return;
+        rememberMyLocation(location);
         setSettings({
           location,
           locationOptIn: profile.consents.locationOptIn,
@@ -104,7 +116,13 @@ const LocationSettingsScreen = () => {
     setPending('locate');
     try {
       setSaveError(null);
-      setFound(await getCurrentPosition());
+      const position = await getCurrentPosition();
+      // 주소를 못 찾아도 좌표만으로 저장할 수 있게 한다
+      const address = await findAddress(
+        position.latitude,
+        position.longitude,
+      ).catch(() => null);
+      setFound({ ...position, address });
     } catch (error) {
       setToast({ message: getPositionErrorMessage(error), tone: 'error' });
     } finally {
@@ -117,7 +135,13 @@ const LocationSettingsScreen = () => {
 
     setPending('save');
     try {
-      const location = await saveMyLocation({ ...found, locationNickname });
+      const location = await saveMyLocation({
+        latitude: found.latitude,
+        longitude: found.longitude,
+        roadAddress: found.address ?? undefined,
+        locationNickname,
+      });
+      rememberMyLocation(location);
       setSettings({ ...settings, location });
       setFound(null);
       setToast({ message: '현재 위치로 설정했어요', tone: 'success' });
@@ -134,15 +158,8 @@ const LocationSettingsScreen = () => {
     setPending('delete');
     try {
       await deleteMyLocation();
-      setSettings({
-        ...settings,
-        location: {
-          locationNickname: null,
-          roadAddress: null,
-          latitude: null,
-          longitude: null,
-        },
-      });
+      rememberMyLocation(emptyLocation);
+      setSettings({ ...settings, location: emptyLocation });
       setToast({ message: '위치를 삭제했어요', tone: 'success' });
     } catch {
       setToast({ message: '위치를 삭제하지 못했어요', tone: 'error' });
@@ -162,13 +179,13 @@ const LocationSettingsScreen = () => {
         {settings === undefined && (
           <div
             aria-hidden="true"
-            className="h-18 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
+            className="h-13 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
           />
         )}
 
         {settings === null && (
           <div
-            className={`flex items-center justify-between gap-3 px-4 py-4 ${cardClassName}`}
+            className={`flex min-h-13 items-center justify-between gap-3 px-4 py-2 ${cardClassName}`}
           >
             <p className="text-body-sm-mobile text-text-secondary">
               위치 정보를 불러오지 못했어요
@@ -186,19 +203,28 @@ const LocationSettingsScreen = () => {
         {settings && (
           <section
             aria-label="설정한 위치"
-            className={`flex items-center gap-3 px-4 py-4 ${cardClassName}`}
+            className={`flex min-h-13 items-center gap-3 px-4 py-2 ${cardClassName}`}
           >
             <div
               aria-hidden="true"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-brand text-text-brand"
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-brand text-text-brand"
             >
-              <MapPin className="size-5" />
+              <MapPin className="size-4" />
             </div>
             {hasLocation(settings.location) ? (
               <>
-                <p className="min-w-0 flex-1 truncate text-body-sm-mobile font-medium text-text-primary">
-                  {getLocationName(settings.location)}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body-sm-mobile font-medium text-text-primary">
+                    {getLocationName(settings.location)}
+                  </p>
+                  {/* 이름을 붙였으면 주소를 아래에 함께 보여준다 */}
+                  {settings.location.locationNickname &&
+                    settings.location.roadAddress && (
+                      <p className="truncate text-caption-mobile text-text-secondary">
+                        {settings.location.roadAddress}
+                      </p>
+                    )}
+                </div>
                 <button
                   aria-busy={pending === 'delete' || undefined}
                   className="h-9 shrink-0 rounded-lg px-2 text-body-sm-mobile font-bold text-text-secondary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary aria-busy:cursor-progress aria-busy:opacity-60"
@@ -246,6 +272,7 @@ const LocationSettingsScreen = () => {
 
       {found && (
         <LocationNameSheet
+          address={found.address}
           errorMessage={saveError}
           onClose={() => setFound(null)}
           onSave={handleSave}
