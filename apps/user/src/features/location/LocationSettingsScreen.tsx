@@ -61,10 +61,11 @@ const emptyLocation: MemberLocation = {
   longitude: null,
 };
 
+// GPS로 못 찾으면 같은 화면 위쪽의 주소 검색으로 안내한다
 const getPositionErrorMessage = (error: unknown) =>
   error instanceof PositionError && error.reason === 'denied'
-    ? '브라우저 설정에서 위치 권한을 허용해 주세요'
-    : '현재 위치를 찾지 못했어요';
+    ? '위치 권한이 꺼져 있어요 · 주소로 찾아 주세요'
+    : '현재 위치를 찾지 못했어요 · 주소로 찾아 주세요';
 
 // 위치 설정. 피드와 탐색에서 주변 가게를 찾을 기준 위치를 하나 정한다
 // GPS로 찾은 현재 위치나, 주소 검색으로 고른 위치를 저장한다
@@ -319,7 +320,7 @@ const LocationSettingsScreen = () => {
               aria-hidden="true"
               className="mt-0.5 size-4 shrink-0"
             />
-            위치 이용에 동의하지 않아 현재 위치를 쓸 수 없어요
+            위치 이용에 동의하지 않아 주소로만 설정할 수 있어요
           </p>
         )}
       </div>
