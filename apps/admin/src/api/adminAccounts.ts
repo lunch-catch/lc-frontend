@@ -14,7 +14,7 @@ export const issueAdminAccount = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        loginId: form.id.trim(),
+        loginId: form.id,
         initialPassword: form.password,
         name: form.name.trim(),
         role: form.role,

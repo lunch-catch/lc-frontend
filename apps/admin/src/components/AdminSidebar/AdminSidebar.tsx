@@ -18,6 +18,9 @@ import {
 
 type NavigationIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
+const footerButtonClassName =
+  'flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary active:bg-surface-subtle active:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary disabled:pointer-events-none disabled:opacity-50';
+
 export interface AdminNavigationItem {
   icon: NavigationIcon;
   id: string;
@@ -33,6 +36,7 @@ export interface AdminSidebarProps {
   items?: AdminNavigationItem[];
   onItemSelect?: (itemId: string) => void;
   onLogout?: () => void;
+  logoutDisabled?: boolean;
   theme?: Theme;
   onThemeToggle?: () => void | Promise<void>;
 }
@@ -48,12 +52,19 @@ const defaultNavigationItems: AdminNavigationItem[] = [
   { icon: UserCog, id: 'account', label: '계정 관리' },
 ];
 
+/**
+ * 관리자 탐색 메뉴와 계정·테마·로그아웃 버튼을 표시하는 사이드바입니다.
+ * 로그아웃 확인과 서버 요청은 onLogout을 통해 상위 화면에 위임합니다.
+ * @param props 메뉴 선택 상태, 관리자 정보 및 하단 버튼의 동작과 비활성화 설정
+ * @returns 마우스 진입 시 펼쳐지는 관리자 사이드바
+ */
 export function AdminSidebar({
   admin,
   activeItemId = 'dashboard',
   items = defaultNavigationItems,
   onItemSelect,
   onLogout,
+  logoutDisabled = false,
   theme = 'light',
   onThemeToggle,
 }: AdminSidebarProps) {
@@ -163,7 +174,7 @@ export function AdminSidebar({
           <button
             aria-label={themeToggleLabel}
             title={themeToggleLabel}
-            className="mb-2 flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+            className={`mb-2 ${footerButtonClassName}`}
             onClick={() => void handleThemeToggle()}
             type="button"
           >
@@ -177,7 +188,8 @@ export function AdminSidebar({
         )}
         <button
           aria-label="로그아웃"
-          className="flex h-8 w-full items-center justify-start gap-3 rounded-md px-[13px] text-caption-web font-medium text-text-secondary transition-colors hover:text-status-danger-fg active:text-status-danger-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-status-danger-border"
+          disabled={logoutDisabled}
+          className={footerButtonClassName}
           onClick={onLogout}
           type="button"
         >

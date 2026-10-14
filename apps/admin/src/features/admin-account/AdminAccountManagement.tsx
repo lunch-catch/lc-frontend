@@ -1,13 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import {
-  Button,
-  Input,
-  Radio,
-  SearchField,
-  SelectField,
-  StatusBadge,
-} from '@repo/ui';
-import { formatDateTime } from '@repo/utils';
+import { Button, Input, Radio, SearchField, SelectField } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
 import { issueAdminAccount } from '@admin/api/adminAccounts';
@@ -30,20 +22,17 @@ import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
 
 import type {
-  AdminAccount,
   AdminAccountForm,
   AdminAccountFormErrors,
   AdminAccountRole,
-  AdminAccountStatus,
+  IssuedAdminAccount,
 } from './adminAccountTypes';
 import { validateAdminAccount } from './adminAccountValidation';
 
 const accountColumns: DataTableColumn[] = [
-  { minWidth: 140, width: '22%' },
-  { minWidth: 120, width: '18%' },
-  { minWidth: 130, width: '20%' },
-  { minWidth: 120, width: '18%' },
-  { minWidth: 180, width: '22%' },
+  { key: 'loginId', label: '관리자 ID', minWidth: 140, width: '40%' },
+  { key: 'name', label: '이름', minWidth: 120, width: '30%' },
+  { key: 'role', label: '권한', minWidth: 130, width: '30%' },
 ];
 
 const issueRoleOptions: { label: string; value: AdminAccountRole }[] = [
@@ -53,23 +42,9 @@ const issueRoleOptions: { label: string; value: AdminAccountRole }[] = [
 
 const roleOptions = [{ label: '전체 권한', value: 'ALL' }, ...issueRoleOptions];
 
-const statusOptions = [
-  { label: '전체 상태', value: 'ALL' },
-  { label: '활성', value: 'ACTIVE' },
-  { label: '삭제', value: 'DELETED' },
-];
-
 const roleMeta: Record<AdminAccountRole, string> = {
   ADMIN: '관리자',
   SUPER_ADMIN: '최고 관리자',
-};
-
-const statusMeta: Record<
-  AdminAccountStatus,
-  { label: string; variant: 'success' | 'neutral' }
-> = {
-  ACTIVE: { label: '활성', variant: 'success' },
-  DELETED: { label: '삭제', variant: 'neutral' },
 };
 
 const emptyForm: AdminAccountForm = {
@@ -87,18 +62,23 @@ export const AdminAccountManagement = () => {
   );
   const { role: currentRole } = useAdminAuth();
   const canIssueAccount = currentRole === 'SUPER_ADMIN';
-  const [accounts, setAccounts] = useState<AdminAccount[]>([]);
+  // 목록 조회 계약은 없으므로 이번 화면에서 발급한 응답만 보관한다.
+  const [accounts, setAccounts] = useState<IssuedAdminAccount[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState<AdminAccountForm>(emptyForm);
   const [formErrors, setFormErrors] = useState<AdminAccountFormErrors>({});
   const [isIssuing, setIsIssuing] = useState(false);
   const issuingRef = useRef(false);
   const [notice, setNotice] = useState('');
-  const { errorMessage, isWaiting, reportError, clearError } =
-    useRequestFeedback();
+  const {
+    errorMessage,
+    isWaiting,
+    retryAfterSeconds,
+    reportError,
+    clearError,
+  } = useRequestFeedback();
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [role, setRole] = useState('ALL');
-  const [status, setStatus] = useState('ALL');
   const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
     onCommit: () => setCurrentPage(1),
   });
@@ -111,15 +91,14 @@ export const AdminAccountManagement = () => {
     return accounts.filter((account) => {
       const matchesKeyword =
         !normalizedKeyword ||
-        [account.id, account.name].some((value) =>
+        [account.loginId, account.name].some((value) =>
           value.toLowerCase().includes(normalizedKeyword),
         );
       const matchesRole = role === 'ALL' || account.role === role;
-      const matchesStatus = status === 'ALL' || account.status === status;
 
-      return matchesKeyword && matchesRole && matchesStatus;
+      return matchesKeyword && matchesRole;
     });
-  }, [accounts, keyword, role, status]);
+  }, [accounts, keyword, role]);
 
   const totalPages = Math.ceil(filteredAccounts.length / pageSize);
   const visibleAccounts = filteredAccounts.slice(
@@ -142,7 +121,6 @@ export const AdminAccountManagement = () => {
     setFormErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
-      setFormErrors(nextErrors);
       return;
     }
 
@@ -152,17 +130,7 @@ export const AdminAccountManagement = () => {
     setNotice('');
     try {
       const issued = await issueAdminAccount(form);
-      // 발급 응답에는 생성 시각이 없으므로 클라이언트 시각을 발급일로 만들지 않는다.
-      setAccounts((current) => [
-        {
-          id: issued.loginId,
-          name: issued.name,
-          role: issued.role,
-          status: 'ACTIVE',
-          createdAt: '',
-        },
-        ...current,
-      ]);
+      setAccounts((current) => [issued, ...current]);
       setCurrentPage(1);
       setForm(emptyForm);
       setFormErrors({});
@@ -203,8 +171,7 @@ export const AdminAccountManagement = () => {
             계정 관리
           </h2>
           <p className="mt-2 text-body-sm-web text-text-secondary">
-            관리자 권한과 상태를 조회합니다. 계정 발급은 최고 관리자만
-            가능합니다.
+            관리자 계정을 발급합니다. 계정 발급은 최고 관리자만 가능합니다.
           </p>
         </div>
         {canIssueAccount && (
@@ -218,8 +185,7 @@ export const AdminAccountManagement = () => {
       </header>
 
       <p className="mb-4 text-caption-web text-text-secondary">
-        관리자 목록 조회 API는 아직 연결되지 않았습니다. 이 화면에서 발급한
-        계정만 표시합니다.
+        이 화면에서 발급한 계정만 표시합니다.
       </p>
       {notice && (
         <p
@@ -250,25 +216,12 @@ export const AdminAccountManagement = () => {
           options={roleOptions}
           value={role}
         />
-        <SelectField
-          fitContent
-          onValueChange={(value) => {
-            setCurrentPage(1);
-            setStatus(value);
-          }}
-          options={statusOptions}
-          value={status}
-        />
       </FilterBar>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
         <DataTable
           columnSettings={columnSettings}
-          columns={accountColumns.map((column, index) => ({
-            ...column,
-            key: ['id', 'name', 'role', 'status', 'createdAt'][index],
-            label: ['관리자 ID', '이름', '권한', '상태', '발급일'][index],
-          }))}
+          columns={accountColumns}
           density={density}
         >
           <thead>
@@ -276,33 +229,21 @@ export const AdminAccountManagement = () => {
               <TableHeaderCell columnIndex={0}>관리자 ID</TableHeaderCell>
               <TableHeaderCell columnIndex={1}>이름</TableHeaderCell>
               <TableHeaderCell columnIndex={2}>권한</TableHeaderCell>
-              <TableHeaderCell columnIndex={3}>상태</TableHeaderCell>
-              <TableHeaderCell columnIndex={4}>발급일</TableHeaderCell>
             </tr>
           </thead>
           <tbody>
             {visibleAccounts.length === 0 ? (
-              <TableEmpty colSpan={5}>검색 결과가 없습니다</TableEmpty>
+              <TableEmpty colSpan={3}>검색 결과가 없습니다</TableEmpty>
             ) : (
-              visibleAccounts.map((account) => {
-                const accountStatus = statusMeta[account.status];
-
-                return (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium text-text-primary">
-                      {account.id}
-                    </TableCell>
-                    <TableCell>{account.name}</TableCell>
-                    <TableCell>{roleMeta[account.role]}</TableCell>
-                    <TableCell>
-                      <StatusBadge variant={accountStatus.variant}>
-                        {accountStatus.label}
-                      </StatusBadge>
-                    </TableCell>
-                    <TableCell>{formatDateTime(account.createdAt)}</TableCell>
-                  </TableRow>
-                );
-              })
+              visibleAccounts.map((account) => (
+                <TableRow key={account.loginId}>
+                  <TableCell className="font-medium text-text-primary">
+                    {account.loginId}
+                  </TableCell>
+                  <TableCell>{account.name}</TableCell>
+                  <TableCell>{roleMeta[account.role]}</TableCell>
+                </TableRow>
+              ))
             )}
           </tbody>
         </DataTable>
@@ -315,9 +256,6 @@ export const AdminAccountManagement = () => {
         title="관리자 계정 발급"
       >
         <fieldset disabled={isIssuing} className="flex flex-col gap-5">
-          <p className="text-body-sm-web text-text-secondary">
-            발급한 계정은 기본적으로 활성 상태로 등록됩니다.
-          </p>
           <Input
             errorMessage={formErrors.id}
             label="관리자 ID"
@@ -437,7 +375,7 @@ export const AdminAccountManagement = () => {
               isLoading={isIssuing}
               disabled={isWaiting}
             >
-              {isWaiting ? '재시도 대기 중' : '발급'}
+              {isWaiting ? `${retryAfterSeconds}초 후 발급` : '발급'}
             </Button>
           </div>
           {errorMessage && (
