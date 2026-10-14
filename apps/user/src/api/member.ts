@@ -7,6 +7,11 @@ export interface MyProfile {
   nickname: string;
   profileImageUrl: string | null;
   onboardingCompleted: boolean;
+  // 알림과 위치 정보 이용 동의. 위치에 동의하지 않았으면 GPS로 현재 위치를 찾지 않는다
+  consents: {
+    notificationOptIn: boolean;
+    locationOptIn: boolean;
+  };
   createdAt: string;
 }
 
