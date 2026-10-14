@@ -43,6 +43,7 @@ export const useTemplateEditor = (initialId?: string) => {
 
   useEffect(() => {
     if (!initialId) return;
+    savedId.current = initialId;
     const controller = new AbortController();
     void getTemplate(initialId, controller.signal)
       .then(async (template) => {
@@ -180,14 +181,20 @@ export const useTemplateEditor = (initialId?: string) => {
     }
   };
 
+  // 생성 직후 상세·이력을 읽는 동안에도 이미 받은 결과와 대화는 표시한다.
+  const hasGeneratedTemplate =
+    generation !== null && String(generation.templateId) === initialId;
+
   return {
     template: result?.template ?? null,
     generation,
     versions: result?.versions ?? [],
     nextPageToken: result?.nextPageToken,
-    loading: Boolean(initialId && !result && !loadError),
-    loadError,
-    error,
+    loading: Boolean(
+      initialId && !result && !loadError && !hasGeneratedTemplate,
+    ),
+    loadError: hasGeneratedTemplate ? null : loadError,
+    error: error ?? (hasGeneratedTemplate ? loadError : null),
     busy,
     loadingMore,
     generate,
