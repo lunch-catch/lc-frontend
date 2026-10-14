@@ -40,3 +40,10 @@ export const WithWishCount: Story = {
     wishCount: 3,
   },
 };
+
+// 안 읽은 알림이 있으면 알림 아이콘에 점이 찍힌다
+export const WithUnreadNotifications: Story = {
+  args: {
+    hasUnreadNotifications: true,
+  },
+};

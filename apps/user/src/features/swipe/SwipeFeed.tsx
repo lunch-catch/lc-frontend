@@ -11,6 +11,7 @@ import {
 import AppHeader from '@user/components/AppHeader/AppHeader';
 import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
 import { useHeaderLocationName } from '@user/features/location/useMyLocation';
+import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 
 import GestureRail from './GestureRail';
 import OpenCountdown from './OpenCountdown';
@@ -54,6 +55,7 @@ const SwipeFeed = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wishCount, setWishCount] = useState(getWishCount);
   const locationName = useHeaderLocationName();
+  const hasUnreadNotifications = useHasUnreadNotifications();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // 같은 카드의 노출이 두 번 기록되지 않도록 보낸 serveId를 기억한다
   const impressedServeIds = useRef(new Set<string>());
@@ -121,7 +123,11 @@ const SwipeFeed = () => {
 
   return (
     <>
-      <AppHeader locationName={locationName} wishCount={wishCount} />
+      <AppHeader
+        hasUnreadNotifications={hasUnreadNotifications}
+        locationName={locationName}
+        wishCount={wishCount}
+      />
       {/* 토스트를 헤더 바로 아래에 띄우기 위한 기준 영역 */}
       <div className="relative flex flex-1 flex-col">
         {toastMessage && (
