@@ -223,24 +223,62 @@ export interface CouponSummary {
 export const fetchCouponSummary = () =>
   request<CouponSummary>('/v1/coupons/summary');
 
-// 매장에서 보여줄 1회용 QR 토큰
+// 매장에서 보여줄 1회용 QR. 서버가 그려 준 QR 이미지와 만료 시각
 export interface QrToken {
-  value: string;
+  // <img src>에 바로 넣을 수 있는 이미지 주소 (data URL)
+  imageSrc: string;
   expiresAt: number;
 }
 
 export const QR_TOKEN_LIFETIME_MS = 60_000;
 
-// 60초 동안만 쓸 수 있는 QR 토큰을 받는다
-// 실제 QR 생성 API(:generateQr)는 아직 서버에 없다. 생기면 서버가 그려 준 QR 이미지(PNG)와 만료 시각을 받는다
+// QR 생성은 서버 구현이 끝나 실제 API를 쓴다
+const USE_COUPON_QR_API = true;
+
+interface QrResponse {
+  // QR 이미지 PNG를 Base64로 바꾼 값
+  qrImageBytes: string;
+  expireTime: string;
+}
+
+// mock QR 이미지. 서버처럼 이미지로 주려고 QR을 SVG 이미지 주소로 만든다
+// 실제 API를 쓰면 필요 없어서 쓸 때만 불러온다
+const createMockQrImage = async (value: string) => {
+  const [{ createElement }, { renderToStaticMarkup }, { QRCodeSVG }] =
+    await Promise.all([
+      import('react'),
+      import('react-dom/server'),
+      import('qrcode.react'),
+    ]);
+  const svg = renderToStaticMarkup(
+    createElement(QRCodeSVG, { value, size: 256, marginSize: 4 }),
+  );
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
+// 60초 동안만 쓸 수 있는 QR을 받는다 (POST /v1/coupons/{memberCouponId}:generateQr)
+// 새로 받으면 이전 QR은 바로 쓸 수 없게 된다
 export const fetchQrToken = async (
   memberCouponId: number,
 ): Promise<QrToken> => {
+  if (USE_COUPON_QR_API) {
+    const data = await request<QrResponse>(
+      `/v1/coupons/${memberCouponId}:generateQr`,
+      { method: 'POST' },
+    );
+    return {
+      imageSrc: `data:image/png;base64,${data.qrImageBytes}`,
+      expiresAt: Date.parse(data.expireTime),
+    };
+  }
+
   await wait(MOCK_DELAY_MS);
 
   const issuedAt = getNow();
   return {
-    value: `lunch-catch:${memberCouponId}:${issuedAt}`,
+    imageSrc: await createMockQrImage(
+      `lunch-catch:${memberCouponId}:${issuedAt}`,
+    ),
     expiresAt: issuedAt + QR_TOKEN_LIFETIME_MS,
   };
 };
