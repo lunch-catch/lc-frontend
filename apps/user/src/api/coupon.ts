@@ -79,7 +79,7 @@ const couponFilterStates: Record<CouponFilter, CouponState> = {
 // 그동안은 mock으로 화면을 만들고, 발급 API가 나오면 true로 바꿔 쿠폰 API를 함께 쓴다
 const USE_COUPON_API = false;
 
-// 받은 쿠폰 목록(GET /v1/coupons)은 서버 구현이 끝나 실제 API를 쓴다
+// 받은 쿠폰 목록과 단건 조회(GET /v1/coupons, GET /v1/coupons/{memberCouponId})는 서버 구현이 끝나 실제 API를 쓴다
 // 발급 API가 나오기 전까지 찜 목록에서 받은 mock 쿠폰은 쿠폰함에 보이지 않는다
 const USE_COUPON_LIST_API = true;
 
@@ -195,6 +195,21 @@ export const fetchCoupons = async (
   } while (pageToken);
 
   return items;
+};
+
+// 받은 쿠폰 한 장의 지금 상태 (GET /v1/coupons/{memberCouponId})
+// QR을 보여주는 동안 점주가 스캔해 사용 처리했는지 확인할 때 쓴다
+export const fetchCoupon = async (memberCouponId: number): Promise<Coupon> => {
+  if (USE_COUPON_LIST_API) {
+    return request<Coupon>(`/v1/coupons/${memberCouponId}`);
+  }
+
+  await wait(MOCK_DELAY_MS);
+  const coupon = getMockCoupons(getNow()).find(
+    (item) => item.memberCouponId === memberCouponId,
+  );
+  if (!coupon) throw new Error('쿠폰을 찾을 수 없습니다');
+  return coupon;
 };
 
 // 마이페이지 쿠폰 요약 (GET /v1/coupons/summary). 지금까지 쌓인 누적 값이다

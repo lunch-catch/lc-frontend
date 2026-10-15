@@ -17,6 +17,7 @@ import {
   formatUsableTime,
 } from './couponFormat';
 import { getQrState, type QrState } from './qrState';
+import { useLatestCoupon } from './useLatestCoupon';
 import { useQrToken } from './useQrToken';
 
 const TICK_MS = 1000;
@@ -165,7 +166,9 @@ interface CouponQrProps {
 }
 
 // 매장에서 직원에게 보여주는 쿠폰 QR. 쿠폰함에서 시트로 띄운다
-const CouponQr = ({ coupon }: CouponQrProps) => {
+// 띄워 둔 동안 점주가 스캔하면 단건 조회로 알아채고 사용 완료로 바꾼다
+const CouponQr = ({ coupon: listCoupon }: CouponQrProps) => {
+  const coupon = useLatestCoupon(listCoupon);
   const [now, setNow] = useState(getNow);
 
   // 남은 시간과 사용 시작·만료 시각을 1초마다 다시 확인한다

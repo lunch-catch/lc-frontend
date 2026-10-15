@@ -93,7 +93,11 @@ const AvailableCoupons = () => {
       {/* 시트를 닫으면 QR 화면이 사라지면서 QR 갱신 타이머도 멈춘다 */}
       <BottomSheet
         isOpen={selectedCoupon !== null}
-        onClose={() => setSelectedCoupon(null)}
+        onClose={() => {
+          setSelectedCoupon(null);
+          // QR을 띄운 사이 사용했을 수 있어 목록을 조용히 다시 받는다
+          setAttempt((current) => current + 1);
+        }}
         title="쿠폰 사용"
       >
         {selectedCoupon && <CouponQr coupon={selectedCoupon} />}
