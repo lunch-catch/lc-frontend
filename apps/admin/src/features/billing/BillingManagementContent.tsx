@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Tabs } from '@repo/ui';
 
 import { createMockBillingState } from '@admin/api/mocks/billing';
@@ -61,7 +61,9 @@ export const BillingManagementContent = () => {
           value={activeTab}
         />
       </div>
-      {activeTab === 'payments' && <PaymentHistoryTab {...props} />}
+      {activeTab === 'payments' && (
+        <PaymentHistoryTab preferences={preferences} />
+      )}
       {activeTab === 'refunds' && <RefundRequestsTab {...props} />}
       {activeTab === 'ledger' && (
         <PointLedgerTab today={today} preferences={preferences} />
