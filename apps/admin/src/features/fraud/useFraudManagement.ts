@@ -1,33 +1,61 @@
 import { useMemo, useState } from 'react';
 
 import type { TableDensity } from '@admin/components/DataTable';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import {
+  queryChoice,
+  queryDate,
+  queryPage,
+  queryPageSize,
+  queryText,
+} from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
 import type {
   FraudFilters,
   FraudSort,
   FraudSortKey,
-  FraudTab,
   FraudTableRow,
 } from './fraudTypes';
 import { buildFraudView, sortFraudRows } from './fraudUtils';
 import { useFraudReport } from './useFraudReport';
 
+const fraudQuery = {
+  tab: queryChoice(['impressions', 'requests'] as const, 'impressions'),
+  keyword: queryText(),
+  page: queryPage,
+  size: queryPageSize(10),
+  from: queryDate(),
+  to: queryDate(),
+  reason: queryChoice(
+    ['ALL', 'EXPIRED_OR_UNKNOWN', 'NOT_OWNER'] as const,
+    'ALL',
+  ),
+  sortBy: queryChoice(
+    ['', 'campaignId', 'userId', 'reasonCode', 'count'] as const,
+    '',
+  ),
+  sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
+};
 export const useFraudManagement = () => {
-  const [tab, setTab] = useState<FraudTab>('impressions');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { filters: query, updateFilters } = useUrlFilters('fraud.', fraudQuery);
+  const { tab, page: currentPage, size: pageSize, reason: reasonCode } = query;
+  const period = useMemo(
+    () => ({ startDate: query.from, endDate: query.to }),
+    [query.from, query.to],
+  );
+  const sort = useMemo<FraudSort | null>(
+    () =>
+      query.sortBy ? { key: query.sortBy, direction: query.sortDir } : null,
+    [query.sortBy, query.sortDir],
+  );
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [period, setPeriod] = useState({ startDate: '', endDate: '' });
-  const [reasonCode, setReasonCode] =
-    useState<FraudFilters['reasonCode']>('ALL');
-  const [sort, setSort] = useState<FraudSort | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
     null,
   );
-  const search = useDebouncedSearch({
-    onCommit: () => setCurrentPage(1),
-  });
+  const search = useUrlSearch(query.keyword, (keyword) =>
+    updateFilters({ keyword, page: 1 }),
+  );
   const state = useFraudReport();
   // 화면과 상세 패널이 동일한 기간·검색 조건을 공유한다.
   const filters = useMemo<FraudFilters>(
@@ -59,36 +87,32 @@ export const useFraudManagement = () => {
     pageSize,
     totalCount: rows.length,
     totalPages: Math.ceil(rows.length / pageSize),
-    onPageChange: setCurrentPage,
+    onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (value: number) => {
       // 표시 개수가 줄면 현재 페이지가 사라질 수 있어 첫 페이지로 이동한다.
-      setPageSize(value);
-      setCurrentPage(1);
+      updateFilters({ size: value, page: 1 });
     },
   };
   const handleSortChange = (key: FraudSortKey) => {
-    setCurrentPage(1);
-    // 공통 테이블 버튼의 안내와 동일하게 내림차순 → 오름차순 → 해제 순서를 따른다.
-    setSort((previous) => {
-      if (!previous || previous.key !== key) return { key, direction: 'desc' };
-      if (previous.direction === 'desc') return { key, direction: 'asc' };
-      return null;
+    updateFilters({
+      page: 1,
+      sortBy: sort?.key !== key ? key : sort.direction === 'desc' ? key : '',
+      sortDir: sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc',
     });
   };
   const changeTab = (value: string) => {
-    // 기간·검색어는 유지하고 탭마다 다른 열의 정렬과 상세 선택만 해제한다.
-    setTab(value as FraudTab);
-    setCurrentPage(1);
-    setSort(null);
+    updateFilters({
+      tab: value as typeof tab,
+      page: 1,
+      sortBy: '',
+      sortDir: 'desc',
+    });
     setSelectedCampaignId(null);
   };
-  const changeReason = (value: string) => {
-    setReasonCode(value as FraudFilters['reasonCode']);
-    setCurrentPage(1);
-  };
+  const changeReason = (value: string) =>
+    updateFilters({ reason: value as typeof reasonCode, page: 1 });
   const changePeriod = (value: { startDate: string; endDate: string }) => {
-    setPeriod(value);
-    setCurrentPage(1);
+    updateFilters({ from: value.startDate, to: value.endDate, page: 1 });
     setSelectedCampaignId(null);
   };
 
