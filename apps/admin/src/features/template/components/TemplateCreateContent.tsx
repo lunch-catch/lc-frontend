@@ -128,164 +128,177 @@ export const TemplateCreateContent = ({
     );
 
   return (
-    <section className="flex h-full min-h-0 flex-col">
-      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-xl border border-border-subtle shadow-sm xl:grid-cols-[minmax(280px,0.8fr)_minmax(280px,1fr)_minmax(360px,1.4fr)]">
-        <section className="flex min-h-0 flex-col border-b border-border-subtle xl:border-b-0 xl:border-r">
-          <ScrollArea className="flex flex-col gap-4 p-4" ref={chatHistoryRef}>
-            <TemplateChatBubble variant="assistant">
-              {published
-                ? '게시된 템플릿입니다. 게시 후에는 수정할 수 없습니다.'
-                : '만들고 싶은 포스터의 분위기와 홍보 내용을 알려주세요. 생성된 버전은 자동으로 임시저장됩니다.'}
-            </TemplateChatBubble>
-            {messages.map((message) => (
-              <TemplateChatBubble
-                key={message.id}
-                variant={message.isAssistant ? 'assistant' : 'user'}
-              >
-                {message.text}
+    <section className="flex h-full min-h-0 min-w-0 flex-col">
+      <ScrollArea
+        aria-label="템플릿 편집 영역"
+        orientation="horizontal"
+        tabIndex={0}
+        className="min-w-0 rounded-xl border border-border-subtle shadow-sm focus-visible:outline-2 focus-visible:outline-action-primary"
+      >
+        {/* 세 영역을 함께 보며 편집할 수 있도록 최소 작업 너비 아래에서만 가로로 스크롤한다. */}
+        <div className="grid h-full min-h-0 min-w-[800px] grid-cols-[minmax(240px,0.8fr)_minmax(240px,1fr)_minmax(300px,1.2fr)]">
+          <section className="flex min-h-0 min-w-0 flex-col border-r border-border-subtle">
+            <ScrollArea
+              className="flex flex-col gap-4 p-4"
+              ref={chatHistoryRef}
+            >
+              <TemplateChatBubble variant="assistant">
+                {published
+                  ? '게시된 템플릿입니다. 게시 후에는 수정할 수 없습니다.'
+                  : '만들고 싶은 포스터의 분위기와 홍보 내용을 알려주세요. 생성된 버전은 자동으로 임시저장됩니다.'}
               </TemplateChatBubble>
-            ))}
-            {editor.busy && <TemplateChatBubble variant="loading" />}
-            {editor.error && (
-              <p
-                role="alert"
-                className="text-body-sm-web text-status-danger-fg"
-              >
-                {editor.error}
-              </p>
-            )}
-          </ScrollArea>
-          {!published && (
-            <div className="flex flex-col gap-3 border-t border-border-subtle p-4">
-              {!persisted && (
-                <div className="flex flex-col items-start gap-1.5">
-                  {suggestions.map((suggestion) => (
-                    <QuickPromptButton
-                      key={suggestion}
-                      label={suggestion}
-                      disabled={locked || !displayName.trim()}
-                      onClick={() => void handleSend(suggestion)}
-                    />
-                  ))}
-                </div>
-              )}
-              <label htmlFor="template-request" className="sr-only">
-                템플릿 생성·수정 요청
-              </label>
-              <div className="relative">
-                <textarea
-                  id="template-request"
-                  className="h-20 w-full resize-none rounded-md border border-border-subtle bg-bg-surface px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:border-action-primary focus:outline-none"
-                  maxLength={500}
-                  disabled={locked}
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="원하는 분위기나 수정 내용을 입력해 주세요"
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === 'Enter' &&
-                      !event.shiftKey &&
-                      !event.nativeEvent.isComposing
-                    ) {
-                      event.preventDefault();
-                      void handleSend();
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  aria-label="생성·수정 요청 보내기"
-                  className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-subtle hover:text-action-primary disabled:cursor-not-allowed disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-action-primary"
-                  disabled={locked || !displayName.trim() || !prompt.trim()}
-                  onClick={() => void handleSend()}
+              {messages.map((message) => (
+                <TemplateChatBubble
+                  key={message.id}
+                  variant={message.isAssistant ? 'assistant' : 'user'}
                 >
-                  <Send aria-hidden="true" className="size-4" />
-                </button>
+                  {message.text}
+                </TemplateChatBubble>
+              ))}
+              {editor.busy && <TemplateChatBubble variant="loading" />}
+              {editor.error && (
+                <p
+                  role="alert"
+                  className="text-body-sm-web text-status-danger-fg"
+                >
+                  {editor.error}
+                </p>
+              )}
+            </ScrollArea>
+            {!published && (
+              <div className="flex flex-col gap-3 border-t border-border-subtle p-4">
+                {!persisted && (
+                  <div className="flex flex-col items-start gap-1.5">
+                    {suggestions.map((suggestion) => (
+                      <QuickPromptButton
+                        key={suggestion}
+                        label={suggestion}
+                        disabled={locked || !displayName.trim()}
+                        onClick={() => void handleSend(suggestion)}
+                      />
+                    ))}
+                  </div>
+                )}
+                <label htmlFor="template-request" className="sr-only">
+                  템플릿 생성·수정 요청
+                </label>
+                <div className="relative">
+                  <textarea
+                    id="template-request"
+                    className="h-20 w-full resize-none rounded-md border border-border-subtle bg-bg-surface px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:border-action-primary focus:outline-none"
+                    maxLength={500}
+                    disabled={locked}
+                    value={prompt}
+                    onChange={(event) => setPrompt(event.target.value)}
+                    placeholder="원하는 분위기나 수정 내용을 입력해 주세요"
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === 'Enter' &&
+                        !event.shiftKey &&
+                        !event.nativeEvent.isComposing
+                      ) {
+                        event.preventDefault();
+                        void handleSend();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    aria-label="생성·수정 요청 보내기"
+                    className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-subtle hover:text-action-primary disabled:cursor-not-allowed disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-action-primary"
+                    disabled={locked || !displayName.trim() || !prompt.trim()}
+                    onClick={() => void handleSend()}
+                  >
+                    <Send aria-hidden="true" className="size-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+          <section className="flex min-h-0 min-w-0 flex-col border-r border-border-subtle bg-surface-subtle p-2">
+            <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
+              <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
+                {previewHtml ? (
+                  <iframe
+                    className="size-full rounded-lg border border-border-subtle bg-bg-page shadow-md"
+                    // 서버 HTML을 부모 페이지와 분리하고 스크립트 실행을 허용하지 않는다.
+                    sandbox=""
+                    srcDoc={previewHtml}
+                    title={`${displayName || '템플릿'} 미리보기`}
+                  />
+                ) : (
+                  <TemplatePreviewEmptyState />
+                )}
               </div>
             </div>
-          )}
-        </section>
-        <section className="flex min-h-0 flex-col border-b border-border-subtle bg-surface-subtle p-2 xl:border-b-0">
-          <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
-            <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
-              {previewHtml ? (
-                <iframe
-                  className="size-full rounded-lg border border-border-subtle bg-bg-page shadow-md"
-                  // 서버 HTML을 부모 페이지와 분리하고 스크립트 실행을 허용하지 않는다.
-                  sandbox=""
-                  srcDoc={previewHtml}
-                  title={`${displayName || '템플릿'} 미리보기`}
-                />
-              ) : (
-                <TemplatePreviewEmptyState />
-              )}
-            </div>
-          </div>
-        </section>
-        <section className="flex min-h-0 flex-col gap-4 bg-bg-surface p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {!published && (
-              <SelectField
-                aria-label="미리보기 및 게시할 버전 선택"
-                fitContent
-                size="compact"
-                disabled={locked || versionNumber === undefined}
-                placeholder="버전 선택"
-                value={versionNumber === undefined ? '' : String(versionNumber)}
-                options={versionOptions}
-                onValueChange={(value) => setSelectedVersion(Number(value))}
-              />
-            )}
-            {editor.nextPageToken && (
-              <Button
-                className="!min-h-8"
-                variant="tertiary"
-                disabled={locked}
-                onClick={() => void editor.loadMore()}
-              >
-                {editor.loadingMore ? '불러오는 중' : '이전 버전 불러오기'}
-              </Button>
-            )}
-          </div>
-          {previewHtml ? (
-            <ScrollArea
-              aria-label="선택한 템플릿의 HTML"
-              role="region"
-              tabIndex={0}
-              className="min-w-0 overflow-x-auto overscroll-x-contain rounded-md border border-border-subtle bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
-            >
-              <pre className="m-0 w-max min-w-full p-3 font-mono text-caption-web text-text-primary">
-                <code>{previewHtml}</code>
-              </pre>
-            </ScrollArea>
-          ) : (
-            <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-border-subtle bg-surface-subtle p-4 text-center text-body-sm-web text-text-secondary">
-              템플릿을 생성하면 HTML이 표시됩니다.
-            </div>
-          )}
-          <div className="mt-auto flex flex-col gap-3">
-            <p className="text-caption-web text-text-secondary">
-              생성·수정 결과는 임시저장됩니다. 게시한 뒤 목록에서 활성화하면
-              점주에게 노출됩니다.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" disabled={locked} onClick={onBack}>
-                목록으로
-              </Button>
+          </section>
+          <section className="flex min-h-0 min-w-0 flex-col gap-4 bg-bg-surface p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               {!published && (
-                <Button
-                  disabled={
-                    locked || !editor.template || versionNumber === undefined
+                <SelectField
+                  aria-label="미리보기 및 게시할 버전 선택"
+                  fitContent
+                  size="compact"
+                  disabled={locked || versionNumber === undefined}
+                  placeholder="버전 선택"
+                  value={
+                    versionNumber === undefined ? '' : String(versionNumber)
                   }
-                  onClick={() => setPublishModalOpen(true)}
+                  options={versionOptions}
+                  onValueChange={(value) => setSelectedVersion(Number(value))}
+                />
+              )}
+              {editor.nextPageToken && (
+                <Button
+                  className="!min-h-8"
+                  variant="tertiary"
+                  disabled={locked}
+                  onClick={() => void editor.loadMore()}
                 >
-                  게시
+                  {editor.loadingMore ? '불러오는 중' : '이전 버전 불러오기'}
                 </Button>
               )}
             </div>
-          </div>
-        </section>
-      </div>
+            {previewHtml ? (
+              <ScrollArea
+                aria-label="선택한 템플릿의 HTML"
+                role="region"
+                tabIndex={0}
+                className="min-w-0 overflow-x-auto overscroll-x-contain rounded-md border border-border-subtle bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+              >
+                <pre className="m-0 w-max min-w-full p-3 font-mono text-caption-web text-text-primary">
+                  <code>{previewHtml}</code>
+                </pre>
+              </ScrollArea>
+            ) : (
+              <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-border-subtle bg-surface-subtle p-4 text-center text-body-sm-web text-text-secondary">
+                템플릿을 생성하면 HTML이 표시됩니다.
+              </div>
+            )}
+            <div className="mt-auto flex flex-col gap-3">
+              <p className="text-caption-web text-text-secondary">
+                생성·수정 결과는 임시저장됩니다. 게시한 뒤 목록에서 활성화하면
+                점주에게 노출됩니다.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" disabled={locked} onClick={onBack}>
+                  목록으로
+                </Button>
+                {!published && (
+                  <Button
+                    disabled={
+                      locked || !editor.template || versionNumber === undefined
+                    }
+                    onClick={() => setPublishModalOpen(true)}
+                  >
+                    게시
+                  </Button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      </ScrollArea>
 
       <AdminModal
         title="템플릿 게시"
