@@ -3,6 +3,8 @@ import { Tabs } from '@repo/ui';
 
 import { createMockBillingState } from '@admin/api/mocks/billing';
 import type { TableDensity } from '@admin/components/DataTable';
+import { queryChoice } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 import { createDailyCache, getKoreaDate } from './billingUtils';
 import { PaymentHistoryTab } from './tabs/PaymentHistoryTab';
@@ -21,15 +23,20 @@ const tabs: BillingTabItem[] = [
   { label: '포인트 변동 내역', value: 'ledger' },
   { label: '매출 현황', value: 'sales' },
 ];
+const tabQuery = {
+  tab: queryChoice(['payments', 'ledger', 'sales'] as const, 'payments'),
+};
 
 export const BillingManagementContent = () => {
   const [today] = useState(getKoreaDate);
   const [state] = useState(() => createMockBillingState(today));
   const [dailyCache] = useState(() => createDailyCache(state.ledger, today));
-  const [tab, setTab] = useState<BillingTab>('payments');
+  const {
+    filters: { tab },
+    updateFilters,
+  } = useUrlFilters('', tabQuery);
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [pageSize, setPageSize] = useState(20);
-  const preferences = { density, setDensity, pageSize, setPageSize };
+  const preferences = { density, setDensity };
   const props = { state, today, preferences };
 
   return (
@@ -46,7 +53,7 @@ export const BillingManagementContent = () => {
           onValueChange={(value) => {
             const next = tabs.find((item) => item.value === value);
 
-            if (next) setTab(next.value);
+            if (next) updateFilters({ tab: next.value });
           }}
           value={tab}
         />

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   DateRangePicker,
   type DateRangeSelectionMode,
@@ -23,6 +22,7 @@ import {
   useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+import { getSummaryQuery } from '@admin/features/billing/billingQuery';
 import type { BillingTablePreferences } from '@admin/features/billing/billingView';
 import { getMonthRange } from '@admin/features/billing/billingView';
 import {
@@ -30,6 +30,7 @@ import {
   pointSummaryPeriods,
 } from '@admin/features/billing/pointSummaryUtils';
 import { usePointSummary } from '@admin/features/billing/usePointSummary';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 const amounts: { key: keyof Omit<PointSummaryItem, 'label'>; label: string }[] =
   [
@@ -67,11 +68,12 @@ export const PointSummarySection = ({
   today,
   preferences,
 }: PointSummarySectionProps) => {
-  const [period, setPeriod] = useState<PointSummaryPeriod>('DAILY');
-  const [range, setRange] = useState(() => ({
-    ...getMonthRange(today),
-    endDate: today,
-  }));
+  const { filters, updateFilters } = useUrlFilters(
+    'summary.',
+    getSummaryQuery(getMonthRange(today).startDate, today),
+  );
+  const { period, sortDir } = filters;
+  const range = { startDate: filters.from, endDate: filters.to };
   const { density, setDensity } = preferences;
   const columnSettings = useTableColumnSettings(
     'billing.point-summary',
@@ -86,6 +88,7 @@ export const PointSummarySection = ({
     ownerId && !validationError
       ? { ownerId, period, from: range.startDate, to: range.endDate }
       : null,
+    sortDir,
   );
 
   return (
@@ -116,15 +119,15 @@ export const PointSummarySection = ({
             const nextPeriod = value as PointSummaryPeriod;
             const mode = selectionModes[nextPeriod];
             // 조회 단위 변경과 날짜 보정을 함께 반영해 부분 주·월 범위로 요청하지 않는다.
-            setRange((current) => ({
-              startDate: current.startDate
-                ? getDateRangeUnit(current.startDate, mode).startDate
+            updateFilters({
+              from: range.startDate
+                ? getDateRangeUnit(range.startDate, mode).startDate
                 : '',
-              endDate: current.endDate
-                ? getDateRangeUnit(current.endDate, mode).endDate
+              to: range.endDate
+                ? getDateRangeUnit(range.endDate, mode).endDate
                 : '',
-            }));
-            setPeriod(nextPeriod);
+              period: nextPeriod,
+            });
           }}
         />
         <DateRangePicker
@@ -133,7 +136,9 @@ export const PointSummarySection = ({
           ariaLabel="합계 조회 기간"
           placeholder="합계 조회 기간 선택"
           value={range}
-          onValueChange={setRange}
+          onValueChange={(value) =>
+            updateFilters({ from: value.startDate, to: value.endDate })
+          }
         />
       </FilterBar>
       {validationError && (
@@ -154,7 +159,9 @@ export const PointSummarySection = ({
             <TableHeaderCell
               columnIndex={0}
               sortDirection={summary.sortDir}
-              onSortChange={summary.changeSort}
+              onSortChange={() =>
+                updateFilters({ sortDir: sortDir === 'desc' ? 'asc' : 'desc' })
+              }
             >
               기간
             </TableHeaderCell>

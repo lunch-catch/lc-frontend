@@ -18,8 +18,6 @@ export const getMonthRange = (today: string): DateRangeValue => {
 export interface BillingTablePreferences {
   density: TableDensity;
   setDensity: Dispatch<SetStateAction<TableDensity>>;
-  pageSize: number;
-  setPageSize: Dispatch<SetStateAction<number>>;
 }
 export interface BillingTabProps {
   state: BillingState;

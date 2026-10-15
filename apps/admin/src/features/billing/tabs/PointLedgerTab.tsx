@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button, DateRangePicker, SearchField, SelectField } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
 
-import type { PointLedgerItem, PointLedgerType } from '@admin/api/pointLedger';
+import type { PointLedgerItem } from '@admin/api/pointLedger';
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import {
   DataTable,
@@ -16,6 +16,7 @@ import {
   useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+import { getLedgerQuery } from '@admin/features/billing/billingQuery';
 import { ledgerTypeLabels } from '@admin/features/billing/billingUtils';
 import {
   type BillingTablePreferences,
@@ -25,7 +26,8 @@ import { PointLedgerDetails } from '@admin/features/billing/components/PointLedg
 import { PointSummarySection } from '@admin/features/billing/components/PointSummarySection';
 import { isPositivePointId } from '@admin/features/billing/pointSummaryUtils';
 import { usePointLedger } from '@admin/features/billing/usePointLedger';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
 const columns: DataTableColumn[] = [
   { key: 'createdAt', label: '일시', width: '20%' },
@@ -60,19 +62,28 @@ interface PointLedgerTabProps {
 }
 
 export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
-  const { density, setDensity, pageSize, setPageSize } = preferences;
+  const { density, setDensity } = preferences;
   // 저장 키는 최초 열 구성의 값으로 고정해 열 추가·재배치 시에도 계정별 설정을 재사용한다.
   const columnSettings = useTableColumnSettings(
     'billing.점주 ID|변동 유형|사용 가능 잔액 (전)|거래 금액|사용 가능 잔액 (후)|일시',
     columns.map((column) => ({ ...column, key: column.label })),
   );
   const [selected, setSelected] = useState<PointLedgerItem | null>(null);
-  const ownerSearch = useDebouncedSearch({ onCommit: () => setSelected(null) });
-  const campaignSearch = useDebouncedSearch({
-    onCommit: () => setSelected(null),
+  const defaultRange = getMonthRange(today);
+  const { filters, updateFilters } = useUrlFilters(
+    'ledger.',
+    getLedgerQuery(defaultRange.startDate, defaultRange.endDate),
+  );
+  const { type, size: pageSize, sortDir } = filters;
+  const range = { startDate: filters.from, endDate: filters.to };
+  const ownerSearch = useUrlSearch(filters.ownerId, (ownerId) => {
+    updateFilters({ ownerId });
+    setSelected(null);
   });
-  const [type, setType] = useState<PointLedgerType | 'ALL'>('ALL');
-  const [range, setRange] = useState(() => getMonthRange(today));
+  const campaignSearch = useUrlSearch(filters.campaignId, (campaignId) => {
+    updateFilters({ campaignId });
+    setSelected(null);
+  });
   const owner = ownerSearch.keyword.trim();
   const campaign = campaignSearch.keyword.trim();
   const ownerInputPending = ownerSearch.draftKeyword !== ownerSearch.keyword;
@@ -100,6 +111,7 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
           to: range.endDate,
         }
       : null,
+    sortDir,
   );
 
   return (
@@ -162,7 +174,7 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
             ]}
             onValueChange={(value) => {
               setSelected(null);
-              setType(value as PointLedgerType | 'ALL');
+              updateFilters({ type: value as typeof type });
             }}
           />
           <DateRangePicker
@@ -170,7 +182,7 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
             placeholder="조회 기간 선택"
             value={range}
             onValueChange={(value) => {
-              setRange(value);
+              updateFilters({ from: value.startDate, to: value.endDate });
               setSelected(null);
             }}
           />
@@ -197,7 +209,9 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
                     column.key === 'createdAt'
                       ? () => {
                           setSelected(null);
-                          ledger.changeSort();
+                          updateFilters({
+                            sortDir: sortDir === 'desc' ? 'asc' : 'desc',
+                          });
                         }
                       : undefined
                   }
@@ -305,7 +319,7 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
             }))}
             onValueChange={(value) => {
               setSelected(null);
-              setPageSize(Number(value));
+              updateFilters({ size: Number(value) });
             }}
           />
         </div>

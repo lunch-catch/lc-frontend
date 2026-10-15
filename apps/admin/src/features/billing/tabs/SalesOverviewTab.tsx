@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { DateRangePicker, type DateRangeValue, StatusBadge } from '@repo/ui';
+import { DateRangePicker, StatusBadge } from '@repo/ui';
 import { formatDate, formatPoints } from '@repo/utils';
 
 import {
@@ -20,6 +19,8 @@ import {
   getMonthRange,
 } from '@admin/features/billing/billingView';
 import { BillingTable } from '@admin/features/billing/components/BillingTable';
+import { queryDate } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 interface SalesOverviewTabProps extends BillingTabProps {
   dailyCache: DailyCache[];
 }
@@ -50,9 +51,12 @@ export const SalesOverviewTab = ({
   dailyCache,
   preferences,
 }: SalesOverviewTabProps) => {
-  const [summaryRange, setSummaryRange] = useState<DateRangeValue>(() =>
-    getMonthRange(today),
-  );
+  const defaultRange = getMonthRange(today);
+  const { filters, updateFilters } = useUrlFilters('sales.', {
+    from: queryDate(defaultRange.startDate),
+    to: queryDate(defaultRange.endDate),
+  });
+  const summaryRange = { startDate: filters.from, endDate: filters.to };
   const previousDay = new Date(today + 'T00:00:00Z');
   previousDay.setUTCDate(previousDay.getUTCDate() - 1);
   // 당일은 집계 중이므로 기간 합계도 일별 목록의 집계 완료일까지만 포함한다.
@@ -160,7 +164,9 @@ export const SalesOverviewTab = ({
                   ariaLabel="합계 조회 기간"
                   placeholder="전체 기간"
                   value={summaryRange}
-                  onValueChange={setSummaryRange}
+                  onValueChange={(value) =>
+                    updateFilters({ from: value.startDate, to: value.endDate })
+                  }
                 />
               </TableCell>
               {summaryAmounts.map((amount, index) => (
@@ -194,6 +200,7 @@ export const SalesOverviewTab = ({
       >
         <h3 className="text-body-sm-web font-semibold">일별 내역</h3>
         <BillingTable
+          queryPrefix="sales.table."
           preferences={preferences}
           columns={columns}
           rows={rows}

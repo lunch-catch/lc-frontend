@@ -25,8 +25,8 @@ interface PointLedgerResult {
 export const usePointLedger = (
   pageSize: number,
   filters: PointLedgerFilters | null,
+  sortDir: 'asc' | 'desc' = 'desc',
 ) => {
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pageToken, setPageToken] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const filterKey = JSON.stringify([pageSize, filters, sortDir]);
@@ -99,9 +99,6 @@ export const usePointLedger = (
   // 추가 요청 중에는 같은 조건의 기존 목록을 계속 표시하고 로딩 여부만 요청 키로 판단한다.
   const currentResult = result?.filterKey === filterKey ? result : null;
   const loading = enabled && currentResult?.key !== requestKey;
-  const changeSort = () => {
-    setSortDir((value) => (value === 'desc' ? 'asc' : 'desc'));
-  };
   const loadMore = () => {
     const token = currentResult?.data?.nextPageToken;
     if (loading || !token) return;
@@ -115,7 +112,6 @@ export const usePointLedger = (
     loading,
     enabled,
     sortDir,
-    changeSort,
     loadMore,
     hasNext: Boolean(currentResult?.data?.nextPageToken),
   };

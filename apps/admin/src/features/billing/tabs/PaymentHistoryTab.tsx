@@ -7,12 +7,7 @@ import {
 } from '@repo/ui';
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
-import type {
-  AdminPayment,
-  PaymentSearchType,
-  PaymentSortKey,
-  PaymentStatus,
-} from '@admin/api/payments';
+import type { AdminPayment, PaymentSortKey } from '@admin/api/payments';
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import {
   DataTable,
@@ -23,11 +18,11 @@ import {
   TableHeaderCell,
   TableLoading,
   TableRow,
-  type TableSortDirection,
   useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
+import { paymentQuery } from '@admin/features/billing/billingQuery';
 import type { BillingTablePreferences } from '@admin/features/billing/billingView';
 import { PaymentDetails } from '@admin/features/billing/components/PaymentDetails';
 import {
@@ -37,7 +32,8 @@ import {
   paymentVariants,
 } from '@admin/features/billing/paymentUtils';
 import { usePayments } from '@admin/features/billing/usePayments';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
 const columns: (DataTableColumn & { key: keyof AdminPayment })[] = [
   { key: 'requestedAt', label: '요청 시각', width: '12%', minWidth: 145 },
@@ -69,26 +65,22 @@ interface PaymentHistoryTabProps {
 }
 
 export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
-  const { density, setDensity, pageSize, setPageSize } = preferences;
+  const { density, setDensity } = preferences;
   // 기존 테이블의 저장 키를 유지해 남아 있는 열의 계정별 설정을 재사용한다.
   const columnSettings = useTableColumnSettings(
     'billing.결제 ID|점주 ID|결제 금액|충전 포인트|상태|결제 시각',
     columns.map((column) => ({ ...column, key: column.label })),
   );
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<PaymentStatus | 'ALL'>('ALL');
-  const [searchType, setSearchType] = useState<PaymentSearchType>('OWNER_ID');
-  const [range, setRange] = useState({ startDate: '', endDate: '' });
-  const [sort, setSort] = useState<{
-    key: PaymentSortKey;
-    direction: TableSortDirection;
-  } | null>(null);
+  const { filters, updateFilters } = useUrlFilters('payments.', paymentQuery);
+  const { page, size: pageSize, status, searchType } = filters;
+  const range = { startDate: filters.from, endDate: filters.to };
+  const sort = filters.sortBy
+    ? { key: filters.sortBy, direction: filters.sortDir }
+    : null;
   const [selected, setSelected] = useState<AdminPayment | null>(null);
-  const search = useDebouncedSearch({
-    onCommit: () => {
-      setPage(1);
-      setSelected(null);
-    },
+  const search = useUrlSearch(filters.keyword, (keyword) => {
+    updateFilters({ keyword, page: 1 });
+    setSelected(null);
   });
   const keyword = search.keyword.trim();
   const inputPending = search.draftKeyword !== search.keyword;
@@ -129,30 +121,26 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
     totalCount,
     totalPages: Math.ceil(totalCount / pageSize),
     onPageChange: (next: number) => {
-      setPage(next);
+      updateFilters({ page: next });
       setSelected(null);
     },
     onPageSizeChange: (next: number) => {
-      setPageSize(next);
-      setPage(1);
+      updateFilters({ size: next, page: 1 });
       setSelected(null);
     },
   };
   const refreshAfterRecheck = () => {
     // 상태 변경으로 마지막 페이지가 비어도 첫 페이지부터 유효한 결과를 보여 준다.
-    setPage(1);
+    updateFilters({ page: 1 }, true);
     payments.refresh();
   };
   const changeSort = (key: PaymentSortKey) => {
-    setPage(1);
     setSelected(null);
-    setSort((current) =>
-      current?.key !== key
-        ? { key, direction: 'desc' }
-        : current.direction === 'desc'
-          ? { key, direction: 'asc' }
-          : null,
-    );
+    updateFilters({
+      page: 1,
+      sortBy: sort?.key !== key ? key : sort.direction === 'desc' ? key : '',
+      sortDir: sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc',
+    });
   };
 
   return (
@@ -169,9 +157,11 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
           value={searchType}
           options={paymentSearchOptions}
           onValueChange={(value) => {
-            setSearchType(value as PaymentSearchType);
-            search.resetSearch();
-            setPage(1);
+            updateFilters({
+              searchType: value as typeof searchType,
+              keyword: '',
+              page: 1,
+            });
             setSelected(null);
           }}
         />
@@ -193,8 +183,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
             })),
           ]}
           onValueChange={(value) => {
-            setStatus(value as PaymentStatus | 'ALL');
-            setPage(1);
+            updateFilters({ status: value as typeof status, page: 1 });
             setSelected(null);
           }}
         />
@@ -203,8 +192,11 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
           placeholder="요청일 범위 선택"
           value={range}
           onValueChange={(value) => {
-            setRange(value);
-            setPage(1);
+            updateFilters({
+              from: value.startDate,
+              to: value.endDate,
+              page: 1,
+            });
             setSelected(null);
           }}
         />
