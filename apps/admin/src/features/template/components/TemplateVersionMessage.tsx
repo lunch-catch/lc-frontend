@@ -20,7 +20,7 @@ export const TemplateVersionMessage = ({
   >
     <span aria-hidden="true" className="h-px min-w-2 flex-1 bg-border-subtle" />
     <span className="min-w-0 truncate">
-      버전 {versionNumber}이 생성되었습니다.
+      {versionNumber}번 버전이 생성되었습니다.
     </span>
     <span aria-hidden="true" className="h-px min-w-2 flex-1 bg-border-subtle" />
   </button>

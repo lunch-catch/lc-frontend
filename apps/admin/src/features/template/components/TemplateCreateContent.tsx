@@ -436,9 +436,9 @@ export const TemplateCreateContent = ({
       >
         <div className="flex flex-col gap-6">
           <p className="text-body-sm-web text-text-secondary">
-            버전 {versionNumber}을 최종 저장하시겠습니까? 저장하면 해당 버전으로
-            게시되며 모든 임시저장 버전이 삭제됩니다. 이후에는 수정할 수
-            없습니다. 점주 노출 여부는 목록에서 설정할 수 있습니다.
+            {versionNumber}번 버전을 최종 저장하시겠습니까? 저장하면 해당
+            버전으로 게시되며 모든 임시저장 버전이 삭제됩니다. 이후에는 수정할
+            수 없습니다. 점주 노출 여부는 목록에서 설정할 수 있습니다.
           </p>
           {editor.error && (
             <p role="alert" className="text-caption-web text-status-danger-fg">
@@ -467,7 +467,7 @@ export const TemplateCreateContent = ({
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <p className="text-body-sm-web text-text-primary">
-              버전 {pendingVersion}으로 돌아가시겠습니까?
+              {pendingVersion}번 버전으로 돌아가시겠습니까?
             </p>
             <p className="text-body-sm-web text-text-secondary">
               선택한 버전의 HTML과 미리보기를 표시합니다.
