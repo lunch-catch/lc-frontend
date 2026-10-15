@@ -75,10 +75,6 @@ const couponFilterStates: Record<CouponFilter, CouponState> = {
   expired: 'EXPIRED',
 };
 
-// 발급 API(POST /v1/coupons)가 아직 없어 실제 서버에는 받은 쿠폰이 쌓이지 않는다
-// 그동안은 mock으로 화면을 만들고, 발급 API가 나오면 true로 바꿔 쿠폰 API를 함께 쓴다
-const USE_COUPON_API = false;
-
 // 받은 쿠폰 목록과 단건 조회(GET /v1/coupons, GET /v1/coupons/{memberCouponId})는 서버 구현이 끝나 실제 API를 쓴다
 // 발급 API가 나오기 전까지 찜 목록에서 받은 mock 쿠폰은 쿠폰함에 보이지 않는다
 const USE_COUPON_LIST_API = true;
@@ -98,13 +94,17 @@ export interface IssuanceLimit {
 export const fetchIssuanceLimit = () =>
   request<IssuanceLimit>('/v1/coupons/issuance-limit');
 
-// 오늘 받은 쿠폰 수와 하루 한도. 발급 API가 나오기 전에는 mock 값을 쓴다
-// 주소에 ?mockDailyLimit를 붙이면 하루 한도에 닿은 상태를 확인할 수 있다
+// 발급 한도 조회는 서버 구현이 끝나 실제 API를 쓴다
+// 발급 API가 나오기 전까지 찜 목록에서 mock으로 받은 쿠폰은 이 수에 들어가지 않는다
+const USE_COUPON_LIMIT_API = true;
+
+// 오늘 받은 쿠폰 수와 하루 한도
+// mock일 때 주소에 ?mockDailyLimit를 붙이면 하루 한도에 닿은 상태를 확인할 수 있다
 export const fetchTodayIssuance = async (): Promise<{
   issuedCount: number;
   dailyLimit: number;
 }> => {
-  if (USE_COUPON_API) {
+  if (USE_COUPON_LIMIT_API) {
     const { dailyLimit, issuedCount } = await fetchIssuanceLimit();
     return { dailyLimit, issuedCount };
   }
@@ -283,6 +283,7 @@ export const fetchQrToken = async (
   };
 };
 
+// 발급 API(POST /v1/coupons)와 캠페인별 발급 상태(:getStatus)는 아직 서버에 없어 mock으로 받는다
 // 주소에 ?mockIssueSoldOut을 붙이면 받는 사이 수량이 소진된 경우를 확인할 수 있다
 export const issueCoupon = async (campaignId: string): Promise<IssueResult> => {
   await wait(MOCK_DELAY_MS);
