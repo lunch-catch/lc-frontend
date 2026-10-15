@@ -228,6 +228,9 @@ export const buildSelectedTemplatePrompt = (
 /** 미리보기의 스크립트 실행·폼 제출·외부 리소스 로딩을 제한한다. */
 export const createSelectablePreviewHtml = (html: string) => {
   const document = new DOMParser().parseFromString(html, 'text/html');
+  // 미리보기는 A4 틀 안에 고정하며 원본 HTML 코드의 스크롤과 분리한다.
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
   const policy = document.createElement('meta');
   policy.httpEquiv = 'Content-Security-Policy';
   policy.content =

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import scrollbarStyles from '@admin/components/ScrollArea/scrollbar.css?inline';
 import {
   createSelectablePreviewHtml,
   selectTemplateElement,
@@ -32,44 +31,9 @@ export const SelectableTemplatePreview = ({
   const srcDoc = useMemo(() => createSelectablePreviewHtml(html), [html]);
 
   useEffect(() => {
-    if (!document) return;
-    // iframe은 부모의 CSS를 상속하지 않으므로 기존 ScrollArea 스타일과 필요한 토큰만 전달한다.
-    const style = document.createElement('style');
-    style.textContent = scrollbarStyles;
-    document.head.append(style);
-    const root = document.documentElement;
-    root.classList.add('admin-scrollbar');
-    const themeRoot = window.document.documentElement;
-    const syncTokens = () => {
-      const tokens = getComputedStyle(themeRoot);
-      for (const name of [
-        '--space-1',
-        '--space-2',
-        '--semantic-border-subtle',
-        '--semantic-text-tertiary',
-      ]) {
-        root.style.setProperty(name, tokens.getPropertyValue(name));
-      }
-    };
-    syncTokens();
-    // 테마 변경은 스크롤바 토큰만 갱신해 선택 상태와 스크롤 위치를 유지한다.
-    const observer = new MutationObserver(syncTokens);
-    observer.observe(themeRoot, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-    return () => {
-      observer.disconnect();
-      style.remove();
-      root.classList.remove('admin-scrollbar');
-    };
-  }, [document]);
-
-  useEffect(() => {
     if (!document || disabled) return;
     const style = document.createElement('style');
-    style.textContent =
-      'body * { cursor: crosshair; } [data-editor-selected] { outline: 2px solid #F56B20 !important; outline-offset: -2px !important; }';
+    style.textContent = 'body * { cursor: crosshair; }';
     document.head.append(style);
     const select = (event: MouseEvent) => {
       event.preventDefault();
@@ -92,9 +56,51 @@ export const SelectableTemplatePreview = ({
   useEffect(() => {
     if (!document || disabled || !selected?.selector) return;
     const element = document.querySelector(selected.selector);
-    element?.setAttribute('data-editor-selected', '');
-    element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    return () => element?.removeAttribute('data-editor-selected');
+    if (!element) return;
+    element.setAttribute('data-editor-selected', '');
+    // 선택 요소의 스타일과 겹침 순서를 바꾸지 않고, 별도 레이어를 템플릿 내용 위에 표시한다.
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-editor-selection-overlay', '');
+    overlay.setAttribute('aria-hidden', 'true');
+    const color = getComputedStyle(window.document.documentElement)
+      .getPropertyValue('--semantic-code-selection-bg')
+      .trim();
+    overlay.style.setProperty('--template-selection-color', color);
+    // 템플릿의 높은 z-index 위에 표시하면서 클릭은 원래 요소로 통과시킨다.
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      zIndex: '2147483647',
+      pointerEvents: 'none',
+      boxSizing: 'border-box',
+      border: '2px solid var(--template-selection-color)',
+      borderRadius: '4px',
+      boxShadow:
+        '0 0 0 1px color-mix(in srgb, var(--template-selection-color) 30%, transparent), 0 0 12px 2px color-mix(in srgb, var(--template-selection-color) 55%, transparent)',
+    });
+    document.body.append(overlay);
+    // 테두리가 글자에 닿지 않도록 선택 영역보다 조금 넓게 그린다.
+    const outlinePadding = 2;
+    const updateBounds = () => {
+      const bounds = element.getBoundingClientRect();
+      Object.assign(overlay.style, {
+        left: `${bounds.left - outlinePadding}px`,
+        top: `${bounds.top - outlinePadding}px`,
+        width: `${bounds.width + outlinePadding * 2}px`,
+        height: `${bounds.height + outlinePadding * 2}px`,
+      });
+    };
+    updateBounds();
+    const observer = new ResizeObserver(updateBounds);
+    observer.observe(element);
+    observer.observe(document.body);
+    const frameWindow = document.defaultView;
+    frameWindow?.addEventListener('resize', updateBounds);
+    return () => {
+      observer.disconnect();
+      frameWindow?.removeEventListener('resize', updateBounds);
+      overlay.remove();
+      element.removeAttribute('data-editor-selected');
+    };
   }, [document, disabled, selected]);
 
   return (
