@@ -6,11 +6,6 @@ interface DetailItemProps {
   compact?: boolean;
 }
 
-interface BillingFeedbackProps {
-  notice: string;
-  error: string;
-}
-
 export const DetailItem = ({
   label,
   children,
@@ -27,25 +22,4 @@ export const DetailItem = ({
       {children}
     </dd>
   </div>
-);
-
-export const BillingFeedback = ({ notice, error }: BillingFeedbackProps) => (
-  <>
-    {notice && (
-      <p
-        role="status"
-        className="rounded-lg bg-status-success-bg p-3 text-body-sm-web text-status-success-fg"
-      >
-        {notice}
-      </p>
-    )}
-    {error && (
-      <p
-        role="alert"
-        className="rounded-lg bg-status-danger-bg p-3 text-body-sm-web text-status-danger-fg"
-      >
-        {error}
-      </p>
-    )}
-  </>
 );

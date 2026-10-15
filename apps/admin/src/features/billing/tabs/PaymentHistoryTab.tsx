@@ -1,112 +1,321 @@
-import { useState } from 'react';
-import { StatusBadge, type StatusBadgeVariant } from '@repo/ui';
+﻿import { useState } from 'react';
+import {
+  DateRangePicker,
+  SearchField,
+  SelectField,
+  StatusBadge,
+} from '@repo/ui';
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
+import type {
+  AdminPayment,
+  PaymentSearchType,
+  PaymentSortKey,
+  PaymentStatus,
+} from '@admin/api/payments';
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
-import type { PaymentStatus } from '@admin/features/billing/billingTypes';
-import { paymentStatusLabels } from '@admin/features/billing/billingUtils';
 import {
-  type BillingTabProps,
-  cell,
-} from '@admin/features/billing/billingView';
-import { DetailItem } from '@admin/features/billing/components/BillingDetails';
-import { BillingTable } from '@admin/features/billing/components/BillingTable';
-const paymentVariants: Record<PaymentStatus, StatusBadgeVariant> = {
-  PENDING: 'warning',
-  SUCCESS: 'success',
-  FAILED: 'danger',
-  CANCELED: 'danger',
-  UNKNOWN: 'warning',
-};
+  DataTable,
+  type DataTableColumn,
+  TableCell,
+  TableEmpty,
+  TableError,
+  TableHeaderCell,
+  TableLoading,
+  TableRow,
+  type TableSortDirection,
+  useTableColumnSettings,
+} from '@admin/components/DataTable';
+import { FilterBar } from '@admin/components/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
+import type { BillingTablePreferences } from '@admin/features/billing/billingView';
+import { PaymentDetails } from '@admin/features/billing/components/PaymentDetails';
+import {
+  getPaymentFilterError,
+  paymentSearchOptions,
+  paymentStatusLabels,
+  paymentVariants,
+} from '@admin/features/billing/paymentUtils';
+import { usePayments } from '@admin/features/billing/usePayments';
+import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
 
-const columns = [
-  { label: '결제 ID', width: 16 },
-  { label: '점주 ID', width: 16 },
-  { label: '결제 금액', width: 16 },
-  { label: '충전 포인트', width: 16 },
-  { label: '상태', width: 16 },
-  { label: '결제 시각', width: 20 },
+const columns: (DataTableColumn & { key: keyof AdminPayment })[] = [
+  { key: 'requestedAt', label: '요청 시각', width: '12%', minWidth: 145 },
+  { key: 'paymentId', label: '결제 ID', width: '8%', minWidth: 90 },
+  { key: 'ownerId', label: '점주 ID', width: '8%', minWidth: 90 },
+  { key: 'orderId', label: '주문 번호', width: '14%', minWidth: 140 },
+  { key: 'pgTid', label: '거래 ID', width: '12%', minWidth: 120 },
+  {
+    key: 'amount',
+    label: '결제 금액',
+    width: '11%',
+    minWidth: 115,
+    align: 'right',
+  },
+  {
+    key: 'chargedPoint',
+    label: '충전 포인트',
+    width: '11%',
+    minWidth: 120,
+    align: 'right',
+  },
+  { key: 'status', label: '상태', width: '10%', minWidth: 125 },
+  { key: 'approvedAt', label: '승인 시각', width: '14%', minWidth: 180 },
 ];
-export const PaymentHistoryTab = (props: BillingTabProps) => {
-  const { state } = props;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const selectedPayment = state.payments.find((item) => item.id === selectedId);
-  const rows = state.payments.map((item) => ({
-    id: item.id,
-    date: item.paidAt,
-    status: item.status,
-    ownerId: item.ownerId,
-    search: item.id + ' ' + item.ownerId,
-    cells: [
-      cell(item.id, item.id),
-      cell(item.ownerId, item.ownerId),
-      cell(formatWon(item.amount), item.amount),
-      cell(formatPoints(item.points), item.points),
-      cell(
-        <StatusBadge variant={paymentVariants[item.status]}>
-          {paymentStatusLabels[item.status]}
-        </StatusBadge>,
-        item.status,
-      ),
-      cell(formatDateTime(item.paidAt), item.paidAt),
-    ],
-  }));
+const sortKeys = new Set<string>(['requestedAt', 'amount', 'approvedAt']);
+
+interface PaymentHistoryTabProps {
+  preferences: BillingTablePreferences;
+}
+
+export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
+  const { density, setDensity, pageSize, setPageSize } = preferences;
+  // 기존 테이블의 저장 키를 유지해 남아 있는 열의 계정별 설정을 재사용한다.
+  const columnSettings = useTableColumnSettings(
+    'billing.결제 ID|점주 ID|결제 금액|충전 포인트|상태|결제 시각',
+    columns.map((column) => ({ ...column, key: column.label })),
+  );
+  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<PaymentStatus | 'ALL'>('ALL');
+  const [searchType, setSearchType] = useState<PaymentSearchType>('OWNER_ID');
+  const [range, setRange] = useState({ startDate: '', endDate: '' });
+  const [sort, setSort] = useState<{
+    key: PaymentSortKey;
+    direction: TableSortDirection;
+  } | null>(null);
+  const [selected, setSelected] = useState<AdminPayment | null>(null);
+  const search = useDebouncedSearch({
+    onCommit: () => {
+      setPage(1);
+      setSelected(null);
+    },
+  });
+  const keyword = search.keyword.trim();
+  const inputPending = search.draftKeyword !== search.keyword;
+  const validationError = getPaymentFilterError(
+    range.startDate,
+    range.endDate,
+    searchType,
+    keyword,
+  );
+  // 화면은 1부터, 서버는 0부터 페이지를 센다. 검색·정렬은 전체 목록 기준으로 서버에 맡긴다.
+  const query = new URLSearchParams({
+    page: String(page - 1),
+    size: String(pageSize),
+  });
+  if (keyword) {
+    query.set('searchType', searchType);
+    query.set('keyword', keyword);
+  }
+  if (status !== 'ALL') query.set('status', status);
+  if (range.startDate) query.set('from', range.startDate);
+  if (range.endDate) query.set('to', range.endDate);
+  if (sort) {
+    query.set('sortBy', sort.key);
+    query.set('sortDir', sort.direction);
+  }
+  const payments = usePayments(
+    !inputPending && !validationError ? query.toString() : null,
+  );
+  const items = payments.data?.items ?? [];
+  // 목록을 갱신하는 동안에도 선택한 결제와 재조회 결과를 상세 패널에 유지한다.
+  const selectedPayment = selected
+    ? (items.find((item) => item.paymentId === selected.paymentId) ?? selected)
+    : null;
+  const totalCount = payments.data?.totalElements ?? 0;
+  const pagination = {
+    currentPage: page,
+    pageSize,
+    totalCount,
+    totalPages: Math.ceil(totalCount / pageSize),
+    onPageChange: (next: number) => {
+      setPage(next);
+      setSelected(null);
+    },
+    onPageSizeChange: (next: number) => {
+      setPageSize(next);
+      setPage(1);
+      setSelected(null);
+    },
+  };
+  const refreshAfterRecheck = () => {
+    // 상태 변경으로 마지막 페이지가 비어도 첫 페이지부터 유효한 결과를 보여 준다.
+    setPage(1);
+    payments.refresh();
+  };
+  const changeSort = (key: PaymentSortKey) => {
+    setPage(1);
+    setSelected(null);
+    setSort((current) =>
+      current?.key !== key
+        ? { key, direction: 'desc' }
+        : current.direction === 'desc'
+          ? { key, direction: 'asc' }
+          : null,
+    );
+  };
+
   return (
     <>
-      <BillingTable
-        preferences={props.preferences}
+      <FilterBar
+        className="!px-0 !py-0"
+        columnSettings={columnSettings}
+        density={{ value: density, onValueChange: setDensity }}
+        pagination={pagination}
+      >
+        <SelectField
+          fitContent
+          aria-label="결제 검색 종류"
+          value={searchType}
+          options={paymentSearchOptions}
+          onValueChange={(value) => {
+            setSearchType(value as PaymentSearchType);
+            search.resetSearch();
+            setPage(1);
+            setSelected(null);
+          }}
+        />
+        <SearchField
+          aria-label="결제 검색어"
+          placeholder={`${paymentSearchOptions.find((option) => option.value === searchType)?.label}를 입력하세요`}
+          value={search.draftKeyword}
+          onChange={(event) => search.setDraftKeyword(event.target.value)}
+        />
+        <SelectField
+          fitContent
+          aria-label="결제 상태"
+          value={status}
+          options={[
+            { label: '상태 전체', value: 'ALL' },
+            ...Object.entries(paymentStatusLabels).map(([value, label]) => ({
+              value,
+              label,
+            })),
+          ]}
+          onValueChange={(value) => {
+            setStatus(value as PaymentStatus | 'ALL');
+            setPage(1);
+            setSelected(null);
+          }}
+        />
+        <DateRangePicker
+          ariaLabel="결제 요청일 범위"
+          placeholder="요청일 범위 선택"
+          value={range}
+          onValueChange={(value) => {
+            setRange(value);
+            setPage(1);
+            setSelected(null);
+          }}
+        />
+      </FilterBar>
+      {validationError && !inputPending && (
+        <p role="alert" className="text-caption-web text-status-danger-fg">
+          {validationError}
+        </p>
+      )}
+      <DataTable
+        className="table-fixed"
         columns={columns}
-        rows={rows}
-        statusOptions={Object.entries(paymentStatusLabels)}
-        onRowClick={(id) => {
-          setSelectedId(id);
-          setDetailOpen(true);
-        }}
-      />
+        columnSettings={columnSettings}
+        density={density}
+        resizableColumns
+      >
+        <thead>
+          <tr>
+            {columns.map((column, index) => (
+              <TableHeaderCell
+                key={column.key}
+                columnIndex={index}
+                onSortChange={
+                  sortKeys.has(column.key)
+                    ? () => changeSort(column.key as PaymentSortKey)
+                    : undefined
+                }
+                sortDirection={
+                  sort && sort.key === column.key ? sort.direction : undefined
+                }
+              >
+                {column.label}
+              </TableHeaderCell>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {payments.loading || inputPending ? (
+            <tr>
+              <TableLoading colSpan={columns.length} />
+            </tr>
+          ) : validationError || payments.error ? (
+            <tr>
+              <TableError colSpan={columns.length}>
+                {validationError || payments.error}
+              </TableError>
+            </tr>
+          ) : !items.length ? (
+            <tr>
+              <TableEmpty colSpan={columns.length}>
+                조회된 결제 내역이 없습니다.
+              </TableEmpty>
+            </tr>
+          ) : (
+            items.map((item) => (
+              <TableRow
+                key={item.paymentId}
+                showDetailArrow
+                tabIndex={0}
+                role="button"
+                aria-label={`결제 ${item.paymentId} 상세 보기`}
+                className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
+                onClick={() => setSelected(item)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelected(item);
+                  }
+                }}
+              >
+                <TableCell title={formatDateTime(item.requestedAt)}>
+                  {formatDateTime(item.requestedAt)}
+                </TableCell>
+                <TableCell>{item.paymentId}</TableCell>
+                <TableCell>{item.ownerId}</TableCell>
+                <TableCell title={item.orderId}>{item.orderId}</TableCell>
+                <TableCell title={item.pgTid ?? undefined}>
+                  {item.pgTid ?? '—'}
+                </TableCell>
+                <TableCell>{formatWon(item.amount)}</TableCell>
+                <TableCell>{formatPoints(item.chargedPoint)}</TableCell>
+                <TableCell>
+                  <StatusBadge variant={paymentVariants[item.status]}>
+                    {paymentStatusLabels[item.status]}
+                  </StatusBadge>
+                </TableCell>
+                <TableCell>
+                  {item.approvedAt ? formatDateTime(item.approvedAt) : '—'}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </tbody>
+      </DataTable>
+      <PaginationSummary {...pagination} />
       <AdminDrawer
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
+        open={selectedPayment !== null}
+        onClose={() => setSelected(null)}
         title="결제 상세"
         resizable
       >
         {selectedPayment && (
-          <div className="space-y-5">
-            <StatusBadge variant={paymentVariants[selectedPayment.status]}>
-              {paymentStatusLabels[selectedPayment.status]}
-            </StatusBadge>
-            <dl>
-              <DetailItem label="결제 ID">{selectedPayment.id}</DetailItem>
-              <DetailItem label="점주 ID">{selectedPayment.ownerId}</DetailItem>
-              <DetailItem label="결제 금액">
-                {formatWon(selectedPayment.amount)}
-              </DetailItem>
-              <DetailItem label="충전 포인트">
-                {formatPoints(selectedPayment.points)}
-              </DetailItem>
-              <DetailItem label="결제 시각">
-                {formatDateTime(selectedPayment.paidAt)}
-              </DetailItem>
-              {selectedPayment.status !== 'SUCCESS' && (
-                <>
-                  <DetailItem label="실패 사유">
-                    {selectedPayment.failureReason || '—'}
-                  </DetailItem>
-                  <DetailItem label="취소 ID">
-                    {selectedPayment.cancellationId || '—'}
-                  </DetailItem>
-                </>
-              )}
-            </dl>
-            {selectedPayment.status === 'UNKNOWN' && (
-              <div className="space-y-3 rounded-lg bg-status-warning-bg p-4">
-                <p className="text-body-sm-web text-status-warning-fg">
-                  결제 결과가 아직 확정되지 않았습니다. 상태 확인과 갱신은
-                  서버에서 처리하며, 관리자는 조회만 할 수 있습니다.
-                </p>
-              </div>
-            )}
-          </div>
+          <PaymentDetails
+            key={selectedPayment.paymentId}
+            payment={selectedPayment}
+            onRefresh={refreshAfterRecheck}
+            onRechecked={(updated) => {
+              setSelected(updated);
+              refreshAfterRecheck();
+            }}
+          />
         )}
       </AdminDrawer>
     </>
