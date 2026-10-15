@@ -1,9 +1,4 @@
-import {
-  type Dispatch,
-  type ReactNode,
-  type SetStateAction,
-  useState,
-} from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { DateRangeValue } from '@repo/ui';
 
 import type {
@@ -28,7 +23,6 @@ export interface BillingTablePreferences {
 }
 export interface BillingTabProps {
   state: BillingState;
-  setState: Dispatch<SetStateAction<BillingState>>;
   today: string;
   preferences: BillingTablePreferences;
 }
@@ -50,14 +44,6 @@ export interface BillingColumn {
   label: string;
   width: number;
 }
-export const currentTimestamp = (today: string) =>
-  today +
-  'T' +
-  new Date().toLocaleTimeString('en-GB', {
-    timeZone: 'Asia/Seoul',
-    hour12: false,
-  }) +
-  '+09:00';
 export const cell = (
   content: ReactNode,
   value: string | number,
@@ -67,26 +53,3 @@ export const cell = (
   value,
   title: title ?? (typeof content === 'string' ? content : undefined),
 });
-export const useBillingFeedback = ({ state, setState }: BillingTabProps) => {
-  const [notice, setNotice] = useState('');
-  const [error, setError] = useState('');
-  const clearFeedback = () => {
-    setNotice('');
-    setError('');
-  };
-  const runMutation = (
-    update: (current: BillingState) => BillingState,
-    message: string,
-  ) => {
-    try {
-      setState(update(state));
-      setNotice(message);
-      setError('');
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : '처리하지 못했습니다.',
-      );
-    }
-  };
-  return { notice, error, setNotice, setError, clearFeedback, runMutation };
-};

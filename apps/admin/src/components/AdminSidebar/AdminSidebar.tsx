@@ -2,7 +2,6 @@ import { type ComponentType, type SVGProps, useRef, useState } from 'react';
 import type { Theme } from '@repo/ui';
 import {
   CircleDollarSign,
-  ClipboardCheck,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -48,7 +47,6 @@ const defaultNavigationItems: AdminNavigationItem[] = [
   { icon: CircleDollarSign, id: 'settlement', label: '포인트/정산 관리' },
   { icon: Users, id: 'member', label: '회원 관리' },
   { icon: ShieldAlert, id: 'fraud', label: '부정 관리' },
-  { icon: ClipboardCheck, id: 'review', label: '심사 관리' },
   { icon: UserCog, id: 'account', label: '계정 관리' },
 ];
 
