@@ -10,12 +10,16 @@ import EmptyState from '@user/components/EmptyState/EmptyState';
 import CouponCard from './CouponCard';
 import { formatUsableTime } from './couponFormat';
 import CouponListSkeleton from './CouponListSkeleton';
+import CouponLoadError from './CouponLoadError';
 import CouponQr from './CouponQr';
 
 // 쿠폰함 사용 가능 탭. 받은 쿠폰 중 아직 쓰지 않은 쿠폰과 QR
 const AvailableCoupons = () => {
   const navigate = useNavigate();
-  const [coupons, setCoupons] = useState<Coupon[] | null>(null);
+  // undefined면 불러오는 중, null이면 실패
+  const [coupons, setCoupons] = useState<Coupon[] | null>();
+  // 다시 시도할 때마다 올려서 요청을 새로 보낸다
+  const [attempt, setAttempt] = useState(0);
   // QR을 띄운 쿠폰. 계산대에서 빨리 열고 닫도록 페이지를 옮기지 않고 시트로 띄운다
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
 
@@ -23,15 +27,24 @@ const AvailableCoupons = () => {
     let ignore = false;
 
     // 사용 시작 전 쿠폰도 여기서 보여주고 QR 화면에서 시작 시각을 알려 준다
-    fetchCoupons('issued').then((items) => {
-      if (!ignore) setCoupons(items);
-    });
+    fetchCoupons('issued')
+      .then((items) => {
+        if (!ignore) setCoupons(items);
+      })
+      .catch(() => {
+        if (!ignore) setCoupons(null);
+      });
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [attempt]);
+
+  const retry = () => {
+    setCoupons(undefined);
+    setAttempt((current) => current + 1);
+  };
 
   if (coupons?.length === 0) {
     return (
@@ -49,7 +62,8 @@ const AvailableCoupons = () => {
 
   return (
     <div className="px-page pt-4 pb-6">
-      {!coupons && (
+      {coupons === null && <CouponLoadError onRetry={retry} />}
+      {coupons === undefined && (
         <>
           <CouponListSkeleton />
           <p className="sr-only" role="status">

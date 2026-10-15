@@ -79,6 +79,10 @@ const couponFilterStates: Record<CouponFilter, CouponState> = {
 // 그동안은 mock으로 화면을 만들고, 발급 API가 나오면 true로 바꿔 쿠폰 API를 함께 쓴다
 const USE_COUPON_API = false;
 
+// 받은 쿠폰 목록(GET /v1/coupons)은 서버 구현이 끝나 실제 API를 쓴다
+// 발급 API가 나오기 전까지 찜 목록에서 받은 mock 쿠폰은 쿠폰함에 보이지 않는다
+const USE_COUPON_LIST_API = true;
+
 const MOCK_DELAY_MS = 600;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -133,40 +137,14 @@ export const fetchIssueStatus = async (
   };
 };
 
-interface CouponPage {
+export interface CouponPage {
   items: Coupon[];
+  // 다음 페이지 커서. 마지막 페이지면 null
   nextPageToken: string | null;
 }
 
-// 쿠폰 목록을 마지막 페이지까지 이어서 받는다. 하루 3장이라 페이지가 많지 않다
-const fetchAllCouponPages = async (filter?: CouponFilter) => {
-  const items: Coupon[] = [];
-  let pageToken: string | null = null;
-
-  do {
-    const params = new URLSearchParams({ pageSize: '100' });
-    if (filter) params.set('filter', `state = "${couponFilterStates[filter]}"`);
-    if (pageToken) params.set('pageToken', pageToken);
-
-    const page: CouponPage = await request<CouponPage>(
-      `/v1/coupons?${params.toString()}`,
-    );
-    items.push(...page.items);
-    pageToken = page.nextPageToken;
-  } while (pageToken);
-
-  return items;
-};
-
-// 받은 쿠폰을 최근에 받은 순서로 받는다. filter를 주면 그 상태만 받는다
-// 주소에 ?mockCouponsEmpty를 붙이면 받은 쿠폰이 없는 상태를 확인할 수 있다
-export const fetchCoupons = async (
-  filter?: CouponFilter,
-): Promise<Coupon[]> => {
-  if (USE_COUPON_API) return fetchAllCouponPages(filter);
-
-  await wait(MOCK_DELAY_MS);
-
+const getMockCouponList = (filter?: CouponFilter) => {
+  // 주소에 ?mockCouponsEmpty를 붙이면 받은 쿠폰이 없는 상태를 확인할 수 있다
   if (new URLSearchParams(window.location.search).has('mockCouponsEmpty')) {
     return [];
   }
@@ -174,6 +152,49 @@ export const fetchCoupons = async (
   return getMockCoupons(getNow())
     .filter((coupon) => !filter || coupon.state === couponFilterStates[filter])
     .sort((a, b) => b.issueTime.localeCompare(a.issueTime));
+};
+
+// 받은 쿠폰을 한 페이지 받는다. 최근에 받은 순서이고, filter를 주면 그 상태만 받는다
+// filter를 바꾸면 pageToken 없이 첫 페이지부터 다시 받아야 한다
+export const fetchCouponPage = async ({
+  filter,
+  pageSize = 20,
+  pageToken,
+}: {
+  filter?: CouponFilter;
+  pageSize?: number;
+  pageToken?: string | null;
+} = {}): Promise<CouponPage> => {
+  if (USE_COUPON_LIST_API) {
+    const params = new URLSearchParams({ pageSize: String(pageSize) });
+    if (filter) params.set('filter', `state = "${couponFilterStates[filter]}"`);
+    if (pageToken) params.set('pageToken', pageToken);
+    return request<CouponPage>(`/v1/coupons?${params.toString()}`);
+  }
+
+  await wait(MOCK_DELAY_MS);
+  return { items: getMockCouponList(filter), nextPageToken: null };
+};
+
+// 받은 쿠폰을 마지막 페이지까지 이어서 받는다
+// 미사용 쿠폰처럼 많아야 몇 장인 목록에만 쓴다. 계속 쌓이는 사용 내역은 fetchCouponPage로 나눠 받는다
+export const fetchCoupons = async (
+  filter?: CouponFilter,
+): Promise<Coupon[]> => {
+  const items: Coupon[] = [];
+  let pageToken: string | null = null;
+
+  do {
+    const page: CouponPage = await fetchCouponPage({
+      filter,
+      pageSize: 100,
+      pageToken,
+    });
+    items.push(...page.items);
+    pageToken = page.nextPageToken;
+  } while (pageToken);
+
+  return items;
 };
 
 // 마이페이지 쿠폰 요약 (GET /v1/coupons/summary). 지금까지 쌓인 누적 값이다
