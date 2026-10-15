@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId } from 'react';
+﻿import { type ReactNode, useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -16,32 +16,38 @@ export const AdminModal = ({
   title,
 }: AdminModalProps) => {
   const titleId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!open || !dialog) return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+    // 패널도 native dialog이므로 일반 z-index 대신 같은 최상위 레이어에 나중에 올린다.
+    // 브라우저가 배경 상호작용 차단과 모달 안의 포커스 이동·닫힌 뒤 포커스 복원을 담당한다.
+    if (!dialog.open) dialog.showModal();
+    return () => {
+      if (dialog.open) dialog.close();
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, open]);
+  }, [open]);
 
   if (!open) return null;
 
   return createPortal(
-    <div
+    <dialog
       aria-labelledby={titleId}
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 text-text-primary"
-      role="dialog"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none border-0 bg-transparent p-4 text-text-primary outline-none backdrop:bg-black/40 open:flex open:items-center open:justify-center"
+      ref={dialogRef}
+      onCancel={(event) => {
+        // 모달에서 Escape를 눌러도 아래에 있는 상세 패널까지 닫히지 않게 한다.
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      />
       <div className="relative w-full max-w-md rounded-xl border border-border-subtle bg-bg-surface shadow-lg">
         <header className="relative flex justify-center px-5 pb-2 pt-5">
           <h2
@@ -61,7 +67,7 @@ export const AdminModal = ({
         </header>
         <div className="p-5">{children}</div>
       </div>
-    </div>,
+    </dialog>,
     document.body,
   );
 };
