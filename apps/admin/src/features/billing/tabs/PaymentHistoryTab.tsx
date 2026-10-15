@@ -157,6 +157,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
           value={searchType}
           options={paymentSearchOptions}
           onValueChange={(value) => {
+            search.setDraftKeyword('');
             updateFilters({
               searchType: value as typeof searchType,
               keyword: '',
