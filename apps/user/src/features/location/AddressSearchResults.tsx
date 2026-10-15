@@ -1,5 +1,4 @@
-import type { AddressResult } from '@user/api/kakao';
-
+import type { AddressResult } from './kakaoSearch';
 import type { AddressSearchState } from './useAddressSearch';
 
 export interface AddressSearchResultsProps {

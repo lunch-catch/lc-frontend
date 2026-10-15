@@ -14,6 +14,7 @@ import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import NotificationPage from '@user/pages/NotificationPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
+import OnboardingLocationPage from '@user/pages/OnboardingLocationPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
 import SettingsPage from '@user/pages/SettingsPage';
 import SplashPage from '@user/pages/SplashPage';
@@ -59,6 +60,8 @@ export const router = createBrowserRouter([
               },
             ],
           },
+          // 맞춤 정보에서 서버에 온보딩을 저장한 뒤 들어온다. 입력값을 이어 받을 게 없어 OnboardingProvider 밖에 둔다
+          { path: '/onboarding/location', element: <OnboardingLocationPage /> },
         ],
       },
     ],

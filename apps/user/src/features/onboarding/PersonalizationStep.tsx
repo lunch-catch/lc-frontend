@@ -56,7 +56,8 @@ const PersonalizationStep = () => {
     return () => clearTimeout(timer);
   }, [hasError]);
 
-  // 서버에 온보딩 완료를 저장해야 피드를 쓸 수 있다. 저장한 뒤 서비스 안내(튜토리얼)로 넘어간다
+  // 서버에 온보딩 완료를 저장해야 피드를 쓸 수 있다. 저장한 뒤 위치 설정으로 넘어간다
+  // 위치는 서버에 회원 정보가 저장된 뒤에야 저장할 수 있어서 이 단계 다음에 둔다
   const handleSubmit = async () => {
     if (!gender || !ageGroup || isSubmitting) return;
 
@@ -68,7 +69,7 @@ const PersonalizationStep = () => {
         locationOptIn: consents.location,
         notificationOptIn: consents.marketing,
       });
-      navigate('/onboarding/tutorial', { replace: true });
+      navigate('/onboarding/location', { replace: true });
     } catch {
       setHasError(true);
       setIsSubmitting(false);
@@ -140,7 +141,6 @@ const PersonalizationStep = () => {
         <ActionButton
           disabled={!isComplete}
           loading={isSubmitting}
-          // 위치 설정 화면(#14)이 생기면 그쪽으로 이동한다
           onClick={handleSubmit}
           size="large"
         >

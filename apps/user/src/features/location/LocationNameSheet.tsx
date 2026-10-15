@@ -4,12 +4,16 @@ import { MapPin } from 'lucide-react';
 
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import HintInput from '@user/components/HintInput/HintInput';
+import LocationPreviewMap from '@user/components/KakaoMap/LocationPreviewMap';
 
 // 서버가 받는 위치 이름의 최대 길이
 const NICKNAME_MAX_LENGTH = 50;
 
 export interface LocationNameSheetProps {
   title: string;
+  // 고른 위치. 지도에 핀으로 보여준다
+  latitude: number;
+  longitude: number;
   // 고른 위치의 주소. 찾지 못했으면 null
   address: string | null;
   // 처음 채워 둘 이름 (예: 검색한 장소 이름)
@@ -22,13 +26,15 @@ export interface LocationNameSheetProps {
   onSave: (nickname: string | undefined) => void;
 }
 
-// 고른 위치의 주소를 보여주고, 이름을 붙여 저장하는 시트
-// 저장하기 전에 주소로 맞는 위치인지 확인하게 한다. 이름은 붙이지 않아도 된다
+// 고른 위치를 지도와 주소로 보여주고, 이름을 붙여 저장하는 시트
+// 저장하기 전에 지도와 주소로 맞는 위치인지 확인하게 한다. 이름은 붙이지 않아도 된다
 // 닫힐 때 화면에서 빠져 입력한 이름도 함께 지워진다
 const LocationNameSheet = ({
   address,
   errorMessage,
   initialNickname = '',
+  latitude,
+  longitude,
   onClose,
   onSave,
   saving,
@@ -45,6 +51,7 @@ const LocationNameSheet = ({
   return (
     <BottomSheet isOpen onClose={onClose} title={title}>
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <LocationPreviewMap latitude={latitude} longitude={longitude} />
         <p className="flex items-start gap-2 rounded-lg bg-surface-subtle px-3 py-3 text-body-sm-mobile font-medium text-text-primary">
           <MapPin
             aria-hidden="true"

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CircleAlert, MapPin, Search, X } from 'lucide-react';
 
-import { type AddressResult, findAddress } from '@user/api/kakao';
 import {
   deleteMyLocation,
   fetchMyLocation,
@@ -21,6 +20,7 @@ import TopBar from '@user/components/TopBar/TopBar';
 
 import AddressSearchResults from './AddressSearchResults';
 import { getCurrentPosition, PositionError } from './currentPosition';
+import { type AddressResult, findAddress } from './kakaoSearch';
 import LocationNameSheet from './LocationNameSheet';
 import { useAddressSearch } from './useAddressSearch';
 import { getLocationLabel, rememberMyLocation } from './useMyLocation';
@@ -67,10 +67,21 @@ const getPositionErrorMessage = (error: unknown) =>
     ? '위치 권한이 꺼져 있어요 · 주소로 찾아 주세요'
     : '현재 위치를 찾지 못했어요 · 주소로 찾아 주세요';
 
+// settings: 마이페이지와 홈 헤더에서 들어오는 위치 설정
+// onboarding: 가입할 때 맞춤 정보 다음, 튜토리얼 앞에 두는 단계. 저장하거나 건너뛰면 튜토리얼로 간다
+export type LocationSettingsMode = 'settings' | 'onboarding';
+
+interface LocationSettingsScreenProps {
+  mode?: LocationSettingsMode;
+}
+
 // 위치 설정. 피드와 탐색에서 주변 가게를 찾을 기준 위치를 하나 정한다
 // GPS로 찾은 현재 위치나, 주소 검색으로 고른 위치를 저장한다
-const LocationSettingsScreen = () => {
+const LocationSettingsScreen = ({
+  mode = 'settings',
+}: LocationSettingsScreenProps) => {
   const navigate = useNavigate();
+  const isOnboarding = mode === 'onboarding';
   // undefined면 불러오는 중, null이면 실패
   const [settings, setSettings] = useState<LocationSettings | null>();
   // 다시 시도할 때마다 올려서 요청을 새로 보낸다
@@ -118,6 +129,10 @@ const LocationSettingsScreen = () => {
     setAttempt((current) => current + 1);
   };
 
+  // 온보딩에서는 위치를 저장하거나 건너뛰면 서비스 안내로 넘어간다. 뒤로 가기로 이 단계에 돌아오지 않게 바꿔 넣는다
+  const goToTutorial = () =>
+    navigate('/onboarding/tutorial', { replace: true });
+
   const handleLocate = async () => {
     if (pending || !settings?.locationOptIn) return;
 
@@ -155,6 +170,10 @@ const LocationSettingsScreen = () => {
         locationNickname,
       });
       rememberMyLocation(location);
+      if (isOnboarding) {
+        goToTutorial();
+        return;
+      }
       setSettings({ ...settings, location });
       setPicked(null);
       // 저장했으면 검색을 닫고 저장한 위치 카드를 보여준다
@@ -193,8 +212,32 @@ const LocationSettingsScreen = () => {
     // 화면 높이에 맞춰 두고 검색 결과만 안에서 스크롤해, 페이지 전체가 길어지지 않게 한다
     // 틀(StackLayout)이 하단 버튼 자리로 비워 둔 아래 여백만큼 당겨 화면 높이를 딱 맞춘다
     <div className="-mb-[calc(76px+env(safe-area-inset-bottom))] flex h-dvh flex-col">
-      <TopBar onBack={() => navigate(-1)} title="위치 설정" />
+      {isOnboarding ? (
+        // 서버에는 이미 온보딩을 저장해서 맞춤 정보로 돌아가지 않는다
+        // 회사 주소를 바로 모를 수 있어 건너뛸 수 있게 하고, 나중에 홈 헤더의 위치에서 설정한다
+        <TopBar
+          action={
+            <button
+              className="flex h-11 items-center px-2.5 text-body-sm-mobile font-bold text-text-secondary focus-visible:outline-2 focus-visible:outline-action-primary"
+              onClick={goToTutorial}
+              type="button"
+            >
+              {settings && hasLocation(settings.location)
+                ? '다음'
+                : '나중에 하기'}
+            </button>
+          }
+          title="위치 설정"
+        />
+      ) : (
+        <TopBar onBack={() => navigate(-1)} title="위치 설정" />
+      )}
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-page pt-4">
+        {isOnboarding && (
+          <h2 className="text-h2-mobile leading-snug font-bold text-text-primary">
+            어디서 점심을 드세요?
+          </h2>
+        )}
         <p className="text-body-sm-mobile text-text-secondary">
           설정한 위치 주변 가게의 쿠폰을 보여드려요
         </p>
@@ -349,6 +392,8 @@ const LocationSettingsScreen = () => {
         <LocationNameSheet
           address={picked.address}
           initialNickname={picked.placeName ?? undefined}
+          latitude={picked.latitude}
+          longitude={picked.longitude}
           title={picked.source === 'gps' ? '현재 위치' : '선택한 위치'}
           errorMessage={saveError}
           onClose={() => setPicked(null)}
