@@ -17,20 +17,18 @@ export const AdminModal = ({
 }: AdminModalProps) => {
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const openRef = useRef(open);
 
   useLayoutEffect(() => {
+    openRef.current = open;
     const dialog = dialogRef.current;
-    if (!open || !dialog) return;
+    if (!dialog) return;
 
     // 패널도 native dialog이므로 일반 z-index 대신 같은 최상위 레이어에 나중에 올린다.
     // 브라우저가 배경 상호작용 차단과 모달 안의 포커스 이동·닫힌 뒤 포커스 복원을 담당한다.
-    if (!dialog.open) dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
-    };
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
   }, [open]);
-
-  if (!open) return null;
 
   return createPortal(
     <dialog
@@ -43,6 +41,19 @@ export const AdminModal = ({
         event.preventDefault();
         event.stopPropagation();
         onClose();
+      }}
+      onClose={(event) => {
+        event.stopPropagation();
+        if (!openRef.current) return;
+
+        onClose();
+        // 부모의 닫힘 처리가 반영된 뒤 확인한다. 처리 중이라 닫기를 거부하면 다시 연다.
+        const dialog = event.currentTarget;
+        requestAnimationFrame(() => {
+          if (openRef.current && dialog.isConnected && !dialog.open) {
+            dialog.showModal();
+          }
+        });
       }}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
