@@ -21,7 +21,8 @@ export const TemplateCreatePage = () => {
   const { refresh } = useTemplateManagement();
   const returnToList = () => {
     refresh();
-    void navigate('/templates');
+    // 상세 주소에도 목록의 조건을 유지해 공유 링크로 방문해도 같은 조건으로 돌아간다.
+    void navigate(`/templates${location.search}`);
   };
 
   return (
@@ -33,7 +34,7 @@ export const TemplateCreatePage = () => {
       onPublished={returnToList}
       onCreated={(id) => {
         refresh();
-        void navigate(`/templates/drafts/${id}/edit`, {
+        void navigate(`/templates/drafts/${id}/edit${location.search}`, {
           replace: true,
           state: { createdTemplateId: String(id) },
         });
