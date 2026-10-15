@@ -1,6 +1,14 @@
-import { useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
+import {
+  type KakaoCustomOverlay,
+  type KakaoMap,
+  type KakaoMaps,
+  loadKakaoMaps,
+} from '@user/api/kakao';
 import type { StoreListItem } from '@user/api/store';
+import ActionButton from '@user/components/ActionButton/ActionButton';
 
 import StoreCard from './StoreCard';
 import { formatDiscount } from './storeFormat';
@@ -15,19 +23,15 @@ interface StoreMapProps {
   stores: StoreListItem[];
 }
 
-// 위도 1도와 경도 1도의 거리(m). 서울 위도(약 37.5도) 기준
-const METERS_PER_LATITUDE = 111_000;
-const METERS_PER_LONGITUDE = 88_000;
-// 핀이 가장자리에 붙지 않도록 지도 판 안쪽에 남기는 비율
-const MAP_EDGE_PADDING = 0.12;
+interface KakaoMapHandle {
+  maps: KakaoMaps;
+  map: KakaoMap;
+}
 
-// 지도 판 위에 그리는 길. Figma 지도 화면의 가짜 지도와 같은 모양
-const roadLines = [
-  { orientation: 'horizontal', position: '30%' },
-  { orientation: 'horizontal', position: '64%' },
-  { orientation: 'vertical', position: '36%' },
-  { orientation: 'vertical', position: '74%' },
-] as const;
+// 처음 보여줄 확대 수준. 쿠폰 가게가 없을 때 내 위치 주변 몇 블록이 보이는 정도
+const DEFAULT_MAP_LEVEL = 4;
+// 핀이 가장자리에 붙지 않도록 남기는 여백(px). 아래는 카카오 로고와 축척 자리까지 비운다
+const BOUNDS_PADDING = { top: 48, side: 48, bottom: 64 };
 
 // 핀에 짧게 보여줄 할인 (예: 20%, 3,000원)
 const formatPinLabel = (store: StoreListItem) =>
@@ -35,111 +39,226 @@ const formatPinLabel = (store: StoreListItem) =>
     ? formatDiscount(store.activeCampaign).replace(' 할인', '')
     : '';
 
-// 내 위치를 가운데에 두고, 가장 먼 가게까지 판 안에 들어오도록 좌표를 판 위 위치(%)로 바꾼다
-const toMapPositions = (center: MapCenter, stores: StoreListItem[]) => {
-  const offsets = stores.map((store) => ({
-    storeId: store.storeId,
-    x: (store.longitude - center.longitude) * METERS_PER_LONGITUDE,
-    y: (center.latitude - store.latitude) * METERS_PER_LATITUDE,
-  }));
-  const farthest = Math.max(
-    1,
-    ...offsets.map(({ x, y }) => Math.max(Math.abs(x), Math.abs(y))),
-  );
-  const scale = (0.5 - MAP_EDGE_PADDING) / farthest;
+interface MapOverlayProps {
+  kakao: KakaoMapHandle;
+  latitude: number;
+  longitude: number;
+  // 겹치면 큰 값이 위에 온다
+  zIndex: number;
+  // false면 눌러도 지도 클릭으로 넘긴다 (내 위치 점처럼 누를 일이 없는 표시)
+  clickable?: boolean;
+  children: ReactNode;
+}
 
-  return new Map(
-    offsets.map(({ storeId, x, y }) => [
-      storeId,
-      {
-        left: `${(0.5 + x * scale) * 100}%`,
-        top: `${(0.5 + y * scale) * 100}%`,
-      },
-    ]),
-  );
+// 카카오 지도의 커스텀 오버레이 자리에 React 요소를 그린다
+// 오버레이에 넘긴 빈 요소 안으로 포털을 열어서, 핀 버튼의 클릭과 스타일을 React 그대로 쓴다
+const MapOverlay = ({
+  children,
+  clickable = true,
+  kakao,
+  latitude,
+  longitude,
+  zIndex,
+}: MapOverlayProps) => {
+  const [element] = useState(() => document.createElement('div'));
+  const overlayRef = useRef<KakaoCustomOverlay | null>(null);
+
+  useEffect(() => {
+    const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(latitude, longitude),
+      content: element,
+      clickable,
+    });
+    overlay.setMap(kakao.map);
+    overlayRef.current = overlay;
+    return () => {
+      overlay.setMap(null);
+      overlayRef.current = null;
+    };
+  }, [clickable, element, kakao, latitude, longitude]);
+
+  // 핀을 고르면 오버레이를 새로 만들지 않고 겹치는 순서만 바꾼다
+  useEffect(() => {
+    overlayRef.current?.setZIndex(zIndex);
+  }, [kakao, latitude, longitude, zIndex]);
+
+  return createPortal(children, element);
 };
 
-// 탐색 탭의 지도 보기. 쿠폰 진행 중인 가게를 핀으로 보여주고, 핀을 누르면 아래에 가게 카드를 띄운다
-// 카카오 지도 키를 받기 전까지 쓰는 가짜 지도 판이다. 키를 받으면 판과 위치 계산(toMapPositions)만 카카오 지도로 바꾸고,
-// 핀과 선택한 가게 카드는 카카오 지도의 커스텀 오버레이로 그대로 옮긴다
+// 탐색 탭의 지도 보기. 쿠폰 진행 중인 가게를 카카오 지도 위 핀으로 보여주고, 핀을 누르면 아래에 가게 카드를 띄운다
 const StoreMap = ({ center, stores }: StoreMapProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [kakao, setKakao] = useState<KakaoMapHandle | null>(null);
+  const [hasLoadError, setHasLoadError] = useState(false);
+  // 다시 시도할 때마다 올려서 SDK를 새로 불러온다
+  const [attempt, setAttempt] = useState(0);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  // 지도를 만들 때 처음 가운데에 둘 위치. 그 뒤로 바뀌면 아래 영역 맞추기가 옮긴다
+  const initialCenter = useRef(center);
   // 지도에는 할인을 보여줄 수 있는 쿠폰 진행 중인 가게만 핀으로 둔다
-  const campaignStores = stores.filter((store) => store.hasActiveCampaign);
-  const positions = toMapPositions(center, campaignStores);
+  // 가게 목록을 새로 받을 때만 바뀌어서, 핀을 고를 때는 지도 영역을 다시 맞추지 않는다
+  const campaignStores = useMemo(
+    () => stores.filter((store) => store.hasActiveCampaign),
+    [stores],
+  );
   const selectedStore = campaignStores.find(
     (store) => store.storeId === selectedStoreId,
   );
 
+  // 지도는 화면에 처음 보일 때 한 번 만든다
+  useEffect(() => {
+    let ignore = false;
+
+    loadKakaoMaps()
+      .then((maps) => {
+        const container = containerRef.current;
+        if (ignore || !container) return;
+        const { latitude, longitude } = initialCenter.current;
+        const map = new maps.Map(container, {
+          center: new maps.LatLng(latitude, longitude),
+          level: DEFAULT_MAP_LEVEL,
+        });
+        setKakao({ maps, map });
+      })
+      .catch(() => {
+        if (!ignore) setHasLoadError(true);
+      });
+
+    // 응답 전에 화면을 벗어나면 결과를 버린다
+    return () => {
+      ignore = true;
+    };
+  }, [attempt]);
+
+  // 내 위치와 쿠폰 가게가 모두 보이도록 영역을 맞춘다. 가게가 없으면 내 위치를 가운데에 둔다
+  useEffect(() => {
+    if (!kakao) return;
+
+    const { map, maps } = kakao;
+    const centerLatLng = new maps.LatLng(center.latitude, center.longitude);
+    if (campaignStores.length === 0) {
+      map.setCenter(centerLatLng);
+      map.setLevel(DEFAULT_MAP_LEVEL);
+      return;
+    }
+
+    const bounds = new maps.LatLngBounds();
+    bounds.extend(centerLatLng);
+    campaignStores.forEach((store) =>
+      bounds.extend(new maps.LatLng(store.latitude, store.longitude)),
+    );
+    map.setBounds(
+      bounds,
+      BOUNDS_PADDING.top,
+      BOUNDS_PADDING.side,
+      BOUNDS_PADDING.bottom,
+      BOUNDS_PADDING.side,
+    );
+  }, [kakao, center.latitude, center.longitude, campaignStores]);
+
+  // 지도의 빈 곳을 누르면 고른 가게를 닫는다
+  useEffect(() => {
+    if (!kakao) return;
+
+    const { map, maps } = kakao;
+    const clearSelection = () => setSelectedStoreId(null);
+    maps.event.addListener(map, 'click', clearSelection);
+    return () => maps.event.removeListener(map, 'click', clearSelection);
+  }, [kakao]);
+
+  const retry = () => {
+    setHasLoadError(false);
+    setAttempt((current) => current + 1);
+  };
+
   return (
-    <div className="relative -mx-page min-h-80 flex-1 overflow-hidden bg-[#e9e2da]">
-      {/* 빈 곳을 누르면 고른 가게를 닫는다 */}
-      <button
-        aria-label="가게 선택 닫기"
-        className="absolute inset-0 cursor-default"
-        onClick={() => setSelectedStoreId(null)}
-        tabIndex={-1}
-        type="button"
+    <div className="relative -mx-page min-h-80 flex-1 overflow-hidden bg-surface-subtle">
+      {/* 카카오 지도가 이 안에 그려진다 */}
+      <div
+        aria-label="주변 쿠폰 가게 지도"
+        className="absolute inset-0"
+        ref={containerRef}
+        role="region"
       />
-      {roadLines.map((road) => (
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute bg-bg-surface ${
-            road.orientation === 'horizontal'
-              ? 'inset-x-0 h-4 -translate-y-1/2'
-              : 'inset-y-0 w-4 -translate-x-1/2'
-          }`}
-          key={`${road.orientation}-${road.position}`}
-          style={
-            road.orientation === 'horizontal'
-              ? { top: road.position }
-              : { left: road.position }
-          }
-        />
-      ))}
-      {/* 내 위치 */}
-      <span
-        aria-label="내 위치"
-        className="pointer-events-none absolute top-1/2 left-1/2 flex size-7 -translate-1/2 items-center justify-center rounded-full bg-[#2b7bb9]/25"
-        role="img"
-      >
-        <span className="size-3 rounded-full border-2 border-bg-surface bg-[#2b7bb9]" />
-      </span>
-      {campaignStores.map((store) => {
-        const isSelected = store.storeId === selectedStoreId;
-        return (
-          <button
-            aria-label={`${store.name} ${formatPinLabel(store)} 할인`}
-            aria-pressed={isSelected}
-            // 고르지 않은 핀은 반전 색(라이트는 검정 바탕, 다크는 흰 바탕)으로 둔다
-            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2.5 py-1 text-caption-mobile font-bold whitespace-nowrap shadow-md transition-transform ${
-              isSelected
-                ? 'z-10 scale-110 bg-action-primary text-text-inverse'
-                : 'bg-bg-inverse text-text-on-inverse'
-            }`}
-            key={store.storeId}
-            onClick={() => setSelectedStoreId(store.storeId)}
-            style={positions.get(store.storeId)}
-            type="button"
+      {kakao && (
+        <>
+          <MapOverlay
+            clickable={false}
+            kakao={kakao}
+            latitude={center.latitude}
+            longitude={center.longitude}
+            zIndex={0}
           >
-            {formatPinLabel(store)}
-          </button>
-        );
-      })}
-      {campaignStores.length === 0 && (
-        <p className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-body-sm-mobile text-text-secondary">
+            <span
+              aria-label="내 위치"
+              className="flex size-7 items-center justify-center rounded-full bg-[#2b7bb9]/25"
+              role="img"
+            >
+              <span className="size-3 rounded-full border-2 border-white bg-[#2b7bb9]" />
+            </span>
+          </MapOverlay>
+          {campaignStores.map((store) => {
+            const isSelected = store.storeId === selectedStoreId;
+            return (
+              <MapOverlay
+                kakao={kakao}
+                key={store.storeId}
+                latitude={store.latitude}
+                longitude={store.longitude}
+                // 고른 핀은 다른 핀에 가리지 않게 맨 위로 올린다
+                zIndex={isSelected ? 2 : 1}
+              >
+                <button
+                  aria-label={`${store.name} ${formatPinLabel(store)} 할인`}
+                  aria-pressed={isSelected}
+                  // 지도는 다크 모드에서도 밝아서, 고르지 않은 핀은 모드와 상관없이 검정 바탕으로 둔다
+                  className={`rounded-full px-2.5 py-1 text-caption-mobile font-bold whitespace-nowrap shadow-md transition-transform ${
+                    isSelected
+                      ? 'scale-110 bg-action-primary text-text-inverse'
+                      : 'bg-(--primitive-neutral-900) text-(--primitive-neutral-0)'
+                  }`}
+                  onClick={() => setSelectedStoreId(store.storeId)}
+                  type="button"
+                >
+                  {formatPinLabel(store)}
+                </button>
+              </MapOverlay>
+            );
+          })}
+        </>
+      )}
+      {!kakao && !hasLoadError && (
+        <>
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 animate-pulse bg-surface-subtle motion-reduce:animate-none"
+          />
+          <p className="sr-only" role="status">
+            지도를 불러오는 중이에요
+          </p>
+        </>
+      )}
+      {hasLoadError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-page text-center">
+          <p className="text-body-sm-mobile text-text-secondary">
+            지도를 불러오지 못했어요
+          </p>
+          <ActionButton onClick={retry} variant="outline">
+            다시 시도
+          </ActionButton>
+        </div>
+      )}
+      {kakao && campaignStores.length === 0 && (
+        <p className="pointer-events-none absolute inset-x-page top-3 z-10 rounded-lg bg-bg-surface/90 px-3 py-2 text-center text-body-sm-mobile text-text-secondary">
           주변에 쿠폰 진행 중인 가게가 없어요
         </p>
       )}
       {selectedStore && (
-        // 아래쪽에 떠 있는 "목록으로 보기" 버튼과 겹치지 않도록 그 위에 띄운다
-        <ul className="absolute inset-x-page bottom-14">
+        // 카카오 로고와 축척을 가리지 않도록 그 위에 띄운다
+        <ul className="absolute inset-x-page bottom-9 z-10">
           <StoreCard store={selectedStore} />
         </ul>
       )}
-      <p className="pointer-events-none absolute top-2 right-3 rounded-sm bg-bg-surface/80 px-1.5 py-0.5 text-caption-mobile text-text-tertiary">
-        지도 준비 중 · 위치는 대략적이에요
-      </p>
     </div>
   );
 };

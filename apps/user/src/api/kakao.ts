@@ -1,4 +1,4 @@
-// 카카오 지도 JavaScript SDK. 주소 검색, 좌표와 주소 변환에 쓴다
+// 카카오 지도 JavaScript SDK. 탐색 탭 지도, 주소 검색, 좌표와 주소 변환에 쓴다
 // 키는 브라우저에 그대로 노출되는 JavaScript 키라, 카카오 디벨로퍼스에 등록한 도메인에서만 동작한다
 
 type KakaoStatus = 'OK' | 'ZERO_RESULT' | 'ERROR';
@@ -44,27 +44,77 @@ interface KakaoServices {
   };
 }
 
+export interface KakaoLatLng {
+  getLat: () => number;
+  getLng: () => number;
+}
+
+interface KakaoLatLngBounds {
+  extend: (latLng: KakaoLatLng) => void;
+}
+
+export interface KakaoMap {
+  setCenter: (latLng: KakaoLatLng) => void;
+  setLevel: (level: number) => void;
+  // 영역이 지도 안에 모두 들어오도록 옮기고 확대한다. 여백은 위, 오른쪽, 아래, 왼쪽 순서(px)
+  setBounds: (
+    bounds: KakaoLatLngBounds,
+    paddingTop?: number,
+    paddingRight?: number,
+    paddingBottom?: number,
+    paddingLeft?: number,
+  ) => void;
+}
+
+export interface KakaoCustomOverlay {
+  setMap: (map: KakaoMap | null) => void;
+  setZIndex: (zIndex: number) => void;
+}
+
+export interface KakaoMaps {
+  load: (callback: () => void) => void;
+  services: KakaoServices;
+  LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
+  LatLngBounds: new () => KakaoLatLngBounds;
+  Map: new (
+    container: HTMLElement,
+    options: { center: KakaoLatLng; level: number },
+  ) => KakaoMap;
+  // 지도 위에 직접 만든 요소를 올린다. clickable이면 요소를 눌러도 지도 클릭으로 넘어가지 않는다
+  CustomOverlay: new (options: {
+    position: KakaoLatLng;
+    content: HTMLElement;
+    clickable?: boolean;
+    zIndex?: number;
+  }) => KakaoCustomOverlay;
+  event: {
+    addListener: (target: KakaoMap, type: string, handler: () => void) => void;
+    removeListener: (
+      target: KakaoMap,
+      type: string,
+      handler: () => void,
+    ) => void;
+  };
+}
+
 declare global {
   interface Window {
     kakao?: {
       // 스크립트가 비정상으로 내려오면 kakao만 있고 maps가 없을 수 있다
-      maps?: {
-        load: (callback: () => void) => void;
-        services: KakaoServices;
-      };
+      maps?: KakaoMaps;
     };
   }
 }
 
 const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY;
 
-let sdkPromise: Promise<KakaoServices> | null = null;
+let sdkPromise: Promise<KakaoMaps> | null = null;
 
 // SDK를 처음 쓸 때 한 번만 불러온다. 실패하면 다음에 다시 시도할 수 있게 비운다
-export const loadKakaoServices = () => {
+export const loadKakaoMaps = () => {
   if (sdkPromise) return sdkPromise;
 
-  sdkPromise = new Promise<KakaoServices>((resolve, reject) => {
+  sdkPromise = new Promise<KakaoMaps>((resolve, reject) => {
     if (!KAKAO_JS_KEY) {
       reject(new Error('VITE_KAKAO_JS_KEY가 없습니다'));
       return;
@@ -81,7 +131,7 @@ export const loadKakaoServices = () => {
         reject(new Error('카카오 지도 SDK를 불러오지 못했습니다'));
         return;
       }
-      maps.load(() => resolve(maps.services));
+      maps.load(() => resolve(maps));
     };
     script.onerror = () =>
       reject(new Error('카카오 지도 SDK를 불러오지 못했습니다'));
@@ -93,6 +143,8 @@ export const loadKakaoServices = () => {
 
   return sdkPromise;
 };
+
+const loadKakaoServices = () => loadKakaoMaps().then((maps) => maps.services);
 
 // 검색 결과 하나. 장소 검색이면 이름이 있고, 주소 검색이면 null이다
 export interface AddressResult {

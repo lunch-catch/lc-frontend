@@ -188,9 +188,10 @@ const ExploreScreen = () => {
         wishCount={wishCount}
       />
       {/* 목록에서는 마지막 카드가 떠 있는 전환 버튼에 가리지 않도록 아래를 더 비운다 */}
+      {/* 지도는 버튼 위에서 끝나게 해서, 지도 오른쪽 아래의 카카오 로고를 버튼이 가리지 않게 한다 */}
       <div
         className={`flex flex-1 flex-col gap-3 px-page pt-2 ${
-          view === 'list' ? 'pb-20' : 'pb-6'
+          view === 'list' ? 'pb-20' : 'pb-16'
         }`}
       >
         <form
