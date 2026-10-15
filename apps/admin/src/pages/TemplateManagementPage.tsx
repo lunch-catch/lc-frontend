@@ -30,12 +30,6 @@ export const TemplateManagementPage = () => {
         })
       }
       onOpenTemplate={openTemplate}
-      onLoadDraft={() => {
-        const draft = management.templates.find(
-          (template) => template.status === 'DRAFT',
-        );
-        if (draft) openTemplate(draft);
-      }}
     />
   );
 };

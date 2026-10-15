@@ -64,7 +64,11 @@ export const useTemplateEditor = (initialId?: string) => {
     return () => controller.abort();
   }, [initialId]);
 
-  const generate = async (name: string, requestPrompt: string) => {
+  const generate = async (
+    name: string,
+    requestPrompt: string,
+    baseVersionNumber?: number,
+  ) => {
     if (operationRef.current || moreRef.current) return null;
     if (
       !name.trim() ||
@@ -76,9 +80,24 @@ export const useTemplateEditor = (initialId?: string) => {
       return null;
     }
     const id = result ? String(result.template.templateId) : savedId.current;
+    if (
+      id &&
+      (baseVersionNumber === undefined ||
+        !Number.isSafeInteger(baseVersionNumber) ||
+        baseVersionNumber <= 0)
+    ) {
+      setError('수정할 기준 버전을 다시 선택해 주세요.');
+      return null;
+    }
     const trimmedName = name.trim();
     const trimmedPrompt = requestPrompt.trim();
-    const key = JSON.stringify([id, trimmedName, trimmedPrompt]);
+    // 요청 문구가 같아도 기준 버전이 다르면 별도의 수정 요청으로 취급한다.
+    const key = JSON.stringify([
+      id,
+      baseVersionNumber,
+      trimmedName,
+      trimmedPrompt,
+    ]);
     // 응답 유실 후 같은 입력을 재전송해도 생성·버전 추가가 중복되지 않게 한다.
     if (pendingRequest.current?.key !== key)
       pendingRequest.current = { key, requestId: crypto.randomUUID() };
@@ -91,6 +110,7 @@ export const useTemplateEditor = (initialId?: string) => {
           name: trimmedName,
           requestPrompt: trimmedPrompt,
           requestId: pendingRequest.current.requestId,
+          baseVersionNumber,
         },
         id,
       );

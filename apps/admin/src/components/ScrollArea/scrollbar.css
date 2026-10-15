@@ -1,0 +1,37 @@
+.admin-scrollbar,
+.admin-filter-bar :is([role='listbox'], [role='dialog']) {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--semantic-border-subtle) transparent;
+
+  @supports selector(::-webkit-scrollbar) {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  &::-webkit-scrollbar {
+    width: var(--space-2);
+    height: var(--space-2);
+  }
+
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border: calc(var(--space-1) / 2) solid transparent;
+    border-radius: var(--space-2);
+    background-color: var(--semantic-border-subtle);
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--semantic-text-tertiary);
+  }
+}
+
+/* 스크롤이 없는 드롭다운은 오른쪽 스크롤바 공간을 예약하지 않아 양쪽 여백을 맞춘다. */
+.admin-filter-bar [role='listbox'] {
+  scrollbar-gutter: auto;
+}

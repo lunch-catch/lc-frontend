@@ -82,9 +82,8 @@ const sendRequest = async (
 
   if (!response.ok) {
     const retryAfterSeconds = getRetryAfter(response);
-    // 인증 요청 제한은 본문이 없는 429이므로 JSON 파싱을 시도하지 않는다.
-    const body: unknown =
-      response.status === 429 ? null : await response.json().catch(() => null);
+    // 인증의 빈 429 본문은 허용하고, 템플릿처럼 본문이 있는 429의 오류 코드는 유지한다.
+    const body: unknown = await response.json().catch(() => null);
     const code =
       body &&
       typeof body === 'object' &&
