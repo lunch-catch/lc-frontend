@@ -4,6 +4,7 @@ import { Check, X } from 'lucide-react';
 import type { CampaignIssueStatus } from '@user/api/coupon';
 import type { WishItem } from '@user/api/wishlist';
 import ActionButton from '@user/components/ActionButton/ActionButton';
+import Card from '@user/components/Card/Card';
 
 import type { WishState } from './wishState';
 
@@ -48,7 +49,7 @@ const WishCard = ({
 
   return (
     // 버튼이 어느 가게 것인지 헷갈리지 않도록 사용 시간과 버튼까지 카드 하나에 담는다
-    <li className="relative flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+    <Card as="li" className="relative flex flex-col gap-3 p-4">
       {canRemove && (
         <button
           aria-label={`${wish.storeName} 찜 삭제`}
@@ -128,7 +129,7 @@ const WishCard = ({
           쿠폰함에서 보기
         </ActionButton>
       )}
-    </li>
+    </Card>
   );
 };
 

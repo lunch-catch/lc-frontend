@@ -2,6 +2,7 @@ import { ChevronDown } from 'lucide-react';
 
 import { getNow } from '@user/api/clock';
 import type { StoreBusinessHour } from '@user/api/store';
+import { cardClassName } from '@user/components/Card/Card';
 
 import {
   DAY_LABELS,
@@ -28,7 +29,7 @@ const BusinessHoursSection = ({ hours }: BusinessHoursSectionProps) => {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-h3-mobile font-bold text-text-primary">영업 정보</h2>
-      <div className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+      <div className={`p-4 ${cardClassName}`}>
         <p className="flex items-center gap-2 text-body-mobile">
           <span
             className={`font-bold ${

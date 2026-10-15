@@ -11,6 +11,7 @@ import {
 } from '@user/api/location';
 import { fetchMyProfile } from '@user/api/member';
 import ActionButton from '@user/components/ActionButton/ActionButton';
+import { cardClassName } from '@user/components/Card/Card';
 import FeedbackToast, {
   type FeedbackToastTone,
 } from '@user/components/FeedbackToast/FeedbackToast';
@@ -47,8 +48,6 @@ interface Toast {
   message: string;
   tone: FeedbackToastTone;
 }
-
-const cardClassName = 'rounded-xl border border-border-subtle bg-bg-surface';
 
 // 이름도 주소도 없는 위치는 주소를 못 찾았거나 주소 변환 전에 저장한 위치다
 const getLocationName = (location: MemberLocation) =>

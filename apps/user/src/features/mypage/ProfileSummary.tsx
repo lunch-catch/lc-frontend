@@ -4,6 +4,7 @@ import { User } from 'lucide-react';
 import { type CouponSummary, fetchCouponSummary } from '@user/api/coupon';
 import type { MyProfile } from '@user/api/member';
 import { useAuth } from '@user/auth/useAuth';
+import { cardClassName } from '@user/components/Card/Card';
 
 import NicknameSheet from './NicknameSheet';
 import { type Loaded, useLoad } from './useLoad';
@@ -13,8 +14,6 @@ const formatJoinedDate = (iso: string) => {
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} 가입`;
 };
-
-const cardClassName = 'rounded-xl border border-border-subtle bg-bg-surface';
 
 // 불러오지 못한 카드 자리에 두는 안내와 다시 시도 버튼
 const LoadError = ({

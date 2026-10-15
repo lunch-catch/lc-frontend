@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Checkbox, ChoiceChip } from '@repo/ui';
 
 import ActionButton from '@user/components/ActionButton/ActionButton';
+import Card from '@user/components/Card/Card';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
 import TopBar from '@user/components/TopBar/TopBar';
 import { startKakaoWithdrawAuth } from '@user/features/login/kakaoLogin';
@@ -57,7 +58,7 @@ const WithdrawScreen = () => {
           >
             탈퇴하기 전에 확인해 주세요
           </h2>
-          <ul className="mt-4 flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+          <Card as="ul" className="mt-4 flex flex-col gap-3 p-4">
             {notices.map((notice) => (
               <li
                 className="flex gap-2 text-body-sm-mobile break-keep text-text-primary"
@@ -69,7 +70,7 @@ const WithdrawScreen = () => {
                 {notice}
               </li>
             ))}
-          </ul>
+          </Card>
         </section>
 
         <fieldset>
