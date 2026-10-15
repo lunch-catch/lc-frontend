@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 import type {
   DashboardDataset,
@@ -16,13 +17,26 @@ import {
 } from './dashboardUtils';
 
 export const useDashboardReport = (data: DashboardDataset) => {
-  const [range, setRange] = useState<DashboardRange>({
-    startDate: shiftDate(data.completedThrough, -13),
-    endDate: data.completedThrough,
+  const { filters, updateFilters } = useUrlFilters('dashboard.', {
+    from: queryDate(shiftDate(data.completedThrough, -13)),
+    to: queryDate(data.completedThrough),
+    interval: queryChoice(['day', 'week', 'month'] as const, 'day'),
+    metric: queryChoice(
+      ['impressions', 'saves', 'issued', 'used'] as const,
+      'impressions',
+    ),
+    compare: queryChoice(['true', 'false'] as const, 'true'),
   });
-  const [interval, setInterval] = useState<DashboardInterval>('day');
-  const [metric, setMetric] = useState<UsageMetric>('impressions');
-  const [compare, setCompare] = useState(true);
+  const range = { startDate: filters.from, endDate: filters.to };
+  const { interval, metric } = filters;
+  const compare = filters.compare === 'true';
+  const setRange = (value: DashboardRange) =>
+    updateFilters({ from: value.startDate, to: value.endDate });
+  const setInterval = (interval: DashboardInterval) =>
+    updateFilters({ interval });
+  const setMetric = (metric: UsageMetric) => updateFilters({ metric });
+  const setCompare = (compare: boolean) =>
+    updateFilters({ compare: compare ? 'true' : 'false' });
   const validRange = Boolean(
     range.startDate &&
     range.endDate &&
