@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { type AddressResult, searchAddress } from '@user/api/kakao';
+import { type AddressResult, searchAddress } from './kakaoSearch';
 
 // 이 글자 수부터 검색한다
 const MIN_KEYWORD_LENGTH = 2;

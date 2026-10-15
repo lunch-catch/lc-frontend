@@ -4,7 +4,7 @@ import { MapPin } from 'lucide-react';
 
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import HintInput from '@user/components/HintInput/HintInput';
-import LocationPreviewMap from '@user/features/map/LocationPreviewMap';
+import LocationPreviewMap from '@user/components/KakaoMap/LocationPreviewMap';
 
 // 서버가 받는 위치 이름의 최대 길이
 const NICKNAME_MAX_LENGTH = 50;

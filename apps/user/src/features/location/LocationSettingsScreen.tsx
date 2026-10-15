@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CircleAlert, MapPin, Search, X } from 'lucide-react';
 
-import { type AddressResult, findAddress } from '@user/api/kakao';
 import {
   deleteMyLocation,
   fetchMyLocation,
@@ -21,6 +20,7 @@ import TopBar from '@user/components/TopBar/TopBar';
 
 import AddressSearchResults from './AddressSearchResults';
 import { getCurrentPosition, PositionError } from './currentPosition';
+import { type AddressResult, findAddress } from './kakaoSearch';
 import LocationNameSheet from './LocationNameSheet';
 import { useAddressSearch } from './useAddressSearch';
 import { getLocationLabel, rememberMyLocation } from './useMyLocation';

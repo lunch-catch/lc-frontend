@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { StoreListItem } from '@user/api/store';
 import ActionButton from '@user/components/ActionButton/ActionButton';
-import MapOverlay from '@user/features/map/MapOverlay';
-import { useKakaoMap } from '@user/features/map/useKakaoMap';
+import MapOverlay from '@user/components/KakaoMap/MapOverlay';
+import { useKakaoMap } from '@user/components/KakaoMap/useKakaoMap';
 
 import StoreCard from './StoreCard';
 import { formatDiscount } from './storeFormat';

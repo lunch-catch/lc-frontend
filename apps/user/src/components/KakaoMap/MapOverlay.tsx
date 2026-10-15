@@ -1,8 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { KakaoCustomOverlay } from '@user/api/kakao';
-
+import type { KakaoCustomOverlay } from './kakaoSdk';
 import type { KakaoMapHandle } from './useKakaoMap';
 
 interface MapOverlayProps {
@@ -31,6 +30,8 @@ const MapOverlay = ({
 }: MapOverlayProps) => {
   const [element] = useState(() => document.createElement('div'));
   const overlayRef = useRef<KakaoCustomOverlay | null>(null);
+  // 위치가 바뀌어 오버레이를 새로 만들 때도 지금 zIndex로 만들도록 ref에 둔다
+  const zIndexRef = useRef(zIndex);
 
   useEffect(() => {
     const overlay = new kakao.maps.CustomOverlay({
@@ -38,6 +39,7 @@ const MapOverlay = ({
       content: element,
       clickable,
       yAnchor,
+      zIndex: zIndexRef.current,
     });
     overlay.setMap(kakao.map);
     overlayRef.current = overlay;
@@ -49,8 +51,9 @@ const MapOverlay = ({
 
   // 핀을 고르면 오버레이를 새로 만들지 않고 겹치는 순서만 바꾼다
   useEffect(() => {
+    zIndexRef.current = zIndex;
     overlayRef.current?.setZIndex(zIndex);
-  }, [kakao, latitude, longitude, yAnchor, zIndex]);
+  }, [zIndex]);
 
   return createPortal(children, element);
 };

@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useRef, useState } from 'react';
 
-import { type KakaoMap, type KakaoMaps, loadKakaoMaps } from '@user/api/kakao';
+import { type KakaoMap, type KakaoMaps, loadKakaoMaps } from './kakaoSdk';
 
 export interface KakaoMapHandle {
   maps: KakaoMaps;

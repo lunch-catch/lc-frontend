@@ -1,9 +1,10 @@
-// 카카오 지도 JavaScript SDK. 탐색 탭 지도, 주소 검색, 좌표와 주소 변환에 쓴다
+// 카카오 지도 JavaScript SDK를 불러온다. 지도(useKakaoMap)와 주소 검색(features/location/kakaoSearch)이 같이 쓴다
+// 서버 요청이 아니라 api가 아닌 여기에 둔다. components는 api의 함수를 가져올 수 없어서 지도 컴포넌트 옆에 둔다
 // 키는 브라우저에 그대로 노출되는 JavaScript 키라, 카카오 디벨로퍼스에 등록한 도메인에서만 동작한다
 
-type KakaoStatus = 'OK' | 'ZERO_RESULT' | 'ERROR';
+export type KakaoStatus = 'OK' | 'ZERO_RESULT' | 'ERROR';
 
-interface KakaoPlace {
+export interface KakaoPlace {
   place_name: string;
   address_name: string;
   road_address_name: string;
@@ -12,19 +13,19 @@ interface KakaoPlace {
   y: string;
 }
 
-interface KakaoAddress {
+export interface KakaoAddress {
   address_name: string;
   road_address: { address_name: string } | null;
   x: string;
   y: string;
 }
 
-interface KakaoCoordAddress {
+export interface KakaoCoordAddress {
   address: { address_name: string } | null;
   road_address: { address_name: string } | null;
 }
 
-interface KakaoServices {
+export interface KakaoServices {
   Places: new () => {
     keywordSearch: (
       keyword: string,
@@ -152,89 +153,4 @@ export const loadKakaoMaps = () => {
   });
 
   return sdkPromise;
-};
-
-const loadKakaoServices = () => loadKakaoMaps().then((maps) => maps.services);
-
-// 검색 결과 하나. 장소 검색이면 이름이 있고, 주소 검색이면 null이다
-export interface AddressResult {
-  placeName: string | null;
-  // 도로명 주소가 없는 곳은 지번 주소
-  address: string;
-  latitude: number;
-  longitude: number;
-}
-
-// 검색 결과 상태를 결과 목록으로 바꾼다. 결과가 없으면 빈 목록이다
-const settle = <T>(
-  status: KakaoStatus,
-  items: T[],
-  resolve: (items: T[]) => void,
-  reject: (error: Error) => void,
-) => {
-  if (status === 'ERROR') reject(new Error('카카오 검색에 실패했습니다'));
-  else resolve(status === 'OK' ? items : []);
-};
-
-const searchPlaces = (services: KakaoServices, keyword: string) =>
-  new Promise<KakaoPlace[]>((resolve, reject) => {
-    new services.Places().keywordSearch(keyword, (result, status) =>
-      settle(status, result, resolve, reject),
-    );
-  });
-
-const searchAddresses = (services: KakaoServices, keyword: string) =>
-  new Promise<KakaoAddress[]>((resolve, reject) => {
-    new services.Geocoder().addressSearch(keyword, (result, status) =>
-      settle(status, result, resolve, reject),
-    );
-  });
-
-// 회사 이름이나 역 이름 같은 장소로 먼저 찾고, 없으면 주소로 찾는다
-export const searchAddress = async (
-  keyword: string,
-): Promise<AddressResult[]> => {
-  const services = await loadKakaoServices();
-
-  const places = await searchPlaces(services, keyword);
-  if (places.length > 0) {
-    return places.map((place) => ({
-      placeName: place.place_name,
-      address: place.road_address_name || place.address_name,
-      latitude: Number(place.y),
-      longitude: Number(place.x),
-    }));
-  }
-
-  const addresses = await searchAddresses(services, keyword);
-  return addresses.map((item) => ({
-    placeName: null,
-    address: item.road_address?.address_name ?? item.address_name,
-    latitude: Number(item.y),
-    longitude: Number(item.x),
-  }));
-};
-
-// 좌표의 주소. 도로명 주소가 없으면 지번 주소, 둘 다 없으면 null
-export const findAddress = async (latitude: number, longitude: number) => {
-  const services = await loadKakaoServices();
-
-  return new Promise<string | null>((resolve, reject) => {
-    new services.Geocoder().coord2Address(
-      longitude,
-      latitude,
-      (result, status) => {
-        if (status === 'ERROR') {
-          reject(new Error('주소를 찾지 못했습니다'));
-          return;
-        }
-        const [first] = result;
-        resolve(
-          first?.road_address?.address_name ??
-            first?.address?.address_name ??
-            null,
-        );
-      },
-    );
-  });
 };
