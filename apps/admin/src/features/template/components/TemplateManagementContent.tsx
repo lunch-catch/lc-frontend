@@ -6,12 +6,22 @@ import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import type { PosterTemplate } from '@admin/features/template/templateTypes';
 import { getTemplateError } from '@admin/features/template/templateUtils';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import { queryChoice, queryText } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
 import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
 
-type TemplateSort = 'ACTIVE_FIRST' | 'INACTIVE_FIRST' | 'REGISTERED';
+const templateQuery = {
+  keyword: queryText(),
+  activation: queryChoice(['ALL', 'ACTIVE', 'INACTIVE'] as const, 'ALL'),
+  status: queryChoice(['ALL', 'DRAFT', 'PUBLISHED'] as const, 'ALL'),
+  sort: queryChoice(
+    ['ACTIVE_FIRST', 'INACTIVE_FIRST', 'REGISTERED'] as const,
+    'REGISTERED',
+  ),
+};
 
 const activationOptions = [
   { label: '활성 여부 전체', value: 'ALL' },
@@ -50,16 +60,18 @@ export const TemplateManagementContent = ({
   hasDraft,
   templates,
 }: TemplateManagementContentProps) => {
-  const [activation, setActivation] = useState('ALL');
+  const { filters, updateFilters } = useUrlFilters('templates.', templateQuery);
+  const { activation, status, sort } = filters;
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [activationError, setActivationError] = useState<string | null>(null);
   const [changingActive, setChangingActive] = useState(false);
   const activationLock = useRef(false);
   const [pendingActivationTemplate, setPendingActivationTemplate] =
     useState<PosterTemplate | null>(null);
-  const [sort, setSort] = useState<TemplateSort>('REGISTERED');
-  const [status, setStatus] = useState('ALL');
-  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch();
+  const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
+    filters.keyword,
+    (keyword) => updateFilters({ keyword }),
+  );
 
   const filteredTemplates = useMemo(() => {
     const query = keyword.trim().toLowerCase();
@@ -143,7 +155,7 @@ export const TemplateManagementContent = ({
         <SelectField
           fitContent
           onValueChange={(value) => {
-            setStatus(value);
+            updateFilters({ status: value as typeof status });
           }}
           options={statusOptions}
           value={status}
@@ -151,7 +163,7 @@ export const TemplateManagementContent = ({
         <SelectField
           fitContent
           onValueChange={(value) => {
-            setActivation(value);
+            updateFilters({ activation: value as typeof activation });
           }}
           options={activationOptions}
           value={activation}
@@ -159,7 +171,7 @@ export const TemplateManagementContent = ({
         <SelectField
           fitContent
           onValueChange={(value) => {
-            setSort(value as TemplateSort);
+            updateFilters({ sort: value as typeof sort });
           }}
           options={sortOptions}
           value={sort}

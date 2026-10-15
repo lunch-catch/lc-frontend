@@ -18,8 +18,15 @@ import {
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import {
+  queryChoice,
+  queryPage,
+  queryPageSize,
+  queryText,
+} from '@admin/hooks/urlQuery';
 import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
 import type {
   AdminAccountForm,
@@ -55,6 +62,12 @@ const emptyForm: AdminAccountForm = {
   role: 'ADMIN',
 };
 
+const accountQuery = {
+  keyword: queryText(),
+  role: queryChoice(['ALL', 'ADMIN', 'SUPER_ADMIN'] as const, 'ALL'),
+  page: queryPage,
+  size: queryPageSize(10),
+};
 export const AdminAccountManagement = () => {
   const columnSettings = useTableColumnSettings(
     'admin-accounts',
@@ -64,7 +77,8 @@ export const AdminAccountManagement = () => {
   const canIssueAccount = currentRole === 'SUPER_ADMIN';
   // 목록 조회 계약은 없으므로 이번 화면에서 발급한 응답만 보관한다.
   const [accounts, setAccounts] = useState<IssuedAdminAccount[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const { filters, updateFilters } = useUrlFilters('accounts.', accountQuery);
+  const { page: currentPage, size: pageSize, role } = filters;
   const [form, setForm] = useState<AdminAccountForm>(emptyForm);
   const [formErrors, setFormErrors] = useState<AdminAccountFormErrors>({});
   const [isIssuing, setIsIssuing] = useState(false);
@@ -78,11 +92,10 @@ export const AdminAccountManagement = () => {
     clearError,
   } = useRequestFeedback();
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
-  const [role, setRole] = useState('ALL');
-  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
-    onCommit: () => setCurrentPage(1),
-  });
-  const [pageSize, setPageSize] = useState(10);
+  const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
+    filters.keyword,
+    (keyword) => updateFilters({ keyword, page: 1 }),
+  );
   const [density, setDensity] = useState<TableDensity>('normal');
 
   const filteredAccounts = useMemo(() => {
@@ -131,7 +144,7 @@ export const AdminAccountManagement = () => {
     try {
       const issued = await issueAdminAccount(form);
       setAccounts((current) => [issued, ...current]);
-      setCurrentPage(1);
+      updateFilters({ page: 1 }, true);
       setForm(emptyForm);
       setFormErrors({});
       setIsIssueModalOpen(false);
@@ -152,11 +165,10 @@ export const AdminAccountManagement = () => {
 
   const pagination = {
     currentPage,
-    onPageChange: setCurrentPage,
+    onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (value: number) => {
       // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
-      setCurrentPage(1);
-      setPageSize(value);
+      updateFilters({ page: 1, size: value });
     },
     pageSize,
     totalCount: filteredAccounts.length,
@@ -210,8 +222,7 @@ export const AdminAccountManagement = () => {
         <SelectField
           fitContent
           onValueChange={(value) => {
-            setCurrentPage(1);
-            setRole(value);
+            updateFilters({ page: 1, role: value as typeof role });
           }}
           options={roleOptions}
           value={role}

@@ -16,7 +16,15 @@ export const MemberManagementPage = () => {
       key={initialMemberId ?? 'all'}
       initialMemberId={initialMemberId}
       activeTab={activeTab}
-      onReviewEnd={(tab) => setSearchParams({ tab })}
+      onReviewEnd={(tab) =>
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current);
+          next.delete('userId');
+          if (tab === 'owner') next.delete('tab');
+          else next.set('tab', tab);
+          return next;
+        })
+      }
     />
   );
 };

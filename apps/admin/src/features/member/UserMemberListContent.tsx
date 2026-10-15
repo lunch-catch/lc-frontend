@@ -24,12 +24,14 @@ import {
   TableHeaderCell,
   TableLoading,
   TableRow,
-  type TableSortDirection,
   useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+
+import { memberQuery } from './memberQuery';
 
 const columns: DataTableColumn[] = [
   { key: 'memberId', label: '회원 ID', minWidth: 120 },
@@ -55,17 +57,19 @@ export const UserMemberListContent = ({
 }: UserMemberListContentProps) => {
   const columnSettings = useTableColumnSettings('members.users', columns);
   const [targetId, setTargetId] = useState(initialMemberId);
-  const [page, setPage] = useState(1);
-  const [size, setSize] = useState(20);
-  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
-    useDebouncedSearch({ onCommit: () => setPage(1) });
-  const [status, setStatus] = useState('ALL');
-  const [dates, setDates] = useState({ startDate: '', endDate: '' });
+  const { filters, updateFilters } = useUrlFilters('users.', memberQuery);
+  const { page, size, status } = filters;
+  const dates = { startDate: filters.from, endDate: filters.to };
+  const sort = filters.sortBy
+    ? { key: filters.sortBy, direction: filters.sortDir }
+    : null;
+  const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
+    filters.keyword,
+    (keyword) => {
+      updateFilters({ keyword, page: 1 });
+    },
+  );
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [sort, setSort] = useState<{
-    key: MemberSortKey;
-    direction: TableSortDirection;
-  } | null>(null);
   const [result, setResult] = useState<{
     key: string;
     data?: MemberPage;
@@ -124,22 +128,18 @@ export const UserMemberListContent = ({
     pageSize: size,
     totalCount: data?.totalElements ?? 0,
     totalPages: Math.ceil((data?.totalElements ?? 0) / size),
-    onPageChange: setPage,
+    onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (value: number) => {
-      setPage(1);
-      setSize(value);
+      updateFilters({ page: 1, size: value });
     },
   };
   const changeSort = (key: MemberSortKey) => {
-    setPage(1);
     // 세 번째 클릭은 정렬 옵션을 제거해 서버 기본 정렬인 가입일 내림차순으로 돌아간다.
-    setSort((current) =>
-      current?.key !== key
-        ? { key, direction: 'desc' }
-        : current.direction === 'desc'
-          ? { key, direction: 'asc' }
-          : null,
-    );
+    updateFilters({
+      page: 1,
+      sortBy: sort?.key !== key ? key : sort.direction === 'desc' ? key : '',
+      sortDir: sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc',
+    });
   };
 
   return (
@@ -158,11 +158,6 @@ export const UserMemberListContent = ({
             variant="neutral"
             onClick={() => {
               setTargetId(undefined);
-              setPage(1);
-              resetSearch();
-              setStatus('ALL');
-              setDates({ startDate: '', endDate: '' });
-              setSort(null);
               onReviewEnd?.();
             }}
           >
@@ -193,16 +188,18 @@ export const UserMemberListContent = ({
           ]}
           value={status}
           onValueChange={(value) => {
-            setPage(1);
-            setStatus(value);
+            updateFilters({ page: 1, status: value as typeof status });
           }}
         />
         <DateRangePicker
           aria-label="가입일 범위"
           value={dates}
           onValueChange={(value) => {
-            setPage(1);
-            setDates(value);
+            updateFilters({
+              page: 1,
+              from: value.startDate,
+              to: value.endDate,
+            });
           }}
         />
       </FilterBar>

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { SegmentedControl } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
@@ -8,6 +7,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@admin/components/DataTable';
+import { queryChoice } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 import { DashboardSection } from './DashboardSection';
 import type {
@@ -29,12 +30,25 @@ export const DashboardBreakdown = ({
   previousDays,
   canCompare,
 }: DashboardBreakdownProps) => {
-  const [dimension, setDimension] = useState<BreakdownDimension>('region');
-  const [rankingMetric, setRankingMetric] = useState<UsageMetric>('used');
-  const [sort, setSort] = useState<{
-    key: keyof UsageBreakdown;
-    direction: 'asc' | 'desc';
-  } | null>({ key: 'used', direction: 'desc' });
+  const { filters, updateFilters } = useUrlFilters('breakdown.', {
+    dimension: queryChoice(['region', 'category'] as const, 'region'),
+    metric: queryChoice(
+      ['impressions', 'saves', 'issued', 'used'] as const,
+      'used',
+    ),
+    sortBy: queryChoice(
+      ['', 'name', 'impressions', 'saves', 'issued', 'used'] as const,
+      'used',
+    ),
+    sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
+  });
+  const { dimension, metric: rankingMetric } = filters;
+  const sort = filters.sortBy
+    ? { key: filters.sortBy, direction: filters.sortDir }
+    : null;
+  const setDimension = (dimension: BreakdownDimension) =>
+    updateFilters({ dimension });
+  const setRankingMetric = (metric: UsageMetric) => updateFilters({ metric });
   const rows = getBreakdown(days, dimension).sort((a, b) => {
     if (!sort) return 0;
     const result =
@@ -59,15 +73,10 @@ export const DashboardBreakdown = ({
     ...usageMetrics,
   ];
   const changeSort = (key: keyof UsageBreakdown) =>
-    setSort(
-      sort?.key === key && sort.direction === 'asc'
-        ? null
-        : {
-            key,
-            direction:
-              sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc',
-          },
-    );
+    updateFilters({
+      sortBy: sort?.key === key && sort.direction === 'asc' ? '' : key,
+      sortDir: sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc',
+    });
   return (
     <DashboardSection
       title="지역·카테고리별 이용 현황"

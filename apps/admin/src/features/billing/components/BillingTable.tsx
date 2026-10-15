@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import {
   DateRangePicker,
   type DateRangeValue,
@@ -23,7 +23,15 @@ import type {
   BillingRecord,
   BillingTablePreferences,
 } from '@admin/features/billing/billingView';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import {
+  queryChoice,
+  queryDate,
+  queryPage,
+  querySize,
+  queryText,
+} from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
 interface Sort {
   index: number;
@@ -31,6 +39,7 @@ interface Sort {
 }
 
 interface BillingTableProps {
+  queryPrefix: string;
   preferences: BillingTablePreferences;
   columns: BillingColumn[];
   rows: BillingRecord[] | ((range: DateRangeValue) => BillingRecord[]);
@@ -45,6 +54,7 @@ interface BillingTableProps {
 }
 
 export const BillingTable = ({
+  queryPrefix,
   columns,
   rows,
   statusOptions = [],
@@ -67,16 +77,46 @@ export const BillingTable = ({
     'billing.' + columns.map((column) => column.label).join('|'),
     tableColumns,
   );
-  const { density, setDensity, pageSize, setPageSize } = preferences;
-  const [status, setStatus] = useState(defaultStatus);
-  const [range, setRange] = useState<DateRangeValue>(() => ({
-    ...defaultRange,
-  }));
-  const [sort, setSort] = useState<Sort | null>(null);
-  const [page, setPage] = useState(1);
-  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
-    onCommit: () => setPage(1),
+  const { density, setDensity } = preferences;
+  const { filters, updateFilters } = useUrlFilters(queryPrefix, {
+    keyword: queryText(),
+    status: queryChoice(
+      ['ALL', ...statusOptions.map(([value]) => value)],
+      defaultStatus,
+    ),
+    from: queryDate(defaultRange.startDate),
+    to: queryDate(defaultRange.endDate),
+    page: queryPage,
+    size: querySize,
+    sortBy: queryChoice(['', ...columns.map((column) => column.label)], ''),
+    sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
   });
+  const { page, size: pageSize } = filters;
+  const status = statusOptions.length ? filters.status : defaultStatus;
+  const range = useMemo(
+    () =>
+      showDateRange
+        ? { startDate: filters.from, endDate: filters.to }
+        : defaultRange,
+    [showDateRange, filters.from, filters.to, defaultRange],
+  );
+  const sort = useMemo<Sort | null>(
+    () =>
+      filters.sortBy
+        ? {
+            index: columns.findIndex(
+              (column) => column.label === filters.sortBy,
+            ),
+            direction: filters.sortDir,
+          }
+        : null,
+    [columns, filters.sortBy, filters.sortDir],
+  );
+  const search = useUrlSearch(filters.keyword, (keyword) =>
+    updateFilters({ keyword, page: 1 }),
+  );
+  const { draftKeyword, setDraftKeyword } = search;
+  const keyword = showSearch ? search.keyword : '';
 
   const records = useMemo(
     () => (typeof rows === 'function' ? rows(range) : rows),
@@ -106,16 +146,14 @@ export const BillingTable = ({
   }, [records, range, status, keyword, sort]);
 
   const totalPages = Math.ceil(filteredRows.length / pageSize);
-  // 다른 탭에서 개수가 바뀌면 실제 목록 페이지를 제한하고, 빈 목록의 상태값은 1로 유지한다.
+  // 공유 URL의 페이지가 현재 결과 범위를 벗어나면 마지막 페이지까지만 표시한다.
   const currentPage = Math.min(page, Math.max(1, totalPages));
 
   const pagination = {
     currentPage,
-    onPageChange: setPage,
+    onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (value: number) => {
-      // 정산 탭끼리 공유하는 개수가 바뀌면 현재 탭의 페이지는 첫 페이지로 돌린다.
-      setPageSize(value);
-      setPage(1);
+      updateFilters({ size: value, page: 1 });
     },
     pageSize,
     totalCount: filteredRows.length,
@@ -143,8 +181,7 @@ export const BillingTable = ({
             fitContent
             value={status}
             onValueChange={(value) => {
-              setStatus(value);
-              setPage(1);
+              updateFilters({ status: value, page: 1 });
             }}
             options={[
               { label: '전체', value: 'ALL' },
@@ -161,8 +198,11 @@ export const BillingTable = ({
             placeholder="조회 기간 선택"
             value={range}
             onValueChange={(value) => {
-              setRange(value);
-              setPage(1);
+              updateFilters({
+                from: value.startDate,
+                to: value.endDate,
+                page: 1,
+              });
             }}
           />
         )}
@@ -184,14 +224,19 @@ export const BillingTable = ({
                   sort?.index === index ? sort.direction : undefined
                 }
                 onSortChange={() => {
-                  setPage(1);
-                  setSort((current) =>
-                    !current || current.index !== index
-                      ? { index, direction: 'desc' }
-                      : current.direction === 'desc'
-                        ? { index, direction: 'asc' }
-                        : null,
-                  );
+                  updateFilters({
+                    page: 1,
+                    sortBy:
+                      sort?.index !== index
+                        ? column.label
+                        : sort.direction === 'desc'
+                          ? column.label
+                          : '',
+                    sortDir:
+                      sort?.index === index && sort.direction === 'desc'
+                        ? 'asc'
+                        : 'desc',
+                  });
                 }}
               >
                 {column.label}

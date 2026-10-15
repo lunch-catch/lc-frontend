@@ -20,8 +20,10 @@ interface PointSummaryResult {
   error?: string;
 }
 
-export const usePointSummary = (filters: PointSummaryFilters | null) => {
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+export const usePointSummary = (
+  filters: PointSummaryFilters | null,
+  sortDir: 'asc' | 'desc' = 'desc',
+) => {
   const [result, setResult] = useState<PointSummaryResult | null>(null);
   const enabled = filters !== null;
   const key = filters
@@ -57,7 +59,5 @@ export const usePointSummary = (filters: PointSummaryFilters | null) => {
     loading: enabled && !current,
     enabled,
     sortDir,
-    changeSort: () =>
-      setSortDir((value) => (value === 'desc' ? 'asc' : 'desc')),
   };
 };

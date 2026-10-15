@@ -1,5 +1,5 @@
 ﻿import { useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { TemplateManagementContent } from '@admin/features/template/components/TemplateManagementContent';
 import type { PosterTemplate } from '@admin/features/template/templateTypes';
@@ -7,6 +7,7 @@ import { useTemplateManagement } from '@admin/features/template/useTemplateManag
 
 export const TemplateManagementPage = () => {
   const navigate = useNavigate();
+  const { search } = useLocation();
   const management = useTemplateManagement();
   const { refresh } = management;
   useEffect(() => {
@@ -14,9 +15,9 @@ export const TemplateManagementPage = () => {
   }, [refresh]);
   const openTemplate = (template: PosterTemplate) => {
     void navigate(
-      template.status === 'DRAFT'
+      (template.status === 'DRAFT'
         ? `/templates/drafts/${template.templateId}/edit`
-        : `/templates/${template.templateId}`,
+        : `/templates/${template.templateId}`) + search,
     );
   };
 
@@ -24,7 +25,9 @@ export const TemplateManagementPage = () => {
     <TemplateManagementContent
       {...management}
       onCreate={(name) =>
-        void navigate('/templates/new', { state: { templateName: name } })
+        void navigate(`/templates/new${search}`, {
+          state: { templateName: name },
+        })
       }
       onOpenTemplate={openTemplate}
       onLoadDraft={() => {
