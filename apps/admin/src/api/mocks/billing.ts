@@ -1,8 +1,7 @@
-import type {
+﻿import type {
   BillingCampaign,
   BillingState,
   LedgerEntry,
-  Payment,
   PointPolicy,
 } from '@admin/features/billing/billingTypes';
 import { getBalance } from '@admin/features/billing/billingUtils';
@@ -10,54 +9,17 @@ import { getBalance } from '@admin/features/billing/billingUtils';
 export const createMockBillingState = (today: string): BillingState => {
   const owners = ['OWN-001', 'OWN-002', 'OWN-003', 'OWN-004', 'OWN-005'];
   const amounts = [50000, 30000, 100000, 10000, 30000];
-  const payments: Payment[] = owners.map((ownerId, index) => ({
-    id: 'PG-PAY-' + (index + 1),
+  // 아직 API를 연결하지 않은 매출·환불 화면의 집계 원장만 유지한다.
+  const ledger: LedgerEntry[] = owners.map((ownerId, index) => ({
+    id: 'L-PG-PAY-' + (index + 1),
     ownerId,
+    type: 'CHARGE',
     amount: amounts[index],
-    points: amounts[index],
-    status: 'SUCCESS',
-    paidAt: '2026-09-20T09:00:00+09:00',
+    balanceDelta: amounts[index],
+    reservedDelta: 0,
+    createdAt: '2026-09-20T09:00:00+09:00',
+    transactionId: 'PG-PAY-' + (index + 1),
   }));
-  payments.push(
-    {
-      id: 'PG-PAY-7',
-      ownerId: 'OWN-001',
-      amount: 10000,
-      points: 10000,
-      status: 'FAILED',
-      paidAt: '2026-09-25T10:00:00+09:00',
-      failureReason: '한도 초과',
-    },
-    {
-      id: 'PG-PAY-8',
-      ownerId: 'OWN-002',
-      amount: 30000,
-      points: 30000,
-      status: 'PENDING',
-      paidAt: today + 'T10:00:00+09:00',
-    },
-    {
-      id: 'PG-PAY-9',
-      ownerId: 'OWN-004',
-      amount: 10000,
-      points: 10000,
-      status: 'CANCELED',
-      paidAt: '2026-09-26T10:00:00+09:00',
-      cancellationId: 'PG-CANCEL-9',
-    },
-  );
-  const ledger: LedgerEntry[] = payments
-    .filter((payment) => payment.status === 'SUCCESS')
-    .map((payment) => ({
-      id: 'L-' + payment.id,
-      ownerId: payment.ownerId,
-      type: 'CHARGE',
-      amount: payment.points,
-      balanceDelta: payment.points,
-      reservedDelta: 0,
-      createdAt: payment.paidAt,
-      transactionId: payment.id,
-    }));
   [0, 1, 4].forEach((index) => {
     const ownerId = owners[index];
     ledger.push(
@@ -165,7 +127,6 @@ export const createMockBillingState = (today: string): BillingState => {
     reason: '기본 정책',
   };
   return {
-    payments,
     ledger,
     campaigns,
     policy,

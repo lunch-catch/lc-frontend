@@ -1,20 +1,7 @@
-export type PaymentStatus =
-  'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELED' | 'UNKNOWN';
-export type LedgerType =
+﻿export type LedgerType =
   'CHARGE' | 'RESERVE' | 'DEDUCT' | 'RELEASE' | 'ADJUST' | 'REFUND';
 export type RefundStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED';
 export type ReportPeriod = 'day' | 'week' | 'month';
-
-export interface Payment {
-  id: string;
-  ownerId: string;
-  amount: number;
-  points: number;
-  status: PaymentStatus;
-  paidAt: string;
-  failureReason?: string;
-  cancellationId?: string;
-}
 
 export interface LedgerEntry {
   id: string;
@@ -63,7 +50,6 @@ export interface PointPolicy {
 }
 
 export interface BillingState {
-  payments: Payment[];
   ledger: LedgerEntry[];
   refunds: RefundRequest[];
   campaigns: BillingCampaign[];
