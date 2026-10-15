@@ -23,8 +23,10 @@ import {
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
+import { ownerQuery } from './memberQuery';
 import type { MemberStatus, MemberType, Owner } from './memberTypes';
 import { getMaskedValue, isIncludedInDateRange } from './memberUtils';
 import { UserMemberListContent } from './UserMemberListContent';
@@ -91,15 +93,28 @@ export const MemberManagementContent = ({
     ownerTableColumns,
   );
   const [targetMemberId, setTargetMemberId] = useState(initialMemberId);
-  const [currentPage, setCurrentPage] = useState(1);
-  const { draftKeyword, keyword, setDraftKeyword, resetSearch } =
-    useDebouncedSearch({ onCommit: () => setCurrentPage(1) });
-  const [endDate, setEndDate] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [status, setStatus] = useState('ALL');
+  const { filters, updateFilters } = useUrlFilters('owners.', ownerQuery);
+  const {
+    page: currentPage,
+    size: pageSize,
+    from: startDate,
+    to: endDate,
+    status,
+  } = filters;
+  const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
+    filters.keyword,
+    (keyword) => {
+      updateFilters({ keyword, page: 1 });
+    },
+  );
   const [tableDensity, setTableDensity] = useState<TableDensity>('normal');
-  const [pageSize, setPageSize] = useState(20);
-  const [ownerSort, setOwnerSort] = useState<OwnerSort | null>(null);
+  const ownerSort = useMemo<OwnerSort | null>(
+    () =>
+      filters.sortBy
+        ? { key: filters.sortBy, direction: filters.sortDir }
+        : null,
+    [filters.sortBy, filters.sortDir],
+  );
 
   const filteredOwners = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -149,35 +164,32 @@ export const MemberManagementContent = ({
     if (nextTab === activeTab) return;
     onReviewEnd?.(nextTab as MemberType);
     setTargetMemberId(undefined);
-    // 점주와 사용자의 검색 대상이 달라 탭 전환 시 이전 조회 조건을 넘기지 않는다.
-    setCurrentPage(1);
-    resetSearch();
-    setStatus('ALL');
-    setStartDate('');
-    setEndDate('');
-    setOwnerSort(null);
   };
 
-  const handleOwnerSortChange = (nextKey: keyof Owner) => {
-    setCurrentPage(1);
-    setOwnerSort((currentSort) => {
-      if (!currentSort || currentSort.key !== nextKey) {
-        return { direction: 'desc', key: nextKey };
-      }
-
-      return currentSort.direction === 'desc'
-        ? { direction: 'asc', key: nextKey }
-        : null;
+  const handleOwnerSortChange = (
+    nextKey: Exclude<typeof filters.sortBy, ''>,
+  ) => {
+    updateFilters({
+      page: 1,
+      sortBy:
+        ownerSort?.key !== nextKey
+          ? nextKey
+          : ownerSort.direction === 'desc'
+            ? nextKey
+            : '',
+      sortDir:
+        ownerSort?.key === nextKey && ownerSort.direction === 'desc'
+          ? 'asc'
+          : 'desc',
     });
   };
 
   const pagination = {
     currentPage,
-    onPageChange: setCurrentPage,
+    onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (value: number) => {
       // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
-      setCurrentPage(1);
-      setPageSize(value);
+      updateFilters({ page: 1, size: value });
     },
     pageSize,
     totalCount: activeList.length,
@@ -216,8 +228,7 @@ export const MemberManagementContent = ({
             <SelectField
               fitContent
               onValueChange={(nextStatus) => {
-                setCurrentPage(1);
-                setStatus(nextStatus);
+                updateFilters({ page: 1, status: nextStatus as typeof status });
               }}
               options={statusOptions}
               value={status}
@@ -228,9 +239,11 @@ export const MemberManagementContent = ({
                 endDate: nextEndDate,
                 startDate: nextStartDate,
               }) => {
-                setCurrentPage(1);
-                setStartDate(nextStartDate);
-                setEndDate(nextEndDate);
+                updateFilters({
+                  page: 1,
+                  from: nextStartDate,
+                  to: nextEndDate,
+                });
               }}
               value={{ endDate, startDate }}
             />
@@ -240,7 +253,9 @@ export const MemberManagementContent = ({
             columnSettings={columnSettings}
             members={visibleList}
             density={tableDensity}
-            onSortChange={(key) => handleOwnerSortChange(key as keyof Owner)}
+            onSortChange={(key) =>
+              handleOwnerSortChange(key as Exclude<typeof filters.sortBy, ''>)
+            }
             sortDirection={ownerSort?.direction}
             sortKey={ownerSort?.key}
           />
