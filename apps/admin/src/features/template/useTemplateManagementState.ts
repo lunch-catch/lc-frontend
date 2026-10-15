@@ -7,7 +7,6 @@ import type { PosterTemplate } from './templateTypes';
 import { getTemplateError } from './templateUtils';
 
 export interface TemplateManagement {
-  hasDraft: boolean;
   templates: PosterTemplate[];
   loading: boolean;
   error: string | null;
@@ -83,7 +82,6 @@ export const useTemplateManagementState = (): TemplateManagement => {
 
   return {
     templates,
-    hasDraft: templates.some((item) => item.status === 'DRAFT'),
     loading: adminId !== undefined && !current,
     error: current?.error ?? null,
     refresh,

@@ -105,14 +105,27 @@ export const getTemplateVersions = async (
 
 /** 같은 생성·수정 요청의 재시도에는 requestId를 그대로 전달해 중복 버전을 방지한다. */
 export const generateTemplate = async (
-  values: { name: string; requestPrompt: string; requestId: string },
+  values: {
+    name: string;
+    requestPrompt: string;
+    requestId: string;
+    baseVersionNumber?: number;
+  },
   id?: string,
 ) => {
   const path = id ? `${basePath}/${encodeURIComponent(id)}/versions` : basePath;
-  // 수정 API는 이름 변경을 지원하지 않아 생성 요청과 본문 구성이 다르다.
+  // baseVersionNumber는 백엔드 반영 예정인 기준 버전 필드이며 수정 요청에서만 보낸다.
   const body = id
-    ? { requestPrompt: values.requestPrompt, requestId: values.requestId }
-    : values;
+    ? {
+        requestPrompt: values.requestPrompt,
+        requestId: values.requestId,
+        baseVersionNumber: values.baseVersionNumber,
+      }
+    : {
+        name: values.name,
+        requestPrompt: values.requestPrompt,
+        requestId: values.requestId,
+      };
   const data = await requestData<TemplateGeneration>(
     path,
     jsonOptions('POST', body),

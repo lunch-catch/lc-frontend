@@ -1,6 +1,6 @@
 ﻿import { useMemo, useRef, useState } from 'react';
 import { Button, SearchField, SelectField } from '@repo/ui';
-import { FilePenLine, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
@@ -42,22 +42,18 @@ const sortOptions = [
 export interface TemplateManagementContentProps {
   onCreate: (name: string) => void;
   onOpenTemplate: (template: PosterTemplate) => void;
-  onLoadDraft: () => void;
   changeActive: (template: PosterTemplate) => Promise<void>;
   loading: boolean;
   error: string | null;
-  hasDraft: boolean;
   templates: PosterTemplate[];
 }
 
 export const TemplateManagementContent = ({
   onCreate,
   onOpenTemplate,
-  onLoadDraft,
   changeActive,
   loading,
   error,
-  hasDraft,
   templates,
 }: TemplateManagementContentProps) => {
   const { filters, updateFilters } = useUrlFilters('templates.', templateQuery);
@@ -119,7 +115,7 @@ export const TemplateManagementContent = ({
   const isActivating = pendingActivationTemplate?.active === false;
 
   return (
-    <section className="flex flex-col">
+    <section className="@container flex flex-col">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-display-web font-semibold text-text-primary">
@@ -129,22 +125,12 @@ export const TemplateManagementContent = ({
             템플릿을 미리보기로 확인하고 점주 노출 여부를 관리합니다.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            disabled={!hasDraft}
-            leadingIcon={<FilePenLine aria-hidden="true" className="size-4" />}
-            onClick={onLoadDraft}
-            variant="secondary"
-          >
-            임시저장 불러오기
-          </Button>
-          <Button
-            leadingIcon={<Plus aria-hidden="true" className="size-4" />}
-            onClick={() => setNameModalOpen(true)}
-          >
-            템플릿 생성
-          </Button>
-        </div>
+        <Button
+          leadingIcon={<Plus aria-hidden="true" className="size-4" />}
+          onClick={() => setNameModalOpen(true)}
+        >
+          템플릿 생성
+        </Button>
       </header>
 
       <FilterBar className="mb-4 shrink-0">
@@ -186,7 +172,7 @@ export const TemplateManagementContent = ({
           {error ?? '템플릿을 불러오는 중입니다.'}
         </div>
       ) : filteredTemplates.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 @sm:grid-cols-2 @xl:grid-cols-3 @3xl:grid-cols-4 @5xl:grid-cols-5">
           {filteredTemplates.map((template) => (
             <TemplatePreviewCard
               key={template.templateId}
