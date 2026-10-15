@@ -20,6 +20,7 @@ export const TemplateHtmlCode = ({
   selected,
   onSelect,
 }: TemplateHtmlCodeProps) => {
+  const viewportRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef<HTMLElement>(null);
   const elements = useMemo(() => getTemplateCodeElements(html), [html]);
   const chunks = useMemo(() => {
@@ -53,11 +54,21 @@ export const TemplateHtmlCode = ({
     : undefined;
   const selectedStart = selectedElement?.start;
   useEffect(() => {
-    if (selectedStart === undefined) return;
-    codeRef.current
-      ?.querySelector(`[data-code-start="${selectedStart}"]`)
-      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [selectedStart]);
+    if (selected?.source !== 'preview' || selectedStart === undefined) return;
+    const viewport = viewportRef.current;
+    const element = codeRef.current?.querySelector(
+      `[data-code-start="${selectedStart}"]`,
+    );
+    if (!viewport || !element) return;
+    // 직접 고른 코드는 그대로 두고, 미리보기 선택만 가로 위치를 유지하며 세로로 따라간다.
+    const viewportTop =
+      viewport.getBoundingClientRect().top + viewport.clientTop;
+    const bounds = element.getBoundingClientRect();
+    if (bounds.top < viewportTop)
+      viewport.scrollTop += bounds.top - viewportTop;
+    else if (bounds.bottom > viewportTop + viewport.clientHeight)
+      viewport.scrollTop += bounds.bottom - viewportTop - viewport.clientHeight;
+  }, [selectedStart, selected?.source]);
   const selectElement = (start: number, end?: number) => {
     if (disabled) return;
     const element = findTemplateCodeElement(elements, start, end);
@@ -96,6 +107,7 @@ export const TemplateHtmlCode = ({
 
   return (
     <ScrollArea
+      ref={viewportRef}
       aria-label="선택한 템플릿의 HTML"
       role="region"
       tabIndex={0}
@@ -123,7 +135,7 @@ export const TemplateHtmlCode = ({
                     ? `${chunk.element.selection.label} 태그를 수정 대상으로 선택`
                     : undefined
                 }
-                className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action-primary ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'bg-surface-brand text-text-primary' : selectable ? 'hover:bg-bg-surface' : ''}`}
+                className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action-primary ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'bg-code-selection text-code-selection-fg' : selectable ? 'hover:bg-bg-surface' : ''}`}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
