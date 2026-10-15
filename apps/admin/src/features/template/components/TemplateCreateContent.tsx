@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Button } from '@repo/ui';
+import { Button, StatusBadge } from '@repo/ui';
 import { Code2, MousePointer2, Send, X } from 'lucide-react';
 
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
@@ -70,8 +70,6 @@ export const TemplateCreateContent = ({
       editor.versions[0]?.versionNumber ?? 0,
     ) || undefined;
   const versionNumber = selectedVersion ?? latestVersionNumber;
-  const viewingOlderVersion =
-    !published && versionNumber !== latestVersionNumber;
   const version = editor.versions.find(
     (item) => item.versionNumber === versionNumber,
   );
@@ -195,6 +193,7 @@ export const TemplateCreateContent = ({
       <ScrollArea
         aria-label="템플릿 편집 영역"
         orientation="horizontal"
+        hideScrollbar
         tabIndex={0}
         className="min-w-0 rounded-xl border border-border-subtle shadow-sm focus-visible:outline-2 focus-visible:outline-action-primary"
       >
@@ -279,27 +278,18 @@ export const TemplateCreateContent = ({
                 <label htmlFor="template-request" className="sr-only">
                   템플릿 생성·수정 요청
                 </label>
-                {viewingOlderVersion && (
-                  <div className="flex flex-col items-start gap-1 text-caption-web text-text-secondary">
-                    <p>버전 {versionNumber}을 기준으로 새 버전을 만듭니다.</p>
-                    <button
-                      type="button"
-                      disabled={locked}
-                      className="font-medium text-text-brand hover:underline disabled:opacity-50"
-                      onClick={() => {
-                        if (latestVersionNumber !== undefined)
-                          requestVersionChange(latestVersionNumber);
-                      }}
-                    >
-                      최신 버전으로 이동
-                    </button>
-                  </div>
-                )}
                 <div
                   className={`relative flex flex-col rounded-lg border bg-bg-surface transition-colors focus-within:border-action-primary ${selectedTarget ? 'border-action-primary/40' : 'border-border-subtle'}`}
                 >
                   {selectedTarget && (
-                    <span className="ml-3 mt-2 inline-flex h-6 max-w-[calc(100%-1.5rem)] items-center gap-1.5 self-start rounded-full border border-action-primary/30 bg-surface-brand pl-2 pr-1 text-caption-web font-medium text-text-brand">
+                    <StatusBadge
+                      variant="neutral"
+                      className="ml-3 mt-2 h-6 max-w-[calc(100%-1.5rem)] gap-1.5 self-start border border-border-subtle"
+                      style={{
+                        paddingBlock: 0,
+                        paddingInline: 'var(--space-2)',
+                      }}
+                    >
                       {selectedTarget.source === 'code' ? (
                         <Code2 aria-hidden="true" className="size-3 shrink-0" />
                       ) : (
@@ -310,7 +300,7 @@ export const TemplateCreateContent = ({
                       )}
                       <span
                         id="template-selection-label"
-                        className="min-w-0 truncate text-text-primary"
+                        className="min-w-0 truncate"
                         title={selectedTarget.label}
                       >
                         <span className="sr-only">수정 대상: </span>
@@ -320,7 +310,7 @@ export const TemplateCreateContent = ({
                         type="button"
                         aria-label="수정 대상 선택 해제"
                         disabled={locked}
-                        className="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-action-primary/15 focus-visible:outline-2 focus-visible:outline-action-primary disabled:opacity-50"
+                        className="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-text-primary/10 focus-visible:outline-2 focus-visible:outline-action-primary disabled:opacity-50"
                         onClick={() => {
                           setSelectionContext(null);
                           setSelectionError('');
@@ -329,7 +319,7 @@ export const TemplateCreateContent = ({
                       >
                         <X aria-hidden="true" className="size-3" />
                       </button>
-                    </span>
+                    </StatusBadge>
                   )}
                   <textarea
                     ref={promptRef}
@@ -364,7 +354,7 @@ export const TemplateCreateContent = ({
                   <button
                     type="button"
                     aria-label="생성·수정 요청 보내기"
-                    className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-subtle hover:text-action-primary disabled:cursor-not-allowed disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-action-primary"
+                    className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-md text-action-primary enabled:hover:bg-surface-brand enabled:hover:text-action-primary-hover disabled:cursor-not-allowed disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-action-primary"
                     disabled={locked || !displayName.trim() || !prompt.trim()}
                     onClick={() => void handleSend()}
                   >
@@ -377,12 +367,6 @@ export const TemplateCreateContent = ({
                     className="text-caption-web text-status-danger-fg"
                   >
                     {selectionError}
-                  </p>
-                )}
-                {previewHtml && (
-                  <p className="text-caption-web text-text-secondary">
-                    미리보기 요소를 클릭하거나 HTML 코드를 선택해 수정할 부분을
-                    지정하세요.
                   </p>
                 )}
               </div>
@@ -432,6 +416,12 @@ export const TemplateCreateContent = ({
               <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-border-subtle bg-surface-subtle p-4 text-center text-body-sm-web text-text-secondary">
                 템플릿을 생성하면 HTML이 표시됩니다.
               </div>
+            )}
+            {previewHtml && !published && (
+              <p className="text-caption-web text-text-secondary">
+                미리보기 요소를 클릭하거나 HTML 코드를 선택해 수정할 부분을
+                지정하세요.
+              </p>
             )}
           </section>
         </div>
