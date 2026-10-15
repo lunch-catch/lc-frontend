@@ -13,21 +13,34 @@ interface SavedKakaoAuth {
   intent: KakaoAuthIntent;
 }
 
+// 진행 중인 시작. 버튼이 "진행 중"으로 바뀌기 전에 한 번 더 눌려도 인가 주소를 두 번 받지 않는다
+// 두 번 받으면 나중 응답의 state가 보관값을 덮어써서, 먼저 받은 state로 떠난 카카오에서 돌아올 때 맞지 않는다
+let starting: Promise<void> | null = null;
+
 // 인가 주소를 받아 state와 목적을 보관하고 카카오 화면으로 이동한다
-const startKakaoAuth = async (intent: KakaoAuthIntent) => {
-  const authorizationUrl = await fetchKakaoAuthorizationUrl({
-    // 탈퇴는 이미 로그인한 카카오 계정이어도 다시 로그인하게 한다
-    reauth: intent.type === 'withdraw',
+const startKakaoAuth = (intent: KakaoAuthIntent) => {
+  starting ??= (async () => {
+    const authorizationUrl = await fetchKakaoAuthorizationUrl({
+      // 탈퇴는 이미 로그인한 카카오 계정이어도 다시 로그인하게 한다
+      reauth: intent.type === 'withdraw',
+    });
+    const state = new URL(authorizationUrl).searchParams.get('state');
+
+    if (!state) {
+      throw new Error('카카오 인가 주소에 state가 없습니다');
+    }
+
+    const saved: SavedKakaoAuth = { state, intent };
+    window.sessionStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(saved));
+    // 떠나는 동안은 잠근 채로 둔다. 페이지가 바뀌면서 함께 사라진다
+    window.location.assign(authorizationUrl);
+  })().catch((error: unknown) => {
+    // 실패하면 다시 누를 수 있게 푼다
+    starting = null;
+    throw error;
   });
-  const state = new URL(authorizationUrl).searchParams.get('state');
 
-  if (!state) {
-    throw new Error('카카오 인가 주소에 state가 없습니다');
-  }
-
-  const saved: SavedKakaoAuth = { state, intent };
-  window.sessionStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(saved));
-  window.location.assign(authorizationUrl);
+  return starting;
 };
 
 export const startKakaoLogin = () => startKakaoAuth({ type: 'login' });
@@ -55,9 +68,18 @@ export const consumeKakaoAuth = (
   try {
     const saved = readSavedKakaoAuth();
     window.sessionStorage.removeItem(STATE_STORAGE_KEY);
-    return saved && state !== null && saved.state === state
-      ? saved.intent
-      : null;
+    const isMatched = saved !== null && state !== null && saved.state === state;
+
+    // 개발 중에 왜 맞지 않았는지 바로 보려고 남긴다. 보관값이 없는지, 값이 다른지 구분된다
+    if (!isMatched && import.meta.env.DEV) {
+      console.warn('카카오 콜백 state 불일치', {
+        보관한_state: saved?.state ?? null,
+        보관한_목적: saved?.intent.type ?? null,
+        돌아온_state: state,
+      });
+    }
+
+    return isMatched ? saved.intent : null;
   } catch {
     return null;
   }
