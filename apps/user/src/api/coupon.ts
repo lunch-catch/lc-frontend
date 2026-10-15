@@ -212,6 +212,12 @@ export const fetchCoupon = async (memberCouponId: number): Promise<Coupon> => {
   return coupon;
 };
 
+// 아직 쓰지 않은 쿠폰을 삭제한다 (DELETE /v1/coupons/{memberCouponId})
+// 받은 날의 발급 수가 1 줄어 그날 한 장을 더 받을 수 있다. 같은 이벤트 쿠폰은 다시 받을 수 없다
+// 이미 삭제한 쿠폰을 다시 지워도 성공(204)이고, 사용한 쿠폰은 409 COUPON-012로 거절된다
+export const deleteCoupon = (memberCouponId: number) =>
+  request<void>(`/v1/coupons/${memberCouponId}`, { method: 'DELETE' });
+
 // 마이페이지 쿠폰 요약 (GET /v1/coupons/summary). 지금까지 쌓인 누적 값이다
 export interface CouponSummary {
   receivedCouponCount: number;

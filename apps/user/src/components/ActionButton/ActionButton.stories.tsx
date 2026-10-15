@@ -60,3 +60,27 @@ export const Soft: Story = {
     variant: 'soft',
   },
 };
+
+// 확인 창의 취소처럼 옆 버튼보다 한 단계 낮은 행동
+export const Secondary: Story = {
+  args: {
+    children: '취소',
+    variant: 'secondary',
+  },
+};
+
+// 카드 안의 버튼처럼 색 없이 두는 행동
+export const Outline: Story = {
+  args: {
+    children: 'QR 보기',
+    variant: 'outline',
+  },
+};
+
+// 삭제처럼 되돌릴 수 없는 행동
+export const Danger: Story = {
+  args: {
+    children: '삭제',
+    variant: 'danger',
+  },
+};

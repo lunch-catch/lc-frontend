@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomSheet } from '@repo/ui';
+import { QrCode } from 'lucide-react';
 
-import { type Coupon, fetchCoupons } from '@user/api/coupon';
+import { ApiError } from '@user/api/client';
+import { type Coupon, deleteCoupon, fetchCoupons } from '@user/api/coupon';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import EmptyState from '@user/components/EmptyState/EmptyState';
+import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
 
 import CouponCard from './CouponCard';
+import CouponDeleteConfirm from './CouponDeleteConfirm';
 import { formatUsableTime } from './couponFormat';
 import CouponListSkeleton from './CouponListSkeleton';
 import CouponLoadError from './CouponLoadError';
 import CouponQr from './CouponQr';
+
+const TOAST_DURATION_MS = 2500;
 
 // 쿠폰함 사용 가능 탭. 받은 쿠폰 중 아직 쓰지 않은 쿠폰과 QR
 const AvailableCoupons = () => {
@@ -22,6 +28,18 @@ const AvailableCoupons = () => {
   const [attempt, setAttempt] = useState(0);
   // QR을 띄운 쿠폰. 계산대에서 빨리 열고 닫도록 페이지를 옮기지 않고 시트로 띄운다
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  // 카드를 누르면 QR을, 카드의 ×를 누르면 삭제 확인을 시트로 띄운다
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+
+    const timer = setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   useEffect(() => {
     let ignore = false;
@@ -40,6 +58,34 @@ const AvailableCoupons = () => {
       ignore = true;
     };
   }, [attempt]);
+
+  // 시트를 닫는다. QR을 띄운 사이 사용했을 수 있어 목록을 조용히 다시 받는다
+  const closeSheet = () => {
+    setSelectedCoupon(null);
+    setIsConfirmingDelete(false);
+    setDeleteError(null);
+    setAttempt((current) => current + 1);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedCoupon || isDeleting) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteCoupon(selectedCoupon.memberCouponId);
+      closeSheet();
+      setToastMessage('쿠폰을 삭제했어요');
+    } catch (error) {
+      setDeleteError(
+        error instanceof ApiError && error.code === 'COUPON-012'
+          ? '이미 사용한 쿠폰이라 삭제할 수 없어요'
+          : '쿠폰을 삭제하지 못했어요',
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const retry = () => {
     setCoupons(undefined);
@@ -61,7 +107,12 @@ const AvailableCoupons = () => {
   }
 
   return (
-    <div className="px-page pt-4 pb-6">
+    <div className="relative px-page pt-4 pb-6">
+      {toastMessage && (
+        <div className="absolute inset-x-0 top-0 z-20 px-page pt-3">
+          <FeedbackToast message={toastMessage} />
+        </div>
+      )}
       {coupons === null && <CouponLoadError onRetry={retry} />}
       {coupons === undefined && (
         <>
@@ -75,17 +126,27 @@ const AvailableCoupons = () => {
         <ul className="flex flex-col gap-3">
           {coupons.map((coupon) => (
             <CouponCard
-              action={
-                <span className="shrink-0 rounded-lg bg-surface-brand px-3 py-1.5 text-caption-mobile font-bold text-text-brand">
-                  QR 보기
-                </span>
-              }
               coupon={coupon}
               // 쿠폰은 받은 날 사용 시간 안에만 쓸 수 있다
               detail={`사용 ${formatUsableTime(coupon)} · 오늘`}
+              footer={
+                // 가게에 가서 천천히 여는 버튼이라 주황 대신 테두리 버튼으로 둔다
+                // 쿠폰이 여러 장이어도 화면이 주황으로 덮이지 않고, 회색으로 채운 비활성 버튼과도 헷갈리지 않는다
+                <ActionButton
+                  aria-label={`${coupon.storeName} 쿠폰 QR 보기`}
+                  className="gap-1.5"
+                  onClick={() => setSelectedCoupon(coupon)}
+                  variant="outline"
+                >
+                  <QrCode aria-hidden="true" className="size-4" />
+                  QR 보기
+                </ActionButton>
+              }
               key={coupon.memberCouponId}
-              label={`${coupon.storeName} 쿠폰 QR 보기`}
-              onClick={() => setSelectedCoupon(coupon)}
+              onRemove={() => {
+                setSelectedCoupon(coupon);
+                setIsConfirmingDelete(true);
+              }}
             />
           ))}
         </ul>
@@ -93,14 +154,22 @@ const AvailableCoupons = () => {
       {/* 시트를 닫으면 QR 화면이 사라지면서 QR 갱신 타이머도 멈춘다 */}
       <BottomSheet
         isOpen={selectedCoupon !== null}
-        onClose={() => {
-          setSelectedCoupon(null);
-          // QR을 띄운 사이 사용했을 수 있어 목록을 조용히 다시 받는다
-          setAttempt((current) => current + 1);
-        }}
-        title="쿠폰 사용"
+        onClose={closeSheet}
+        title={isConfirmingDelete ? '쿠폰을 삭제할까요?' : '쿠폰 사용'}
       >
-        {selectedCoupon && <CouponQr coupon={selectedCoupon} />}
+        {selectedCoupon && isConfirmingDelete && (
+          <CouponDeleteConfirm
+            coupon={selectedCoupon}
+            errorMessage={deleteError}
+            isDeleting={isDeleting}
+            onCancel={closeSheet}
+            onConfirm={handleDelete}
+          />
+        )}
+        {/* 계산대에서 보여주는 화면이라 QR 시트에는 삭제를 두지 않는다 */}
+        {selectedCoupon && !isConfirmingDelete && (
+          <CouponQr coupon={selectedCoupon} />
+        )}
       </BottomSheet>
     </div>
   );
