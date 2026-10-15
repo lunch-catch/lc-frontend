@@ -78,7 +78,14 @@ export interface KakaoMaps {
   LatLngBounds: new () => KakaoLatLngBounds;
   Map: new (
     container: HTMLElement,
-    options: { center: KakaoLatLng; level: number },
+    options: {
+      center: KakaoLatLng;
+      level: number;
+      // 끌어서 옮기기, 마우스 휠과 두 번 눌러 확대. 미리보기처럼 움직이지 않는 지도에서 끈다
+      draggable?: boolean;
+      scrollwheel?: boolean;
+      disableDoubleClickZoom?: boolean;
+    },
   ) => KakaoMap;
   // 지도 위에 직접 만든 요소를 올린다. clickable이면 요소를 눌러도 지도 클릭으로 넘어가지 않는다
   CustomOverlay: new (options: {
@@ -86,6 +93,9 @@ export interface KakaoMaps {
     content: HTMLElement;
     clickable?: boolean;
     zIndex?: number;
+    // 요소의 어느 지점을 좌표에 맞출지 (0~1). 기본은 가운데(0.5), 핀 끝을 맞추려면 yAnchor 1
+    xAnchor?: number;
+    yAnchor?: number;
   }) => KakaoCustomOverlay;
   event: {
     addListener: (target: KakaoMap, type: string, handler: () => void) => void;

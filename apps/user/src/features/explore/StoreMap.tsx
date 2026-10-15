@@ -1,14 +1,9 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  type KakaoCustomOverlay,
-  type KakaoMap,
-  type KakaoMaps,
-  loadKakaoMaps,
-} from '@user/api/kakao';
 import type { StoreListItem } from '@user/api/store';
 import ActionButton from '@user/components/ActionButton/ActionButton';
+import MapOverlay from '@user/features/map/MapOverlay';
+import { useKakaoMap } from '@user/features/map/useKakaoMap';
 
 import StoreCard from './StoreCard';
 import { formatDiscount } from './storeFormat';
@@ -23,11 +18,6 @@ interface StoreMapProps {
   stores: StoreListItem[];
 }
 
-interface KakaoMapHandle {
-  maps: KakaoMaps;
-  map: KakaoMap;
-}
-
 // 처음 보여줄 확대 수준. 쿠폰 가게가 없을 때 내 위치 주변 몇 블록이 보이는 정도
 const DEFAULT_MAP_LEVEL = 4;
 // 핀이 가장자리에 붙지 않도록 남기는 여백(px). 아래는 카카오 로고와 축척 자리까지 비운다
@@ -39,62 +29,15 @@ const formatPinLabel = (store: StoreListItem) =>
     ? formatDiscount(store.activeCampaign).replace(' 할인', '')
     : '';
 
-interface MapOverlayProps {
-  kakao: KakaoMapHandle;
-  latitude: number;
-  longitude: number;
-  // 겹치면 큰 값이 위에 온다
-  zIndex: number;
-  // false면 눌러도 지도 클릭으로 넘긴다 (내 위치 점처럼 누를 일이 없는 표시)
-  clickable?: boolean;
-  children: ReactNode;
-}
-
-// 카카오 지도의 커스텀 오버레이 자리에 React 요소를 그린다
-// 오버레이에 넘긴 빈 요소 안으로 포털을 열어서, 핀 버튼의 클릭과 스타일을 React 그대로 쓴다
-const MapOverlay = ({
-  children,
-  clickable = true,
-  kakao,
-  latitude,
-  longitude,
-  zIndex,
-}: MapOverlayProps) => {
-  const [element] = useState(() => document.createElement('div'));
-  const overlayRef = useRef<KakaoCustomOverlay | null>(null);
-
-  useEffect(() => {
-    const overlay = new kakao.maps.CustomOverlay({
-      position: new kakao.maps.LatLng(latitude, longitude),
-      content: element,
-      clickable,
-    });
-    overlay.setMap(kakao.map);
-    overlayRef.current = overlay;
-    return () => {
-      overlay.setMap(null);
-      overlayRef.current = null;
-    };
-  }, [clickable, element, kakao, latitude, longitude]);
-
-  // 핀을 고르면 오버레이를 새로 만들지 않고 겹치는 순서만 바꾼다
-  useEffect(() => {
-    overlayRef.current?.setZIndex(zIndex);
-  }, [kakao, latitude, longitude, zIndex]);
-
-  return createPortal(children, element);
-};
-
 // 탐색 탭의 지도 보기. 쿠폰 진행 중인 가게를 카카오 지도 위 핀으로 보여주고, 핀을 누르면 아래에 가게 카드를 띄운다
 const StoreMap = ({ center, stores }: StoreMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [kakao, setKakao] = useState<KakaoMapHandle | null>(null);
-  const [hasLoadError, setHasLoadError] = useState(false);
-  // 다시 시도할 때마다 올려서 SDK를 새로 불러온다
-  const [attempt, setAttempt] = useState(0);
+  // 처음 가운데에 둘 위치. 그 뒤로 바뀌면 아래 영역 맞추기가 옮긴다
+  const { hasLoadError, kakao, retry } = useKakaoMap(containerRef, {
+    ...center,
+    level: DEFAULT_MAP_LEVEL,
+  });
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-  // 지도를 만들 때 처음 가운데에 둘 위치. 그 뒤로 바뀌면 아래 영역 맞추기가 옮긴다
-  const initialCenter = useRef(center);
   // 지도에는 할인을 보여줄 수 있는 쿠폰 진행 중인 가게만 핀으로 둔다
   // 가게 목록을 새로 받을 때만 바뀌어서, 핀을 고를 때는 지도 영역을 다시 맞추지 않는다
   const campaignStores = useMemo(
@@ -104,31 +47,6 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
   const selectedStore = campaignStores.find(
     (store) => store.storeId === selectedStoreId,
   );
-
-  // 지도는 화면에 처음 보일 때 한 번 만든다
-  useEffect(() => {
-    let ignore = false;
-
-    loadKakaoMaps()
-      .then((maps) => {
-        const container = containerRef.current;
-        if (ignore || !container) return;
-        const { latitude, longitude } = initialCenter.current;
-        const map = new maps.Map(container, {
-          center: new maps.LatLng(latitude, longitude),
-          level: DEFAULT_MAP_LEVEL,
-        });
-        setKakao({ maps, map });
-      })
-      .catch(() => {
-        if (!ignore) setHasLoadError(true);
-      });
-
-    // 응답 전에 화면을 벗어나면 결과를 버린다
-    return () => {
-      ignore = true;
-    };
-  }, [attempt]);
 
   // 내 위치와 쿠폰 가게가 모두 보이도록 영역을 맞춘다. 가게가 없으면 내 위치를 가운데에 둔다
   useEffect(() => {
@@ -166,11 +84,6 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
     return () => maps.event.removeListener(map, 'click', clearSelection);
   }, [kakao]);
 
-  const retry = () => {
-    setHasLoadError(false);
-    setAttempt((current) => current + 1);
-  };
-
   return (
     <div className="relative -mx-page min-h-80 flex-1 overflow-hidden bg-surface-subtle">
       {/* 카카오 지도가 이 안에 그려진다 */}
@@ -187,7 +100,6 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
             kakao={kakao}
             latitude={center.latitude}
             longitude={center.longitude}
-            zIndex={0}
           >
             <span
               aria-label="내 위치"

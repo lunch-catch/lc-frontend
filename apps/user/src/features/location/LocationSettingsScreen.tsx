@@ -349,6 +349,8 @@ const LocationSettingsScreen = () => {
         <LocationNameSheet
           address={picked.address}
           initialNickname={picked.placeName ?? undefined}
+          latitude={picked.latitude}
+          longitude={picked.longitude}
           title={picked.source === 'gps' ? '현재 위치' : '선택한 위치'}
           errorMessage={saveError}
           onClose={() => setPicked(null)}
