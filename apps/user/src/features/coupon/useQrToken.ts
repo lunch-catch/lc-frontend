@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { getNow } from '@user/api/clock';
 import { fetchQrToken, type QrToken } from '@user/api/coupon';
 
 // QR을 보여줄 수 있는 동안 60초짜리 QR을 받고, 시간이 다 되면 새로 받는다
@@ -35,7 +36,14 @@ export const useQrToken = (
     let ignore = false;
     fetchQrToken(memberCouponId)
       .then((nextToken) => {
-        if (!ignore) setToken(nextToken);
+        if (ignore) return;
+        // 응답이 늦게 와 이미 만료된 QR이면 다시 받기를 기다린다
+        // 만료된 QR을 저장하면 받을 조건이 그대로라 다시 요청하지 않고 새로 받는 중에 멈춘다
+        if (nextToken.expiresAt <= getNow()) {
+          setHasFailed(true);
+          return;
+        }
+        setToken(nextToken);
       })
       .catch(() => {
         if (!ignore) setHasFailed(true);

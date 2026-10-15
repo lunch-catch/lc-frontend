@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomSheet } from '@repo/ui';
 import { QrCode } from 'lucide-react';
@@ -33,6 +33,8 @@ const AvailableCoupons = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // 시트를 닫을 때마다 올린다. 삭제 중에 시트를 닫고 다른 쿠폰을 열면, 앞 삭제의 응답이 새 시트를 건드리지 않게 한다
+  const sheetSession = useRef(0);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -61,8 +63,10 @@ const AvailableCoupons = () => {
 
   // 시트를 닫는다. QR을 띄운 사이 사용했을 수 있어 목록을 조용히 다시 받는다
   const closeSheet = () => {
+    sheetSession.current += 1;
     setSelectedCoupon(null);
     setIsConfirmingDelete(false);
+    setIsDeleting(false);
     setDeleteError(null);
     setAttempt((current) => current + 1);
   };
@@ -70,19 +74,25 @@ const AvailableCoupons = () => {
   const handleDelete = async () => {
     if (!selectedCoupon || isDeleting) return;
 
+    const session = sheetSession.current;
     setIsDeleting(true);
     setDeleteError(null);
     try {
       await deleteCoupon(selectedCoupon.memberCouponId);
-      closeSheet();
       setToastMessage('쿠폰을 삭제했어요');
+      // 그사이 시트를 닫았으면 시트는 그대로 두고 목록만 다시 받는다
+      if (session === sheetSession.current) {
+        closeSheet();
+      } else {
+        setAttempt((current) => current + 1);
+      }
     } catch (error) {
+      if (session !== sheetSession.current) return;
       setDeleteError(
         error instanceof ApiError && error.code === 'COUPON-012'
           ? '이미 사용한 쿠폰이라 삭제할 수 없어요'
           : '쿠폰을 삭제하지 못했어요',
       );
-    } finally {
       setIsDeleting(false);
     }
   };
@@ -168,7 +178,11 @@ const AvailableCoupons = () => {
         )}
         {/* 계산대에서 보여주는 화면이라 QR 시트에는 삭제를 두지 않는다 */}
         {selectedCoupon && !isConfirmingDelete && (
-          <CouponQr coupon={selectedCoupon} />
+          // 쿠폰이 바뀌면 이전 쿠폰의 상태 확인과 QR을 이어 쓰지 않고 새로 시작한다
+          <CouponQr
+            coupon={selectedCoupon}
+            key={selectedCoupon.memberCouponId}
+          />
         )}
       </BottomSheet>
     </div>

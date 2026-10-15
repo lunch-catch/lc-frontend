@@ -40,7 +40,7 @@ const CouponDeleteConfirm = ({
       <ActionButton onClick={onCancel} size="large" variant="secondary">
         취소
       </ActionButton>
-      {/* 되돌릴 수 없는 행동이라 주황 대신 경고 색으로 둔다 */}
+      {/* 되돌릴 수 없는 행동이라 확인 창에서 가장 진한 버튼으로 둔다 */}
       <ActionButton
         loading={isDeleting}
         onClick={onConfirm}
