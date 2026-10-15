@@ -2,7 +2,8 @@ import type { ButtonHTMLAttributes } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 export type ActionButtonSize = 'medium' | 'large';
-export type ActionButtonVariant = 'brand' | 'soft' | 'ghost';
+export type ActionButtonVariant =
+  'brand' | 'soft' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
 export interface ActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ActionButtonSize;
@@ -23,8 +24,19 @@ const variantClassNames: Record<ActionButtonVariant, string> = {
   brand:
     'bg-action-primary text-text-inverse active:bg-action-primary-hover disabled:bg-action-primary-disabled disabled:text-text-tertiary',
   soft: 'bg-surface-brand text-text-brand active:bg-brand-200 disabled:bg-action-primary-disabled disabled:text-text-tertiary',
+  // secondary: 확인 창의 취소처럼 옆 버튼보다 한 단계 낮은 행동. 회색 바탕이라 버튼으로 읽힌다
+  secondary:
+    'bg-surface-subtle text-text-primary active:opacity-80 disabled:text-text-disabled',
+  // outline: 카드 안의 버튼처럼 색 없이 두되, 회색으로 채운 비활성 버튼과 모양이 달라 누를 수 있는 버튼으로 읽힌다
+  outline:
+    'border border-border-subtle bg-bg-surface text-text-primary active:bg-surface-subtle disabled:text-text-disabled',
   ghost:
     'bg-transparent text-text-secondary active:bg-surface-subtle disabled:text-text-disabled',
+  // danger: 삭제처럼 되돌릴 수 없는 행동. 확인 창의 주 버튼이라 가장 진하게 채운다
+  // 빨강은 따뜻한 화면 톤과 만나면 탁해 보여 반전 색을 쓴다 (라이트는 검정, 다크는 흰색)
+  // 무엇이 바뀌는지는 확인 창 문구로 알린다
+  danger:
+    'bg-bg-inverse text-text-on-inverse active:opacity-80 disabled:opacity-50',
 };
 
 const ActionButton = ({

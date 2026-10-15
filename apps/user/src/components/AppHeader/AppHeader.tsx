@@ -22,7 +22,14 @@ const AppHeader = ({
     <header className="bg-bg-page px-page pt-1.5 pb-1">
       {/* 로고는 찜 목록, 알림과 같은 줄 가운데에 두고 위치는 그 아래 줄에 둔다 */}
       <div className="flex items-center justify-between">
-        <Wordmark size="sm" />
+        {/* 로고를 누르면 홈(오늘 점심 탭)으로 간다. 스플래시인 /로 보내지 않는다 */}
+        <Link
+          aria-label="런치캐치 홈"
+          className="flex h-11 items-center"
+          to="/swipe"
+        >
+          <Wordmark size="sm" />
+        </Link>
         <nav aria-label="바로가기" className="flex items-center gap-1">
           <Link
             aria-label={wishCount > 0 ? `찜 목록 ${wishCount}개` : undefined}

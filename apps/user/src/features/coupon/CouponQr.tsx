@@ -1,6 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { CircleCheck } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 
 import { getNow } from '@user/api/clock';
 import {
@@ -17,13 +16,12 @@ import {
   formatUsableTime,
 } from './couponFormat';
 import { getQrState, type QrState } from './qrState';
+import { useLatestCoupon } from './useLatestCoupon';
 import { useQrToken } from './useQrToken';
 
 const TICK_MS = 1000;
 // 계산대에서 스캔이 잘 되도록 QR을 화면에서 가장 크게 둔다 (테두리 안쪽 크기)
 const QR_SIZE = 278;
-// 스캐너가 QR 경계를 찾을 수 있도록 둘레에 QR 칸 4개만큼 빈 여백을 둔다 (QR 표준 권장값)
-const QR_QUIET_ZONE = 4;
 
 // 남은 시간을 00:52 모양으로 바꾼다. 마지막 1초까지 보이도록 올림한다
 const formatSeconds = (remainingMs: number) => {
@@ -47,10 +45,11 @@ interface QrPanelProps {
   state: QrState;
   token: QrToken | null;
   now: number;
+  onRetry: () => void;
 }
 
 // 상태에 따라 QR이나 큰 안내, 그리고 짧은 설명을 바꿔 보여주는 영역
-const QrPanel = ({ coupon, now, state, token }: QrPanelProps) => {
+const QrPanel = ({ coupon, now, onRetry, state, token }: QrPanelProps) => {
   // 숫자 폭을 같게 해 1초마다 글자가 좌우로 흔들리지 않게 한다
   // 토큰을 받은 순간과 화면 시계가 1초 안쪽으로 어긋날 수 있어 60초를 넘지 않게 한다
   const remaining = token && (
@@ -75,6 +74,18 @@ const QrPanel = ({ coupon, now, state, token }: QrPanelProps) => {
     refreshing: {
       title: 'QR 갱신 중',
       description: '새 QR을 불러오고 있어요',
+    },
+    failed: {
+      title: 'QR을 불러오지 못했어요',
+      description: (
+        <button
+          className="h-9 rounded-lg border border-border-subtle px-3 text-body-sm-mobile font-bold text-text-primary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+          onClick={onRetry}
+          type="button"
+        >
+          다시 시도
+        </button>
+      ),
     },
     offline: {
       title: '인터넷 연결 없음',
@@ -135,13 +146,15 @@ const QrPanel = ({ coupon, now, state, token }: QrPanelProps) => {
       {showsQr && (
         <div className="flex size-70 items-center justify-center overflow-hidden rounded-xl border border-border-subtle bg-white">
           {token && state !== 'refreshing' ? (
-            <QRCodeSVG
+            // 서버가 그려 준 QR 이미지. 스캐너가 경계를 찾는 여백은 이미지에 들어 있다
+            <img
+              alt="쿠폰 QR 코드"
               // 연결이 끊긴 동안에는 아직 쓸 수 있는 QR인지 알 수 없어 흐리게 보여준다
-              className={state === 'offline' ? 'opacity-30 blur-[2px]' : ''}
-              marginSize={QR_QUIET_ZONE}
-              size={QR_SIZE}
-              title="쿠폰 QR 코드"
-              value={token.value}
+              // 작은 QR 칸이 번지지 않게 확대할 때 픽셀을 그대로 키운다
+              className={`[image-rendering:pixelated] ${state === 'offline' ? 'opacity-30 blur-[2px]' : ''}`}
+              height={QR_SIZE}
+              src={token.imageSrc}
+              width={QR_SIZE}
             />
           ) : (
             <div
@@ -165,7 +178,9 @@ interface CouponQrProps {
 }
 
 // 매장에서 직원에게 보여주는 쿠폰 QR. 쿠폰함에서 시트로 띄운다
-const CouponQr = ({ coupon }: CouponQrProps) => {
+// 띄워 둔 동안 점주가 스캔하면 단건 조회로 알아채고 사용 완료로 바꾼다
+const CouponQr = ({ coupon: listCoupon }: CouponQrProps) => {
+  const coupon = useLatestCoupon(listCoupon);
   const [now, setNow] = useState(getNow);
 
   // 남은 시간과 사용 시작·만료 시각을 1초마다 다시 확인한다
@@ -178,8 +193,12 @@ const CouponQr = ({ coupon }: CouponQrProps) => {
     coupon.state === 'ISSUED' &&
     now >= Date.parse(coupon.usableStartTime) &&
     now < Date.parse(coupon.usableEndTime);
-  const { isOnline, token } = useQrToken(coupon.memberCouponId, canShowQr, now);
-  const state = getQrState({ coupon, isOnline, now, token });
+  const { hasFailed, isOnline, retry, token } = useQrToken(
+    coupon.memberCouponId,
+    canShowQr,
+    now,
+  );
+  const state = getQrState({ coupon, hasFailed, isOnline, now, token });
 
   return (
     // 작은 화면에서 시트가 화면을 넘지 않도록 내용만 스크롤한다
@@ -209,7 +228,13 @@ const CouponQr = ({ coupon }: CouponQrProps) => {
           </strong>
         )}
       </div>
-      <QrPanel coupon={coupon} now={now} state={state} token={token} />
+      <QrPanel
+        coupon={coupon}
+        now={now}
+        onRetry={retry}
+        state={state}
+        token={token}
+      />
       <p className="text-center text-caption-mobile font-medium text-text-brand">
         오늘 사용 시간 {formatUsableTime(coupon)}
       </p>
