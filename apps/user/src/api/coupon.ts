@@ -236,6 +236,7 @@ export interface QrToken {
   expiresAt: number;
 }
 
+// QR을 쓸 수 있는 시간. 서버도 QR을 만든 시각에서 60초 뒤에 만료시키므로 같은 값으로 둔다
 export const QR_TOKEN_LIFETIME_MS = 60_000;
 
 // QR 생성은 서버 구현이 끝나 실제 API를 쓴다
@@ -244,6 +245,7 @@ const USE_COUPON_QR_API = true;
 interface QrResponse {
   // QR 이미지 PNG를 Base64로 바꾼 값
   qrImageBytes: string;
+  // 서버 시계 기준 만료 시각. 휴대폰 시계가 틀리면 어긋나서 화면에서는 쓰지 않는다
   expireTime: string;
 }
 
@@ -264,9 +266,14 @@ const createMockQrImage = async (value: string) => {
 
 // 60초 동안만 쓸 수 있는 QR을 받는다 (POST /v1/coupons/{memberCouponId}:generateQr)
 // 새로 받으면 이전 QR은 바로 쓸 수 없게 된다
+// 만료 시각은 서버 시각 대신 요청을 보낸 휴대폰 시각에 60초를 더해 정한다
+// 휴대폰 시계가 틀려도 60초를 정확히 세고, 서버는 요청을 받은 뒤에 QR을 만들어 화면이 서버보다 먼저 만료된다
 export const fetchQrToken = async (
   memberCouponId: number,
 ): Promise<QrToken> => {
+  const requestedAt = getNow();
+  const expiresAt = requestedAt + QR_TOKEN_LIFETIME_MS;
+
   if (USE_COUPON_QR_API) {
     const data = await request<QrResponse>(
       `/v1/coupons/${memberCouponId}:generateQr`,
@@ -274,18 +281,17 @@ export const fetchQrToken = async (
     );
     return {
       imageSrc: `data:image/png;base64,${data.qrImageBytes}`,
-      expiresAt: Date.parse(data.expireTime),
+      expiresAt,
     };
   }
 
   await wait(MOCK_DELAY_MS);
 
-  const issuedAt = getNow();
   return {
     imageSrc: await createMockQrImage(
-      `lunch-catch:${memberCouponId}:${issuedAt}`,
+      `lunch-catch:${memberCouponId}:${requestedAt}`,
     ),
-    expiresAt: issuedAt + QR_TOKEN_LIFETIME_MS,
+    expiresAt,
   };
 };
 
