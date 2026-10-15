@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   DateRangePicker,
-  type DateRangeValue,
   MultiSelectField,
   SearchField,
   StatusBadge,
@@ -27,7 +26,16 @@ import {
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import {
+  queryChoice,
+  queryChoices,
+  queryDate,
+  queryPage,
+  querySize,
+  queryText,
+} from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
 import type { Campaign, CampaignReport, CampaignStatus } from './campaignTypes';
 import { campaignStatusMeta } from './campaignUtils';
@@ -92,24 +100,52 @@ const columns: DataTableColumn[] = headers.map((header, index) => ({
   width: `${columnWidths[index]}%`,
 }));
 
+const campaignQuery = {
+  keyword: queryText(),
+  statuses: queryChoices(initialStatuses),
+  from: queryDate(),
+  to: queryDate(),
+  page: queryPage,
+  size: querySize,
+  sortBy: queryChoice(
+    [
+      'id',
+      'ownerId',
+      'registeredAt',
+      'validImpressions',
+      'storeName',
+      'status',
+      'startDate',
+      'dailyBudget',
+      'cumulativeSpent',
+    ] as const,
+    'registeredAt',
+  ),
+  sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
+};
 export const CampaignManagementContent = () => {
   const columnSettings = useTableColumnSettings('campaigns', columns);
-  const [statuses, setStatuses] = useState<CampaignStatus[]>(initialStatuses);
-  const [range, setRange] = useState<DateRangeValue>({
-    startDate: '',
-    endDate: '',
-  });
+  const { filters, updateFilters } = useUrlFilters('campaigns.', campaignQuery);
+  const { page, size: pageSize } = filters;
+  const statuses = useMemo(
+    () =>
+      filters.statuses ? (filters.statuses.split(',') as CampaignStatus[]) : [],
+    [filters.statuses],
+  );
+  const range = useMemo(
+    () => ({ startDate: filters.from, endDate: filters.to }),
+    [filters.from, filters.to],
+  );
+  const sort = useMemo<CampaignSort>(
+    () => ({ key: filters.sortBy, direction: filters.sortDir }),
+    [filters.sortBy, filters.sortDir],
+  );
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [sort, setSort] = useState<CampaignSort>({
-    key: 'registeredAt',
-    direction: 'desc',
-  });
   const [reports] = useState(getMockCampaignReports);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
-    onCommit: () => setPage(1),
-  });
+  const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
+    filters.keyword,
+    (keyword) => updateFilters({ keyword, page: 1 }),
+  );
 
   const filteredCampaigns = useMemo(() => {
     // 목록과 분석 리포트를 ID로 합치며, 누락된 집계를 0으로 확정하지 않는다.
@@ -151,23 +187,24 @@ export const CampaignManagementContent = () => {
   );
 
   const handleSort = (key: CampaignSortKey) => {
-    setPage(1);
-    setSort((current) =>
-      !current || current.key !== key
-        ? { key, direction: 'desc' }
-        : current.direction === 'desc'
-          ? { key, direction: 'asc' }
-          : { key: 'registeredAt', direction: 'desc' },
-    );
+    updateFilters({
+      page: 1,
+      sortBy:
+        sort.key !== key
+          ? key
+          : sort.direction === 'desc'
+            ? key
+            : 'registeredAt',
+      sortDir: sort.key === key && sort.direction === 'desc' ? 'asc' : 'desc',
+    });
   };
 
   const pagination = {
     currentPage: page,
-    onPageChange: setPage,
+    onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (value: number) => {
       // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
-      setPageSize(value);
-      setPage(1);
+      updateFilters({ size: value, page: 1 });
     },
     pageSize,
     totalCount: filteredCampaigns.length,
@@ -200,8 +237,7 @@ export const CampaignManagementContent = () => {
           fitContent
           options={statusOptions}
           onValueChange={(value) => {
-            setStatuses(value as CampaignStatus[]);
-            setPage(1);
+            updateFilters({ statuses: value.join(','), page: 1 });
           }}
           value={statuses}
         />
@@ -210,8 +246,11 @@ export const CampaignManagementContent = () => {
           placeholder="집행 기간 선택"
           value={range}
           onValueChange={(value) => {
-            setRange(value);
-            setPage(1);
+            updateFilters({
+              from: value.startDate,
+              to: value.endDate,
+              page: 1,
+            });
           }}
         />
       </FilterBar>
