@@ -1,15 +1,12 @@
-﻿import type {
-  BillingCampaign,
+import type {
   BillingState,
   LedgerEntry,
-  PointPolicy,
 } from '@admin/features/billing/billingTypes';
-import { getBalance } from '@admin/features/billing/billingUtils';
 
 export const createMockBillingState = (today: string): BillingState => {
   const owners = ['OWN-001', 'OWN-002', 'OWN-003', 'OWN-004', 'OWN-005'];
   const amounts = [50000, 30000, 100000, 10000, 30000];
-  // 아직 API를 연결하지 않은 매출·환불 화면의 집계 원장만 유지한다.
+  // 아직 API를 연결하지 않은 매출 화면의 집계 원장만 유지한다.
   const ledger: LedgerEntry[] = owners.map((ownerId, index) => ({
     id: 'L-PG-PAY-' + (index + 1),
     ownerId,
@@ -101,68 +98,5 @@ export const createMockBillingState = (today: string): BillingState => {
       serveId: 'SERVE-TODAY',
     },
   );
-  const campaigns: BillingCampaign[] = owners.map((ownerId, index) => ({
-    id: 'CMP-' + (index + 1),
-    ownerId,
-    storeName: [
-      '한상차림',
-      '오늘의 파스타',
-      '도시락 연구소',
-      '미소 카레',
-      '정성 한끼',
-    ][index],
-    status: index === 0 ? 'ACTIVE' : index === 4 ? 'SCHEDULED' : 'PAUSED',
-    registeredAt: '2026-09-' + (20 + index) + 'T10:00:00+09:00',
-    startDate: '2026-09-20',
-    endDate: '2026-10-20',
-    dailyBudget: 10000,
-    validImpressions:
-      index === 0 || index === 1 || index === 4 ? 600 : index === 2 ? 1000 : 0,
-  }));
-  const policy: PointPolicy = {
-    minimum: 10000,
-    products: [10000, 30000, 50000, 100000],
-    actorId: 'SYSTEM-MOCK',
-    updatedAt: '2026-09-20T00:00:00+09:00',
-    reason: '기본 정책',
-  };
-  return {
-    ledger,
-    campaigns,
-    policy,
-    policyHistory: [policy],
-    refunds: [
-      {
-        id: 'REF-001',
-        ownerId: 'OWN-002',
-        points: getBalance(ledger, 'OWN-002').balance,
-        status: 'REQUESTED',
-        requestedAt: today + 'T10:00:00+09:00',
-      },
-      {
-        id: 'REF-002',
-        ownerId: 'OWN-001',
-        points: getBalance(ledger, 'OWN-001').balance,
-        status: 'REQUESTED',
-        requestedAt: today + 'T10:05:00+09:00',
-      },
-      {
-        id: 'REF-003',
-        ownerId: 'OWN-003',
-        points: 90000,
-        status: 'REQUESTED',
-        requestedAt: today + 'T11:10:00+09:00',
-      },
-      {
-        id: 'REF-004',
-        ownerId: 'OWN-004',
-        points: 10000,
-        status: 'APPROVED',
-        requestedAt: '2026-09-24T09:30:00+09:00',
-        processedAt: '2026-09-24T10:00:00+09:00',
-        actorId: 'ADMIN-MOCK',
-        cancellationId: 'MOCK-CANCEL-OLD',
-      },
-    ],
-  };
+  return { ledger };
 };
