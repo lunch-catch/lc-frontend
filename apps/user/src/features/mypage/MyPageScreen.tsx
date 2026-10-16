@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 
 import { fetchMyProfile } from '@user/api/member';
+import Card from '@user/components/Card/Card';
 import TopBar from '@user/components/TopBar/TopBar';
 
 import ProfileSummary from './ProfileSummary';
@@ -26,7 +27,10 @@ const MyPageScreen = () => {
       <div className="flex flex-1 flex-col gap-3 px-page pt-2 pb-6">
         <ProfileSummary profile={profile} />
         <nav aria-label="바로가기">
-          <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+          <Card
+            as="ul"
+            className="divide-y divide-border-subtle overflow-hidden"
+          >
             {menuItems.map(({ label, to }) => (
               <li key={to}>
                 <Link
@@ -41,7 +45,7 @@ const MyPageScreen = () => {
                 </Link>
               </li>
             ))}
-          </ul>
+          </Card>
         </nav>
       </div>
     </div>

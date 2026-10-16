@@ -1,3 +1,5 @@
+import { cardClassName } from '@user/components/Card/Card';
+
 const SKELETON_CARD_COUNT = 4;
 
 // 가게 목록을 불러오는 동안 카드 자리에 보여주는 회색 틀
@@ -9,7 +11,7 @@ const StoreListSkeleton = () => {
     >
       {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
         <div
-          className="flex items-center gap-3 rounded-xl border border-border-subtle bg-bg-surface p-3"
+          className={`flex items-center gap-3 p-3 ${cardClassName}`}
           key={index}
         >
           <div className="size-18 shrink-0 rounded-lg bg-surface-subtle" />

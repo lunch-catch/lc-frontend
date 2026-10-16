@@ -2,6 +2,8 @@ import { type ReactNode, useState } from 'react';
 import { getTheme, SegmentedControl, setTheme, type Theme } from '@repo/ui';
 import { Moon, Sun } from 'lucide-react';
 
+import { cardClassName } from '@user/components/Card/Card';
+
 const themeItems = [
   {
     value: 'light',
@@ -33,7 +35,9 @@ const ThemeSettings = () => {
       >
         화면
       </h2>
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3">
+      <div
+        className={`flex items-center justify-between gap-3 px-4 py-3 ${cardClassName}`}
+      >
         <p className="text-body-sm-mobile font-medium text-text-primary">
           화면 모드
         </p>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Toggle } from '@repo/ui';
 
 import { type MyProfile, updateMyProfile } from '@user/api/member';
+import Card from '@user/components/Card/Card';
 
 type ConsentKey = keyof MyProfile['consents'];
 
@@ -62,7 +63,7 @@ const ConsentSettings = ({ consents, onSaved }: ConsentSettingsProps) => {
       >
         알림·위치
       </h2>
-      <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+      <Card as="ul" className="divide-y divide-border-subtle overflow-hidden">
         {consentItems.map(({ description, key, label }) => {
           const inputId = `${key}-toggle`;
           const labelId = `${key}-label`;
@@ -103,7 +104,7 @@ const ConsentSettings = ({ consents, onSaved }: ConsentSettingsProps) => {
             </li>
           );
         })}
-      </ul>
+      </Card>
       {hasError && (
         <p
           className="mt-2 px-1 text-caption-mobile text-status-danger-fg"

@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react';
 
 import { type TermsItem, userTerms } from '@user/api/terms';
 import ActionButton from '@user/components/ActionButton/ActionButton';
+import { cardClassName } from '@user/components/Card/Card';
 import FixedBottom from '@user/components/FixedBottom/FixedBottom';
 import TopBar from '@user/components/TopBar/TopBar';
 
@@ -52,7 +53,7 @@ const ConsentStep = () => {
             필수 항목에 동의하면 시작할 수 있어요
           </p>
         </div>
-        <div className="flex flex-col rounded-xl border border-border-subtle bg-bg-surface px-4 py-2">
+        <div className={`flex flex-col px-4 py-2 ${cardClassName}`}>
           <ConsentRow checked={isAllChecked} onChange={handleAllChange}>
             <span className="text-body-mobile font-bold text-text-primary">
               전체 동의

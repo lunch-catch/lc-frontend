@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
+import { cardClassName } from '@user/components/Card/Card';
 
 import { formatDiscount, formatWalkTime } from './storeFormat';
 
@@ -22,7 +23,7 @@ const FeaturedStoreCard = ({ store }: FeaturedStoreCardProps) => {
   return (
     <li>
       <Link
-        className="block overflow-hidden rounded-xl border border-border-subtle bg-bg-surface focus-visible:outline-2 focus-visible:outline-action-primary"
+        className={`block overflow-hidden focus-visible:outline-2 focus-visible:outline-action-primary ${cardClassName}`}
         to={`/stores/${store.storeId}`}
       >
         <div className="relative h-44 bg-surface-subtle">

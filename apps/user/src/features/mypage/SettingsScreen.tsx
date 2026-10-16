@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react';
 import { logout } from '@user/api/auth';
 import { fetchMyProfile } from '@user/api/member';
 import { useAuth } from '@user/auth/useAuth';
+import Card, { cardClassName } from '@user/components/Card/Card';
 import TopBar from '@user/components/TopBar/TopBar';
 
 import ConsentSettings from './ConsentSettings';
@@ -47,7 +48,9 @@ const SettingsScreen = () => {
           />
         )}
         {profile.data === null && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-surface px-4 py-4">
+          <div
+            className={`flex items-center justify-between gap-3 px-4 py-4 ${cardClassName}`}
+          >
             <p className="text-body-sm-mobile text-text-secondary">
               알림·위치 설정을 불러오지 못했어요
             </p>
@@ -76,7 +79,10 @@ const SettingsScreen = () => {
           >
             계정
           </h2>
-          <ul className="divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+          <Card
+            as="ul"
+            className="divide-y divide-border-subtle overflow-hidden"
+          >
             <li>
               <button
                 aria-busy={isLoggingOut || undefined}
@@ -99,7 +105,7 @@ const SettingsScreen = () => {
                 />
               </Link>
             </li>
-          </ul>
+          </Card>
           {hasLogoutError && (
             <p
               className="mt-2 px-1 text-caption-mobile text-status-danger-fg"

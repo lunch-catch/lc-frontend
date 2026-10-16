@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Store, X } from 'lucide-react';
 
 import type { Coupon } from '@user/api/coupon';
+import Card from '@user/components/Card/Card';
 
 import { formatDiscount, formatTarget } from './couponFormat';
 
@@ -25,7 +26,7 @@ const CouponCard = ({
   footer,
   onRemove,
 }: CouponCardProps) => (
-  <li className="relative flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+  <Card as="li" className="relative flex flex-col gap-3 p-4">
     {onRemove && (
       <button
         aria-label={`${coupon.storeName} 쿠폰 삭제`}
@@ -76,7 +77,7 @@ const CouponCard = ({
       </div>
     </div>
     {footer}
-  </li>
+  </Card>
 );
 
 export default CouponCard;

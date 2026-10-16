@@ -31,6 +31,7 @@ import {
 } from '@user/api/wishlist';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import ActionButton from '@user/components/ActionButton/ActionButton';
+import Card, { cardClassName } from '@user/components/Card/Card';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
@@ -354,7 +355,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
               {meta}
             </p>
           )}
-          <div className="mt-4 grid grid-cols-3 rounded-xl border border-border-subtle bg-bg-surface py-2">
+          <div className={`mt-4 grid grid-cols-3 py-2 ${cardClassName}`}>
             <QuickAction href={`tel:${store.phone}`} label="전화">
               <Phone aria-hidden="true" className="size-5" />
             </QuickAction>
@@ -390,7 +391,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           <h2 className="text-h3-mobile font-bold text-text-primary">
             대표 메뉴
           </h2>
-          <ul className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-bg-surface px-4">
+          <Card as="ul" className="divide-y divide-border-subtle px-4">
             {store.menus.map((menu) => (
               <li
                 className="flex items-center justify-between gap-3 py-3 text-body-mobile"
@@ -404,7 +405,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
                 </span>
               </li>
             ))}
-          </ul>
+          </Card>
         </section>
 
         <BusinessHoursSection hours={store.businessHours} />

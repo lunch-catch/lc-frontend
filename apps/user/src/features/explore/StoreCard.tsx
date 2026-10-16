@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
+import { cardClassName } from '@user/components/Card/Card';
 
 import { formatDiscount, formatWalkTime } from './storeFormat';
 
@@ -21,7 +22,7 @@ const StoreCard = ({ store }: StoreCardProps) => {
   return (
     <li>
       <Link
-        className="flex items-center gap-3 rounded-xl border border-border-subtle bg-bg-surface p-3 active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+        className={`flex items-center gap-3 p-3 active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary ${cardClassName}`}
         to={`/stores/${store.storeId}`}
       >
         {store.thumbnailUrl ? (
