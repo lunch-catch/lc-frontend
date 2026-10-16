@@ -15,15 +15,33 @@ interface SavedKakaoAuth {
 
 // 진행 중인 시작. 버튼이 "진행 중"으로 바뀌기 전에 한 번 더 눌려도 인가 주소를 두 번 받지 않는다
 // 두 번 받으면 나중 응답의 state가 보관값을 덮어써서, 먼저 받은 state로 떠난 카카오에서 돌아올 때 맞지 않는다
-let starting: Promise<void> | null = null;
+// 목적(로그인·탈퇴)이 다르면 합치지 않고 새로 시작한다. 탈퇴를 기다리는 사이 로그인을 누르면 로그인으로 가야 한다
+let starting: { type: KakaoAuthIntent['type']; promise: Promise<void> } | null =
+  null;
+// 시작할 때마다 올린다. 응답이 왔을 때 더 나중에 시작한 것이 있으면 그 응답은 버린다
+let generation = 0;
+
+// 카카오 화면에서 뒤로 가기로 돌아오면 브라우저가 떠날 때의 페이지를 그대로 되살려 잠금도 남아 있다
+// 그대로 두면 버튼을 다시 눌러도 아무 일도 없어서, 되살아난 페이지에서는 잠금을 푼다
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  starting = null;
+  generation += 1;
+});
 
 // 인가 주소를 받아 state와 목적을 보관하고 카카오 화면으로 이동한다
 const startKakaoAuth = (intent: KakaoAuthIntent) => {
-  starting ??= (async () => {
+  if (starting?.type === intent.type) return starting.promise;
+
+  const current = ++generation;
+  const promise = (async () => {
     const authorizationUrl = await fetchKakaoAuthorizationUrl({
       // 탈퇴는 이미 로그인한 카카오 계정이어도 다시 로그인하게 한다
       reauth: intent.type === 'withdraw',
     });
+    // 기다리는 사이 다른 목적으로 다시 시작했으면 이 주소로는 떠나지 않는다
+    if (current !== generation) return;
+
     const state = new URL(authorizationUrl).searchParams.get('state');
 
     if (!state) {
@@ -35,12 +53,13 @@ const startKakaoAuth = (intent: KakaoAuthIntent) => {
     // 떠나는 동안은 잠근 채로 둔다. 페이지가 바뀌면서 함께 사라진다
     window.location.assign(authorizationUrl);
   })().catch((error: unknown) => {
-    // 실패하면 다시 누를 수 있게 푼다
-    starting = null;
+    // 실패하면 다시 누를 수 있게 푼다. 그사이 새로 시작한 것이 있으면 그 잠금은 건드리지 않는다
+    if (current === generation) starting = null;
     throw error;
   });
 
-  return starting;
+  starting = { type: intent.type, promise };
+  return promise;
 };
 
 export const startKakaoLogin = () => startKakaoAuth({ type: 'login' });
