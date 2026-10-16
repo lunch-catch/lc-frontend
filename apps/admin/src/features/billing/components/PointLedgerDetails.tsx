@@ -9,7 +9,7 @@ import { DetailItem } from '@admin/features/billing/components/BillingDetails';
 
 const sourceLabels = {
   REALTIME: '실시간 처리',
-  RECONCILIATION: '대사 처리',
+  RECONCILIATION: '정산 검증',
   MANUAL: '수동 처리',
 };
 
