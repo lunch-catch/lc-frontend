@@ -4,12 +4,10 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { Button } from '@repo/ui';
 import { LoaderCircle } from 'lucide-react';
 
 import { ApiError } from '@admin/api/client';
 import { TableSettingsAccountContext } from '@admin/components/DataTable/tableSettingsAccountContext';
-import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
 
 import { AdminAuthContext } from './adminAuthContext';
 import {
@@ -52,40 +50,25 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     subscribeAuth,
     getAuthState,
   );
-  const { isWaiting, retryAfterSeconds, reportError } = useRequestFeedback();
   useEffect(() => {
     void restoreAdmin().catch(() => undefined);
   }, []);
-  useEffect(() => {
-    if (restoreError) reportError(restoreError);
-  }, [restoreError, reportError]);
 
   // 쿠키 복원이 끝나기 전에 로그인 화면으로 이동하면 원래 방문한 경로가 사라진다.
   if (isRestoring) return <AuthLoading />;
-  if (restoreError)
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg-page p-6">
-        <p role="alert" className="text-body-sm-web text-text-secondary">
-          {restoreError instanceof ApiError
-            ? restoreError.message
-            : '로그인 상태를 확인하지 못했습니다. 연결 상태를 확인해 주세요.'}
-        </p>
-        <Button
-          disabled={isWaiting}
-          onClick={() => {
-            void restoreAdmin().catch(() => undefined);
-          }}
-        >
-          {isWaiting ? `${retryAfterSeconds}초 후 다시 확인` : '다시 확인'}
-        </Button>
-      </main>
-    );
+  // 복원 실패가 공개 로그인 화면까지 가리지 않도록 오류는 로그인 안내로만 전달한다.
+  const restoreNotice =
+    restoreError instanceof ApiError
+      ? restoreError.message
+      : restoreError
+        ? '로그인 상태를 확인하지 못했습니다. 연결 상태를 확인한 뒤 로그인해 주세요.'
+        : null;
 
   return (
     <AdminAuthContext
       value={{
         admin,
-        authNotice,
+        authNotice: authNotice ?? restoreNotice,
         isAuthenticated: admin !== null,
         role: admin?.role ?? null,
         login: loginAdmin,

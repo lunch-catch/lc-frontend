@@ -168,10 +168,14 @@ export const request = async (
 export const requestData = async <T>(
   path: string,
   options: Omit<RequestInit, 'credentials'>,
-  expectedStatus: number,
+  expectedStatus: number | readonly number[],
 ): Promise<T> => {
   const response = await request(path, options);
-  if (response.status !== expectedStatus)
+  const matchesStatus =
+    typeof expectedStatus === 'number'
+      ? response.status === expectedStatus
+      : expectedStatus.includes(response.status);
+  if (!matchesStatus)
     throw new ApiError('서버 응답 상태를 확인할 수 없습니다.', response.status);
   const body = await response.json().catch(() => null);
   if (!body || body.code !== 'SUCCESS' || body.data == null)
