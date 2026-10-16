@@ -20,8 +20,9 @@ export const PointAdjustmentModal = ({
   onClose,
   onSaved,
 }: PointAdjustmentModalProps) => {
-  // 캠페인 불일치의 targetId는 캠페인 ID이며 점주 ID는 별도로 입력해야 한다.
-  const campaignRequired = mismatch?.checkType === 'CAMPAIGN_SPEND_VS_LEDGER';
+  // 캠페인 대상 두 유형은 정정 시 targetId와 동일한 campaignId가 필요하다.
+  const campaignRequired =
+    mismatch !== undefined && mismatch.checkType !== 'PG_VS_CHARGE';
   const [owner, setOwner] = useState(ownerId);
   const [campaign, setCampaign] = useState(
     campaignRequired ? String(mismatch.targetId) : '',

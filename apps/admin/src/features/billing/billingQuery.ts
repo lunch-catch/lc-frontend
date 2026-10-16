@@ -42,7 +42,12 @@ export const refundQuery = {
 };
 export const mismatchQuery = {
   checkType: queryChoice(
-    ['ALL', 'PG_VS_CHARGE', 'CAMPAIGN_SPEND_VS_LEDGER'] as const,
+    [
+      'ALL',
+      'PG_VS_CHARGE',
+      'CAMPAIGN_SPEND_VS_LEDGER',
+      'CAMPAIGN_OVERSPEND',
+    ] as const,
     'ALL',
   ),
   resolved: queryChoice(['ALL', 'true', 'false'] as const, 'ALL'),

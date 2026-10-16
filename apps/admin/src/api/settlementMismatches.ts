@@ -8,7 +8,8 @@ import {
 } from './billingResponse';
 import { requestData } from './client';
 
-export type MismatchCheckType = 'PG_VS_CHARGE' | 'CAMPAIGN_SPEND_VS_LEDGER';
+export type MismatchCheckType =
+  'PG_VS_CHARGE' | 'CAMPAIGN_SPEND_VS_LEDGER' | 'CAMPAIGN_OVERSPEND';
 export type MismatchResolutionType =
   'CACHE_REBUILD' | 'LEDGER_CORRECTION' | 'OVERCHARGE_REVERSAL';
 export interface SettlementMismatch {
@@ -29,7 +30,7 @@ const isMismatch = (value: unknown): value is SettlementMismatch =>
   isBillingRecord(value) &&
   isBillingId(value.mismatchId) &&
   isBillingId(value.targetId) &&
-  ['PG_VS_CHARGE', 'CAMPAIGN_SPEND_VS_LEDGER'].includes(
+  ['PG_VS_CHARGE', 'CAMPAIGN_SPEND_VS_LEDGER', 'CAMPAIGN_OVERSPEND'].includes(
     String(value.checkType),
   ) &&
   typeof value.businessDate === 'string' &&

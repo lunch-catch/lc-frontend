@@ -22,6 +22,7 @@ export const refundVariants: Record<RefundStatus, StatusBadgeVariant> = {
 export const mismatchLabels: Record<MismatchCheckType, string> = {
   PG_VS_CHARGE: '결제 승인 / 충전 원장',
   CAMPAIGN_SPEND_VS_LEDGER: '캠페인 소진 / 원장',
+  CAMPAIGN_OVERSPEND: '예약액 초과 소진',
 };
 export const resolutionLabels: Record<MismatchResolutionType, string> = {
   CACHE_REBUILD: '캐시 재집계',
