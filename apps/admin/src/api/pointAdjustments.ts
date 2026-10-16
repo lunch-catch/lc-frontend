@@ -39,6 +39,7 @@ export const adjustPoints = async (
     !isBillingInteger(data.amount) ||
     data.amount !== values.amount ||
     !isOptionalBillingId(data.campaignId) ||
+    data.campaignId !== (values.campaignId ?? null) ||
     typeof data.reason !== 'string' ||
     typeof data.createdAt !== 'string'
   )
