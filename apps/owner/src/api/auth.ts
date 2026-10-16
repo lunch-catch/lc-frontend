@@ -26,13 +26,22 @@ export interface SignupFieldErrors {
 }
 
 // 서버 로그인 응답 (POST /v1/owner/auth/tokens). 토큰은 서버가 HttpOnly 쿠키로 내려준다
-interface OwnerLoginResponse {
+// 튜토리얼은 입점을 마친 점주만 보므로 tutorialViewed는 ACTIVE일 때만 온다
+interface ActiveOwnerLoginResponse {
   email: string;
   role: string;
-  status: OwnerStatus;
-  // Swagger에는 있지만 개발 서버 응답에는 아직 없다. 없으면 안 본 것으로 본다
+  status: 'ACTIVE';
+  // 명세상 항상 온다. ACTIVE 계정이 없어 개발 서버에서 확인하지 못해, boolean이 아니면 응답 형식 오류로 본다
   tutorialViewed?: boolean;
 }
+
+interface InactiveOwnerLoginResponse {
+  email: string;
+  role: string;
+  status: Exclude<OwnerStatus, 'ACTIVE'>;
+}
+
+type OwnerLoginResponse = ActiveOwnerLoginResponse | InactiveOwnerLoginResponse;
 
 // 서버 회원가입 응답 (POST /v1/owners). 인증 쿠키는 주지 않는다
 interface OwnerSignupResponse {
@@ -57,6 +66,8 @@ const LOGIN_FAILED_MESSAGE = '이메일 또는 비밀번호가 올바르지 않�
 // 화면 제목("로그인에 실패했습니다" 등)이 실패를 알리므로 원인만 알린다
 const UNAVAILABLE_MESSAGE =
   '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+// 로그인 요청 제한(429)에 걸렸을 때. 남은 시간은 화면이 따로 보여준다
+const RATE_LIMITED_MESSAGE = '요청이 많아 잠시 후 다시 시도해 주세요.';
 const EMAIL_DUPLICATED_MESSAGE = '이미 가입된 이메일입니다.';
 // 서버가 입력 형식 오류 등으로 가입을 거절했을 때
 const SIGNUP_REJECTED_MESSAGE = '입력한 정보를 다시 확인해 주세요.';
@@ -69,12 +80,29 @@ const isLoginAllowedStatus = (
 ): status is LoginResponse['status'] =>
   status === 'ONBOARDING' || status === 'ACTIVE';
 
+// 로그인과 재발급은 요청 제한(1분 고정 구간)을 함께 쓴다. Retry-After를 읽지 못하면 최대 대기 시간인 60초로 본다
+const DEFAULT_RETRY_AFTER_SECONDS = 60;
+
+// 요청 제한(429)이면 남은 시간과 함께 요청 제한 문구,
 // 서버가 오류 코드와 함께 거절했으면(예: AUTH-001, 입력 형식 오류 COMMON-002) 로그인 실패 문구,
-// 응답을 받지 못했거나 읽지 못했거나 서버 오류(5xx)면 다시 시도 문구를 보여준다
-const getLoginErrorMessage = (error: unknown) =>
-  error instanceof ApiError && error.code !== null && error.status < 500
-    ? LOGIN_FAILED_MESSAGE
-    : UNAVAILABLE_MESSAGE;
+// 응답을 받지 못했거나 읽지 못했거나 서버 오류(5xx, 503 AUTH-002 포함)면 다시 시도 문구를 보여준다
+const getLoginFailure = (error: unknown): ApiResult<never> => {
+  if (error instanceof ApiError && error.status === 429) {
+    return {
+      ok: false,
+      message: RATE_LIMITED_MESSAGE,
+      retryAfterSeconds: error.retryAfterSeconds ?? DEFAULT_RETRY_AFTER_SECONDS,
+    };
+  }
+
+  return {
+    ok: false,
+    message:
+      error instanceof ApiError && error.code !== null && error.status < 500
+        ? LOGIN_FAILED_MESSAGE
+        : UNAVAILABLE_MESSAGE,
+  };
+};
 
 export const login = async ({
   email,
@@ -86,20 +114,30 @@ export const login = async ({
       body: { email, password },
     });
 
-    // 이용 정지·탈퇴 계정은 서버가 거절하지 않고 내려보내도 같은 문구로 막는다
-    if (!isLoginAllowedStatus(data.status)) {
-      return { ok: false, message: LOGIN_FAILED_MESSAGE };
+    // ONBOARDING은 튜토리얼 대상이 아니라 본 적 없는 것으로 둔다
+    if (data.status === 'ONBOARDING') {
+      return {
+        ok: true,
+        data: { status: 'ONBOARDING', tutorialViewed: false },
+      };
     }
 
-    return {
-      ok: true,
-      data: {
-        status: data.status,
-        tutorialViewed: data.tutorialViewed ?? false,
-      },
-    };
+    if (data.status === 'ACTIVE') {
+      // 안 본 것으로 채우면 이미 본 점주에게 튜토리얼이 다시 뜨므로 로그인을 실패로 돌려준다
+      if (typeof data.tutorialViewed !== 'boolean') {
+        return { ok: false, message: UNAVAILABLE_MESSAGE };
+      }
+
+      return {
+        ok: true,
+        data: { status: 'ACTIVE', tutorialViewed: data.tutorialViewed },
+      };
+    }
+
+    // 이용 정지·탈퇴 계정은 서버가 거절하지 않고 내려보내도 같은 문구로 막는다
+    return { ok: false, message: LOGIN_FAILED_MESSAGE };
   } catch (error) {
-    return { ok: false, message: getLoginErrorMessage(error) };
+    return getLoginFailure(error);
   }
 };
 
@@ -171,7 +209,7 @@ const getMockOwnerStatus = (): LoginResponse['status'] | null => {
 // 인증 쿠키로 로그인한 점주를 확인한다. 화면은 HttpOnly 쿠키를 읽을 수 없어 새로고침 뒤 로그인 상태는 이것으로만 알 수 있다.
 // 로그인 전이면 data가 null이다. 재발급까지 실패해 쿠키로 로그인할 수 없거나(401), 점주가 아닌 계정이거나(403 AUTH-006),
 // 이용 정지·탈퇴 상태인 경우다. 그 밖의 오류(요청 제한 429, 서버 오류 5xx 등)나 응답을 받지 못한 경우는
-// 로그인 전인지 알 수 없어 실패로 돌려준다
+// 로그인 전인지 알 수 없어 실패로 돌려준다. 재발급이 요청 제한(429)에 걸렸으면 남은 시간을 함께 돌려준다
 export const getMe = async (): Promise<ApiResult<LoginResponse | null>> => {
   const mockStatus = getMockOwnerStatus();
 
@@ -198,6 +236,14 @@ export const getMe = async (): Promise<ApiResult<LoginResponse | null>> => {
       (error.status === 401 || error.status === 403)
     ) {
       return { ok: true, data: null };
+    }
+
+    if (error instanceof ApiError && error.status === 429) {
+      return {
+        ok: false,
+        retryAfterSeconds:
+          error.retryAfterSeconds ?? DEFAULT_RETRY_AFTER_SECONDS,
+      };
     }
 
     return { ok: false };

@@ -22,6 +22,7 @@ import {
   type BillingTablePreferences,
   getMonthRange,
 } from '@admin/features/billing/billingView';
+import { PointAdjustmentModal } from '@admin/features/billing/components/PointAdjustmentModal';
 import { PointLedgerDetails } from '@admin/features/billing/components/PointLedgerDetails';
 import { PointSummarySection } from '@admin/features/billing/components/PointSummarySection';
 import { isPositivePointId } from '@admin/features/billing/pointSummaryUtils';
@@ -59,9 +60,15 @@ const getValidationError = (
 interface PointLedgerTabProps {
   preferences: BillingTablePreferences;
   today: string;
+  onAdjusted: (ledgerId: number) => void;
 }
 
-export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
+export const PointLedgerTab = ({
+  preferences,
+  today,
+  onAdjusted,
+}: PointLedgerTabProps) => {
+  const [adjusting, setAdjusting] = useState(false);
   const { density, setDensity } = preferences;
   // 저장 키는 최초 열 구성의 값으로 고정해 열 추가·재배치 시에도 계정별 설정을 재사용한다.
   const columnSettings = useTableColumnSettings(
@@ -127,6 +134,13 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
           value={ownerSearch.draftKeyword}
           onChange={(event) => ownerSearch.setDraftKeyword(event.target.value)}
         />
+        <Button
+          className="ml-auto"
+          variant="secondary"
+          onClick={() => setAdjusting(true)}
+        >
+          포인트 수동 조정
+        </Button>
       </div>
       <PointSummarySection
         ownerId={selectedOwnerId}
@@ -335,6 +349,13 @@ export const PointLedgerTab = ({ preferences, today }: PointLedgerTabProps) => {
           <PointLedgerDetails key={selected.ledgerId} item={selected} />
         )}
       </AdminDrawer>
+      {adjusting && (
+        <PointAdjustmentModal
+          ownerId={selectedOwnerId ?? ''}
+          onClose={() => setAdjusting(false)}
+          onSaved={onAdjusted}
+        />
+      )}
     </div>
   );
 };

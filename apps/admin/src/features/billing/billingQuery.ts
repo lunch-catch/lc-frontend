@@ -24,6 +24,42 @@ export const paymentQuery = {
   sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
 };
 
+export const refundQuery = {
+  ownerId: queryText(),
+  status: queryChoice(
+    ['ALL', 'REQUESTED', 'APPROVED', 'REJECTED', 'COMPLETED'] as const,
+    'ALL',
+  ),
+  from: queryDate(),
+  to: queryDate(),
+  page: queryPage,
+  size: querySize,
+  sortBy: queryChoice(
+    ['requestedAt', 'amount', 'processedAt'] as const,
+    'requestedAt',
+  ),
+  sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
+};
+export const mismatchQuery = {
+  checkType: queryChoice(
+    [
+      'ALL',
+      'PG_VS_CHARGE',
+      'CAMPAIGN_SPEND_VS_LEDGER',
+      'CAMPAIGN_OVERSPEND',
+    ] as const,
+    'ALL',
+  ),
+  resolved: queryChoice(['ALL', 'true', 'false'] as const, 'ALL'),
+  from: queryDate(),
+  to: queryDate(),
+  page: queryPage,
+  size: querySize,
+  sortBy: queryChoice(['createdAt', 'businessDate'] as const, 'createdAt'),
+  sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
+};
+export const policyHistoryQuery = { page: queryPage, size: querySize };
+
 export const getLedgerQuery = (from: string, to: string) => ({
   ownerId: queryText(),
   campaignId: queryText(),
