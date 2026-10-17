@@ -66,16 +66,32 @@ export const TemplateCreateContent = ({
   const locked = editor.busy || editor.loadingMore;
   const latestVersionNumber =
     Math.max(
-      editor.generation?.versionNumber ?? 0,
-      editor.versions[0]?.versionNumber ?? 0,
+      0,
+      editor.generation &&
+        editor.getVersionAvailability(editor.generation.versionNumber) ===
+          'available'
+        ? editor.generation.versionNumber
+        : 0,
+      ...editor.versions
+        .filter(
+          (item) =>
+            editor.getVersionAvailability(item.versionNumber) === 'available',
+        )
+        .map((item) => item.versionNumber),
     ) || undefined;
-  const versionNumber = selectedVersion ?? latestVersionNumber;
+  const versionNumber =
+    selectedVersion !== null &&
+    editor.getVersionAvailability(selectedVersion) === 'available'
+      ? selectedVersion
+      : latestVersionNumber;
   const version = editor.versions.find(
     (item) => item.versionNumber === versionNumber,
   );
-  // 서버 이력이 다음 페이지로 넘어가도 대화에 남은 생성 버전은 다시 열 수 있다.
+  // 대화의 HTML은 서버에 남아 있는 버전만 미리보기와 저장에 사용할 수 있다.
   const localVersion = messages.find(
-    (message) => message.versionNumber === versionNumber,
+    (message) =>
+      message.versionNumber === versionNumber &&
+      editor.getVersionAvailability(message.versionNumber) === 'available',
   );
   const generatedHtml =
     editor.generation && editor.generation.versionNumber === versionNumber
@@ -110,11 +126,20 @@ export const TemplateCreateContent = ({
     .map((item) => item.versionNumber)
     .sort((a, b) => a - b);
   const requestVersionChange = (nextVersion: number) => {
-    if (!locked && nextVersion !== versionNumber)
+    if (
+      !locked &&
+      nextVersion !== versionNumber &&
+      editor.getVersionAvailability(nextVersion) === 'available'
+    )
       setPendingVersion(nextVersion);
   };
   const confirmVersionChange = () => {
-    if (locked || pendingVersion === null) return;
+    if (
+      locked ||
+      pendingVersion === null ||
+      editor.getVersionAvailability(pendingVersion) !== 'available'
+    )
+      return;
     // 버전 이동은 조회 상태만 바꾼다. 서버의 최신 버전이나 이후 이력은 변경하지 않는다.
     setSelectedVersion(pendingVersion);
     setSelectionContext(null);
@@ -225,6 +250,7 @@ export const TemplateCreateContent = ({
                   versionNumber={number}
                   current={number === versionNumber}
                   disabled={locked}
+                  availability={editor.getVersionAvailability(number)}
                   onSelect={requestVersionChange}
                 />
               ))}
@@ -242,6 +268,9 @@ export const TemplateCreateContent = ({
                     versionNumber={message.versionNumber}
                     current={message.versionNumber === versionNumber}
                     disabled={locked}
+                    availability={editor.getVersionAvailability(
+                      message.versionNumber,
+                    )}
                     onSelect={requestVersionChange}
                   />
                   {message.hasRemovedElements && (
@@ -324,7 +353,7 @@ export const TemplateCreateContent = ({
                   <textarea
                     ref={promptRef}
                     id="template-request"
-                    className="admin-scrollbar block h-20 w-full resize-none overflow-y-auto overscroll-y-contain rounded-md border-0 bg-transparent px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:outline-none"
+                    className="ui-scrollbar block h-20 w-full resize-none overflow-y-auto overscroll-y-contain rounded-md border-0 bg-transparent px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:outline-none"
                     aria-describedby={
                       selectedTarget ? 'template-selection-label' : undefined
                     }

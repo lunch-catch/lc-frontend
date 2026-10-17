@@ -106,7 +106,7 @@ export const AdminLayout = () => {
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* 공통 레이아웃은 유지하고 URL에 대응하는 하위 페이지만 교체한다. */}
         <main
-          className="admin-scrollbar min-h-0 flex-1 overflow-auto overscroll-y-contain p-6"
+          className="ui-scrollbar min-h-0 flex-1 overflow-auto overscroll-y-contain p-6"
           // 첫 생성 후 편집 주소로 바뀌어도 대화 상태가 있는 편집기는 다시 마운트하지 않는다.
           key={
             pathname.startsWith('/templates/') ? '/templates/editor' : pathname

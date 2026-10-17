@@ -29,7 +29,7 @@ const tabs: BillingTabItem[] = [
   { label: '환불 요청', value: 'refunds' },
   { label: '충전 정책', value: 'policy' },
   { label: '정산 검증', value: 'mismatches' },
-  { label: '매출 현황', value: 'sales' },
+  { label: '매출 현황 (예시 데이터)', value: 'sales' },
 ];
 const tabQuery = {
   tab: queryChoice(
@@ -62,7 +62,7 @@ export const BillingManagementContent = () => {
           결제·포인트 내역과 환불 요청, 충전 정책 및 정산 불일치를 관리합니다.
         </p>
       </header>
-      <div className="overflow-x-auto admin-scrollbar">
+      <div className="overflow-x-auto ui-scrollbar">
         <div className="w-max">
           <Tabs
             items={tabs}

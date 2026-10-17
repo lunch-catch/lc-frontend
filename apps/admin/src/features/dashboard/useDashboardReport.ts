@@ -5,15 +5,15 @@ import type {
   DashboardDataset,
   DashboardInterval,
   DashboardRange,
-  UsageMetric,
+  FunnelMetric,
 } from './dashboardTypes';
 import {
+  getDashboardRangeError,
   getPreviousRange,
   getTrend,
   selectDays,
   shiftDate,
   summarizeDays,
-  usageMetrics,
 } from './dashboardUtils';
 
 export const useDashboardReport = (data: DashboardDataset) => {
@@ -22,7 +22,7 @@ export const useDashboardReport = (data: DashboardDataset) => {
     to: queryDate(data.completedThrough),
     interval: queryChoice(['day', 'week', 'month'] as const, 'day'),
     metric: queryChoice(
-      ['impressions', 'saves', 'issued', 'used'] as const,
+      ['impressions', 'saves', 'issued'] as const,
       'impressions',
     ),
     compare: queryChoice(['true', 'false'] as const, 'true'),
@@ -34,16 +34,15 @@ export const useDashboardReport = (data: DashboardDataset) => {
     updateFilters({ from: value.startDate, to: value.endDate });
   const setInterval = (interval: DashboardInterval) =>
     updateFilters({ interval });
-  const setMetric = (metric: UsageMetric) => updateFilters({ metric });
+  const setMetric = (metric: FunnelMetric) => updateFilters({ metric });
   const setCompare = (compare: boolean) =>
     updateFilters({ compare: compare ? 'true' : 'false' });
-  const validRange = Boolean(
-    range.startDate &&
-    range.endDate &&
-    range.startDate <= range.endDate &&
-    (Date.parse(range.endDate) - Date.parse(range.startDate)) / 86_400_000 <
-      366,
-  );
+  const rangeError =
+    getDashboardRangeError(range, interval) ||
+    (range.startDate < data.availableFrom
+      ? `조회 가능한 기간은 ${data.availableFrom}부터입니다.`
+      : '');
+  const validRange = !rangeError;
   const completedRange = {
     ...range,
     endDate:
@@ -58,7 +57,9 @@ export const useDashboardReport = (data: DashboardDataset) => {
     ? getPreviousRange(completedRange)
     : undefined;
   const canCompare = Boolean(
-    previousRange && previousRange.startDate >= data.availableFrom,
+    previousRange &&
+    previousRange.startDate >= data.availableFrom &&
+    !getDashboardRangeError(previousRange, interval),
   );
   const previousDays =
     previousRange && canCompare ? selectDays(data.days, previousRange) : [];
@@ -85,13 +86,13 @@ export const useDashboardReport = (data: DashboardDataset) => {
           interval,
         )
       : [];
-  const selectedMetric = usageMetrics.find((item) => item.value === metric)!;
   const validRatio = summary.totalImpressions
     ? (summary.impressions / summary.totalImpressions) * 100
-    : 0;
+    : null;
   const pending = validRange && range.endDate >= data.today;
   return {
     range,
+    completedRange,
     setRange,
     interval,
     setInterval,
@@ -100,6 +101,7 @@ export const useDashboardReport = (data: DashboardDataset) => {
     compare,
     setCompare,
     validRange,
+    rangeError,
     hasCompletedPeriod,
     days,
     previousRange,
@@ -110,7 +112,6 @@ export const useDashboardReport = (data: DashboardDataset) => {
     snapshot,
     trend,
     previousTrend,
-    selectedMetric,
     validRatio,
     pending,
   };

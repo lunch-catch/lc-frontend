@@ -1,5 +1,6 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 
+import { ApiError } from '@admin/api/client';
 import {
   generateTemplate,
   getTemplate,
@@ -8,7 +9,11 @@ import {
   type TemplateGeneration,
 } from '@admin/api/templates';
 
-import type { PosterTemplate, TemplateVersion } from './templateTypes';
+import type {
+  PosterTemplate,
+  TemplateVersion,
+  TemplateVersionAvailability,
+} from './templateTypes';
 import { getTemplateError } from './templateUtils';
 
 interface EditorResult {
@@ -26,6 +31,8 @@ export const useTemplateEditor = (initialId?: string) => {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [versionsFresh, setVersionsFresh] = useState(false);
+  const [deletedVersions, setDeletedVersions] = useState<number[]>([]);
   // React 상태가 다음 렌더에 반영되기 전의 연속 클릭도 잠금으로 차단한다.
   const operationRef = useRef(false);
   const moreRef = useRef(false);
@@ -51,12 +58,14 @@ export const useTemplateEditor = (initialId?: string) => {
           template.status === 'DRAFT'
             ? await getTemplateVersions(initialId, undefined, controller.signal)
             : { items: [], nextPageToken: null };
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
           setResult({
             template,
             versions: page.items,
             nextPageToken: page.nextPageToken,
           });
+          setVersionsFresh(true);
+        }
       })
       .catch((cause: unknown) => {
         if (!controller.signal.aborted) setLoadError(getTemplateError(cause));
@@ -64,17 +73,34 @@ export const useTemplateEditor = (initialId?: string) => {
     return () => controller.abort();
   }, [initialId]);
 
+  const getVersionAvailability = (
+    versionNumber: number,
+  ): TemplateVersionAvailability => {
+    if (deletedVersions.includes(versionNumber)) return 'deleted';
+    // 수정 성공 시 오래된 버전이 삭제될 수 있어 재조회 전 목록은 신뢰하지 않는다.
+    if (!versionsFresh)
+      return generation?.versionNumber === versionNumber
+        ? 'available'
+        : 'unknown';
+    if (result?.versions.some((item) => item.versionNumber === versionNumber))
+      return 'available';
+    // 아직 다음 페이지가 있으면 목록에 없다는 이유만으로 삭제됐다고 단정하지 않는다.
+    return result?.nextPageToken ? 'unknown' : 'deleted';
+  };
+
   const generate = async (
     name: string,
     requestPrompt: string,
-    baseVersionNumber?: number,
+    selectedVersionNumber?: number,
   ) => {
     if (operationRef.current || moreRef.current) return null;
+    const trimmedName = name.trim();
+    const trimmedPrompt = requestPrompt.trim();
     if (
-      !name.trim() ||
-      name.trim().length > 100 ||
-      !requestPrompt.trim() ||
-      requestPrompt.trim().length > 500
+      !trimmedName ||
+      trimmedName.length > 100 ||
+      !trimmedPrompt ||
+      trimmedPrompt.length > 500
     ) {
       setError('템플릿명은 1~100자, 요청 내용은 1~500자로 입력해 주세요.');
       return null;
@@ -82,19 +108,36 @@ export const useTemplateEditor = (initialId?: string) => {
     const id = result ? String(result.template.templateId) : savedId.current;
     if (
       id &&
-      (baseVersionNumber === undefined ||
-        !Number.isSafeInteger(baseVersionNumber) ||
-        baseVersionNumber <= 0)
+      (selectedVersionNumber === undefined ||
+        !Number.isSafeInteger(selectedVersionNumber) ||
+        selectedVersionNumber <= 0)
     ) {
       setError('수정할 기준 버전을 다시 선택해 주세요.');
       return null;
     }
-    const trimmedName = name.trim();
-    const trimmedPrompt = requestPrompt.trim();
-    // 요청 문구가 같아도 기준 버전이 다르면 별도의 수정 요청으로 취급한다.
+    if (
+      id &&
+      selectedVersionNumber !== undefined &&
+      getVersionAvailability(selectedVersionNumber) !== 'available'
+    ) {
+      setError('선택한 버전을 사용할 수 없습니다. 다른 버전을 선택해 주세요.');
+      return null;
+    }
+    // 현재 수정 API는 최신 버전만 사용하므로 이전 버전의 선택 내용을 잘못 적용하지 않는다.
+    const latestVersionNumber = Math.max(
+      generation?.versionNumber ?? 0,
+      ...(result?.versions.map((item) => item.versionNumber) ?? []),
+    );
+    if (id && selectedVersionNumber !== latestVersionNumber) {
+      setError(
+        '현재는 최신 버전만 수정할 수 있습니다. 최신 버전으로 이동해 주세요.',
+      );
+      return null;
+    }
+    // 선택 버전은 서버에 보내지 않지만 같은 문구를 새 버전에서 다시 요청하는 경우를 구분한다.
     const key = JSON.stringify([
       id,
-      baseVersionNumber,
+      selectedVersionNumber,
       trimmedName,
       trimmedPrompt,
     ]);
@@ -110,7 +153,6 @@ export const useTemplateEditor = (initialId?: string) => {
           name: trimmedName,
           requestPrompt: trimmedPrompt,
           requestId: pendingRequest.current.requestId,
-          baseVersionNumber,
         },
         id,
       );
@@ -118,6 +160,7 @@ export const useTemplateEditor = (initialId?: string) => {
       if (!mounted.current) return null;
       savedId.current = String(generated.templateId);
       setGeneration(generated);
+      setVersionsFresh(false);
       // 새 템플릿은 서버 ID가 있는 편집 주소로 이동한 뒤 상세와 이력을 불러온다.
       if (!initialId) return generated;
       // 생성 응답에 생성 시각은 없으므로 임의 날짜를 채우지 않고 상세·이력에서 읽는다.
@@ -126,13 +169,14 @@ export const useTemplateEditor = (initialId?: string) => {
         getTemplate(String(generated.templateId)),
         getTemplateVersions(String(generated.templateId)),
       ]).catch(() => [null, null] as const);
-      if (mounted.current && template && page)
+      if (mounted.current && template && page) {
         setResult({
           template,
           versions: page.items,
           nextPageToken: page.nextPageToken,
         });
-      else if (mounted.current)
+        setVersionsFresh(true);
+      } else if (mounted.current)
         setError(
           '임시저장은 완료했지만 버전 이력을 불러오지 못했습니다. 새로고침해 주세요.',
         );
@@ -148,6 +192,10 @@ export const useTemplateEditor = (initialId?: string) => {
 
   const publish = async (versionNumber: number) => {
     if (!result || operationRef.current || moreRef.current) return false;
+    if (getVersionAvailability(versionNumber) !== 'available') {
+      setError('선택한 버전을 사용할 수 없습니다. 다른 버전을 선택해 주세요.');
+      return false;
+    }
     operationRef.current = true;
     setBusy(true);
     setError(null);
@@ -155,6 +203,33 @@ export const useTemplateEditor = (initialId?: string) => {
       await publishTemplate(String(result.template.templateId), versionNumber);
       return mounted.current;
     } catch (cause) {
+      // 다른 관리자 요청으로 버전이 삭제됐을 때도 남아 있는 버전 목록으로 갱신한다.
+      if (cause instanceof ApiError && cause.code === 'POSTER-008') {
+        if (mounted.current) {
+          setVersionsFresh(false);
+          // 후속 목록 조회가 실패해도 서버가 삭제를 확인한 버전은 다시 허용하지 않는다.
+          setDeletedVersions((current) =>
+            current.includes(versionNumber)
+              ? current
+              : [...current, versionNumber],
+          );
+        }
+        const page = await getTemplateVersions(
+          String(result.template.templateId),
+        ).catch(() => null);
+        if (mounted.current && page) {
+          setResult((current) =>
+            current
+              ? {
+                  ...current,
+                  versions: page.items,
+                  nextPageToken: page.nextPageToken,
+                }
+              : current,
+          );
+          setVersionsFresh(true);
+        }
+      }
       if (mounted.current) setError(getTemplateError(cause));
       return false;
     } finally {
@@ -164,7 +239,12 @@ export const useTemplateEditor = (initialId?: string) => {
   };
 
   const loadMore = async () => {
-    if (!result?.nextPageToken || moreRef.current || operationRef.current)
+    if (
+      !versionsFresh ||
+      !result?.nextPageToken ||
+      moreRef.current ||
+      operationRef.current
+    )
       return;
     moreRef.current = true;
     setLoadingMore(true);
@@ -209,7 +289,8 @@ export const useTemplateEditor = (initialId?: string) => {
     template: result?.template ?? null,
     generation,
     versions: result?.versions ?? [],
-    nextPageToken: result?.nextPageToken,
+    nextPageToken: versionsFresh ? result?.nextPageToken : null,
+    getVersionAvailability,
     loading: Boolean(
       initialId && !result && !loadError && !hasGeneratedTemplate,
     ),

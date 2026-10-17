@@ -44,7 +44,7 @@ const statusOptions = [
 ];
 
 const memberTabs = [
-  { label: '점주 목록', value: 'owner' },
+  { label: '점주 목록 (예시 데이터)', value: 'owner' },
   { label: '사용자 목록', value: 'member' },
 ];
 

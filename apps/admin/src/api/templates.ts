@@ -109,17 +109,14 @@ export const generateTemplate = async (
     name: string;
     requestPrompt: string;
     requestId: string;
-    baseVersionNumber?: number;
   },
   id?: string,
 ) => {
   const path = id ? `${basePath}/${encodeURIComponent(id)}/versions` : basePath;
-  // baseVersionNumber는 백엔드 반영 예정인 기준 버전 필드이며 수정 요청에서만 보낸다.
   const body = id
     ? {
         requestPrompt: values.requestPrompt,
         requestId: values.requestId,
-        baseVersionNumber: values.baseVersionNumber,
       }
     : {
         name: values.name,
