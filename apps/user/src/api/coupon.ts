@@ -1,4 +1,4 @@
-import { request } from './client';
+import { ApiError, request } from './client';
 import { getNow } from './clock';
 import {
   getMockCoupons,
@@ -11,11 +11,20 @@ import {
 // 캠페인 하나의 발급 상태
 export interface CampaignIssueStatus {
   campaignId: string;
+  // 오늘의 쿠폰 이벤트 ID. 발급할 때 서버에 보낸다. 오늘 이벤트가 없거나 mock이면 null
+  eventId: number | null;
   remainingCount: number;
+  // 사용 시간 (HH:MM). 이벤트가 없으면 빈 문자열
   usableFrom: string;
   usableTo: string;
   // 오늘 이 캠페인 쿠폰을 이미 받았는지
   isIssued: boolean;
+}
+
+// 발급 상태를 물을 캠페인. 서버는 가게 단위로 답해서 가게 ID도 함께 넘긴다
+export interface IssueTarget {
+  campaignId: string;
+  storeId: string;
 }
 
 export interface IssueStatusResponse {
@@ -26,7 +35,14 @@ export interface IssueStatusResponse {
 }
 
 // 받기 결과. 받는 사이 수량이 소진되거나 하루 한도에 닿으면 실패한다
-export type IssueResult = 'issued' | 'soldOut' | 'limitReached';
+// alreadyIssued: 오늘 이미 받음, notWished: 찜하지 않음, notOpen: 발급 시간이 아니거나 오늘 이벤트가 없음
+export type IssueResult =
+  | 'issued'
+  | 'soldOut'
+  | 'limitReached'
+  | 'alreadyIssued'
+  | 'notWished'
+  | 'notOpen';
 
 // 받은 쿠폰의 상태 (GET /v1/coupons 명세)
 // ISSUED: 아직 안 씀(사용 시작 전 포함), USED: 사용 완료, EXPIRED: 사용 시간이 지남
@@ -120,15 +136,89 @@ export const fetchTodayIssuance = async (): Promise<{
   return { dailyLimit: MOCK_DAILY_ISSUE_LIMIT, issuedCount };
 };
 
-// 찜 목록에서 받은 캠페인 ID를 보내 각 캠페인의 발급 상태를 한 번에 받는다
-// 캠페인별 상태(:getStatus)는 아직 서버에 없어 mock이고, 하루 한도만 쿠폰 API를 쓸 수 있다
+// 발급(POST /v1/coupons)과 가게별 발급 상태(POST /v1/coupon-events:getStatus)는 서버 구현이 끝나 실제 API를 쓴다
+// 찜 API가 아직 없어 서버 응답의 wished·canIssue는 항상 false라 쓰지 않고, 찜 여부는 화면이 따로 안다
+const USE_COUPON_ISSUE_API = true;
+
+// 가게별 오늘 쿠폰 이벤트 상태 (POST /v1/coupon-events:getStatus 응답 한 건)
+interface CouponEventStatusItem {
+  storeId: number;
+  hasCampaign: boolean;
+  eventId: number | null;
+  eventState: 'SCHEDULED' | 'OPEN' | 'SOLD_OUT' | 'CLOSED' | 'NO_EVENT';
+  remainingQuantity: number;
+  usableStartTime: string | null;
+  usableEndTime: string | null;
+  hasIssuedToday: boolean;
+  wished: boolean;
+  canIssue: boolean;
+  cannotIssueReason: string | null;
+}
+
+interface CouponEventStatusResponse {
+  serverTime: string;
+  items: CouponEventStatusItem[];
+}
+
+// ISO 시각을 화면에 보여줄 HH:MM으로 바꾼다
+const formatClockTime = (isoString: string | null) =>
+  isoString
+    ? new Date(isoString).toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+    : '';
+
+// 한 번에 물을 수 있는 가게 수 (명세의 storeIds 최대 개수)
+const MAX_STATUS_STORE_IDS = 100;
+
+// 가게 ID로 오늘 이벤트 상태를 받아 캠페인별 상태로 바꾼다. 가게 ID가 숫자가 아닌 캠페인(mock 데이터)은 묻지 않는다
+const fetchCampaignStatuses = async (
+  targets: IssueTarget[],
+): Promise<CampaignIssueStatus[]> => {
+  const storeIds = [
+    ...new Set(
+      targets.map((target) => Number(target.storeId)).filter(Number.isInteger),
+    ),
+  ].slice(0, MAX_STATUS_STORE_IDS);
+  if (storeIds.length === 0) return [];
+
+  const { items } = await request<CouponEventStatusResponse>(
+    '/v1/coupon-events:getStatus',
+    { method: 'POST', body: { storeIds } },
+  );
+  const itemsByStore = new Map(items.map((item) => [item.storeId, item]));
+
+  return targets.flatMap((target) => {
+    const item = itemsByStore.get(Number(target.storeId));
+    if (!item) return [];
+    return [
+      {
+        campaignId: target.campaignId,
+        eventId: item.eventId,
+        remainingCount: item.remainingQuantity,
+        usableFrom: formatClockTime(item.usableStartTime),
+        usableTo: formatClockTime(item.usableEndTime),
+        isIssued: item.hasIssuedToday,
+      },
+    ];
+  });
+};
+
+// 찜 목록의 캠페인들을 보내 각 캠페인의 발급 상태를 한 번에 받는다
+// 하루 한도는 발급 한도 조회에서 따로 받는다
 export const fetchIssueStatus = async (
-  campaignIds: string[],
+  targets: IssueTarget[],
 ): Promise<IssueStatusResponse> => {
-  const campaigns = campaignIds
-    .map(getMockIssueStatus)
-    .filter((status) => status !== undefined);
-  const { dailyLimit, issuedCount } = await fetchTodayIssuance();
+  const [campaigns, { dailyLimit, issuedCount }] = await Promise.all([
+    USE_COUPON_ISSUE_API
+      ? fetchCampaignStatuses(targets)
+      : targets
+          .map((target) => getMockIssueStatus(target.campaignId))
+          .filter((status) => status !== undefined),
+    fetchTodayIssuance(),
+  ]);
 
   return {
     campaigns,
@@ -295,9 +385,45 @@ export const fetchQrToken = async (
   };
 };
 
-// 발급 API(POST /v1/coupons)와 캠페인별 발급 상태(:getStatus)는 아직 서버에 없어 mock으로 받는다
-// 주소에 ?mockIssueSoldOut을 붙이면 받는 사이 수량이 소진된 경우를 확인할 수 있다
-export const issueCoupon = async (campaignId: string): Promise<IssueResult> => {
+// 서버가 발급을 거절한 이유를 받기 결과로 바꾼다. 여기 없는 오류는 그대로 올린다
+const issueFailuresByCode: Record<string, Exclude<IssueResult, 'issued'>> = {
+  'COUPON-004': 'notWished',
+  'COUPON-005': 'alreadyIssued',
+  'COUPON-006': 'soldOut',
+  'COUPON-007': 'limitReached',
+  // 발급 시간이 아니거나 이벤트가 열려 있지 않음
+  'COUPON-002': 'notOpen',
+};
+
+// 선착순 쿠폰을 받는다 (POST /v1/coupons). 발급 상태에서 받은 오늘 이벤트 ID로 받는다
+// mock일 때 주소에 ?mockIssueSoldOut을 붙이면 받는 사이 수량이 소진된 경우를 확인할 수 있다
+export const issueCoupon = async ({
+  campaignId,
+  eventId,
+}: Pick<
+  CampaignIssueStatus,
+  'campaignId' | 'eventId'
+>): Promise<IssueResult> => {
+  if (USE_COUPON_ISSUE_API) {
+    // 오늘 이벤트가 없으면 서버에 묻지 않아도 받을 수 없다
+    if (eventId === null) return 'notOpen';
+
+    try {
+      await request<{ memberCouponId: number; issueTime: string }>(
+        '/v1/coupons',
+        { method: 'POST', body: { eventId } },
+      );
+      return 'issued';
+    } catch (error) {
+      const failure =
+        error instanceof ApiError && error.code
+          ? issueFailuresByCode[error.code]
+          : undefined;
+      if (!failure) throw error;
+      return failure;
+    }
+  }
+
   await wait(MOCK_DELAY_MS);
 
   if (new URLSearchParams(window.location.search).has('mockIssueSoldOut')) {

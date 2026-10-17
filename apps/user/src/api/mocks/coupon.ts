@@ -172,6 +172,8 @@ export const getMockIssueStatus = (
 
   return {
     campaignId,
+    // mock에는 서버 이벤트가 없다. 받을 때는 캠페인 ID로 받는다
+    eventId: null,
     ...campaign,
     isIssued: findTodayCoupon(campaignId) !== undefined,
   };
