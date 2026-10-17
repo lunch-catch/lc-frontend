@@ -9,6 +9,7 @@ interface DashboardMetricCardProps {
   value: number;
   previous?: number;
   unit?: string;
+  basis?: string;
   description?: string;
   selected?: boolean;
   onSelect?: () => void;
@@ -19,6 +20,7 @@ export const DashboardMetricCard = ({
   value,
   previous,
   unit = '건',
+  basis,
   description,
   selected = false,
   onSelect,
@@ -51,13 +53,18 @@ export const DashboardMetricCard = ({
         : {})}
       className={`relative min-w-0 overflow-hidden rounded-xl border p-4 text-left transition-colors ${surfaceClassName} ${interactionClassName}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-body-sm-web font-medium text-text-secondary">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-body-sm-web font-medium text-text-secondary">
           {label}
         </p>
+        {basis && (
+          <p className="ml-auto text-right text-caption-web text-text-secondary">
+            {basis}
+          </p>
+        )}
         {selected && (
           <span
-            className="size-2 rounded-full bg-action-primary"
+            className="mt-1 shrink-0 size-2 rounded-full bg-action-primary"
             aria-hidden="true"
           />
         )}

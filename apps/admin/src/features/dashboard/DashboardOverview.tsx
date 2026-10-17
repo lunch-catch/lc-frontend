@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { formatNumber } from '@repo/utils';
+import { formatDate, formatNumber } from '@repo/utils';
 import { ExternalLink } from 'lucide-react';
 
 import { DashboardMetricCard } from './DashboardMetricCard';
@@ -25,16 +25,22 @@ export const DashboardOverview = ({
   canCompare,
   mismatchLink,
 }: DashboardOverviewProps) => {
+  // 누적·상태 지표는 기간 합계가 아니라 선택 범위의 마지막 집계일 값을 사용한다.
+  const snapshotBasis = snapshot
+    ? `${formatDate(snapshot.date)} 기준`
+    : '기간 말 기준';
   const metrics = [
     {
-      label: '누적 사용자',
+      label: '누적 회원',
+      basis: snapshotBasis,
       value: snapshot?.totalUsers ?? 0,
       previous: previousSnapshot?.totalUsers,
       unit: '명',
-      description: `신규 ${formatNumber(summary.newUsers)}명 · 누적 탈퇴 ${formatNumber(snapshot?.withdrawnUsers ?? 0)}명 · 정지 ${formatNumber(snapshot?.suspendedUsers ?? 0)}명`,
+      description: `기간 내 신규 ${formatNumber(summary.newUsers)}명 · 누적 탈퇴 ${formatNumber(snapshot?.withdrawnUsers ?? 0)}명 · 정지 ${formatNumber(snapshot?.suspendedUsers ?? 0)}명`,
     },
     {
-      label: '일평균 활성 사용자',
+      label: '일평균 활성 회원',
+      basis: '선택 기간 일평균',
       value: summary.activeUsers,
       previous: canCompare ? previous.activeUsers : undefined,
       unit: '명',
@@ -42,27 +48,30 @@ export const DashboardOverview = ({
     },
     {
       label: '누적 입점 업체',
+      basis: snapshotBasis,
       value: snapshot?.totalStores ?? 0,
       previous: previousSnapshot?.totalStores,
       unit: '개',
-      description: `신규 ${formatNumber(summary.newStores)}개`,
+      description: `기간 내 신규 ${formatNumber(summary.newStores)}개`,
     },
     {
       label: '활성 캠페인',
+      basis: snapshotBasis,
       value: snapshot?.activeCampaigns ?? 0,
       previous: previousSnapshot?.activeCampaigns,
       unit: '개',
-      description: '마지막 집계일 기준',
+      description: '집행 중 캠페인',
     },
     {
       label: '충전액',
+      basis: '선택 기간 합계',
       value: summary.charge,
       previous: canCompare ? previous.charge : undefined,
       unit: '원',
-      description: '선택 기간 합계',
     },
     {
       label: '소진액',
+      basis: '선택 기간 합계',
       value: summary.spend,
       previous: canCompare ? previous.spend : undefined,
       unit: 'P',
@@ -70,6 +79,7 @@ export const DashboardOverview = ({
     },
     {
       label: '미소진 잔액',
+      basis: snapshotBasis,
       value: snapshot?.unspent ?? 0,
       previous: previousSnapshot?.unspent,
       unit: 'P',
@@ -98,6 +108,7 @@ export const DashboardOverview = ({
             </span>
           }
           value={summary.mismatchCount}
+          basis="선택 기간 조회 건수"
           description={
             summary.mismatchCount
               ? '확인 필요 · 상세 보기'
