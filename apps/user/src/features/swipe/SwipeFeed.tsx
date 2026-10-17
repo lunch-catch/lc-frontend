@@ -17,6 +17,7 @@ import {
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 import { useWishCount } from '@user/features/wishlist/useWishCount';
 
+import FeedFilterButton from './FeedFilterButton';
 import {
   clearFeedSession,
   clearRateLimitedUntil,
@@ -43,11 +44,6 @@ import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
 const TOAST_DURATION_MS = 2500;
-// 오픈 안내 줄의 높이와 위아래로 띄울 최소 여백
-const COUNTDOWN_HEIGHT = 32;
-const COUNTDOWN_MIN_GAP = 16;
-// 카드 영역 위쪽 안쪽 여백 (pt-2)
-const CARD_AREA_PADDING_TOP = 8;
 const FIRST_WISH_STORAGE_KEY = 'launch-catch-first-wish-date';
 
 // 오늘 처음 찜했는지 확인하고, 처음이면 오늘 날짜를 기록한다
@@ -155,10 +151,7 @@ const SwipeFeed = () => {
   const hasRetriedRateLimit = useRef(initial.hasRetriedRateLimit);
   // 같은 카드의 노출이 두 번 기록되지 않도록 보낸 serveId를 기억한다. 탭을 오가거나 새로고침해도 이어서 기억한다
   const impressedServeIds = useRef(new Set(loadImpressedServeIds()));
-  const [setCardArea, cardMaxWidth, spareHeight] = usePosterFitWidth();
-  // 카드 묶음이 세로 가운데에 있어서 남는 높이의 절반이 카드 위에 빈다
-  const spareTop = spareHeight / 2;
-  const showCountdown = spareTop >= COUNTDOWN_HEIGHT + COUNTDOWN_MIN_GAP * 2;
+  const [setCardArea, cardMaxWidth] = usePosterFitWidth();
 
   useEffect(() => {
     // 저장해 둔 묶음으로 이어 볼 때는 받지 않는다
@@ -342,25 +335,25 @@ const SwipeFeed = () => {
         {status === 'done' && <SwipeDone />}
         {status === 'waiting' && <SwipeWaiting until={waitUntil} />}
         {/* 불러오는 중에는 카드 자리에 회색 틀을 보여준다 */}
+        {/* 카드 바로 위 줄. 왼쪽은 피드에 거는 필터("필터"라고 적어 처음 보는 사람도 알 수 있게 한다) */}
+        {/* 오른쪽은 11:00 오픈까지 남은 시간. 오픈 뒤에는 비워 둔다 */}
+        {(status === 'loading' || topCard) && (
+          <div className="flex items-center justify-between gap-3 px-page pt-1">
+            <FeedFilterButton
+              // 필터는 이미 받은 카드에는 적용되지 않고 다음 피드부터 적용된다
+              onSaved={() =>
+                setToastMessage('필터를 저장했어요 · 다음 카드부터 적용돼요')
+              }
+            />
+            <OpenCountdown />
+          </div>
+        )}
         {(status === 'loading' || topCard) && (
           // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
           <section
-            className="relative flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-3"
+            className="relative flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-2"
             ref={setCardArea}
           >
-            {/* 큰 화면에서 카드 위가 비면 그 가운데에 오픈까지 남은 시간을 둔다 */}
-            {/* 겹쳐 두어서 안내가 생겨도 카드 크기 계산이 바뀌지 않는다 */}
-            {showCountdown && (
-              <div
-                className="absolute inset-x-0 flex justify-center"
-                style={{
-                  top:
-                    CARD_AREA_PADDING_TOP + (spareTop - COUNTDOWN_HEIGHT) / 2,
-                }}
-              >
-                <OpenCountdown />
-              </div>
-            )}
             {/* 카드와 버튼을 한 묶음으로 남는 높이의 세로 가운데에 둔다 */}
             {/* PC처럼 화면이 낮으면 포스터가 3:4를 지키도록 묶음 폭을 줄인다 */}
             <div

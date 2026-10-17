@@ -13,8 +13,9 @@ interface GestureRailProps {
   onWish: () => void;
 }
 
+// 작은 화면에서 카드 폭이 좁아져도 "패스"가 두 줄로 꺾이지 않게 글자를 한 줄로 두고, 줄어들 몫은 가운데 안내가 진다
 const actionButtonClassName =
-  'flex h-14 w-22 items-center justify-center gap-1.5 rounded-lg text-caption-mobile transition-colors active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed';
+  'flex h-12 w-22 shrink-0 items-center justify-center gap-1.5 rounded-lg text-caption-mobile whitespace-nowrap transition-colors active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed';
 
 const hintByDirection = {
   wish: {
@@ -49,7 +50,8 @@ const GestureRail = ({
 
   return (
     <div
-      className={`flex h-16 items-center justify-between ${disabled ? 'opacity-40' : ''}`}
+      // 카드와 버튼 사이가 위쪽(필터 줄과 카드 사이)과 비슷하도록 버튼 높이(48px, 터치 영역 44px 이상)만큼만 둔다
+      className={`flex h-12 items-center justify-between ${disabled ? 'opacity-40' : ''}`}
     >
       <button
         aria-label={storeName ? `${storeName} 패스` : '패스'}
@@ -65,12 +67,17 @@ const GestureRail = ({
         <X aria-hidden="true" className="size-4" />
         패스
       </button>
-      <div aria-hidden="true" className="flex flex-col items-center gap-2">
-        <span className={`text-caption-mobile ${hint.textClassName}`}>
+      <div
+        aria-hidden="true"
+        className="flex min-w-0 flex-1 flex-col items-center gap-2"
+      >
+        <span
+          className={`max-w-full truncate text-caption-mobile ${hint.textClassName}`}
+        >
           {hint.label}
         </span>
         <span
-          className={`relative h-0.5 w-34 rounded-full ${hint.trackClassName}`}
+          className={`relative h-0.5 w-full max-w-34 rounded-full ${hint.trackClassName}`}
         >
           <span
             className={`absolute -top-0.5 size-1.5 rounded-full ${hint.dotClassName}`}
