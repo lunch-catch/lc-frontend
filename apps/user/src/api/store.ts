@@ -1,3 +1,4 @@
+import { request } from './client';
 import { mockFeedCards } from './mocks/feed';
 import { mockStoreDetails, mockStores } from './mocks/stores';
 
@@ -25,11 +26,21 @@ export const BUSINESS_CATEGORY_LABELS: Record<BusinessCategory, string> = {
   OTHER: '기타',
 };
 
+// 할인 대상 메뉴 (가게 목록 명세 activeCampaign.targetMenu)
+export interface StoreTargetMenu {
+  menuId: number;
+  name: string;
+  // 할인 전 가격(원)
+  price: number;
+}
+
 // 지금 사용자에게 보여줄 활성 캠페인의 할인 요약
 export interface StoreActiveCampaign {
   discountTargetType: 'ALL' | 'MENU';
   discountType: 'PERCENT' | 'AMOUNT';
   discountValue: number;
+  // MENU면 할인 대상 메뉴, ALL이면 null. mock에는 없다
+  targetMenu?: StoreTargetMenu | null;
 }
 
 // 가게 목록·검색 항목 (GET /v1/stores)
@@ -43,7 +54,7 @@ export interface StoreListItem {
   distanceMeters: number | null;
   hasActiveCampaign: boolean;
   activeCampaign: StoreActiveCampaign | null;
-  // 가게 대표 이미지. 명세에 아직 없어 가게 API 담당에게 추가를 요청했다
+  // 가게 대표 이미지. 서버 목록 응답에는 없어 실제 API에서는 항상 null이다
   thumbnailUrl: string | null;
 }
 
@@ -56,19 +67,81 @@ export interface StoreListResponse {
 export interface StoreListQuery {
   // 가게명 또는 대표 메뉴명 검색어
   query?: string;
+  // 고른 업종. 없으면 전체
   category?: BusinessCategory;
+  // 거리를 잴 기준 위치. 서버는 필수로 받는다
+  latitude: number;
+  longitude: number;
+  // 다음 페이지 커서. 없으면 첫 페이지
+  pageToken?: string | null;
 }
+
+// 가게 목록은 서버 구현이 끝나 실제 API를 쓴다. 가게 상세와 걸어가는 경로는 아직 서버에 없어 mock이다
+const USE_STORE_LIST_API = true;
+
+// 한 번에 받는 가게 수. 지도에 핀을 넉넉히 찍도록 기본(20)보다 크게 받는다
+const STORE_PAGE_SIZE = 50;
+
+interface StoreListItemResponse {
+  storeId: number;
+  name: string;
+  businessCategory: BusinessCategory;
+  longitude: number;
+  latitude: number;
+  distanceMeters: number;
+  hasActiveCampaign: boolean;
+  activeCampaign: StoreActiveCampaign | null;
+}
+
+// 서버 목록에서 받은 가게. 가게 상세 API가 생기기 전까지 상세 화면을 이 정보로 채운다
+const listedStores = new Map<number, StoreListItem>();
+
+const toStoreListItem = (item: StoreListItemResponse): StoreListItem => ({
+  ...item,
+  thumbnailUrl: null,
+});
 
 const MOCK_DELAY_MS = 600;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// 현재 위치 기준 주변 가게를 가까운 순으로 받는다. 활성 캠페인이 있는 가게가 먼저 온다
-// 주소에 ?mockStoresEmpty를 붙이면 주변에 가게가 없는 상태를 확인할 수 있다
-export const fetchStores = async ({
+// 기준 위치에서 가까운 순으로 가게를 받는다 (GET /v1/stores). 반경 제한이 없어 페이지를 이어 받는다
+// 쿠폰 여부는 정렬에 영향을 주지 않는다. 검색어, 업종, 위치가 바뀌면 첫 페이지부터 다시 받는다
+const fetchServerStores = async ({
   category,
+  latitude,
+  longitude,
+  pageToken,
   query,
-}: StoreListQuery = {}): Promise<StoreListResponse> => {
+}: StoreListQuery): Promise<StoreListResponse> => {
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    // 업종을 고르지 않으면 ALL을 보낸다. 빠뜨리면 400이다
+    filter: category ?? 'ALL',
+    pageSize: String(STORE_PAGE_SIZE),
+  });
+  const keyword = query?.trim();
+  if (keyword) params.set('query', keyword);
+  if (pageToken) params.set('pageToken', pageToken);
+
+  const data = await request<{
+    items: StoreListItemResponse[];
+    nextPageToken: string | null;
+  }>(`/v1/stores?${params.toString()}`);
+
+  const items = data.items.map(toStoreListItem);
+  items.forEach((item) => listedStores.set(item.storeId, item));
+  return { items, nextPageToken: data.nextPageToken };
+};
+
+// 주변 가게 목록. mock일 때 주소에 ?mockStoresEmpty를 붙이면 주변에 가게가 없는 상태를 확인할 수 있다
+export const fetchStores = async (
+  storeQuery: StoreListQuery,
+): Promise<StoreListResponse> => {
+  if (USE_STORE_LIST_API) return fetchServerStores(storeQuery);
+
+  const { category, query } = storeQuery;
   await wait(MOCK_DELAY_MS);
 
   if (new URLSearchParams(window.location.search).has('mockStoresEmpty')) {
@@ -133,6 +206,7 @@ export interface StoreDetailCampaign extends StoreActiveCampaign {
 }
 
 // 가게 상세 (GET /v1/stores/{storeId})
+// 상세 API가 아직 없어 서버 목록의 가게는 목록 정보만으로 채운다 (isPartial). 주소, 전화, 메뉴, 영업시간이 비어 있다
 export interface StoreDetail {
   storeId: number;
   name: string;
@@ -146,7 +220,28 @@ export interface StoreDetail {
   imageUrl: string | null;
   menus: StoreMenu[];
   activeCampaign: StoreDetailCampaign | null;
+  // 목록 정보로만 채운 상세인지
+  isPartial?: boolean;
+  // isPartial일 때 목록에서 받은 오늘 할인 요약. 찜·발급에 필요한 캠페인 ID가 없어 쿠폰 영역 대신 보여준다
+  campaignSummary?: StoreActiveCampaign | null;
 }
+
+// 서버 목록에서 본 가게를 상세 모양으로 채운다. 목록에 없는 정보는 비워 둔다
+const toPartialDetail = (store: StoreListItem): StoreDetail => ({
+  storeId: store.storeId,
+  name: store.name,
+  businessCategory: store.businessCategory,
+  roadAddress: '',
+  phone: '',
+  latitude: store.latitude,
+  longitude: store.longitude,
+  businessHours: [],
+  imageUrl: store.thumbnailUrl,
+  menus: [],
+  activeCampaign: null,
+  isPartial: true,
+  campaignSummary: store.activeCampaign,
+});
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
   'MONDAY',
@@ -191,7 +286,11 @@ export const fetchStoreDetail = async (
 
   const store = mockStores.find((item) => item.storeId === storeId);
   const detail = mockStoreDetails[storeId];
-  if (!store || !detail) return null;
+  if (!store || !detail) {
+    // 상세 API가 없어, 서버 목록에서 본 가게면 목록 정보로 채운다
+    const listed = listedStores.get(storeId);
+    return listed ? toPartialDetail(listed) : null;
+  }
 
   const campaignCard = mockFeedCards.find(
     (card) => card.campaignId === detail.campaignId,
@@ -235,9 +334,10 @@ export const fetchWalkingRoute = async (
 ): Promise<WalkingRoute | null> => {
   await wait(MOCK_DELAY_MS);
 
-  const distance = mockStores.find(
-    (store) => store.storeId === storeId,
-  )?.distanceMeters;
+  // 경로 API가 없어, 가게 목록에서 받은 직선거리로 대신한다
+  const distance =
+    listedStores.get(storeId)?.distanceMeters ??
+    mockStores.find((store) => store.storeId === storeId)?.distanceMeters;
   if (distance == null) return null;
 
   return {

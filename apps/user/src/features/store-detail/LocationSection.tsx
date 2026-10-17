@@ -14,18 +14,21 @@ const LocationSection = ({ onCopyAddress, store }: LocationSectionProps) => {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-h3-mobile font-bold text-text-primary">위치</h2>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-body-sm-mobile text-text-primary">
-          {store.roadAddress}
-        </p>
-        <button
-          className="-my-2 shrink-0 px-1 py-2 text-caption-mobile font-medium text-text-secondary underline underline-offset-2"
-          onClick={onCopyAddress}
-          type="button"
-        >
-          주소 복사
-        </button>
-      </div>
+      {/* 가게 상세 API가 없어 목록 정보로만 채운 가게는 주소가 비어 있어, 지도만 보여준다 */}
+      {store.roadAddress && (
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-body-sm-mobile text-text-primary">
+            {store.roadAddress}
+          </p>
+          <button
+            className="-my-2 shrink-0 px-1 py-2 text-caption-mobile font-medium text-text-secondary underline underline-offset-2"
+            onClick={onCopyAddress}
+            type="button"
+          >
+            주소 복사
+          </button>
+        </div>
+      )}
       <a
         aria-label="카카오맵에서 위치 보기"
         className="relative block h-40 overflow-hidden rounded-xl bg-[#e9e2da]"
