@@ -44,6 +44,11 @@ export const TemplateCreateContent = ({
   const [name, setName] = useState(initialName ?? '');
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<TemplateChatEntry[]>([]);
+  const [pendingMessage, setPendingMessage] = useState<Pick<
+    TemplateChatEntry,
+    'text' | 'targetLabel'
+  > | null>(null);
+  const sendingRef = useRef(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [pendingVersion, setPendingVersion] = useState<number | null>(null);
@@ -56,7 +61,7 @@ export const TemplateCreateContent = ({
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const published = editor.template?.status === 'PUBLISHED';
-  const locked = editor.busy || editor.loadingMore;
+  const locked = editor.busy || editor.loadingMore || pendingMessage !== null;
   const latestVersionNumber =
     Math.max(
       0,
@@ -143,10 +148,10 @@ export const TemplateCreateContent = ({
     chatHistoryRef.current?.scrollTo({
       top: chatHistoryRef.current.scrollHeight,
     });
-  }, [messages, editor.busy, editor.error, editor.loading]);
+  }, [messages, pendingMessage, editor.busy, editor.error, editor.loading]);
 
   const handleSend = async () => {
-    if (locked || published || !prompt.trim()) return;
+    if (sendingRef.current || locked || published || !prompt.trim()) return;
     let requestPrompt: string;
     try {
       requestPrompt = buildSelectedTemplatePrompt(prompt, selectedTarget);
@@ -159,26 +164,41 @@ export const TemplateCreateContent = ({
       return;
     }
     setSelectionError('');
-    const generated = await editor.generate(
-      displayName,
-      requestPrompt,
-      versionNumber,
-    );
-    if (!generated) return;
+    const submittedPrompt = prompt;
+    sendingRef.current = true;
+    // 응답 전에 말풍선을 표시하고, 실패하면 원문을 복구해 같은 요청을 재시도할 수 있게 한다.
     setPrompt('');
-    setSelectionContext(null);
-    setSelectedVersion(generated.versionNumber);
-    setMessages((current) => [
-      ...current,
-      {
-        versionNumber: generated.versionNumber,
-        html: generated.html,
-        text: prompt.trim(),
-        targetLabel: selectedTarget?.label,
-        hasRemovedElements: generated.removedElements.length > 0,
-      },
-    ]);
-    if (!templateId) onCreated(generated.templateId);
+    setPendingMessage({
+      text: submittedPrompt.trim(),
+      targetLabel: selectedTarget?.label,
+    });
+    try {
+      const generated = await editor.generate(
+        displayName,
+        requestPrompt,
+        versionNumber,
+      );
+      if (!generated) {
+        setPrompt(submittedPrompt);
+        return;
+      }
+      setSelectionContext(null);
+      setSelectedVersion(generated.versionNumber);
+      setMessages((current) => [
+        ...current,
+        {
+          versionNumber: generated.versionNumber,
+          html: generated.html,
+          text: submittedPrompt.trim(),
+          targetLabel: selectedTarget?.label,
+          hasRemovedElements: generated.removedElements.length > 0,
+        },
+      ]);
+      if (!templateId) onCreated(generated.templateId);
+    } finally {
+      sendingRef.current = false;
+      setPendingMessage(null);
+    }
   };
 
   const handleSave = async () => {
@@ -273,6 +293,16 @@ export const TemplateCreateContent = ({
                   )}
                 </Fragment>
               ))}
+              {pendingMessage && (
+                <TemplateChatBubble variant="user">
+                  {pendingMessage.targetLabel && (
+                    <span className="mb-1 block text-caption-web text-text-secondary">
+                      수정 대상 · {pendingMessage.targetLabel}
+                    </span>
+                  )}
+                  {pendingMessage.text}
+                </TemplateChatBubble>
+              )}
               {editor.busy && <TemplateChatBubble variant="loading" />}
               {editor.error && (
                 <p
