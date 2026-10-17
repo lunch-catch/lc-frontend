@@ -10,21 +10,36 @@ export const DashboardRangeGuide = () => {
   const [open, setOpen] = useState(false);
 
   useLayoutEffect(() => {
-    if (!open || !tooltipRef.current) return;
+    if (!open || !tooltipRef.current || !rootRef.current) return;
     const tooltip = tooltipRef.current;
+    const root = rootRef.current;
     const updatePosition = () => {
-      // 좁은 화면에서도 안내가 뷰포트 밖으로 잘리지 않도록 가로 위치만 보정한다.
-      tooltip.style.transform = 'none';
-      const rect = tooltip.getBoundingClientRect();
+      tooltip.style.left = '100%';
+      tooltip.style.right = 'auto';
+      tooltip.style.transform = 'translateY(-50%)';
+      let rect = tooltip.getBoundingClientRect();
+      // 오른쪽을 우선하고 공간이 부족하면 왼쪽으로 전환한 뒤 화면 안으로 보정한다.
+      if (
+        rect.right > window.innerWidth - 12 &&
+        root.getBoundingClientRect().left - rect.width >= 12
+      ) {
+        tooltip.style.left = 'auto';
+        tooltip.style.right = '100%';
+        rect = tooltip.getBoundingClientRect();
+      }
       const offset =
         rect.left < 12
           ? 12 - rect.left
           : Math.min(0, window.innerWidth - 12 - rect.right);
-      tooltip.style.transform = `translateX(${offset}px)`;
+      tooltip.style.transform = `translate(${offset}px, -50%)`;
     };
     updatePosition();
     window.addEventListener('resize', updatePosition);
-    return () => window.removeEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -60,7 +75,7 @@ export const DashboardRangeGuide = () => {
           ref={tooltipRef}
           id={id}
           role="tooltip"
-          className="absolute right-0 top-full z-40 w-max max-w-[calc(100vw-2rem)] pt-1"
+          className="absolute left-full top-1/2 z-40 w-max max-w-[calc(100vw-2rem)] px-1"
         >
           <div className="rounded-sm border border-border-subtle bg-bg-surface px-2 py-1 text-caption-web text-text-primary shadow-sm">
             일별 최대 {dashboardRangeLimits.day}일 · 주별 최대{' '}
