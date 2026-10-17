@@ -35,8 +35,9 @@ export interface FeedCard {
 }
 
 // serving: 카드 있음, closed: 서빙 시간대(10:00~12:59) 밖, empty: 주변에 오늘 보여줄 카드가 없음
+// nextFeedAt: 다음 피드를 요청해도 거부되지 않는 가장 이른 시각 (이 휴대폰 시계 기준 ms). mock이면 null
 export type FeedResponse =
-  | { status: 'serving'; cards: FeedCard[] }
+  | { status: 'serving'; cards: FeedCard[]; nextFeedAt: number | null }
   | { status: 'closed' }
   | { status: 'empty' };
 
@@ -139,6 +140,8 @@ const fetchMockFeed = async (): Promise<FeedResponse> => {
     cards: mockFeedCards
       .filter((card) => !isMockWishRemoved(card.campaignId))
       .map(fromMockCard),
+    // mock은 다음 피드가 없어 다 넘기면 끝난다
+    nextFeedAt: null,
   };
 };
 
@@ -151,8 +154,17 @@ const loadFeed = async (): Promise<FeedResponse> => {
   if (data.status === 'NO_CANDIDATE' || data.cards.length === 0) {
     return { status: 'empty' };
   }
-  // 받은 순서를 바꾸지 않는다 (명세의 클라이언트 규칙)
-  return { status: 'serving', cards: data.cards.map(toFeedCard) };
+  // 서버 시계 기준 시각이라, 휴대폰 시계가 틀려도 맞도록 카드를 내려준 시각과의 차이만 쓴다
+  const waitMs =
+    Date.parse(data.nextFeedAvailableAt) - Date.parse(data.cards[0].servedAt);
+
+  return {
+    status: 'serving',
+    // 받은 순서를 바꾸지 않는다 (명세의 클라이언트 규칙)
+    cards: data.cards.map(toFeedCard),
+    nextFeedAt:
+      Date.now() + (Number.isFinite(waitMs) ? Math.max(0, waitMs) : 0),
+  };
 };
 
 // 진행 중인 피드 요청. 받는 사이 다시 부르면 새로 보내지 않고 같은 응답을 나눠 쓴다

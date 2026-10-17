@@ -10,12 +10,20 @@ export class ApiError extends Error {
   readonly status: number;
   // 응답 본문을 읽지 못하면 (예: 서버가 꺼져 프록시가 HTML 오류를 준 경우) null이다
   readonly code: string | null;
+  // 429에서 서버가 알려준 다시 요청할 수 있을 때까지 남은 초 (Retry-After). 없으면 null
+  readonly retryAfterSeconds: number | null;
 
-  constructor(status: number, code: string | null, message: string) {
+  constructor(
+    status: number,
+    code: string | null,
+    message: string,
+    retryAfterSeconds: number | null = null,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -67,10 +75,12 @@ const send = async <T>(
   const envelope = await readEnvelope<T>(response);
 
   if (!response.ok || envelope?.code !== 'SUCCESS') {
+    const retryAfter = Number(response.headers.get('Retry-After'));
     throw new ApiError(
       response.status,
       envelope?.code ?? null,
       envelope?.message ?? `요청에 실패했습니다 (${response.status})`,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
     );
   }
 
