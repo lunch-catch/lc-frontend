@@ -214,9 +214,12 @@ export const CampaignManagementContent = () => {
   return (
     <section className="flex flex-col">
       <header className="mb-4">
-        <h2 className="text-display-web font-semibold text-text-primary">
-          캠페인 관리
-        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-display-web font-semibold text-text-primary">
+            캠페인 관리
+          </h2>
+          <StatusBadge variant="neutral">예시 데이터</StatusBadge>
+        </div>
         <p className="mt-2 text-body-sm-web text-text-secondary">
           전체 캠페인을 최신 등록순으로 조회합니다. 누적 소진 포인트와 유효
           노출은 전일 확정 기준입니다.

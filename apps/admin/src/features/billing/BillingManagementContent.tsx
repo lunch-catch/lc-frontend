@@ -29,7 +29,7 @@ const tabs: BillingTabItem[] = [
   { label: '환불 요청', value: 'refunds' },
   { label: '충전 정책', value: 'policy' },
   { label: '정산 검증', value: 'mismatches' },
-  { label: '매출 현황', value: 'sales' },
+  { label: '매출 현황 (예시 데이터)', value: 'sales' },
 ];
 const tabQuery = {
   tab: queryChoice(
