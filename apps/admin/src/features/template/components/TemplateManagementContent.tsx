@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { Button, SearchField, SelectField } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
@@ -13,6 +13,7 @@ import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
 
+const templateLimit = 10;
 const templateQuery = {
   keyword: queryText(),
   activation: queryChoice(['ALL', 'ACTIVE', 'INACTIVE'] as const, 'ALL'),
@@ -59,6 +60,11 @@ export const TemplateManagementContent = ({
   const { filters, updateFilters } = useUrlFilters('templates.', templateQuery);
   const { activation, status, sort } = filters;
   const [nameModalOpen, setNameModalOpen] = useState(false);
+  const [limitTooltipOpen, setLimitTooltipOpen] = useState(false);
+  const limitTooltipId = useId();
+  // 검색·상태 필터와 무관하게 서버가 반환한 전체 템플릿 수로 생성 한도를 판단한다.
+  const atTemplateLimit = templates.length >= templateLimit;
+  const canCreate = !loading && !error && !atTemplateLimit;
   const [activationError, setActivationError] = useState<string | null>(null);
   const [changingActive, setChangingActive] = useState(false);
   const activationLock = useRef(false);
@@ -125,12 +131,47 @@ export const TemplateManagementContent = ({
             템플릿을 미리보기로 확인하고 점주 노출 여부를 관리합니다.
           </p>
         </div>
-        <Button
-          leadingIcon={<Plus aria-hidden="true" className="size-4" />}
-          onClick={() => setNameModalOpen(true)}
+        <span
+          role="group"
+          aria-label={atTemplateLimit ? '템플릿 생성 제한' : undefined}
+          aria-describedby={
+            atTemplateLimit && limitTooltipOpen ? limitTooltipId : undefined
+          }
+          tabIndex={atTemplateLimit ? 0 : undefined}
+          className={`relative inline-flex rounded-md focus-visible:outline-2 focus-visible:outline-action-primary ${atTemplateLimit ? 'cursor-not-allowed' : ''}`}
+          onPointerEnter={() => setLimitTooltipOpen(true)}
+          onPointerMove={() => {
+            if (atTemplateLimit) setLimitTooltipOpen(true);
+          }}
+          onPointerLeave={(event) => {
+            if (!event.currentTarget.contains(document.activeElement))
+              setLimitTooltipOpen(false);
+          }}
+          onFocus={() => setLimitTooltipOpen(true)}
+          onBlur={() => setLimitTooltipOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setLimitTooltipOpen(false);
+          }}
         >
-          템플릿 생성
-        </Button>
+          <Button
+            disabled={!canCreate}
+            // 비활성 버튼이 포인터 이벤트를 삼키지 않도록 안내용 래퍼에서 처리한다.
+            style={atTemplateLimit ? { pointerEvents: 'none' } : undefined}
+            leadingIcon={<Plus aria-hidden="true" className="size-4" />}
+            onClick={() => setNameModalOpen(true)}
+          >
+            템플릿 생성
+          </Button>
+          {atTemplateLimit && limitTooltipOpen && (
+            <span
+              id={limitTooltipId}
+              role="tooltip"
+              className="absolute right-0 top-full z-40 mt-1 w-max max-w-[calc(100vw-2rem)] rounded-sm border border-border-subtle bg-bg-surface px-2 py-1 text-caption-web text-text-primary shadow-sm"
+            >
+              템플릿은 최대 {templateLimit}개까지 등록할 수 있습니다.
+            </span>
+          )}
+        </span>
       </header>
 
       <FilterBar className="mb-4 shrink-0">
@@ -195,6 +236,7 @@ export const TemplateManagementContent = ({
         <TemplateNameModal
           onClose={() => setNameModalOpen(false)}
           onStart={(name) => {
+            if (!canCreate) return;
             setNameModalOpen(false);
             onCreate(name);
           }}

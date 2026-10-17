@@ -10,7 +10,6 @@ import {
 } from '@admin/features/template/templateSelection';
 import { useTemplateEditor } from '@admin/features/template/useTemplateEditor';
 
-import { QuickPromptButton } from './QuickPromptButton';
 import { SelectableTemplatePreview } from './SelectableTemplatePreview';
 import { TemplateChatBubble } from './TemplateChatBubble';
 import { TemplateHtmlCode } from './TemplateHtmlCode';
@@ -34,11 +33,6 @@ interface TemplateChatEntry {
   hasRemovedElements: boolean;
 }
 
-const suggestions = [
-  '따뜻한 색감의 한식 점심 할인 포스터로 만들어줘',
-  '직장인을 위한 파스타 런치 세트 느낌으로 구성해줘',
-];
-
 export const TemplateCreateContent = ({
   templateId,
   initialName,
@@ -50,6 +44,11 @@ export const TemplateCreateContent = ({
   const [name, setName] = useState(initialName ?? '');
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<TemplateChatEntry[]>([]);
+  const [pendingMessage, setPendingMessage] = useState<Pick<
+    TemplateChatEntry,
+    'text' | 'targetLabel'
+  > | null>(null);
+  const sendingRef = useRef(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [pendingVersion, setPendingVersion] = useState<number | null>(null);
@@ -61,9 +60,8 @@ export const TemplateCreateContent = ({
   const [selectionError, setSelectionError] = useState('');
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const chatHistoryRef = useRef<HTMLDivElement>(null);
-  const persisted = Boolean(editor.template || editor.generation);
   const published = editor.template?.status === 'PUBLISHED';
-  const locked = editor.busy || editor.loadingMore;
+  const locked = editor.busy || editor.loadingMore || pendingMessage !== null;
   const latestVersionNumber =
     Math.max(
       0,
@@ -150,13 +148,13 @@ export const TemplateCreateContent = ({
     chatHistoryRef.current?.scrollTo({
       top: chatHistoryRef.current.scrollHeight,
     });
-  }, [messages, editor.busy, editor.error, editor.loading]);
+  }, [messages, pendingMessage, editor.busy, editor.error, editor.loading]);
 
-  const handleSend = async (nextPrompt = prompt) => {
-    if (locked || published || !nextPrompt.trim()) return;
+  const handleSend = async () => {
+    if (sendingRef.current || locked || published || !prompt.trim()) return;
     let requestPrompt: string;
     try {
-      requestPrompt = buildSelectedTemplatePrompt(nextPrompt, selectedTarget);
+      requestPrompt = buildSelectedTemplatePrompt(prompt, selectedTarget);
     } catch (cause) {
       setSelectionError(
         cause instanceof Error
@@ -166,26 +164,41 @@ export const TemplateCreateContent = ({
       return;
     }
     setSelectionError('');
-    const generated = await editor.generate(
-      displayName,
-      requestPrompt,
-      versionNumber,
-    );
-    if (!generated) return;
+    const submittedPrompt = prompt;
+    sendingRef.current = true;
+    // 응답 전에 말풍선을 표시하고, 실패하면 원문을 복구해 같은 요청을 재시도할 수 있게 한다.
     setPrompt('');
-    setSelectionContext(null);
-    setSelectedVersion(generated.versionNumber);
-    setMessages((current) => [
-      ...current,
-      {
-        versionNumber: generated.versionNumber,
-        html: generated.html,
-        text: nextPrompt.trim(),
-        targetLabel: selectedTarget?.label,
-        hasRemovedElements: generated.removedElements.length > 0,
-      },
-    ]);
-    if (!templateId) onCreated(generated.templateId);
+    setPendingMessage({
+      text: submittedPrompt.trim(),
+      targetLabel: selectedTarget?.label,
+    });
+    try {
+      const generated = await editor.generate(
+        displayName,
+        requestPrompt,
+        versionNumber,
+      );
+      if (!generated) {
+        setPrompt(submittedPrompt);
+        return;
+      }
+      setSelectionContext(null);
+      setSelectedVersion(generated.versionNumber);
+      setMessages((current) => [
+        ...current,
+        {
+          versionNumber: generated.versionNumber,
+          html: generated.html,
+          text: submittedPrompt.trim(),
+          targetLabel: selectedTarget?.label,
+          hasRemovedElements: generated.removedElements.length > 0,
+        },
+      ]);
+      if (!templateId) onCreated(generated.templateId);
+    } finally {
+      sendingRef.current = false;
+      setPendingMessage(null);
+    }
   };
 
   const handleSave = async () => {
@@ -229,11 +242,11 @@ export const TemplateCreateContent = ({
               className="flex flex-col gap-4 p-4"
               ref={chatHistoryRef}
             >
-              <TemplateChatBubble variant="assistant">
-                {published
-                  ? '최종 저장된 템플릿입니다. 이후에는 수정할 수 없습니다.'
-                  : '만들고 싶은 포스터의 분위기와 홍보 내용을 알려주세요.'}
-              </TemplateChatBubble>
+              {published && (
+                <TemplateChatBubble variant="assistant">
+                  최종 저장된 템플릿입니다. 이후에는 수정할 수 없습니다.
+                </TemplateChatBubble>
+              )}
               {editor.nextPageToken && (
                 <Button
                   className="!min-h-8 self-center"
@@ -280,6 +293,16 @@ export const TemplateCreateContent = ({
                   )}
                 </Fragment>
               ))}
+              {pendingMessage && (
+                <TemplateChatBubble variant="user">
+                  {pendingMessage.targetLabel && (
+                    <span className="mb-1 block text-caption-web text-text-secondary">
+                      수정 대상 · {pendingMessage.targetLabel}
+                    </span>
+                  )}
+                  {pendingMessage.text}
+                </TemplateChatBubble>
+              )}
               {editor.busy && <TemplateChatBubble variant="loading" />}
               {editor.error && (
                 <p
@@ -292,18 +315,6 @@ export const TemplateCreateContent = ({
             </ScrollArea>
             {!published && (
               <div className="flex flex-col gap-3 border-t border-border-subtle p-4">
-                {!persisted && (
-                  <div className="flex flex-col items-start gap-1.5">
-                    {suggestions.map((suggestion) => (
-                      <QuickPromptButton
-                        key={suggestion}
-                        label={suggestion}
-                        disabled={locked || !displayName.trim()}
-                        onClick={() => void handleSend(suggestion)}
-                      />
-                    ))}
-                  </div>
-                )}
                 <label htmlFor="template-request" className="sr-only">
                   템플릿 생성·수정 요청
                 </label>
