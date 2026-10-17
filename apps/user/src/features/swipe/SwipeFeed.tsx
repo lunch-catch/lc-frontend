@@ -4,7 +4,6 @@ import { ApiError } from '@user/api/client';
 import {
   type FeedCard,
   fetchFeed,
-  getWishCount,
   sendImpression,
   sendSwipeAction,
   type SwipeAction,
@@ -16,6 +15,7 @@ import {
   useMyLocation,
 } from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
+import { useWishCount } from '@user/features/wishlist/useWishCount';
 
 import GestureRail from './GestureRail';
 import OpenCountdown from './OpenCountdown';
@@ -66,7 +66,7 @@ const SwipeFeed = () => {
   const [status, setStatus] = useState<FeedStatus>('loading');
   const [cards, setCards] = useState<FeedCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [wishCount, setWishCount] = useState(getWishCount);
+  const { increase: increaseWishCount, wishCount } = useWishCount();
   // 피드는 저장 위치 기준이라, 노출을 기록할 때 같은 좌표를 보낸다
   const myLocation = useMyLocation();
   const locationName = getHeaderLocationName(myLocation);
@@ -140,7 +140,7 @@ const SwipeFeed = () => {
     setCurrentIndex((index) => index + 1);
 
     if (action === 'wish') {
-      setWishCount(getWishCount());
+      increaseWishCount();
 
       // 찜은 발급이 아니라는 걸 그날 첫 찜에서 한 번만 알려준다
       if (checkFirstWishToday()) {

@@ -2,7 +2,6 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { List, Map as MapIcon, Search, X } from 'lucide-react';
 
-import { getWishCount } from '@user/api/feed';
 import {
   BUSINESS_CATEGORY_LABELS,
   fetchStores,
@@ -14,6 +13,7 @@ import AppHeader from '@user/components/AppHeader/AppHeader';
 import EmptyState from '@user/components/EmptyState/EmptyState';
 import { useHeaderLocationName } from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
+import { useWishCount } from '@user/features/wishlist/useWishCount';
 
 import CategoryIconRow, { type CategoryFilter } from './CategoryIconRow';
 import FeaturedStoreCard from './FeaturedStoreCard';
@@ -42,7 +42,7 @@ const ExploreScreen = () => {
   // 가게 상세에 들어갔다 돌아와도 보던 방식이 유지되도록 주소(?view=map)에 둔다
   const [searchParams, setSearchParams] = useSearchParams();
   const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
-  const [wishCount] = useState(getWishCount);
+  const { wishCount } = useWishCount();
   const locationName = useHeaderLocationName();
   const hasUnreadNotifications = useHasUnreadNotifications();
 

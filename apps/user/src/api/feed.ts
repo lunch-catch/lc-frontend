@@ -1,10 +1,6 @@
 import { request } from './client';
 import { type MockFeedCard, mockFeedCards } from './mocks/feed';
-import {
-  addMockWish,
-  getMockWishes,
-  isMockWishRemoved,
-} from './mocks/wishlist';
+import { addMockWish, isMockWishRemoved } from './mocks/wishlist';
 import { BUSINESS_CATEGORY_LABELS, type BusinessCategory } from './store';
 
 // 카드의 할인 (피드 명세 cards[].discount)
@@ -268,5 +264,3 @@ export const sendSwipeAction = (card: FeedCard, action: SwipeAction) => {
     request('/v1/swipes', { method: 'POST', body, keepalive: true }),
   );
 };
-
-export const getWishCount = () => getMockWishes().length;
