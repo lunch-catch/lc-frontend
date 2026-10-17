@@ -31,7 +31,7 @@ export const TemplatePreviewCard = ({
         </h3>
         <StatusBadge
           className="shrink-0"
-          variant={canChangeActivation ? 'info' : 'neutral'}
+          variant={canChangeActivation ? 'success' : 'neutral'}
         >
           {canChangeActivation ? '게시됨' : '임시저장 중'}
         </StatusBadge>
