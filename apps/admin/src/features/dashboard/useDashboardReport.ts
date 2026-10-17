@@ -92,6 +92,7 @@ export const useDashboardReport = (data: DashboardDataset) => {
   const pending = validRange && range.endDate >= data.today;
   return {
     range,
+    completedRange,
     setRange,
     interval,
     setInterval,

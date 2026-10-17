@@ -24,6 +24,7 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
   const report = useDashboardReport(data);
   const {
     range,
+    completedRange,
     interval,
     validRange,
     rangeError,
@@ -43,7 +44,7 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
     new URLSearchParams({
       tab: 'mismatches',
       'mismatches.from': range.startDate,
-      'mismatches.to': range.endDate,
+      'mismatches.to': completedRange.endDate,
     });
 
   return (
@@ -191,11 +192,13 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                   <div className="mb-4 grid grid-cols-2 gap-2">
                     <DashboardMetricCard
                       label="환불액"
+                      basis="선택 기간 합계"
                       value={summary.refund}
                       unit="P"
                     />
                     <DashboardMetricCard
                       label="조정액"
+                      basis="선택 기간 합계"
                       value={summary.adjustment}
                       unit="P"
                     />
