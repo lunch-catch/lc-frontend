@@ -1,35 +1,32 @@
-import { type FormEvent, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { List, Map as MapIcon, Search, X } from 'lucide-react';
 
 import {
   BUSINESS_CATEGORY_LABELS,
+  type CategoryFilter,
   fetchStores,
+  rememberListedStores,
   type StoreListItem,
 } from '@user/api/store';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import AppHeader from '@user/components/AppHeader/AppHeader';
 import EmptyState from '@user/components/EmptyState/EmptyState';
-import { useHeaderLocationName } from '@user/features/location/useMyLocation';
+import {
+  getHeaderLocationName,
+  useMyLocation,
+} from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 import { useWishCount } from '@user/features/wishlist/useWishCount';
 
-import CategoryIconRow, { type CategoryFilter } from './CategoryIconRow';
+import CategoryIconRow from './CategoryIconRow';
 import FeaturedStoreCard from './FeaturedStoreCard';
 import StoreCard from './StoreCard';
 import StoreListSkeleton from './StoreListSkeleton';
-import StoreMap, { type MapCenter } from './StoreMap';
+import StoreMap from './StoreMap';
 
 type ExploreView = 'list' | 'map';
-
-// 지도 중심으로 쓰는 고정 위치 (강남역)
-// 가게 목록이 아직 강남역 주변 mock이라, 저장한 위치를 쓰면 핀이 한쪽으로 몰린다
-// 가게 API가 생기면 저장한 위치(useMyLocation)로 바꾼다
-const MOCK_CURRENT_LOCATION: MapCenter = {
-  latitude: 37.4979,
-  longitude: 127.0276,
-};
 
 // 탐색 탭. 주변 가게를 업종별로 보고 가게명이나 메뉴로 검색한다 (Figma 4. 홈의 목록·지도 보기)
 // 목록과 지도는 같은 가게 목록을 보여주는 방식만 다르다
@@ -38,34 +35,157 @@ const ExploreScreen = () => {
   // 검색 버튼을 눌러 확정한 검색어. 입력 중에는 목록을 다시 받지 않는다
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('ALL');
-  const [stores, setStores] = useState<StoreListItem[] | null>(null);
+  // undefined면 불러오는 중, null이면 첫 페이지를 받지 못함
+  const [stores, setStores] = useState<StoreListItem[] | null | undefined>();
+  // 다음 페이지 커서. 마지막 페이지면 null
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreError, setHasMoreError] = useState(false);
+  // 다시 시도할 때마다 올려서 첫 페이지를 새로 받는다
+  const [attempt, setAttempt] = useState(0);
+  // 조건이 바뀌면 올린다. 그 전에 보낸 다음 페이지 요청의 응답은 버린다
+  const generation = useRef(0);
+  // 목록 끝에 두어, 화면에 가까워지면 다음 페이지를 받는다
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   // 가게 상세에 들어갔다 돌아와도 보던 방식이 유지되도록 주소(?view=map)에 둔다
   const [searchParams, setSearchParams] = useSearchParams();
   const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
   const { wishCount } = useWishCount();
-  const locationName = useHeaderLocationName();
+  // 가게까지 거리는 저장 위치를 기준으로 잰다. 지도 가운데도 이 위치다
+  const myLocation = useMyLocation();
+  const locationName = getHeaderLocationName(myLocation);
   const hasUnreadNotifications = useHasUnreadNotifications();
+  const latitude = myLocation?.latitude ?? null;
+  const longitude = myLocation?.longitude ?? null;
+  // 저장 위치를 받았는데 좌표가 없으면 위치부터 설정하게 한다
+  const needsLocation =
+    myLocation !== undefined &&
+    myLocation !== null &&
+    (latitude === null || longitude === null);
+  const storeCategory = category === 'ALL' ? undefined : category;
+
+  // 조건이 바뀌면 이전 결과 대신 회색 틀을 보여준다
+  const resetStores = () => {
+    setStores(undefined);
+    setNextPageToken(null);
+    setIsLoadingMore(false);
+    setHasMoreError(false);
+  };
+
+  // 저장 위치를 다시 받아 좌표가 바뀌면 이전 위치의 목록과 다음 페이지 상태를 비운다
+  // effect에서 비우면 이전 목록이 한 번 더 그려져서, 렌더 중에 바로 비운다
+  const locationKey = `${latitude},${longitude}`;
+  const [listedLocationKey, setListedLocationKey] = useState(locationKey);
+  if (listedLocationKey !== locationKey) {
+    setListedLocationKey(locationKey);
+    resetStores();
+  }
 
   useEffect(() => {
+    // 좌표가 없어져도 세대를 올려, 이전 위치로 보낸 요청의 응답을 버린다
+    const current = ++generation.current;
+    if (latitude === null || longitude === null) return;
+
     let ignore = false;
 
     fetchStores({
-      category: category === 'ALL' ? undefined : category,
+      category: storeCategory,
+      latitude,
+      longitude,
       query: query || undefined,
-    }).then((response) => {
-      if (!ignore) setStores(response.items);
-    });
+    })
+      .then((response) => {
+        if (ignore || current !== generation.current) return;
+        rememberListedStores(response.items);
+        setStores(response.items);
+        setNextPageToken(response.nextPageToken);
+        setHasMoreError(false);
+      })
+      .catch(() => {
+        if (!ignore && current === generation.current) setStores(null);
+      });
 
     // 응답 전에 조건이 바뀌거나 화면을 벗어나면 결과를 버린다
     return () => {
       ignore = true;
     };
-  }, [category, query]);
+  }, [attempt, latitude, longitude, query, storeCategory]);
 
-  // 조건이 바뀌면 이전 결과 대신 회색 틀을 보여준다
+  // 다음 페이지를 이어 받는다. 검색어, 업종, 위치는 첫 페이지와 같게 보낸다
+  const loadMore = () => {
+    if (
+      !stores ||
+      !nextPageToken ||
+      isLoadingMore ||
+      latitude === null ||
+      longitude === null
+    ) {
+      return;
+    }
+
+    const current = generation.current;
+    setIsLoadingMore(true);
+    setHasMoreError(false);
+    fetchStores({
+      category: storeCategory,
+      latitude,
+      longitude,
+      pageToken: nextPageToken,
+      query: query || undefined,
+    })
+      .then((response) => {
+        if (current !== generation.current) return;
+        rememberListedStores(response.items);
+        // 같은 가게가 두 번 오면 한 번만 둔다
+        setStores((prev) => {
+          const seen = new Set(prev?.map((store) => store.storeId));
+          return [
+            ...(prev ?? []),
+            ...response.items.filter((store) => !seen.has(store.storeId)),
+          ];
+        });
+        setNextPageToken(response.nextPageToken);
+      })
+      .catch(() => {
+        if (current === generation.current) setHasMoreError(true);
+      })
+      .finally(() => {
+        if (current === generation.current) setIsLoadingMore(false);
+      });
+  };
+
+  // 목록 끝이 화면 아래 300px 앞에 오면 다음 페이지를 받는다
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (
+      !sentinel ||
+      view !== 'list' ||
+      !nextPageToken ||
+      isLoadingMore ||
+      hasMoreError
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) loadMore();
+      },
+      { rootMargin: '0px 0px 300px 0px' },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  });
+
+  const retry = () => {
+    resetStores();
+    setAttempt((value) => value + 1);
+  };
+
   const changeQuery = (nextQuery: string) => {
     if (nextQuery === query) return;
-    setStores(null);
+    resetStores();
     setQuery(nextQuery);
   };
 
@@ -80,11 +200,37 @@ const ExploreScreen = () => {
   };
 
   const changeCategory = (nextCategory: CategoryFilter) => {
-    setStores(null);
+    resetStores();
     setCategory(nextCategory);
   };
 
   const renderContent = () => {
+    if (needsLocation) {
+      return (
+        <EmptyState
+          description="설정한 위치 주변 가게를 보여드려요"
+          image={mascotEmpty}
+          title="위치를 설정해 주세요"
+        >
+          <ActionButton onClick={() => navigate('/my/location')}>
+            위치 설정하기
+          </ActionButton>
+        </EmptyState>
+      );
+    }
+
+    if (stores === null || myLocation === null) {
+      return (
+        <EmptyState
+          description="잠시 후 다시 시도해 주세요"
+          image={mascotEmpty}
+          title="가게를 불러오지 못했어요"
+        >
+          <ActionButton onClick={retry}>다시 시도</ActionButton>
+        </EmptyState>
+      );
+    }
+
     if (!stores && view === 'map') {
       return (
         <div
@@ -136,11 +282,12 @@ const ExploreScreen = () => {
       );
     }
 
-    if (view === 'map') {
-      return <StoreMap center={MOCK_CURRENT_LOCATION} stores={stores} />;
+    if (view === 'map' && latitude !== null && longitude !== null) {
+      return <StoreMap center={{ latitude, longitude }} stores={stores} />;
     }
 
-    // 서버가 쿠폰 진행 중인 가게를 먼저 보내지만 카드만으로는 경계가 안 보여 구역을 나눈다
+    // 서버는 거리순으로만 보내서, 쿠폰 진행 중인 가게를 먼저 볼 수 있도록 화면에서 구역을 나눈다
+    // 다음 페이지를 받으면 각 구역 아래에 이어 붙는다
     const storeGroups = [
       {
         title: '쿠폰 진행 중',
@@ -176,6 +323,27 @@ const ExploreScreen = () => {
             </ul>
           </section>
         ))}
+        {nextPageToken && (
+          <div ref={sentinelRef}>
+            {hasMoreError ? (
+              <div className="flex items-center justify-between gap-3 py-2">
+                <p className="text-body-sm-mobile text-text-secondary">
+                  가게를 더 불러오지 못했어요
+                </p>
+                <ActionButton onClick={loadMore} variant="outline">
+                  다시 시도
+                </ActionButton>
+              </div>
+            ) : (
+              <>
+                <StoreListSkeleton />
+                <p className="sr-only" role="status">
+                  가게를 더 불러오는 중이에요
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -233,7 +401,9 @@ const ExploreScreen = () => {
             </h2>
             {stores && (
               <p className="shrink-0 text-body-sm-mobile text-text-secondary">
-                {stores.length}개 가게
+                {/* 서버가 전체 개수를 주지 않아, 더 있으면 받은 수에 +를 붙인다 */}
+                {stores.length}
+                {nextPageToken ? '+' : ''}개 가게
               </p>
             )}
           </div>

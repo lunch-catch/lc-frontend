@@ -36,6 +36,7 @@ import EmptyState from '@user/components/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
 } from '@user/components/FeedbackToast/FeedbackToast';
+import { formatDiscount } from '@user/features/explore/storeFormat';
 import { useOpenCountdown } from '@user/features/wishlist/useOpenCountdown';
 
 import BusinessHoursSection from './BusinessHoursSection';
@@ -367,10 +368,15 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
               {meta}
             </p>
           )}
-          <div className={`mt-4 grid grid-cols-3 py-2 ${cardClassName}`}>
-            <QuickAction href={`tel:${store.phone}`} label="전화">
-              <Phone aria-hidden="true" className="size-5" />
-            </QuickAction>
+          {/* 전화번호를 모르면(목록 정보로만 채운 가게) 전화 버튼을 빼고 둘로 나눈다 */}
+          <div
+            className={`mt-4 grid py-2 ${store.phone ? 'grid-cols-3' : 'grid-cols-2'} ${cardClassName}`}
+          >
+            {store.phone && (
+              <QuickAction href={`tel:${store.phone}`} label="전화">
+                <Phone aria-hidden="true" className="size-5" />
+              </QuickAction>
+            )}
             <QuickAction
               href={getKakaoDirectionsUrl(store)}
               label="길찾기"
@@ -384,7 +390,19 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           </div>
         </section>
 
-        {campaign && couponInfo && couponState ? (
+        {store.isPartial && store.campaignSummary ? (
+          // 가게 상세 API가 없어 캠페인 ID를 몰라 여기서는 찜하거나 받을 수 없다. 할인만 알려 주고 피드로 안내한다
+          <p className="rounded-xl bg-surface-brand px-4 py-3 text-body-sm-mobile text-text-primary">
+            오늘{' '}
+            <strong className="font-bold text-text-brand">
+              {/* 메뉴 할인이면 어느 메뉴인지 앞에 붙인다 (예: 김치찌개 20% 할인) */}
+              {store.campaignSummary.targetMenu &&
+                `${store.campaignSummary.targetMenu.name} `}
+              {formatDiscount(store.campaignSummary)}
+            </strong>{' '}
+            쿠폰이 있어요 · 찜은 오늘 점심 피드에서 할 수 있어요
+          </p>
+        ) : campaign && couponInfo && couponState ? (
           <CouponSection
             campaign={campaign}
             dailyLimit={couponInfo.dailyLimit}
@@ -399,28 +417,33 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           </p>
         )}
 
-        <section className="flex flex-col gap-3">
-          <h2 className="text-h3-mobile font-bold text-text-primary">
-            대표 메뉴
-          </h2>
-          <Card as="ul" className="divide-y divide-border-subtle px-4">
-            {store.menus.map((menu) => (
-              <li
-                className="flex items-center justify-between gap-3 py-3 text-body-mobile"
-                key={menu.menuId}
-              >
-                <span className="min-w-0 truncate text-text-primary">
-                  {menu.name}
-                </span>
-                <span className="shrink-0 font-bold text-text-primary">
-                  {formatPrice(menu.price)}
-                </span>
-              </li>
-            ))}
-          </Card>
-        </section>
+        {/* 메뉴와 영업시간을 모르면(목록 정보로만 채운 가게) 구역을 숨긴다 */}
+        {store.menus.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-h3-mobile font-bold text-text-primary">
+              대표 메뉴
+            </h2>
+            <Card as="ul" className="divide-y divide-border-subtle px-4">
+              {store.menus.map((menu) => (
+                <li
+                  className="flex items-center justify-between gap-3 py-3 text-body-mobile"
+                  key={menu.menuId}
+                >
+                  <span className="min-w-0 truncate text-text-primary">
+                    {menu.name}
+                  </span>
+                  <span className="shrink-0 font-bold text-text-primary">
+                    {formatPrice(menu.price)}
+                  </span>
+                </li>
+              ))}
+            </Card>
+          </section>
+        )}
 
-        <BusinessHoursSection hours={store.businessHours} />
+        {store.businessHours.length > 0 && (
+          <BusinessHoursSection hours={store.businessHours} />
+        )}
 
         <LocationSection
           onCopyAddress={() => copyText(store.roadAddress, '주소를 복사했어요')}

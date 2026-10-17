@@ -2,8 +2,9 @@ import { useCallback, useState } from 'react';
 
 // 카드 묶음 최대 폭 (큰 폰에서 폭을 채우되 너무 넓어지지 않게)
 const MAX_WIDTH = 400;
-// 카드 묶음에서 포스터를 뺀 높이: 포스터 아래 가격과 시간(69px) + 버튼 줄(64px) + 안내 문구(23px)
-const NON_POSTER_HEIGHT = 156;
+// 카드 묶음에서 포스터를 뺀 높이: 포스터 아래 가격과 시간(69px) + 버튼 줄(48px) + 한 줄 안내 문구(21px)
+// 버튼 줄(GestureRail)이나 안내 문구(SwipeHint) 높이를 바꾸면 여기도 맞춘다
+const NON_POSTER_HEIGHT = 138;
 // 포스터는 점주 화면과 같은 3:4 (폭 = 높이 × 3/4)
 const POSTER_WIDTH_PER_HEIGHT = 3 / 4;
 
