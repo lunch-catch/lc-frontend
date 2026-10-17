@@ -83,6 +83,38 @@ export const saveImpressedServeIds = (ids: Iterable<string>) => {
   }
 };
 
+// 요청 제한(429)으로 다시 요청할 수 있는 시각 (이 휴대폰 시계 기준 ms)
+// 기다리는 중에 새로고침해도 바로 다시 요청하지 않고 이어서 기다리게 저장한다
+const RATE_LIMIT_STORAGE_KEY = 'launch-catch-feed-retry-at';
+
+// 저장한 시각이 아직 지나지 않았으면 돌려준다. 지났거나 없으면 지우고 null
+export const loadRateLimitedUntil = (): number | null => {
+  try {
+    const until = Number(window.sessionStorage.getItem(RATE_LIMIT_STORAGE_KEY));
+    if (Number.isFinite(until) && until > Date.now()) return until;
+    window.sessionStorage.removeItem(RATE_LIMIT_STORAGE_KEY);
+  } catch {
+    // 저장소를 쓸 수 없으면 기다리지 않고 바로 요청한다
+  }
+  return null;
+};
+
+export const saveRateLimitedUntil = (until: number) => {
+  try {
+    window.sessionStorage.setItem(RATE_LIMIT_STORAGE_KEY, String(until));
+  } catch {
+    // 저장소를 쓸 수 없으면 저장하지 않는다
+  }
+};
+
+export const clearRateLimitedUntil = () => {
+  try {
+    window.sessionStorage.removeItem(RATE_LIMIT_STORAGE_KEY);
+  } catch {
+    // 저장소를 쓸 수 없으면 지울 것도 없다
+  }
+};
+
 export const clearFeedSession = () => {
   try {
     window.sessionStorage.removeItem(STORAGE_KEY);

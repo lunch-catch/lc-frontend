@@ -19,11 +19,14 @@ import { useWishCount } from '@user/features/wishlist/useWishCount';
 
 import {
   clearFeedSession,
+  clearRateLimitedUntil,
   type FeedSession,
   loadFeedSession,
   loadImpressedServeIds,
+  loadRateLimitedUntil,
   saveFeedSession,
   saveImpressedServeIds,
+  saveRateLimitedUntil,
 } from './feedSession';
 import GestureRail from './GestureRail';
 import OpenCountdown from './OpenCountdown';
@@ -96,9 +99,17 @@ const getInitialFeed = () => {
     session.nextFeedAt !== null &&
     Date.now() < session.nextFeedAt;
 
+  // 요청 제한(429)으로 기다리던 중에 새로고침했으면 남은 시간만큼 이어서 기다린다
+  const rateLimitedUntil =
+    hasCardsLeft || isWaiting ? null : loadRateLimitedUntil();
+
   let status: FeedStatus = 'loading';
   if (hasCardsLeft) status = 'serving';
-  else if (isWaiting) status = 'waiting';
+  else if (isWaiting || rateLimitedUntil !== null) status = 'waiting';
+
+  let waitUntil = 0;
+  if (isWaiting) waitUntil = session?.nextFeedAt ?? 0;
+  else if (rateLimitedUntil !== null) waitUntil = rateLimitedUntil;
 
   return {
     status,
@@ -106,10 +117,12 @@ const getInitialFeed = () => {
     currentIndex: session?.currentIndex ?? 0,
     nextFeedAt: session?.nextFeedAt ?? null,
     receivedAt: session?.receivedAt ?? 0,
-    waitUntil: isWaiting ? (session?.nextFeedAt ?? 0) : 0,
+    waitUntil,
     // 이어 볼 수 있으면 처음에 피드를 받지 않는다 (-1이면 받지 않음)
     attempt: status === 'loading' ? 0 : -1,
     hasServedCards: session !== null,
+    // 429로 기다리던 중이었으면 이미 한 번 기다린 것이다. 또 거절되면 반복하지 않는다
+    hasRetriedRateLimit: rateLimitedUntil !== null,
   };
 };
 
@@ -120,7 +133,11 @@ const SwipeFeed = () => {
   const [currentIndex, setCurrentIndex] = useState(initial.currentIndex);
   // 지금 묶음을 받은 시각. 저장한 묶음이 오래됐는지 볼 때 쓴다
   const [receivedAt, setReceivedAt] = useState(initial.receivedAt);
-  const { increase: increaseWishCount, wishCount } = useWishCount();
+  const {
+    increase: increaseWishCount,
+    refresh: refreshWishCount,
+    wishCount,
+  } = useWishCount();
   // 피드는 저장 위치 기준이라, 노출을 기록할 때 같은 좌표를 보낸다
   const myLocation = useMyLocation();
   const locationName = getHeaderLocationName(myLocation);
@@ -135,7 +152,7 @@ const SwipeFeed = () => {
   // 카드를 한 번이라도 받았는지. 받은 뒤 다음 피드가 비면 "오늘 다 봤어요"로 보여준다
   const hasServedCards = useRef(initial.hasServedCards);
   // 429로 기다렸다 다시 받은 적이 있는지. 명세대로 한 번만 다시 요청하고, 또 실패하면 반복하지 않는다
-  const hasRetriedRateLimit = useRef(false);
+  const hasRetriedRateLimit = useRef(initial.hasRetriedRateLimit);
   // 같은 카드의 노출이 두 번 기록되지 않도록 보낸 serveId를 기억한다. 탭을 오가거나 새로고침해도 이어서 기억한다
   const impressedServeIds = useRef(new Set(loadImpressedServeIds()));
   const [setCardArea, cardMaxWidth, spareHeight] = usePosterFitWidth();
@@ -154,6 +171,7 @@ const SwipeFeed = () => {
         if (ignore) return;
 
         hasRetriedRateLimit.current = false;
+        clearRateLimitedUntil();
         if (response.status === 'serving') {
           hasServedCards.current = true;
           setCards(response.cards);
@@ -176,7 +194,9 @@ const SwipeFeed = () => {
         const retryAfterSeconds = getRateLimitSeconds(error);
         if (retryAfterSeconds !== null && !hasRetriedRateLimit.current) {
           hasRetriedRateLimit.current = true;
-          setWaitUntil(Date.now() + retryAfterSeconds * 1000);
+          const until = Date.now() + retryAfterSeconds * 1000;
+          saveRateLimitedUntil(until);
+          setWaitUntil(until);
           setStatus('waiting');
           return;
         }
@@ -265,7 +285,12 @@ const SwipeFeed = () => {
   const handleSwipe = (action: SwipeAction) => {
     if (!topCard) return;
 
-    sendSwipeAction(topCard, action);
+    sendSwipeAction(topCard, action).catch(() => {
+      // 찜이 서버에 들어가지 않았으면 미리 올린 찜 수를 바로잡고 알린다. 패스는 알리지 않는다
+      if (action !== 'wish') return;
+      refreshWishCount();
+      setToastMessage('찜하지 못했어요 · 잠시 후 다시 시도해 주세요');
+    });
     setCurrentIndex((index) => index + 1);
 
     // 마지막 카드를 넘기면 다음 피드를 받는다. 아직 이르면 받을 수 있는 시각까지 기다린다

@@ -32,5 +32,15 @@ export const useWishCount = () => {
     setWishCount(lastWishCount);
   };
 
-  return { wishCount, increase };
+  // 서버 찜 수로 바로잡는다. 찜 요청이 실패해 미리 올려 둔 수가 틀렸을 때 쓴다
+  const refresh = () => {
+    fetchWishCount()
+      .then((count) => {
+        lastWishCount = count;
+        setWishCount(count);
+      })
+      .catch(() => {});
+  };
+
+  return { wishCount, increase, refresh };
 };

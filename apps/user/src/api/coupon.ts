@@ -181,14 +181,25 @@ const fetchCampaignStatuses = async (
     ...new Set(
       targets.map((target) => Number(target.storeId)).filter(Number.isInteger),
     ),
-  ].slice(0, MAX_STATUS_STORE_IDS);
+  ];
   if (storeIds.length === 0) return [];
 
-  const { items } = await request<CouponEventStatusResponse>(
-    '/v1/coupon-events:getStatus',
-    { method: 'POST', body: { storeIds } },
+  // 한 번에 100개까지라, 넘으면 나눠 묻고 합친다. 자르면 그 가게의 찜이 목록에서 조용히 빠진다
+  const chunks: number[][] = [];
+  for (let start = 0; start < storeIds.length; start += MAX_STATUS_STORE_IDS) {
+    chunks.push(storeIds.slice(start, start + MAX_STATUS_STORE_IDS));
+  }
+  const responses = await Promise.all(
+    chunks.map((chunk) =>
+      request<CouponEventStatusResponse>('/v1/coupon-events:getStatus', {
+        method: 'POST',
+        body: { storeIds: chunk },
+      }),
+    ),
   );
-  const itemsByStore = new Map(items.map((item) => [item.storeId, item]));
+  const itemsByStore = new Map(
+    responses.flatMap(({ items }) => items).map((item) => [item.storeId, item]),
+  );
 
   return targets.flatMap((target) => {
     const item = itemsByStore.get(Number(target.storeId));

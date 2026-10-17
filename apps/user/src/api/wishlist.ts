@@ -130,7 +130,11 @@ export const addWish = async (campaignId: string): Promise<void> => {
 // 찜을 지운다 (DELETE /v1/wishlist/{campaignId}). 찜 목록에 없어도 성공이다
 // 지운 캠페인은 당일 피드에 다시 나오지 않고 10:50 오픈 알림 대상에서도 빠진다 (서버 처리)
 export const removeWish = async (campaignId: string): Promise<void> => {
-  if (USE_WISH_REMOVE_API && isServerId(campaignId)) {
+  if (isServerId(campaignId)) {
+    // 삭제 API가 없는데 성공처럼 보이면 새로고침 뒤 다시 나타난다. 실패로 돌려 화면이 카드를 되돌리게 한다
+    if (!USE_WISH_REMOVE_API) {
+      throw new Error('찜 삭제 API가 아직 없습니다');
+    }
     await request(`/v1/wishlist/${campaignId}`, { method: 'DELETE' });
     return;
   }

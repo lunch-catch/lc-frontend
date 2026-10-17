@@ -204,11 +204,11 @@ export const fetchPosterHtml = (posterUrl: string): Promise<string> => {
 };
 
 // 응답을 기다리지 않는 요청을 보낸다. 실패하면 한 번만 다시 보내고 포기한다 (명세의 클라이언트 규칙)
-const sendOnceWithRetry = (send: () => Promise<unknown>) => {
+// 다시 보내도 실패하면 돌려준 Promise가 실패한다. 결과를 쓰지 않는 쪽은 무시하면 된다
+const sendOnceWithRetry = (send: () => Promise<unknown>) =>
   send()
     .catch(() => send())
-    .catch(() => {});
-};
+    .then(() => undefined);
 
 // 탭이 뒤로 가 있으면 다시 보일 때까지 기다린다. 앱이 백그라운드에 있는 동안 본 것으로 치지 않는다
 const whenVisible = (callback: () => void) => {
@@ -243,9 +243,11 @@ export const sendImpression = (card: FeedCard, location: Coordinates) => {
       latitude: location.latitude,
       longitude: location.longitude,
     };
-    sendOnceWithRetry(() =>
-      request('/v1/impressions', { method: 'POST', body, keepalive: true }),
-    );
+    sendOnceWithRetry(
+      () =>
+        request('/v1/impressions', { method: 'POST', body, keepalive: true }),
+      // 노출은 응답에 의존하지 않아 실패해도 화면에 알리지 않는다
+    ).catch(() => {});
   });
 };
 
@@ -256,14 +258,18 @@ const swipeActionValues: Record<SwipeAction, 'WISH' | 'PASS'> = {
 
 // 카드를 찜하거나 패스한다 (POST /v1/swipes). 찜하면 서버 찜 목록에 들어간다
 // 화면은 응답을 기다리지 않고 바로 다음 카드로 넘어간다. 같은 카드를 다시 보내도 서버가 처음 것만 반영한다
-export const sendSwipeAction = (card: FeedCard, action: SwipeAction) => {
+// 다시 보내도 실패하면 돌려준 Promise가 실패한다. 찜이면 화면이 찜 수를 바로잡는다
+export const sendSwipeAction = (
+  card: FeedCard,
+  action: SwipeAction,
+): Promise<void> => {
   if (!USE_FEED_API) {
     // mock 찜 목록은 mock 카드로만 채울 수 있다
     const mockCard = mockFeedCards.find(
       (item) => item.campaignId === card.campaignId,
     );
     if (action === 'wish' && mockCard) addMockWish(mockCard);
-    return;
+    return Promise.resolve();
   }
 
   const body = {
@@ -272,7 +278,7 @@ export const sendSwipeAction = (card: FeedCard, action: SwipeAction) => {
     action: swipeActionValues[action],
     occurredAt: new Date().toISOString(),
   };
-  sendOnceWithRetry(() =>
+  return sendOnceWithRetry(() =>
     request('/v1/swipes', { method: 'POST', body, keepalive: true }),
   );
 };
