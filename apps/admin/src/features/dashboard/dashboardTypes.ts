@@ -1,5 +1,7 @@
 export type DashboardInterval = 'day' | 'week' | 'month';
 export type UsageMetric = 'impressions' | 'saves' | 'issued' | 'used';
+export type FunnelMetric = Exclude<UsageMetric, 'used'>;
+export type BreakdownMetric = UsageMetric | 'spend';
 export type BreakdownDimension = 'region' | 'category';
 
 export interface DashboardRange {
@@ -16,21 +18,34 @@ export interface UsageCounts {
 
 export interface UsageBreakdown extends UsageCounts {
   name: string;
+  spend: number;
 }
 
-export interface DashboardDailyAggregate extends UsageCounts {
+export interface DashboardSegment extends UsageCounts {
+  region: string;
+  category: string;
+  spend: number;
+}
+
+/** 실제 API 응답과 분리된 화면 모델. 누적·상태 지표는 기간 말 스냅샷으로 읽는다. */
+export interface DashboardDailyAggregate extends Omit<UsageCounts, 'used'> {
   date: string;
   totalImpressions: number;
   newUsers: number;
   newStores: number;
   totalUsers: number;
   totalStores: number;
+  activeUsers: number;
+  activeCampaigns: number;
+  withdrawnUsers: number;
+  suspendedUsers: number;
   charge: number;
   spend: number;
+  refund: number;
+  adjustment: number;
   unspent: number;
   mismatchCount: number;
-  regions: UsageBreakdown[];
-  categories: UsageBreakdown[];
+  segments: DashboardSegment[];
 }
 
 export interface DashboardDataset {
@@ -41,16 +56,19 @@ export interface DashboardDataset {
   days: DashboardDailyAggregate[];
 }
 
-export interface DashboardSummary extends UsageCounts {
+export interface DashboardSummary extends Omit<UsageCounts, 'used'> {
   totalImpressions: number;
   newUsers: number;
   newStores: number;
+  activeUsers: number;
   charge: number;
   spend: number;
+  refund: number;
+  adjustment: number;
   mismatchCount: number;
 }
 
-export interface DashboardTrendPoint extends UsageCounts {
+export interface DashboardTrendPoint extends Omit<UsageCounts, 'used'> {
   label: string;
   charge: number;
   spend: number;

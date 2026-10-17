@@ -85,9 +85,12 @@ export const FraudManagementContent = ({
   return (
     <section className="flex flex-col">
       <header className="mb-4">
-        <h2 className="text-display-web font-semibold text-text-primary">
-          부정 관리
-        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-display-web font-semibold text-text-primary">
+            부정 관리
+          </h2>
+          <StatusBadge variant="neutral">예시 데이터</StatusBadge>
+        </div>
         <p className="mt-2 text-body-sm-web text-text-secondary">
           무효 노출과 피드 요청 제한 초과 내역을 조회하고 부정 의심 계정을
           검토합니다.

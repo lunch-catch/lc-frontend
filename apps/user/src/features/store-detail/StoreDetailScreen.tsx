@@ -66,14 +66,21 @@ const ACTION_TOAST_DURATION_MS = 4000;
 const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   soldOut: '아쉽게도 그사이 수량이 모두 소진됐어요',
   limitReached: '오늘 받을 수 있는 쿠폰을 모두 받았어요',
+  alreadyIssued: '오늘 이미 받은 쿠폰이에요',
+  notWished: '찜한 뒤에 받을 수 있어요',
+  notOpen: '지금은 받을 수 없는 시간이에요',
 };
 
 const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
 
-const loadCouponInfo = async (campaignId: string): Promise<CouponInfo> => {
+// 발급 상태는 가게 단위로 물어서 이 가게의 ID를 함께 보낸다
+const loadCouponInfo = async (
+  campaignId: string,
+  storeId: number,
+): Promise<CouponInfo> => {
   const [isWished, issueStatus] = await Promise.all([
     fetchIsWished(campaignId),
-    fetchIssueStatus([campaignId]),
+    fetchIssueStatus([{ campaignId, storeId: String(storeId) }]),
   ]);
   const status = issueStatus.campaigns[0];
   if (!status) throw new Error('발급 상태가 없는 캠페인');
@@ -111,7 +118,9 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
         fetchWalkingRoute(storeId),
       ]);
       const campaignId = detail?.activeCampaign?.campaignId;
-      const info = campaignId ? await loadCouponInfo(campaignId) : null;
+      const info = campaignId
+        ? await loadCouponInfo(campaignId, storeId)
+        : null;
       if (ignore) return;
 
       setStore(detail);
@@ -239,9 +248,12 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
         await addWish(campaign.campaignId);
         setWished(true);
       }
-      const result = await issueCoupon(campaign.campaignId);
+      const result = await issueCoupon({
+        campaignId: campaign.campaignId,
+        eventId: couponInfo.status.eventId,
+      });
       // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
-      setCouponInfo(await loadCouponInfo(campaign.campaignId));
+      setCouponInfo(await loadCouponInfo(campaign.campaignId, storeId));
 
       setToast(
         result === 'issued'

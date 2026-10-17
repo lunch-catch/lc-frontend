@@ -1,6 +1,25 @@
-import type { FeedCard } from '@user/api/feed';
-
 import { type PosterSlotValues, renderMockPoster } from './posterTemplates';
+
+// mock 피드 카드. 피드 API가 생기기 전 화면 모양 그대로라, 찜·쿠폰 mock이 가게 사진과 가격을 여기서 가져간다
+// 피드 화면이 쓰는 카드(api/feed.ts의 FeedCard)는 서버 응답 모양이라 이것과 다르다
+export interface MockFeedCard {
+  serveId: string;
+  campaignId: string;
+  storeId: string;
+  storeName: string;
+  // 업종 이름 (예: 일식)
+  category: string;
+  walkMinutes: number;
+  imageUrl: string;
+  offerTitle: string;
+  originalPrice: number;
+  salePrice: number;
+  issueOpenTime: string;
+  usableFrom: string;
+  usableTo: string;
+  remainingCount: number;
+  posterHtml: string;
+}
 
 // Unsplash 음식 사진 (카드 폭 328px의 2배 크기로 요청)
 const photo = (id: string) =>
@@ -28,11 +47,12 @@ const ownerPosters: Record<
   },
 };
 
-const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
+// storeId는 가게 mock(api/mocks/stores.ts)의 숫자 ID와 같다. 가게 mock에 없는 캠페인은 10번부터 빈 번호를 쓴다
+const feedCardData: Omit<MockFeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-0',
     campaignId: 'campaign-katsu',
-    storeId: 'store-katsu',
+    storeId: '1',
     storeName: '카츠쿠라 역삼점',
     category: '일식',
     walkMinutes: 3,
@@ -48,7 +68,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-1',
     campaignId: 'campaign-1',
-    storeId: 'store-1',
+    storeId: '2',
     storeName: '성수 화로구이',
     category: '양식',
     walkMinutes: 4,
@@ -64,7 +84,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-2',
     campaignId: 'campaign-2',
-    storeId: 'store-2',
+    storeId: '5',
     storeName: '도우앤치즈',
     category: '양식',
     walkMinutes: 6,
@@ -80,7 +100,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-3',
     campaignId: 'campaign-3',
-    storeId: 'store-3',
+    storeId: '3',
     storeName: '스시 하루',
     category: '일식',
     walkMinutes: 3,
@@ -96,7 +116,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-4',
     campaignId: 'campaign-4',
-    storeId: 'store-4',
+    storeId: '6',
     storeName: '멘야 텐',
     category: '일식',
     walkMinutes: 7,
@@ -112,7 +132,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-5',
     campaignId: 'campaign-5',
-    storeId: 'store-5',
+    storeId: '4',
     storeName: '홍루 반점',
     category: '중식',
     walkMinutes: 5,
@@ -128,7 +148,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-6',
     campaignId: 'campaign-6',
-    storeId: 'store-6',
+    storeId: '10',
     storeName: '새우 볶음밥 연구소',
     category: '중식',
     walkMinutes: 9,
@@ -144,7 +164,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-7',
     campaignId: 'campaign-7',
-    storeId: 'store-7',
+    storeId: '11',
     storeName: '포케 스테이션',
     category: '샐러드',
     walkMinutes: 2,
@@ -160,7 +180,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-8',
     campaignId: 'campaign-8',
-    storeId: 'store-8',
+    storeId: '7',
     storeName: '방콕 키친',
     category: '아시안',
     walkMinutes: 8,
@@ -176,7 +196,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-9',
     campaignId: 'campaign-9',
-    storeId: 'store-9',
+    storeId: '12',
     storeName: '그릴 앤 그린',
     category: '샐러드',
     walkMinutes: 6,
@@ -192,7 +212,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
   {
     serveId: 'serve-10',
     campaignId: 'campaign-10',
-    storeId: 'store-10',
+    storeId: '13',
     storeName: '그레인 테이블',
     category: '샐러드',
     walkMinutes: 5,
@@ -209,7 +229,7 @@ const feedCardData: Omit<FeedCard, 'posterHtml'>[] = [
 
 // 카드마다 점주가 만든 포스터 HTML을 붙인다. 실제로는 서버가 저장된 포스터를 함께 내려준다
 // 점주 앱과 같은 포스터가 있으면 그대로 쓰고, 나머지는 템플릿을 돌아가며 골라 카드 정보로 채운다
-export const mockFeedCards: FeedCard[] = feedCardData.map((card, index) => {
+export const mockFeedCards: MockFeedCard[] = feedCardData.map((card, index) => {
   const ownerPoster = ownerPosters[card.campaignId];
   const posterHtml = ownerPoster
     ? renderMockPoster(ownerPoster.templateIndex, ownerPoster.slots)

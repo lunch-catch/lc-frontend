@@ -5,9 +5,8 @@ import type {
   CouponState,
   IssueResult,
 } from '@user/api/coupon';
-import type { FeedCard } from '@user/api/feed';
 
-import { mockFeedCards } from './feed';
+import { type MockFeedCard, mockFeedCards } from './feed';
 
 // 하루에 받을 수 있는 쿠폰 수 (서버가 정해서 내려주는 값)
 export const MOCK_DAILY_ISSUE_LIMIT = 3;
@@ -55,7 +54,7 @@ interface CreateCouponOptions {
 
 // 피드 카드의 할인을 쿠폰 명세 모양으로 바꾼다
 // "전 메뉴"로 시작하는 카드는 전 메뉴 정액 할인, 나머지는 메뉴 정액 할인으로 둔다
-const toDiscount = (card: FeedCard, storeIndex: number) => {
+const toDiscount = (card: MockFeedCard, storeIndex: number) => {
   const discount = card.originalPrice - card.salePrice;
   if (card.offerTitle.startsWith('전 메뉴')) {
     return {
@@ -79,7 +78,7 @@ const toDiscount = (card: FeedCard, storeIndex: number) => {
 };
 
 const createCoupon = (
-  card: FeedCard,
+  card: MockFeedCard,
   {
     dayOffset = 0,
     issueTime = dateAt(dayOffset, card.issueOpenTime),
@@ -172,6 +171,8 @@ export const getMockIssueStatus = (
 
   return {
     campaignId,
+    // mock에는 서버 이벤트가 없다. 받을 때는 캠페인 ID로 받는다
+    eventId: null,
     ...campaign,
     isIssued: findTodayCoupon(campaignId) !== undefined,
   };

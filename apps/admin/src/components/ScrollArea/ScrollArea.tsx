@@ -77,7 +77,7 @@ export const ScrollArea = forwardRef<HTMLDivElement, ScrollAreaProps>(
             : 'overflow-x-auto overflow-y-hidden overscroll-x-contain',
           hideScrollbar
             ? '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
-            : 'admin-scrollbar',
+            : 'ui-scrollbar',
           dragToScroll && 'cursor-grab select-none active:cursor-grabbing',
           className,
         ]

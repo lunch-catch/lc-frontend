@@ -2,7 +2,6 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { List, Map as MapIcon, Search, X } from 'lucide-react';
 
-import { getWishCount } from '@user/api/feed';
 import {
   BUSINESS_CATEGORY_LABELS,
   fetchStores,
@@ -17,6 +16,7 @@ import {
   useMyLocation,
 } from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
+import { useWishCount } from '@user/features/wishlist/useWishCount';
 
 import CategoryIconRow, { type CategoryFilter } from './CategoryIconRow';
 import FeaturedStoreCard from './FeaturedStoreCard';
@@ -49,7 +49,7 @@ const ExploreScreen = () => {
   // 가게 상세에 들어갔다 돌아와도 보던 방식이 유지되도록 주소(?view=map)에 둔다
   const [searchParams, setSearchParams] = useSearchParams();
   const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
-  const [wishCount] = useState(getWishCount);
+  const { wishCount } = useWishCount();
   // 가게까지 거리는 저장 위치를 기준으로 잰다. 지도 가운데도 이 위치다
   const myLocation = useMyLocation();
   const locationName = getHeaderLocationName(myLocation);

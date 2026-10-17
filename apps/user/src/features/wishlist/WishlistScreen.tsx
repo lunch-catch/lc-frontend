@@ -31,6 +31,9 @@ const ACTION_TOAST_DURATION_MS = 4000;
 const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   soldOut: '아쉽게도 그사이 수량이 모두 소진됐어요',
   limitReached: '오늘 받을 수 있는 쿠폰을 모두 받았어요',
+  alreadyIssued: '오늘 이미 받은 쿠폰이에요',
+  notWished: '찜한 뒤에 받을 수 있어요',
+  notOpen: '지금은 받을 수 없는 시간이에요',
 };
 
 // 찜마다 발급 상태를 붙이고 카드 상태를 정한다
@@ -93,11 +96,9 @@ const WishlistScreen = () => {
   useEffect(() => {
     let ignore = false;
 
-    // 찜 목록을 먼저 받고, 그 캠페인 ID로 쿠폰 발급 상태를 받아 합친다
+    // 찜 목록을 먼저 받고, 그 캠페인과 가게 ID로 쿠폰 발급 상태를 받아 합친다
     fetchWishlist().then(async (items) => {
-      const status = await fetchIssueStatus(
-        items.map((item) => item.campaignId),
-      );
+      const status = await fetchIssueStatus(items);
       if (ignore) return;
 
       setWishes(items);
@@ -126,11 +127,16 @@ const WishlistScreen = () => {
     setIssuingCampaignId(campaignId);
 
     try {
-      const result = await issueCoupon(campaignId);
-      // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
-      const status = await fetchIssueStatus(
-        wishes.map((wish) => wish.campaignId),
+      // 발급은 발급 상태에서 받아 둔 오늘 이벤트 ID로 한다
+      const current = issueStatus?.campaigns.find(
+        (campaign) => campaign.campaignId === campaignId,
       );
+      const result = await issueCoupon({
+        campaignId,
+        eventId: current?.eventId ?? null,
+      });
+      // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
+      const status = await fetchIssueStatus(wishes);
       setIssueStatus(status);
 
       if (result === 'issued') {
