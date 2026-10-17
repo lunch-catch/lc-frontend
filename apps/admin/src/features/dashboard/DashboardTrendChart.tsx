@@ -9,12 +9,12 @@ import {
 } from './dashboardChartUtils';
 
 const chartLayout = {
-  height: 240,
+  height: 208,
   left: 64,
   right: 32,
-  top: 32,
-  bottom: 192,
-  labelY: 224,
+  top: 20,
+  bottom: 160,
+  labelY: 192,
 };
 const axisFormatter = new Intl.NumberFormat('ko-KR', { notation: 'compact' });
 
@@ -55,17 +55,21 @@ export const DashboardTrendChart = ({
   }, [hasLabels]);
   const active = Math.min(activeIndex ?? labels.length - 1, labels.length - 1);
   const tickInterval = getChartLabelInterval(labels.length, width);
-  const max = getChartAxisMaximum([
-    ...primary.values,
-    ...(secondary?.values ?? []),
-  ]);
+  const values = [...primary.values, ...(secondary?.values ?? [])];
+  const max = getChartAxisMaximum(values);
+  // 과오 차감 정정으로 소진액이 음수가 될 수 있어 0 아래 구간도 표시한다.
+  const min =
+    Math.min(0, ...values) < 0
+      ? -getChartAxisMaximum(values.map((value) => -value))
+      : 0;
   const plotWidth = width - chartLayout.left - chartLayout.right;
   const x = (index: number) =>
     labels.length === 1
       ? chartLayout.left + plotWidth / 2
       : chartLayout.left + (index * plotWidth) / (labels.length - 1);
   const y = (value: number) =>
-    chartLayout.bottom - (value / max) * (chartLayout.bottom - chartLayout.top);
+    chartLayout.bottom -
+    ((value - min) / (max - min)) * (chartLayout.bottom - chartLayout.top);
   const path = (values: number[]) =>
     values.map((value, index) => `${x(index)},${y(value)}`).join(' ');
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
@@ -99,18 +103,18 @@ export const DashboardTrendChart = ({
       </p>
     );
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div
         id={id}
-        className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-bg-page px-4 py-3"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-bg-page px-3 py-2"
       >
         <div className="space-y-1">
-          <p className="text-caption-web text-text-secondary">선택 구간</p>
-          <p className="text-body-sm-web font-medium tabular-nums text-text-primary">
+          <p className="text-caption-web font-medium tabular-nums text-text-secondary">
+            <span className="sr-only">선택 구간 </span>
             {labels[active]}
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-3">
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
           {[primary, ...(secondary ? [secondary] : [])].map((series, index) => (
             <div key={series.name} className="space-y-1">
               <p className="flex items-center gap-2 text-caption-web text-text-secondary">
@@ -124,7 +128,7 @@ export const DashboardTrendChart = ({
                 />
                 {series.name}
               </p>
-              <p className="text-h2-web font-semibold tabular-nums text-text-primary">
+              <p className="text-body-sm-web font-semibold tabular-nums text-text-primary">
                 {formatNumber(series.values[active] ?? 0)}
                 <span className="ml-1 text-caption-web font-normal text-text-secondary">
                   {unit}
@@ -139,7 +143,7 @@ export const DashboardTrendChart = ({
           aria-label={title}
           className="w-full text-caption-web"
           style={{
-            height: 'calc(var(--space-16) * 4)',
+            height: chartLayout.height,
           }}
           viewBox={`0 0 ${width} ${chartLayout.height}`}
           onPointerMove={handlePointerMove}
@@ -163,24 +167,24 @@ export const DashboardTrendChart = ({
               <line
                 x1={chartLayout.left}
                 x2={width - chartLayout.right}
-                y1={y(max * fraction)}
-                y2={y(max * fraction)}
+                y1={y(min + (max - min) * fraction)}
+                y2={y(min + (max - min) * fraction)}
                 stroke="var(--semantic-border-subtle)"
                 strokeDasharray={fraction === 0 ? undefined : '2 6'}
                 strokeOpacity={fraction === 0 ? 1 : 0.6}
               />
               <text
                 x={chartLayout.left - 8}
-                y={y(max * fraction) + 4}
+                y={y(min + (max - min) * fraction) + 4}
                 textAnchor="end"
                 fill="var(--semantic-text-tertiary)"
               >
-                {axisFormatter.format(max * fraction)}
+                {axisFormatter.format(min + (max - min) * fraction)}
               </text>
             </g>
           ))}
           <polygon
-            points={`${x(0)},${chartLayout.bottom} ${path(primary.values)} ${x(primary.values.length - 1)},${chartLayout.bottom}`}
+            points={`${x(0)},${y(0)} ${path(primary.values)} ${x(primary.values.length - 1)},${y(0)}`}
             fill={`url(#${id}-fill)`}
           />
           {secondary && (
@@ -274,7 +278,7 @@ export const DashboardTrendChart = ({
           </g>
         </svg>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-caption-web text-text-secondary">
+      <div className="sr-only">
         <span>마우스 또는 키보드로 구간별 수치를 확인하세요.</span>
         <span>단위: {unit}</span>
       </div>
