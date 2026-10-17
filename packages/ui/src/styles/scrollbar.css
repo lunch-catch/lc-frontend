@@ -1,9 +1,9 @@
-.admin-scrollbar,
-.admin-filter-bar :is([role='listbox'], [role='dialog']) {
+.ui-scrollbar {
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--semantic-border-subtle) transparent;
 
+  /* 표준 색상 속성이 아래 WebKit 손잡이 스타일을 덮어쓰지 않도록 한다. */
   @supports selector(::-webkit-scrollbar) {
     scrollbar-width: auto;
     scrollbar-color: auto;
@@ -31,7 +31,7 @@
   }
 }
 
-/* 스크롤이 없는 드롭다운은 오른쪽 스크롤바 공간을 예약하지 않아 양쪽 여백을 맞춘다. */
-.admin-filter-bar [role='listbox'] {
+/* 옵션이 적은 드롭다운에는 스크롤바 여백을 예약하지 않는다. */
+.ui-scrollbar:is([role='listbox'], [role='dialog']) {
   scrollbar-gutter: auto;
 }

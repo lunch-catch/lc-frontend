@@ -324,7 +324,7 @@ export const TemplateCreateContent = ({
                   <textarea
                     ref={promptRef}
                     id="template-request"
-                    className="admin-scrollbar block h-20 w-full resize-none overflow-y-auto overscroll-y-contain rounded-md border-0 bg-transparent px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:outline-none"
+                    className="ui-scrollbar block h-20 w-full resize-none overflow-y-auto overscroll-y-contain rounded-md border-0 bg-transparent px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:outline-none"
                     aria-describedby={
                       selectedTarget ? 'template-selection-label' : undefined
                     }

@@ -62,7 +62,7 @@ export const BillingManagementContent = () => {
           결제·포인트 내역과 환불 요청, 충전 정책 및 정산 불일치를 관리합니다.
         </p>
       </header>
-      <div className="overflow-x-auto admin-scrollbar">
+      <div className="overflow-x-auto ui-scrollbar">
         <div className="w-max">
           <Tabs
             items={tabs}
