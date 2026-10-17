@@ -4,7 +4,9 @@ import { List, Map as MapIcon, Search, X } from 'lucide-react';
 
 import {
   BUSINESS_CATEGORY_LABELS,
+  type CategoryFilter,
   fetchStores,
+  rememberListedStores,
   type StoreListItem,
 } from '@user/api/store';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
@@ -18,7 +20,7 @@ import {
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 import { useWishCount } from '@user/features/wishlist/useWishCount';
 
-import CategoryIconRow, { type CategoryFilter } from './CategoryIconRow';
+import CategoryIconRow from './CategoryIconRow';
 import FeaturedStoreCard from './FeaturedStoreCard';
 import StoreCard from './StoreCard';
 import StoreListSkeleton from './StoreListSkeleton';
@@ -63,11 +65,29 @@ const ExploreScreen = () => {
     (latitude === null || longitude === null);
   const storeCategory = category === 'ALL' ? undefined : category;
 
+  // 조건이 바뀌면 이전 결과 대신 회색 틀을 보여준다
+  const resetStores = () => {
+    setStores(undefined);
+    setNextPageToken(null);
+    setIsLoadingMore(false);
+    setHasMoreError(false);
+  };
+
+  // 저장 위치를 다시 받아 좌표가 바뀌면 이전 위치의 목록과 다음 페이지 상태를 비운다
+  // effect에서 비우면 이전 목록이 한 번 더 그려져서, 렌더 중에 바로 비운다
+  const locationKey = `${latitude},${longitude}`;
+  const [listedLocationKey, setListedLocationKey] = useState(locationKey);
+  if (listedLocationKey !== locationKey) {
+    setListedLocationKey(locationKey);
+    resetStores();
+  }
+
   useEffect(() => {
+    // 좌표가 없어져도 세대를 올려, 이전 위치로 보낸 요청의 응답을 버린다
+    const current = ++generation.current;
     if (latitude === null || longitude === null) return;
 
     let ignore = false;
-    const current = ++generation.current;
 
     fetchStores({
       category: storeCategory,
@@ -77,6 +97,7 @@ const ExploreScreen = () => {
     })
       .then((response) => {
         if (ignore || current !== generation.current) return;
+        rememberListedStores(response.items);
         setStores(response.items);
         setNextPageToken(response.nextPageToken);
         setHasMoreError(false);
@@ -115,6 +136,7 @@ const ExploreScreen = () => {
     })
       .then((response) => {
         if (current !== generation.current) return;
+        rememberListedStores(response.items);
         // 같은 가게가 두 번 오면 한 번만 둔다
         setStores((prev) => {
           const seen = new Set(prev?.map((store) => store.storeId));
@@ -155,14 +177,6 @@ const ExploreScreen = () => {
     observer.observe(sentinel);
     return () => observer.disconnect();
   });
-
-  // 조건이 바뀌면 이전 결과 대신 회색 틀을 보여준다
-  const resetStores = () => {
-    setStores(undefined);
-    setNextPageToken(null);
-    setIsLoadingMore(false);
-    setHasMoreError(false);
-  };
 
   const retry = () => {
     resetStores();

@@ -395,6 +395,9 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           <p className="rounded-xl bg-surface-brand px-4 py-3 text-body-sm-mobile text-text-primary">
             오늘{' '}
             <strong className="font-bold text-text-brand">
+              {/* 메뉴 할인이면 어느 메뉴인지 앞에 붙인다 (예: 김치찌개 20% 할인) */}
+              {store.campaignSummary.targetMenu &&
+                `${store.campaignSummary.targetMenu.name} `}
               {formatDiscount(store.campaignSummary)}
             </strong>{' '}
             쿠폰이 있어요 · 찜은 오늘 점심 피드에서 할 수 있어요

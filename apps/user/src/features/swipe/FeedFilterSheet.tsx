@@ -7,13 +7,12 @@ import {
   type FeedSort,
   saveFeedFilter,
 } from '@user/api/feedFilter';
-import type { BusinessCategory } from '@user/api/store';
+import { CATEGORY_FILTER_OPTIONS, type CategoryFilter } from '@user/api/store';
 import ActionButton from '@user/components/ActionButton/ActionButton';
 import {
   categoryIcons,
-  categoryOptions,
   shortCategoryLabels,
-} from '@user/features/explore/categoryIcons';
+} from '@user/components/CategoryIcon/categoryIcons';
 
 const sortItems: { value: FeedSort; label: string }[] = [
   { value: 'DISTANCE', label: '거리순' },
@@ -40,7 +39,7 @@ const FeedFilterSheet = ({
   const [hasError, setHasError] = useState(false);
 
   // 전체를 누르면 고른 업종을 모두 푼다. 업종을 하나도 고르지 않은 상태가 전체다
-  const toggleCategory = (category: 'ALL' | BusinessCategory) => {
+  const toggleCategory = (category: CategoryFilter) => {
     if (category === 'ALL') {
       setCategories([]);
       return;
@@ -73,7 +72,7 @@ const FeedFilterSheet = ({
           <legend className="mb-3 text-body-sm-mobile font-bold text-text-primary">
             업종 · 여러 개 선택
           </legend>
-          {categoryOptions.map((option) => {
+          {CATEGORY_FILTER_OPTIONS.map((option) => {
             const isSelected =
               option.value === 'ALL'
                 ? categories.length === 0

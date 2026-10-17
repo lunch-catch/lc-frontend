@@ -26,6 +26,21 @@ export const BUSINESS_CATEGORY_LABELS: Record<BusinessCategory, string> = {
   OTHER: '기타',
 };
 
+// 업종 고르기 값. ALL이면 전체 업종이다 (가게 목록 filter와 같은 값)
+export type CategoryFilter = 'ALL' | BusinessCategory;
+
+// 업종 고르기 선택지. 전체를 맨 앞에 둔다 (탐색 탭 업종 고르기, 피드 필터)
+export const CATEGORY_FILTER_OPTIONS: {
+  value: CategoryFilter;
+  label: string;
+}[] = [
+  { value: 'ALL', label: '전체' },
+  ...Object.entries(BUSINESS_CATEGORY_LABELS).map(([value, label]) => ({
+    value: value as BusinessCategory,
+    label,
+  })),
+];
+
 // 할인 대상 메뉴 (가게 목록 명세 activeCampaign.targetMenu)
 export interface StoreTargetMenu {
   menuId: number;
@@ -130,9 +145,16 @@ const fetchServerStores = async ({
     nextPageToken: string | null;
   }>(`/v1/stores?${params.toString()}`);
 
-  const items = data.items.map(toStoreListItem);
+  return {
+    items: data.items.map(toStoreListItem),
+    nextPageToken: data.nextPageToken,
+  };
+};
+
+// 화면에 반영한 목록의 가게를 기억한다. 가게 상세와 걸어가는 시간을 이 정보로 채운다
+// 조건이 바뀐 뒤 늦게 온 응답이 거리를 덮어쓰지 않도록, 받은 곳이 아니라 화면에 반영할 때 부른다
+export const rememberListedStores = (items: StoreListItem[]) => {
   items.forEach((item) => listedStores.set(item.storeId, item));
-  return { items, nextPageToken: data.nextPageToken };
 };
 
 // 주변 가게 목록. mock일 때 주소에 ?mockStoresEmpty를 붙이면 주변에 가게가 없는 상태를 확인할 수 있다

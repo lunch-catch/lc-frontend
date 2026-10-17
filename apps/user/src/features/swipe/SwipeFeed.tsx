@@ -340,9 +340,12 @@ const SwipeFeed = () => {
         {(status === 'loading' || topCard) && (
           <div className="flex items-center justify-between gap-3 px-page pt-1">
             <FeedFilterButton
-              // 필터는 이미 받은 카드에는 적용되지 않고 다음 피드부터 적용된다
+              onLoadError={() => setToastMessage('필터를 불러오지 못했어요')}
+              // 필터는 이미 받은 카드에는 적용되지 않고, 지금 카드를 다 본 뒤 새로 받는 피드부터 적용된다
               onSaved={() =>
-                setToastMessage('필터를 저장했어요 · 다음 카드부터 적용돼요')
+                setToastMessage(
+                  '필터를 저장했어요 · 새로 받는 카드부터 적용돼요',
+                )
               }
             />
             <OpenCountdown />

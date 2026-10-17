@@ -1,11 +1,8 @@
+import { CATEGORY_FILTER_OPTIONS, type CategoryFilter } from '@user/api/store';
 import {
-  type CategoryFilter,
   categoryIcons,
-  categoryOptions,
   shortCategoryLabels as shortLabels,
-} from './categoryIcons';
-
-export type { CategoryFilter };
+} from '@user/components/CategoryIcon/categoryIcons';
 
 interface CategoryIconRowProps {
   value: CategoryFilter;
@@ -18,7 +15,7 @@ const CategoryIconRow = ({ onChange, value }: CategoryIconRowProps) => {
     // fieldset은 기본으로 내용보다 좁아지지 않아(min-width: min-content) 화면을 넓힐 수 있어 min-w-0으로 푼다
     <fieldset className="relative grid min-w-0 grid-cols-5 gap-y-1">
       <legend className="sr-only">업종</legend>
-      {categoryOptions.map((option) => {
+      {CATEGORY_FILTER_OPTIONS.map((option) => {
         const isSelected = value === option.value;
 
         return (
