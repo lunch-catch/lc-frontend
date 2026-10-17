@@ -1,20 +1,17 @@
-import { StatusBadge, type StatusBadgeVariant } from '@repo/ui';
+import type { ReactNode } from 'react';
 import { formatNumber } from '@repo/utils';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 
-import { getSparklinePoints } from './dashboardChartUtils';
 import { getChangeLabel } from './dashboardUtils';
 
 interface DashboardMetricCardProps {
-  label: string;
+  label: ReactNode;
   value: number;
   previous?: number;
   unit?: string;
   description?: string;
   selected?: boolean;
   onSelect?: () => void;
-  values?: number[];
-  variant?: 'card' | 'inset';
 }
 
 export const DashboardMetricCard = ({
@@ -25,24 +22,24 @@ export const DashboardMetricCard = ({
   description,
   selected = false,
   onSelect,
-  values = [],
-  variant = 'card',
 }: DashboardMetricCardProps) => {
   const Container = onSelect ? 'button' : 'div';
   const direction = previous === undefined ? 0 : Math.sign(value - previous);
   const ChangeIcon =
     direction > 0 ? ArrowUpRight : direction < 0 ? ArrowDownRight : Minus;
-  const points = getSparklinePoints(values);
-  // 패널 안의 성장 지표는 테두리를 중복하지 않고 바깥 패널의 구분선을 사용한다.
-  const surfaceClassName =
-    variant === 'inset'
-      ? 'py-2'
-      : `rounded-xl border p-5 ${selected ? 'border-action-primary bg-surface-brand' : 'border-border-subtle bg-bg-surface'}`;
+  const surfaceClassName = selected
+    ? 'border-action-primary bg-surface-brand'
+    : 'border-border-subtle bg-bg-surface';
   const interactionClassName = onSelect
     ? 'cursor-pointer hover:border-action-primary focus-visible:outline-2 focus-visible:outline-action-primary'
     : '';
-  const changeVariant: StatusBadgeVariant =
-    direction > 0 ? 'success' : direction < 0 ? 'danger' : 'neutral';
+  const changeTextClassName =
+    direction > 0
+      ? 'text-status-success-fg'
+      : direction < 0
+        ? 'text-status-danger-fg'
+        : 'text-text-secondary';
+
   return (
     <Container
       {...(onSelect
@@ -52,7 +49,7 @@ export const DashboardMetricCard = ({
             'aria-pressed': selected,
           }
         : {})}
-      className={`relative min-w-0 overflow-hidden text-left transition-colors ${surfaceClassName} ${interactionClassName}`}
+      className={`relative min-w-0 overflow-hidden rounded-xl border p-4 text-left transition-colors ${surfaceClassName} ${interactionClassName}`}
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-body-sm-web font-medium text-text-secondary">
@@ -65,45 +62,29 @@ export const DashboardMetricCard = ({
           />
         )}
       </div>
-      <p className="mt-3 flex flex-wrap items-baseline gap-1 text-display-web font-semibold tracking-tight tabular-nums text-text-primary">
+      <p className="mt-2 flex flex-wrap items-baseline gap-1 text-h2-web font-semibold tracking-tight tabular-nums text-text-primary sm:text-h1">
         {formatNumber(value)}
         <span className="text-body-sm-web font-normal text-text-secondary">
           {unit}
         </span>
       </p>
-      {previous !== undefined && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-caption-web">
-          <StatusBadge variant={changeVariant} className="gap-1">
-            <ChangeIcon className="size-3" aria-hidden="true" />
-            {getChangeLabel(value, previous)}
-          </StatusBadge>
-          <span className="text-text-secondary">이전 기간 대비</span>
+      {(previous !== undefined || description) && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-caption-web">
+          {previous !== undefined && (
+            <span
+              className={`inline-flex items-center gap-1 ${changeTextClassName}`}
+            >
+              <ChangeIcon className="size-3" aria-hidden />
+              {getChangeLabel(value, previous)}
+              <span className="sr-only">이전 기간 대비</span>
+            </span>
+          )}
+          {description && (
+            <span className="ml-auto text-right text-text-secondary">
+              {description}
+            </span>
+          )}
         </div>
-      )}
-      {description && (
-        <p className="mt-2 text-caption-web text-text-secondary">
-          {description}
-        </p>
-      )}
-      {values.length > 1 && (
-        <svg
-          viewBox="0 0 100 36"
-          preserveAspectRatio="none"
-          className="mt-4 h-8 w-full"
-          aria-hidden="true"
-        >
-          <polyline
-            points={points}
-            fill="none"
-            stroke={
-              selected
-                ? 'var(--semantic-action-primary)'
-                : 'var(--semantic-action-secondary)'
-            }
-            strokeWidth="2"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
       )}
     </Container>
   );

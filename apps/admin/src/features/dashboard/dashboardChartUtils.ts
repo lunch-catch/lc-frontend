@@ -20,16 +20,3 @@ export const getNearestChartIndex = (
   const index = Math.round(((position - plotLeft) / plotWidth) * (count - 1));
   return Math.max(0, Math.min(count - 1, index));
 };
-
-export const getSparklinePoints = (values: number[]) => {
-  const maximum = Math.max(1, ...values);
-  const minimum = Math.min(0, ...values);
-  // 카드 안의 작은 추이선도 0을 기준으로 그려 변동 폭이 과장되지 않게 한다.
-  return values
-    .map((value, index) => {
-      const x = (index * 100) / Math.max(1, values.length - 1);
-      const y = 32 - ((value - minimum) / (maximum - minimum)) * 28;
-      return `${x},${y}`;
-    })
-    .join(' ');
-};

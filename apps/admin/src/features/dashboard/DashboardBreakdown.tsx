@@ -1,4 +1,4 @@
-import { SegmentedControl } from '@repo/ui';
+import { SegmentedControl, SelectField } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
 import {
@@ -7,17 +7,22 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@admin/components/DataTable';
-import { queryChoice } from '@admin/hooks/urlQuery';
+import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+import { queryChoice, queryText } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 import { DashboardSection } from './DashboardSection';
 import type {
   BreakdownDimension,
+  BreakdownMetric,
   DashboardDailyAggregate,
   UsageBreakdown,
-  UsageMetric,
 } from './dashboardTypes';
-import { getBreakdown, getChangeLabel, usageMetrics } from './dashboardUtils';
+import {
+  breakdownMetrics,
+  getBreakdown,
+  getChangeLabel,
+} from './dashboardUtils';
 
 interface DashboardBreakdownProps {
   days: DashboardDailyAggregate[];
@@ -33,14 +38,16 @@ export const DashboardBreakdown = ({
   const { filters, updateFilters } = useUrlFilters('breakdown.', {
     dimension: queryChoice(['region', 'category'] as const, 'region'),
     metric: queryChoice(
-      ['impressions', 'saves', 'issued', 'used'] as const,
+      ['impressions', 'saves', 'issued', 'used', 'spend'] as const,
       'used',
     ),
     sortBy: queryChoice(
-      ['', 'name', 'impressions', 'saves', 'issued', 'used'] as const,
+      ['', 'name', 'impressions', 'saves', 'issued', 'used', 'spend'] as const,
       'used',
     ),
     sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
+    region: queryText(),
+    category: queryText(),
   });
   const { dimension, metric: rankingMetric } = filters;
   const sort = filters.sortBy
@@ -48,8 +55,14 @@ export const DashboardBreakdown = ({
     : null;
   const setDimension = (dimension: BreakdownDimension) =>
     updateFilters({ dimension });
-  const setRankingMetric = (metric: UsageMetric) => updateFilters({ metric });
-  const rows = getBreakdown(days, dimension).sort((a, b) => {
+  const setRankingMetric = (metric: BreakdownMetric) =>
+    updateFilters({ metric });
+  const segments = [...days, ...previousDays].flatMap((day) => day.segments);
+  const names = (key: 'region' | 'category') =>
+    [...new Set(segments.map((item) => item[key]))].sort((a, b) =>
+      a.localeCompare(b, 'ko'),
+    );
+  const rows = getBreakdown(days, dimension, filters).sort((a, b) => {
     if (!sort) return 0;
     const result =
       sort.key === 'name'
@@ -58,19 +71,22 @@ export const DashboardBreakdown = ({
     return result * (sort.direction === 'asc' ? 1 : -1);
   });
   const previous = new Map(
-    getBreakdown(previousDays, dimension).map((row) => [row.name, row.used]),
+    getBreakdown(previousDays, dimension, filters).map((row) => [
+      row.name,
+      row[rankingMetric],
+    ]),
   );
   // 표 정렬을 바꿔도 상위 순위는 선택한 지표의 내림차순을 유지한다.
   const ranking = [...rows]
     .sort((a, b) => b[rankingMetric] - a[rankingMetric])
     .slice(0, 3);
   const rankingMax = Math.max(1, ...ranking.map((row) => row[rankingMetric]));
-  const rankingLabel = usageMetrics.find(
+  const rankingLabel = breakdownMetrics.find(
     (item) => item.value === rankingMetric,
   )!.label;
   const columns: { value: keyof UsageBreakdown; label: string }[] = [
     { value: 'name', label: dimension === 'region' ? '지역' : '카테고리' },
-    ...usageMetrics,
+    ...breakdownMetrics,
   ];
   const changeSort = (key: keyof UsageBreakdown) =>
     updateFilters({
@@ -80,7 +96,6 @@ export const DashboardBreakdown = ({
   return (
     <DashboardSection
       title="지역·카테고리별 이용 현황"
-      description="이용량이 많은 곳을 비교하고, 전체 내역에서 이전 기간 대비 변화를 확인하세요."
       action={
         <SegmentedControl<BreakdownDimension>
           ariaLabel="분석 기준"
@@ -93,16 +108,41 @@ export const DashboardBreakdown = ({
         />
       }
     >
-      <div className="mb-5 rounded-lg bg-bg-page p-4">
+      <div className="relative z-30 mb-5 flex flex-wrap items-center gap-2">
+        <SelectField
+          fitContent
+          aria-label="분석 지역"
+          value={filters.region}
+          options={[
+            { value: '', label: '지역 전체' },
+            ...names('region').map((value) => ({ value, label: value })),
+          ]}
+          onValueChange={(region) => updateFilters({ region })}
+        />
+        <SelectField
+          fitContent
+          aria-label="분석 카테고리"
+          value={filters.category}
+          options={[
+            { value: '', label: '카테고리 전체' },
+            ...names('category').map((value) => ({ value, label: value })),
+          ]}
+          onValueChange={(category) => updateFilters({ category })}
+        />
+      </div>
+      <div className="relative z-20 mb-5 rounded-lg bg-bg-page p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h4 className="text-body-sm-web font-semibold">
             {rankingLabel} 상위 {ranking.length}곳
           </h4>
-          <SegmentedControl<UsageMetric>
-            ariaLabel="상위 순위 지표"
+          <SelectField
+            fitContent
+            aria-label="상위 순위 지표"
             value={rankingMetric}
-            onValueChange={setRankingMetric}
-            items={usageMetrics}
+            onValueChange={(value) =>
+              setRankingMetric(value as BreakdownMetric)
+            }
+            options={breakdownMetrics}
           />
         </div>
         {ranking.length ? (
@@ -119,7 +159,7 @@ export const DashboardBreakdown = ({
                   <span className="font-semibold tabular-nums">
                     {formatNumber(row[rankingMetric])}
                     <span className="ml-1 text-caption-web font-normal text-text-secondary">
-                      건
+                      {rankingMetric === 'spend' ? 'P' : '건'}
                     </span>
                   </span>
                 </div>
@@ -144,17 +184,38 @@ export const DashboardBreakdown = ({
         )}
       </div>
       <p className="mb-2 text-right text-caption-web text-text-secondary">
-        단위: 건 · 열 제목을 눌러 정렬
+        단위: 건 · 소진액: P
       </p>
-      <div className="overflow-x-auto">
+      <ScrollArea
+        orientation="horizontal"
+        className="w-full"
+        aria-label="지역·카테고리 분석 가로 스크롤"
+        tabIndex={0}
+      >
+        {/* 분석 기준과 데이터 자릿수가 달라져도 같은 열 위치를 유지한다. */}
         <DataTable
-          personalizationKey={'dashboard.' + dimension}
+          className="min-w-[760px] table-fixed"
           columns={[
             ...columns.map((column) => ({
               key: String(column.value),
               label: column.label,
+              width:
+                column.value === 'name'
+                  ? '20%'
+                  : column.value === 'spend'
+                    ? '16%'
+                    : '12%',
+              align:
+                column.value === 'name'
+                  ? ('left' as const)
+                  : ('right' as const),
             })),
-            { key: 'changeRate', label: '사용 증감률' },
+            {
+              key: 'changeRate',
+              label: `${rankingLabel} 증감률`,
+              align: 'right',
+              width: '16%',
+            },
           ]}
           aria-label={`${dimension === 'region' ? '지역' : '카테고리'}별 이용 현황`}
         >
@@ -171,15 +232,15 @@ export const DashboardBreakdown = ({
                   {column.label}
                 </TableHeaderCell>
               ))}
-              <TableHeaderCell>사용 증감률</TableHeaderCell>
+              <TableHeaderCell>{rankingLabel} 증감률</TableHeaderCell>
             </tr>
           </thead>
           <tbody>
             {rows.length ? (
               rows.map((row) => {
-                const previousUsed = previous.get(row.name) ?? 0;
+                const previousValue = previous.get(row.name) ?? 0;
                 const changeDirection = canCompare
-                  ? Math.sign(row.used - previousUsed)
+                  ? Math.sign(row[rankingMetric] - previousValue)
                   : 0;
                 const changeClassName =
                   changeDirection > 0
@@ -190,10 +251,10 @@ export const DashboardBreakdown = ({
                 return (
                   <TableRow key={row.name}>
                     <TableCell className="font-medium">{row.name}</TableCell>
-                    {usageMetrics.map((metric) => (
+                    {breakdownMetrics.map((metric) => (
                       <TableCell
                         key={metric.value}
-                        className={`tabular-nums ${metric.value === 'used' ? 'font-semibold' : ''}`}
+                        className={`tabular-nums ${metric.value === rankingMetric ? 'font-semibold' : ''}`}
                       >
                         {formatNumber(row[metric.value])}
                       </TableCell>
@@ -201,7 +262,7 @@ export const DashboardBreakdown = ({
                     <TableCell className="tabular-nums">
                       <span className={changeClassName}>
                         {canCompare
-                          ? getChangeLabel(row.used, previousUsed)
+                          ? getChangeLabel(row[rankingMetric], previousValue)
                           : '비교 집계 없음'}
                       </span>
                     </TableCell>
@@ -210,7 +271,7 @@ export const DashboardBreakdown = ({
               })
             ) : (
               <tr>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <p className="py-8 text-center text-text-secondary">
                     선택한 기간에 집계된 이용 데이터가 없습니다.
                   </p>
@@ -219,7 +280,7 @@ export const DashboardBreakdown = ({
             )}
           </tbody>
         </DataTable>
-      </div>
+      </ScrollArea>
     </DashboardSection>
   );
 };
