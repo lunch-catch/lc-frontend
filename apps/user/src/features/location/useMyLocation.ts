@@ -48,12 +48,16 @@ export const useMyLocation = () => {
 };
 
 // 헤더에 보여줄 위치 문구. undefined면 아직 불러오는 중이다
-export const useHeaderLocationName = () => {
-  const location = useMyLocation();
-
+// 위치를 따로 쓰는 화면(피드)은 받은 위치로 이 문구만 만든다
+export const getHeaderLocationName = (
+  location: MemberLocation | null | undefined,
+) => {
   if (location === undefined) return undefined;
   // 불러오지 못했으면 설정을 다시 하라고 하지 않고 이름 없이 보여준다
   if (location === null) return '내 위치';
   if (!hasLocation(location)) return '위치를 설정해 주세요';
   return `${getLocationLabel(location) ?? '내 위치'} 주변`;
 };
+
+export const useHeaderLocationName = () =>
+  getHeaderLocationName(useMyLocation());
