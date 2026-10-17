@@ -28,11 +28,11 @@ export interface WishItem {
   discount: WishDiscount | null;
 }
 
-// 찜 목록 조회는 서버 구현이 끝나 실제 API를 쓴다
+// 찜 목록 조회와 가게 상세 찜(POST /v1/wishlist)은 서버 구현이 끝나 실제 API를 쓴다
 const USE_WISHLIST_API = true;
-// 찜 추가(POST /v1/wishlist)와 삭제(DELETE /v1/wishlist/{campaignId})는 명세에는 있지만 아직 서버에 없어 mock이다
+// 찜 삭제(DELETE /v1/wishlist/{campaignId})는 명세에는 있지만 아직 서버에 없어 mock이다
 // 서버에 올라오면 켠다. 그 전까지는 지운 찜이 새로 불러올 때 다시 보인다
-const USE_WISH_EDIT_API = false;
+const USE_WISH_REMOVE_API = false;
 
 const MOCK_DELAY_MS = 600;
 
@@ -111,8 +111,9 @@ export const fetchWishCount = async () =>
   (await fetchWishlist()).filter((wish) => wish.storeName !== null).length;
 
 // 가게 상세에서 찜한다 (POST /v1/wishlist). 이미 찜했어도 성공이다
+// 오늘 노출 중인 캠페인이 아니면 404 ADSERVING-004로 실패한다
 export const addWish = async (campaignId: string): Promise<void> => {
-  if (USE_WISH_EDIT_API && isServerId(campaignId)) {
+  if (USE_WISHLIST_API && isServerId(campaignId)) {
     await request('/v1/wishlist', {
       method: 'POST',
       body: { campaignId: Number(campaignId) },
@@ -129,7 +130,7 @@ export const addWish = async (campaignId: string): Promise<void> => {
 // 찜을 지운다 (DELETE /v1/wishlist/{campaignId}). 찜 목록에 없어도 성공이다
 // 지운 캠페인은 당일 피드에 다시 나오지 않고 10:50 오픈 알림 대상에서도 빠진다 (서버 처리)
 export const removeWish = async (campaignId: string): Promise<void> => {
-  if (USE_WISH_EDIT_API && isServerId(campaignId)) {
+  if (USE_WISH_REMOVE_API && isServerId(campaignId)) {
     await request(`/v1/wishlist/${campaignId}`, { method: 'DELETE' });
     return;
   }
@@ -140,8 +141,9 @@ export const removeWish = async (campaignId: string): Promise<void> => {
 };
 
 // 삭제를 되돌린다. 서버에서는 같은 캠페인을 다시 찜하는 요청이다
+// 삭제가 mock인 동안은 서버 찜이 그대로 남아 있어, 다시 찜해도 이미 찜한 것(200)으로 성공한다
 export const restoreWish = async (campaignId: string): Promise<void> => {
-  if (USE_WISH_EDIT_API && isServerId(campaignId)) {
+  if (USE_WISHLIST_API && isServerId(campaignId)) {
     await addWish(campaignId);
     return;
   }
