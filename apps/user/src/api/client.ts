@@ -22,6 +22,8 @@ export class ApiError extends Error {
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
+  // 화면을 벗어나거나 앱을 닫는 순간에도 브라우저가 끝까지 보내게 한다 (노출처럼 응답을 기다리지 않는 요청)
+  keepalive?: boolean;
 }
 
 // API 서버 주소. 배포에서는 https://api.lunchcatch.com 처럼 다른 주소를 넣고,
@@ -46,10 +48,11 @@ const readEnvelope = async <T>(
 // 요청을 한 번 보내고 봉투를 벗긴 data를 돌려준다
 const send = async <T>(
   path: string,
-  { body, method = 'GET' }: RequestOptions,
+  { body, keepalive, method = 'GET' }: RequestOptions,
 ): Promise<T> => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
+    keepalive,
     // 배포에서는 API 서버가 다른 주소(api.lunchcatch.com)라 인증 쿠키를 실으려면 include가 필요하다
     // 같은 사이트(lunchcatch.com)라서 SameSite=Strict 쿠키도 함께 간다
     credentials: 'include',

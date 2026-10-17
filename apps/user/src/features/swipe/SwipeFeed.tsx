@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { ApiError } from '@user/api/client';
 import {
   type FeedCard,
   fetchFeed,
@@ -10,7 +11,10 @@ import {
 } from '@user/api/feed';
 import AppHeader from '@user/components/AppHeader/AppHeader';
 import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
-import { useHeaderLocationName } from '@user/features/location/useMyLocation';
+import {
+  getHeaderLocationName,
+  useMyLocation,
+} from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 
 import GestureRail from './GestureRail';
@@ -20,6 +24,9 @@ import PosterSkeleton from './PosterSkeleton';
 import SwipeClosed from './SwipeClosed';
 import SwipeDone from './SwipeDone';
 import SwipeHint from './SwipeHint';
+import SwipeUnavailable, {
+  type SwipeUnavailableReason,
+} from './SwipeUnavailable';
 import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
@@ -47,16 +54,26 @@ const checkFirstWishToday = () => {
   return true;
 };
 
-type FeedStatus = 'loading' | 'serving' | 'closed';
+type FeedStatus = 'loading' | 'serving' | 'closed' | SwipeUnavailableReason;
+
+// 피드를 받지 못한 이유를 화면에 맞게 나눈다. 저장한 위치가 없으면 위치 설정으로 안내한다
+const getFeedFailure = (error: unknown): SwipeUnavailableReason =>
+  error instanceof ApiError && error.code === 'ADSERVING-002'
+    ? 'needsLocation'
+    : 'error';
 
 const SwipeFeed = () => {
   const [status, setStatus] = useState<FeedStatus>('loading');
   const [cards, setCards] = useState<FeedCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wishCount, setWishCount] = useState(getWishCount);
-  const locationName = useHeaderLocationName();
+  // 피드는 저장 위치 기준이라, 노출을 기록할 때 같은 좌표를 보낸다
+  const myLocation = useMyLocation();
+  const locationName = getHeaderLocationName(myLocation);
   const hasUnreadNotifications = useHasUnreadNotifications();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // 다시 시도할 때마다 올려서 피드를 새로 받는다
+  const [attempt, setAttempt] = useState(0);
   // 같은 카드의 노출이 두 번 기록되지 않도록 보낸 serveId를 기억한다
   const impressedServeIds = useRef(new Set<string>());
   const [setCardArea, cardMaxWidth, spareHeight] = usePosterFitWidth();
@@ -67,32 +84,47 @@ const SwipeFeed = () => {
   useEffect(() => {
     let ignore = false;
 
-    fetchFeed().then((response) => {
-      if (ignore) return;
+    fetchFeed()
+      .then((response) => {
+        if (ignore) return;
 
-      setStatus(response.status);
-      if (response.status === 'serving') {
-        setCards(response.cards);
-      }
-    });
+        setStatus(response.status);
+        if (response.status === 'serving') {
+          setCards(response.cards);
+          setCurrentIndex(0);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!ignore) setStatus(getFeedFailure(error));
+      });
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [attempt]);
+
+  const retry = () => {
+    setStatus('loading');
+    setAttempt((current) => current + 1);
+  };
 
   const topCard = cards[currentIndex];
   // 맨 앞 카드와 그 뒤 두 장. 뒤 카드의 포스터를 미리 그려 두어 넘길 때 깜빡이지 않게 한다
   const visibleCards = cards.slice(currentIndex, currentIndex + 3);
   const isDone = cards.length > 0 && currentIndex >= cards.length;
 
+  const latitude = myLocation?.latitude ?? null;
+  const longitude = myLocation?.longitude ?? null;
+
+  // 맨 위 카드가 바뀌면 노출을 한 번 보낸다. 저장 위치를 받기 전이면 받은 뒤에 보낸다
   useEffect(() => {
-    if (topCard && !impressedServeIds.current.has(topCard.serveId)) {
-      impressedServeIds.current.add(topCard.serveId);
-      sendImpression(topCard);
-    }
-  }, [topCard]);
+    if (!topCard || latitude === null || longitude === null) return;
+    if (impressedServeIds.current.has(topCard.serveId)) return;
+
+    impressedServeIds.current.add(topCard.serveId);
+    sendImpression(topCard, { latitude, longitude });
+  }, [latitude, longitude, topCard]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -136,6 +168,11 @@ const SwipeFeed = () => {
           </div>
         )}
         {status === 'closed' && <SwipeClosed />}
+        {(status === 'empty' ||
+          status === 'needsLocation' ||
+          status === 'error') && (
+          <SwipeUnavailable onRetry={retry} reason={status} />
+        )}
         {isDone && <SwipeDone />}
         {/* 불러오는 중에는 카드 자리에 회색 틀을 보여준다 */}
         {(status === 'loading' || topCard) && (

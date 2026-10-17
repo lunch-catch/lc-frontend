@@ -1,5 +1,4 @@
-import type { FeedCard } from './feed';
-import { mockFeedCards } from './mocks/feed';
+import { type MockFeedCard, mockFeedCards } from './mocks/feed';
 import {
   addMockWish,
   getMockWishes,
@@ -22,7 +21,7 @@ const MOCK_DELAY_MS = 600;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const toWishItem = (card: FeedCard): WishItem => ({
+const toWishItem = (card: MockFeedCard): WishItem => ({
   campaignId: card.campaignId,
   storeId: card.storeId,
   storeName: card.storeName,
