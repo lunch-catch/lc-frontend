@@ -8,19 +8,11 @@ import {
   ListChecks,
 } from 'lucide-react';
 
-import { getSettlementMismatches } from '@admin/api/settlementMismatches';
-import { useBillingResource } from '@admin/features/billing/useBillingResource';
-
-const pendingQuery = new URLSearchParams({
-  resolved: 'false',
-  page: '0',
-  size: '1',
-}).toString();
+import { usePendingSettlementCount } from './usePendingSettlementCount';
 
 export const DashboardActionQueue = () => {
-  // 처리 대기 항목은 분석 기간과 무관하게 전체 미해결 건을 조회한다.
-  const resource = useBillingResource(getSettlementMismatches, pendingQuery);
-  const count = resource.data?.totalElements;
+  const resource = usePendingSettlementCount();
+  const count = resource.count;
   const hasPending = count !== undefined && count > 0;
   const Icon = hasPending
     ? CircleAlert
