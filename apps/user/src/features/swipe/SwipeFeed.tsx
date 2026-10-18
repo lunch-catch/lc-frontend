@@ -8,14 +8,14 @@ import {
   sendSwipeAction,
   type SwipeAction,
 } from '@user/api/feed';
-import AppHeader from '@user/components/AppHeader/AppHeader';
-import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
 import {
   getHeaderLocationName,
   useMyLocation,
 } from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 import { useWishCount } from '@user/features/wishlist/useWishCount';
+import AppHeader from '@user/ui/AppHeader/AppHeader';
+import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 
 import FeedFilterButton from './FeedFilterButton';
 import {

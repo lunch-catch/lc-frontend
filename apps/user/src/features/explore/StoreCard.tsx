@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
-import { cardClassName } from '@user/components/Card/Card';
+import { cardClassName } from '@user/ui/Card/Card';
 
 import { formatDiscount, formatWalkTime } from './storeFormat';
 

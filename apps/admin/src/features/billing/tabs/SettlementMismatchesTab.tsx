@@ -6,8 +6,8 @@ import {
   getSettlementMismatches,
   type SettlementMismatch,
 } from '@admin/api/settlementMismatches';
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
 
 import {
   getBillingRangeError,

@@ -1,6 +1,6 @@
 import { type MouseEvent, useEffect, useMemo, useRef } from 'react';
 
-import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
 import {
   findTemplateCodeElement,

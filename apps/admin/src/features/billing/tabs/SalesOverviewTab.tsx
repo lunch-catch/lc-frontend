@@ -8,12 +8,6 @@ import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { getSales } from '@admin/api/analytics';
 import {
-  DataTable,
-  TableCell,
-  TableHeaderCell,
-  TableRow,
-} from '@admin/components/DataTable';
-import {
   getAnalyticsRangeError,
   shiftDate,
 } from '@admin/features/analytics/analyticsDateUtils';
@@ -24,6 +18,12 @@ import {
 import { useAnalyticsQuery } from '@admin/features/analytics/useAnalyticsQuery';
 import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import {
+  DataTable,
+  TableCell,
+  TableHeaderCell,
+  TableRow,
+} from '@admin/ui/DataTable';
 
 import type {
   BillingColumn,

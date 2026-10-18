@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Toggle } from '@repo/ui';
 
 import { type MyProfile, updateMyProfile } from '@user/api/member';
-import Card from '@user/components/Card/Card';
+import Card from '@user/ui/Card/Card';
 
 type ConsentKey = keyof MyProfile['consents'];
 

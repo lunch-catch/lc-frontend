@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router';
 
 import mascotAlert from '@user/assets/illustrations/mascot-alert.webp';
 import mascotDefault from '@user/assets/illustrations/mascot-default.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 // 탈퇴하지 못한 이유
 // cancelled: 카카오 화면에서 취소했거나 다른 탭에서 시작함, reauth: 다른 카카오 계정으로 확인함, server: 서버 오류

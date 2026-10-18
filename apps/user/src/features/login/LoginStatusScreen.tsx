@@ -1,6 +1,6 @@
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
 import mascotLoading from '@user/assets/illustrations/mascot-loading.webp';
-import Wordmark from '@user/components/Wordmark/Wordmark';
+import Wordmark from '@user/ui/Wordmark/Wordmark';
 
 import KakaoLoginButton from './KakaoLoginButton';
 

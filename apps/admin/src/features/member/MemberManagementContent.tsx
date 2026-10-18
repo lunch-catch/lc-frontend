@@ -9,6 +9,8 @@ import {
 import { formatDate, formatDateTime } from '@repo/utils';
 
 import { mockOwners } from '@admin/api/mocks/owners';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import {
   DataTable,
   type DataTableColumn,
@@ -20,11 +22,9 @@ import {
   TableRow,
   type TableSortDirection,
   useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { ownerQuery } from './memberQuery';
 import type { MemberStatus, MemberType, Owner } from './memberTypes';

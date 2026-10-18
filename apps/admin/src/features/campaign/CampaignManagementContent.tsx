@@ -14,19 +14,6 @@ import {
 
 import { campaigns, getMockCampaignReports } from '@admin/api/mocks/campaigns';
 import {
-  DataTable,
-  type DataTableColumn,
-  TableCell,
-  type TableDensity,
-  TableEmpty,
-  TableHeaderCell,
-  TableRow,
-  type TableSortDirection,
-  useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import {
   queryChoice,
   queryChoices,
   queryDate,
@@ -36,6 +23,19 @@ import {
 } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import {
+  DataTable,
+  type DataTableColumn,
+  TableCell,
+  type TableDensity,
+  TableEmpty,
+  TableHeaderCell,
+  TableRow,
+  type TableSortDirection,
+  useTableColumnSettings,
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import type { Campaign, CampaignReport, CampaignStatus } from './campaignTypes';
 import { campaignStatusMeta } from './campaignUtils';

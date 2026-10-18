@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router';
 
 import mascotAlert from '@user/assets/illustrations/mascot-alert.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 // 서빙 시간대(10:00~12:59) 밖에 피드 대신 보여주는 화면
 const SwipeClosed = () => {

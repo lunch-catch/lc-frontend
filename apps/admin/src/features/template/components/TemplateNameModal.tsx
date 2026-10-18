@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { Button, Input } from '@repo/ui';
 
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 
 import { getValidTemplateName } from '../templateUtils';
 

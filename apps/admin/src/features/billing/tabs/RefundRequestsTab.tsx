@@ -8,9 +8,9 @@ import {
 import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { type AdminRefund, getRefunds } from '@admin/api/refunds';
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
 
 import {
   getBillingRangeError,

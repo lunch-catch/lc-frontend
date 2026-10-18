@@ -1,15 +1,15 @@
 import { SegmentedControl, SelectField } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
+import { queryChoice, queryText } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import {
   DataTable,
   TableCell,
   TableHeaderCell,
   TableRow,
-} from '@admin/components/DataTable';
-import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
-import { queryChoice, queryText } from '@admin/hooks/urlQuery';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+} from '@admin/ui/DataTable';
+import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
 import { DashboardSection } from './DashboardSection';
 import type {

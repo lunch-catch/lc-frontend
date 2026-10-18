@@ -3,8 +3,8 @@ import { Check, Store, X } from 'lucide-react';
 
 import type { CampaignIssueStatus } from '@user/api/coupon';
 import type { WishItem } from '@user/api/wishlist';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import Card from '@user/components/Card/Card';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import Card from '@user/ui/Card/Card';
 
 import { formatWishAmount, formatWishTarget } from './wishFormat';
 import type { WishState } from './wishState';

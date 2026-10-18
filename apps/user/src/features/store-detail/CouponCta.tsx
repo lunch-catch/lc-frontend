@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router';
 
-import ActionButton from '@user/components/ActionButton/ActionButton';
+import { formatCountdown } from '@user/features/wishlist/useOpenCountdown';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
 import FeedbackToast, {
   type FeedbackToastProps,
-} from '@user/components/FeedbackToast/FeedbackToast';
-import FixedBottom from '@user/components/FixedBottom/FixedBottom';
-import { formatCountdown } from '@user/features/wishlist/useOpenCountdown';
+} from '@user/ui/FeedbackToast/FeedbackToast';
+import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
 
 import type { CouponState } from './couponState';
 

@@ -2,7 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { getTheme, SegmentedControl, setTheme, type Theme } from '@repo/ui';
 import { Moon, Sun } from 'lucide-react';
 
-import { cardClassName } from '@user/components/Card/Card';
+import { cardClassName } from '@user/ui/Card/Card';
 
 const themeItems = [
   {

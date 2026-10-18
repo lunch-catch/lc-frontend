@@ -10,14 +10,14 @@ import {
   saveMyLocation,
 } from '@user/api/location';
 import { fetchMyProfile } from '@user/api/member';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import { cardClassName } from '@user/components/Card/Card';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import { cardClassName } from '@user/ui/Card/Card';
 import FeedbackToast, {
   type FeedbackToastTone,
-} from '@user/components/FeedbackToast/FeedbackToast';
-import FixedBottom from '@user/components/FixedBottom/FixedBottom';
-import HintInput from '@user/components/HintInput/HintInput';
-import TopBar from '@user/components/TopBar/TopBar';
+} from '@user/ui/FeedbackToast/FeedbackToast';
+import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
+import HintInput from '@user/ui/HintInput/HintInput';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 import AddressSearchResults from './AddressSearchResults';
 import { getCurrentPosition, PositionError } from './currentPosition';

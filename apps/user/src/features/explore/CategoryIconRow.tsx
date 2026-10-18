@@ -2,7 +2,7 @@ import { CATEGORY_FILTER_OPTIONS, type CategoryFilter } from '@user/api/store';
 import {
   categoryIcons,
   shortCategoryLabels as shortLabels,
-} from '@user/components/CategoryIcon/categoryIcons';
+} from '@user/ui/CategoryIcon/categoryIcons';
 
 interface CategoryIconRowProps {
   value: CategoryFilter;

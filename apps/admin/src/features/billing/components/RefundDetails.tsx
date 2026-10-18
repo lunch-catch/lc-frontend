@@ -4,7 +4,7 @@ import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { ApiError } from '@admin/api/client';
 import { type AdminRefund, processRefund } from '@admin/api/refunds';
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 
 import { refundStatusLabels, refundVariants } from '../billingManagementUtils';
 import { useBillingMutation } from '../useBillingMutation';

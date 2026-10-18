@@ -10,6 +10,7 @@ import type {
   PointSummaryItem,
   PointSummaryPeriod,
 } from '@admin/api/pointSummary';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import {
   DataTable,
   type DataTableColumn,
@@ -20,9 +21,8 @@ import {
   TableLoading,
   TableRow,
   useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import { getSummaryQuery } from '../billingQuery';
 import type { BillingTablePreferences } from '../billingView';

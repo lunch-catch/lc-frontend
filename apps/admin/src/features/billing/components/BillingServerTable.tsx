@@ -10,10 +10,10 @@ import {
   TableLoading,
   TableRow,
   useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
+import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
 import type { BillingTablePreferences } from '../billingView';
 

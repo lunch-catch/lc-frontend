@@ -2,9 +2,9 @@
 import { Tabs } from '@repo/ui';
 
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
-import type { TableDensity } from '@admin/components/DataTable';
 import { queryChoice } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import type { TableDensity } from '@admin/ui/DataTable';
 
 import { getKoreaDate } from './billingUtils';
 import { PaymentHistoryTab } from './tabs/PaymentHistoryTab';

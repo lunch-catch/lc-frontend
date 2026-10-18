@@ -4,7 +4,7 @@ import { formatPoints } from '@repo/utils';
 
 import { adjustPoints } from '@admin/api/pointAdjustments';
 import type { SettlementMismatch } from '@admin/api/settlementMismatches';
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 
 import { getPointAdjustmentError } from '../billingManagementUtils';
 import { useBillingMutation } from '../useBillingMutation';

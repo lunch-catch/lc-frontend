@@ -2,8 +2,8 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { Button, StatusBadge } from '@repo/ui';
 import { Code2, MousePointer2, Send, X } from 'lucide-react';
 
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
+import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
 import {
   buildSelectedTemplatePrompt,

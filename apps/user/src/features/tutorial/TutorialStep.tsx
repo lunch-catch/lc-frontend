@@ -5,7 +5,7 @@ import tutorialBrowse from '@user/assets/illustrations/tutorial-browse.webp';
 import tutorialCoupon from '@user/assets/illustrations/tutorial-coupon.webp';
 import tutorialLike from '@user/assets/illustrations/tutorial-like.webp';
 import { useAuth } from '@user/auth/useAuth';
-import ActionButton from '@user/components/ActionButton/ActionButton';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
 
 // 서비스의 흐름(넘기기 → 찜 → 11시에 받기)을 한 장씩 보여준다 (Figma 2. 튜토리얼)
 const pages = [

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import mascotLoading from '@user/assets/illustrations/mascot-loading.webp';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 interface SwipeWaitingProps {
   // 새 카드를 받을 시각 (이 휴대폰 시계 기준 ms)

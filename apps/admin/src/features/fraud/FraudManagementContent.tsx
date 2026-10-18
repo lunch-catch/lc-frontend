@@ -8,10 +8,10 @@ import {
 } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
-import { useTableColumnSettings } from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
+import { useTableColumnSettings } from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { FraudCampaignDetail } from './FraudCampaignDetail';
 import { FraudTable } from './FraudTable';

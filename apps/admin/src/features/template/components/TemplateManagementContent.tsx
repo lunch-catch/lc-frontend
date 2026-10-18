@@ -2,11 +2,11 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { Button, SearchField, SelectField } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { queryChoice, queryText } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import type { PosterTemplate } from '../templateTypes';
 import { getTemplateError } from '../templateUtils';

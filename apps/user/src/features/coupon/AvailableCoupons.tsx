@@ -6,9 +6,9 @@ import { QrCode } from 'lucide-react';
 import { ApiError } from '@user/api/client';
 import { type Coupon, deleteCoupon, fetchCoupons } from '@user/api/coupon';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import EmptyState from '@user/components/EmptyState/EmptyState';
-import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
+import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 
 import CouponCard from './CouponCard';
 import CouponDeleteConfirm from './CouponDeleteConfirm';

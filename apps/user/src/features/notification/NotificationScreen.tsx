@@ -10,8 +10,8 @@ import {
   type UserNotification,
 } from '@user/api/notification';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import EmptyState from '@user/components/EmptyState/EmptyState';
-import TopBar from '@user/components/TopBar/TopBar';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 // 오늘이면 시각(10:50), 어제면 어제, 그 전이면 날짜(10월 12일)
 const formatSentAt = (isoString: string) => {

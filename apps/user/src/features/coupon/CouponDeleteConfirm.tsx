@@ -1,5 +1,5 @@
 import type { Coupon } from '@user/api/coupon';
-import ActionButton from '@user/components/ActionButton/ActionButton';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
 
 import { formatDiscount, formatTarget } from './couponFormat';
 

@@ -3,8 +3,8 @@ import { Button, Input } from '@repo/ui';
 import { Plus, X } from 'lucide-react';
 
 import { type PointPolicy, savePointPolicy } from '@admin/api/pointPolicy';
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
+import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
 import { getPointPolicyError } from '../billingManagementUtils';
 import { useBillingMutation } from '../useBillingMutation';

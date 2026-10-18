@@ -10,15 +10,15 @@ import {
   type StoreListItem,
 } from '@user/api/store';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import AppHeader from '@user/components/AppHeader/AppHeader';
-import EmptyState from '@user/components/EmptyState/EmptyState';
 import {
   getHeaderLocationName,
   useMyLocation,
 } from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
 import { useWishCount } from '@user/features/wishlist/useWishCount';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import AppHeader from '@user/ui/AppHeader/AppHeader';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 import CategoryIconRow from './CategoryIconRow';
 import FeaturedStoreCard from './FeaturedStoreCard';

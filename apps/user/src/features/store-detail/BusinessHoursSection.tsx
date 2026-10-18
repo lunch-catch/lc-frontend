@@ -2,7 +2,7 @@ import { ChevronDown } from 'lucide-react';
 
 import { getNow } from '@user/api/clock';
 import type { StoreBusinessHour } from '@user/api/store';
-import { cardClassName } from '@user/components/Card/Card';
+import { cardClassName } from '@user/ui/Card/Card';
 
 import {
   DAY_LABELS,

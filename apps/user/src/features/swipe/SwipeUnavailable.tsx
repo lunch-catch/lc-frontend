@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router';
 
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 // empty: 주변에 오늘 보여줄 카드가 없음, needsLocation: 저장한 위치가 없음, error: 피드를 받지 못함
 export type SwipeUnavailableReason = 'empty' | 'needsLocation' | 'error';

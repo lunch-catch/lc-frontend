@@ -7,6 +7,15 @@ import {
 } from '@repo/ui';
 
 import {
+  queryChoice,
+  queryDate,
+  queryPage,
+  querySize,
+  queryText,
+} from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import {
   DataTable,
   TableCell,
   TableEmpty,
@@ -16,18 +25,9 @@ import {
   TableRow,
   type TableSortDirection,
   useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import {
-  queryChoice,
-  queryDate,
-  queryPage,
-  querySize,
-  queryText,
-} from '@admin/hooks/urlQuery';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { inDateRange } from '../billingUtils';
 import type {
