@@ -1,10 +1,7 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { DateRangeValue } from '@repo/ui';
 
-import type {
-  DataTableColumn,
-  TableDensity,
-} from '@admin/components/DataTable';
+import type { DataTableColumn, TableDensity } from '@admin/ui/DataTable';
 
 export const getMonthRange = (today: string): DateRangeValue => {
   const [year, month] = today.split('-').map(Number);

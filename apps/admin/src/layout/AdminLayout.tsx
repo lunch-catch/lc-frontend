@@ -5,9 +5,9 @@ import { Button, getTheme, setTheme } from '@repo/ui';
 import { LogOut } from 'lucide-react';
 
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import { AdminSidebar } from '@admin/components/AdminSidebar/AdminSidebar';
 import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
+import { AdminSidebar } from '@admin/ui/AdminSidebar/AdminSidebar';
 
 import { adminNavigationPaths, getActiveAdminItem } from './adminNavigation';
 

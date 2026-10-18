@@ -1,4 +1,4 @@
-import { cardClassName } from '@user/components/Card/Card';
+import { cardClassName } from '@user/ui/Card/Card';
 
 const SKELETON_CARD_COUNT = 2;
 

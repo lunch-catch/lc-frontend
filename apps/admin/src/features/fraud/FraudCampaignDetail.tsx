@@ -6,7 +6,7 @@ import {
   TableEmpty,
   TableHeaderCell,
   TableRow,
-} from '@admin/components/DataTable';
+} from '@admin/ui/DataTable';
 
 import { FraudMemberAction } from './FraudMemberAction';
 import type {

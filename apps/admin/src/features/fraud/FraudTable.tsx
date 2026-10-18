@@ -11,7 +11,7 @@ import {
   TableHeaderCell,
   TableLoading,
   TableRow,
-} from '@admin/components/DataTable';
+} from '@admin/ui/DataTable';
 
 import { FraudMemberAction } from './FraudMemberAction';
 import { impressionHeaders, requestHeaders } from './fraudTableColumns';

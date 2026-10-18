@@ -3,7 +3,9 @@ import { Button, DateRangePicker, SearchField, SelectField } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
 
 import type { PointLedgerItem } from '@admin/api/pointLedger';
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
 import {
   DataTable,
   type DataTableColumn,
@@ -14,18 +16,16 @@ import {
   TableLoading,
   TableRow,
   useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import { getLedgerQuery } from '../billingQuery';
 import { ledgerTypeLabels } from '../billingUtils';
 import { type BillingTablePreferences, getMonthRange } from '../billingView';
-import { PointAdjustmentModal } from '../components/PointAdjustmentModal';
-import { PointLedgerDetails } from '../components/PointLedgerDetails';
-import { PointSummarySection } from '../components/PointSummarySection';
 import { isPositivePointId } from '../pointSummaryUtils';
+import { PointAdjustmentModal } from '../ui/PointAdjustmentModal';
+import { PointLedgerDetails } from '../ui/PointLedgerDetails';
+import { PointSummarySection } from '../ui/PointSummarySection';
 import { usePointLedger } from '../usePointLedger';
 
 const columns: DataTableColumn[] = [

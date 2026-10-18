@@ -15,7 +15,7 @@ import {
 } from '@user/api/wishlist';
 import FeedbackToast, {
   type FeedbackToastProps,
-} from '@user/components/FeedbackToast/FeedbackToast';
+} from '@user/ui/FeedbackToast/FeedbackToast';
 
 import { formatCountdown, useOpenCountdown } from './useOpenCountdown';
 import WishCard from './WishCard';

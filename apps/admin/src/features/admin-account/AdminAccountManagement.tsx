@@ -5,19 +5,6 @@ import { Plus } from 'lucide-react';
 import { issueAdminAccount } from '@admin/api/adminAccounts';
 import { ApiError } from '@admin/api/client';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
-import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import {
-  DataTable,
-  type DataTableColumn,
-  TableCell,
-  type TableDensity,
-  TableEmpty,
-  TableHeaderCell,
-  TableRow,
-  useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import {
   queryChoice,
   queryPage,
@@ -27,6 +14,19 @@ import {
 import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
+import {
+  DataTable,
+  type DataTableColumn,
+  TableCell,
+  type TableDensity,
+  TableEmpty,
+  TableHeaderCell,
+  TableRow,
+  useTableColumnSettings,
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import type {
   AdminAccountForm,

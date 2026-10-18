@@ -8,7 +8,9 @@ import {
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import type { AdminPayment, PaymentSortKey } from '@admin/api/payments';
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
 import {
   DataTable,
   type DataTableColumn,
@@ -19,21 +21,19 @@ import {
   TableLoading,
   TableRow,
   useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { paymentQuery } from '../billingQuery';
 import type { BillingTablePreferences } from '../billingView';
-import { PaymentDetails } from '../components/PaymentDetails';
 import {
   getPaymentFilterError,
   paymentSearchOptions,
   paymentStatusLabels,
   paymentVariants,
 } from '../paymentUtils';
+import { PaymentDetails } from '../ui/PaymentDetails';
 import { usePayments } from '../usePayments';
 
 const columns: (DataTableColumn & { key: keyof AdminPayment })[] = [

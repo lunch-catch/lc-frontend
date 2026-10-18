@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router';
 
-import TopBar from '@user/components/TopBar/TopBar';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 // 찜에서 받기, 사용까지 이어지는 순서로 둔다
 const couponTabs = [

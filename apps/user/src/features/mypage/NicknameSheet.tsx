@@ -2,8 +2,8 @@ import { type FormEvent, useState } from 'react';
 import { BottomSheet } from '@repo/ui';
 
 import { type MyProfile, updateMyProfile } from '@user/api/member';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import HintInput from '@user/components/HintInput/HintInput';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import HintInput from '@user/ui/HintInput/HintInput';
 
 // 서버가 받는 닉네임 길이 (1~20자, 공백만은 안 된다)
 const NICKNAME_MAX_LENGTH = 20;

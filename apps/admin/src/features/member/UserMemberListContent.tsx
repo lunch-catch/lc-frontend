@@ -14,6 +14,8 @@ import {
   type MemberPage,
   type MemberSortKey,
 } from '@admin/api/members';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import {
   DataTable,
   type DataTableColumn,
@@ -25,11 +27,9 @@ import {
   TableLoading,
   TableRow,
   useTableColumnSettings,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { memberQuery } from './memberQuery';
 

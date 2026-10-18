@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Store, X } from 'lucide-react';
 
 import type { Coupon } from '@user/api/coupon';
-import Card from '@user/components/Card/Card';
+import Card from '@user/ui/Card/Card';
 
 import { formatDiscount, formatTarget } from './couponFormat';
 

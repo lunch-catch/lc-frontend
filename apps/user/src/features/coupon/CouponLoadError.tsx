@@ -1,4 +1,4 @@
-import { cardClassName } from '@user/components/Card/Card';
+import { cardClassName } from '@user/ui/Card/Card';
 
 // 쿠폰 목록을 불러오지 못했을 때 목록 자리에 두는 안내와 다시 시도 버튼
 const CouponLoadError = ({ onRetry }: { onRetry: () => void }) => (

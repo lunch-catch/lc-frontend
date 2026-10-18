@@ -4,10 +4,10 @@ import { BottomSheet } from '@repo/ui';
 import { ChevronRight } from 'lucide-react';
 
 import { type TermsItem, userTerms } from '@user/api/terms';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import { cardClassName } from '@user/components/Card/Card';
-import FixedBottom from '@user/components/FixedBottom/FixedBottom';
-import TopBar from '@user/components/TopBar/TopBar';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import { cardClassName } from '@user/ui/Card/Card';
+import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 import ConsentRow from './ConsentRow';
 import { type ConsentKey } from './onboardingContext';

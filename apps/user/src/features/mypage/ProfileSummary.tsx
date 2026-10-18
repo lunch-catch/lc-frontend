@@ -4,7 +4,7 @@ import { User } from 'lucide-react';
 import { type CouponSummary, fetchCouponSummary } from '@user/api/coupon';
 import type { MyProfile } from '@user/api/member';
 import { useAuth } from '@user/auth/useAuth';
-import { cardClassName } from '@user/components/Card/Card';
+import { cardClassName } from '@user/ui/Card/Card';
 
 import NicknameSheet from './NicknameSheet';
 import { type Loaded, useLoad } from './useLoad';

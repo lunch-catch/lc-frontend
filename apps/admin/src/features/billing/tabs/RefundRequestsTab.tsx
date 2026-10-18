@@ -8,9 +8,9 @@ import {
 import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { type AdminRefund, getRefunds } from '@admin/api/refunds';
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
 
 import {
   getBillingRangeError,
@@ -23,8 +23,8 @@ import type { BillingTablePreferences } from '../billingView';
 import {
   type BillingServerColumn,
   BillingServerTable,
-} from '../components/BillingServerTable';
-import { RefundDetails } from '../components/RefundDetails';
+} from '../ui/BillingServerTable';
+import { RefundDetails } from '../ui/RefundDetails';
 import { useBillingResource } from '../useBillingResource';
 
 const columns: BillingServerColumn<AdminRefund>[] = [

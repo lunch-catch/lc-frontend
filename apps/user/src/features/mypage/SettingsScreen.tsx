@@ -5,8 +5,8 @@ import { ChevronRight } from 'lucide-react';
 import { logout } from '@user/api/auth';
 import { fetchMyProfile } from '@user/api/member';
 import { useAuth } from '@user/auth/useAuth';
-import Card, { cardClassName } from '@user/components/Card/Card';
-import TopBar from '@user/components/TopBar/TopBar';
+import Card, { cardClassName } from '@user/ui/Card/Card';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 import ConsentSettings from './ConsentSettings';
 import ThemeSettings from './ThemeSettings';

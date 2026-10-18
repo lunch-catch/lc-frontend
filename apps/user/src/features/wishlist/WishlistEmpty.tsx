@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router';
 
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 // 찜한 캠페인이 하나도 없을 때 피드로 안내하는 화면
 const WishlistEmpty = () => {

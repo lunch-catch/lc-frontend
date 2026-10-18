@@ -5,7 +5,7 @@ import {
   type KakaoServices,
   type KakaoStatus,
   loadKakaoMaps,
-} from '@user/components/KakaoMap/kakaoSdk';
+} from '@user/ui/KakaoMap/kakaoSdk';
 
 const loadKakaoServices = () => loadKakaoMaps().then((maps) => maps.services);
 

@@ -7,7 +7,7 @@ import {
   fetchCouponSummary,
 } from '@user/api/coupon';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 import CouponCard from './CouponCard';
 import { formatClock } from './couponFormat';

@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Checkbox, ChoiceChip } from '@repo/ui';
 
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import Card from '@user/components/Card/Card';
-import FixedBottom from '@user/components/FixedBottom/FixedBottom';
-import TopBar from '@user/components/TopBar/TopBar';
 import { startKakaoWithdrawAuth } from '@user/features/login/kakaoLogin';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import Card from '@user/ui/Card/Card';
+import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 // 탈퇴하면 달라지는 것 (회원 API 명세의 탈퇴 시 데이터 처리)
 const notices = [

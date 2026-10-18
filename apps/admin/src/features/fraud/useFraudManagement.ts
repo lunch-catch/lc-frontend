@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 
-import type { TableDensity } from '@admin/components/DataTable';
 import {
   queryChoice,
   queryDate,
@@ -10,6 +9,7 @@ import {
 } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import type { TableDensity } from '@admin/ui/DataTable';
 
 import type {
   FraudFilters,

@@ -7,7 +7,7 @@ import {
 import { LoaderCircle } from 'lucide-react';
 
 import { ApiError } from '@admin/api/client';
-import { TableSettingsAccountContext } from '@admin/components/DataTable/tableSettingsAccountContext';
+import { TableSettingsAccountContext } from '@admin/ui/DataTable/tableSettingsAccountContext';
 
 import { AdminAuthContext } from './adminAuthContext';
 import {

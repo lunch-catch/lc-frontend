@@ -8,11 +8,11 @@ import {
   saveFeedFilter,
 } from '@user/api/feedFilter';
 import { CATEGORY_FILTER_OPTIONS, type CategoryFilter } from '@user/api/store';
-import ActionButton from '@user/components/ActionButton/ActionButton';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
 import {
   categoryIcons,
   shortCategoryLabels,
-} from '@user/components/CategoryIcon/categoryIcons';
+} from '@user/ui/CategoryIcon/categoryIcons';
 
 const sortItems: { value: FeedSort; label: string }[] = [
   { value: 'DISTANCE', label: '거리순' },

@@ -2,8 +2,8 @@ import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 
 import { fetchMyProfile } from '@user/api/member';
-import Card from '@user/components/Card/Card';
-import TopBar from '@user/components/TopBar/TopBar';
+import Card from '@user/ui/Card/Card';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 import ProfileSummary from './ProfileSummary';
 import { useLoad } from './useLoad';

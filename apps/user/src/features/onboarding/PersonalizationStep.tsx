@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router';
 import { ChoiceChip } from '@repo/ui';
 
 import { completeOnboarding, type OnboardingInput } from '@user/api/member';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import FeedbackToast from '@user/components/FeedbackToast/FeedbackToast';
-import FixedBottom from '@user/components/FixedBottom/FixedBottom';
-import TopBar from '@user/components/TopBar/TopBar';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
+import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 import { type AgeGroup, type Gender } from './onboardingContext';
 import { useOnboarding } from './useOnboarding';
