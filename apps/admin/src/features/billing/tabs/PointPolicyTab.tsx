@@ -15,8 +15,8 @@ import type { BillingTablePreferences } from '../billingView';
 import {
   type BillingServerColumn,
   BillingServerTable,
-} from '../components/BillingServerTable';
-import { PointPolicyEditor } from '../components/PointPolicyEditor';
+} from '../ui/BillingServerTable';
+import { PointPolicyEditor } from '../ui/PointPolicyEditor';
 import { useBillingResource } from '../useBillingResource';
 
 const columns: BillingServerColumn<PointPolicy>[] = [

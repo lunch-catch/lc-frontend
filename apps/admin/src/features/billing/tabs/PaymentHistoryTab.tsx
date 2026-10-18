@@ -27,13 +27,13 @@ import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { paymentQuery } from '../billingQuery';
 import type { BillingTablePreferences } from '../billingView';
-import { PaymentDetails } from '../components/PaymentDetails';
 import {
   getPaymentFilterError,
   paymentSearchOptions,
   paymentStatusLabels,
   paymentVariants,
 } from '../paymentUtils';
+import { PaymentDetails } from '../ui/PaymentDetails';
 import { usePayments } from '../usePayments';
 
 const columns: (DataTableColumn & { key: keyof AdminPayment })[] = [

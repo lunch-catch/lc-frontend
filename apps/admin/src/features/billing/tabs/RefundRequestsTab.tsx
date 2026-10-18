@@ -23,8 +23,8 @@ import type { BillingTablePreferences } from '../billingView';
 import {
   type BillingServerColumn,
   BillingServerTable,
-} from '../components/BillingServerTable';
-import { RefundDetails } from '../components/RefundDetails';
+} from '../ui/BillingServerTable';
+import { RefundDetails } from '../ui/RefundDetails';
 import { useBillingResource } from '../useBillingResource';
 
 const columns: BillingServerColumn<AdminRefund>[] = [

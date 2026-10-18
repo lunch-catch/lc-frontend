@@ -1,7 +1,7 @@
 ﻿import { useLocation, useNavigate, useParams } from 'react-router';
 
-import { TemplateCreateContent } from '@admin/features/template/components/TemplateCreateContent';
 import { getValidTemplateName } from '@admin/features/template/templateUtils';
+import { TemplateCreateContent } from '@admin/features/template/ui/TemplateCreateContent';
 import { useTemplateManagement } from '@admin/features/template/useTemplateManagement';
 
 export const TemplateCreatePage = () => {

@@ -1,8 +1,8 @@
 ﻿import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-import { TemplateManagementContent } from '@admin/features/template/components/TemplateManagementContent';
 import type { PosterTemplate } from '@admin/features/template/templateTypes';
+import { TemplateManagementContent } from '@admin/features/template/ui/TemplateManagementContent';
 import { useTemplateManagement } from '@admin/features/template/useTemplateManagement';
 
 export const TemplateManagementPage = () => {

@@ -22,10 +22,10 @@ import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { getLedgerQuery } from '../billingQuery';
 import { ledgerTypeLabels } from '../billingUtils';
 import { type BillingTablePreferences, getMonthRange } from '../billingView';
-import { PointAdjustmentModal } from '../components/PointAdjustmentModal';
-import { PointLedgerDetails } from '../components/PointLedgerDetails';
-import { PointSummarySection } from '../components/PointSummarySection';
 import { isPositivePointId } from '../pointSummaryUtils';
+import { PointAdjustmentModal } from '../ui/PointAdjustmentModal';
+import { PointLedgerDetails } from '../ui/PointLedgerDetails';
+import { PointSummarySection } from '../ui/PointSummarySection';
 import { usePointLedger } from '../usePointLedger';
 
 const columns: DataTableColumn[] = [

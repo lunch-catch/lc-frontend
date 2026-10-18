@@ -31,7 +31,7 @@ import type {
   BillingTablePreferences,
 } from '../billingView';
 import { cell } from '../billingView';
-import { BillingTable } from '../components/BillingTable';
+import { BillingTable } from '../ui/BillingTable';
 
 const amountFields = [
   'chargeAmount',
