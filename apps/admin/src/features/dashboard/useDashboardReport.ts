@@ -3,7 +3,6 @@ import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 import type {
   DashboardDataset,
-  DashboardInterval,
   DashboardRange,
   FunnelMetric,
 } from './dashboardTypes';
@@ -19,9 +18,9 @@ import {
 export const useDashboardReport = (data: DashboardDataset) => {
   const { filters, updateFilters } = useUrlFilters('dashboard.', {
     view: queryChoice(['owners', 'members'] as const, 'owners'),
-    from: queryDate(shiftDate(data.completedThrough, -13)),
+    from: queryDate(shiftDate(data.completedThrough, -6)),
     to: queryDate(data.completedThrough),
-    interval: queryChoice(['day', 'week', 'month'] as const, 'day'),
+    preset: queryChoice(['today', '7', '30', 'custom'] as const, '7'),
     metric: queryChoice(
       ['impressions', 'saves', 'issued'] as const,
       'impressions',
@@ -29,12 +28,38 @@ export const useDashboardReport = (data: DashboardDataset) => {
     compare: queryChoice(['true', 'false'] as const, 'true'),
   });
   const range = { startDate: filters.from, endDate: filters.to };
-  const { interval, metric } = filters;
+  // 대시보드는 일별 조회 한도(92일) 안에서 날짜 범위만 선택한다.
+  const interval = 'day' as const;
+  const { metric } = filters;
+  const getPresetRange = (preset: 'today' | '7' | '30') =>
+    preset === 'today'
+      ? { startDate: data.today, endDate: data.today }
+      : {
+          startDate: shiftDate(data.completedThrough, 1 - Number(preset)),
+          endDate: data.completedThrough,
+        };
+  const presetRange =
+    filters.preset === 'custom' ? null : getPresetRange(filters.preset);
+  const preset =
+    presetRange &&
+    range.startDate === presetRange.startDate &&
+    range.endDate === presetRange.endDate
+      ? filters.preset
+      : 'custom';
+  const setPreset = (preset: 'today' | '7' | '30' | 'custom') => {
+    if (preset === 'custom') updateFilters({ preset });
+    else {
+      const next = getPresetRange(preset);
+      updateFilters({ preset, from: next.startDate, to: next.endDate });
+    }
+  };
   const compare = filters.compare === 'true';
   const setRange = (value: DashboardRange) =>
-    updateFilters({ from: value.startDate, to: value.endDate });
-  const setInterval = (interval: DashboardInterval) =>
-    updateFilters({ interval });
+    updateFilters({
+      from: value.startDate,
+      to: value.endDate,
+      preset: 'custom',
+    });
   const setMetric = (metric: FunnelMetric) => updateFilters({ metric });
   const setCompare = (compare: boolean) =>
     updateFilters({ compare: compare ? 'true' : 'false' });
@@ -66,7 +91,7 @@ export const useDashboardReport = (data: DashboardDataset) => {
   const trend = hasUsagePeriod
     ? getTrend(data.days, completedRange, interval)
     : [];
-  // 이전 기간의 날짜를 같은 위치로 이동한 후 묶어 월·주 경계에서도 비교 구간을 일치시킨다.
+  // 이전 기간의 날짜를 같은 위치로 옮겨 일별 추이를 비교한다.
   const offset = previousRange
     ? (Date.parse(completedRange.startDate) -
         Date.parse(previousRange.startDate)) /
@@ -93,7 +118,8 @@ export const useDashboardReport = (data: DashboardDataset) => {
     completedRange,
     setRange,
     interval,
-    setInterval,
+    preset,
+    setPreset,
     metric,
     setMetric,
     compare,

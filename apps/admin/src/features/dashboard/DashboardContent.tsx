@@ -8,7 +8,6 @@ import { getMockDashboardUsage } from '@admin/api/mocks/dashboardUsage';
 import {
   getAnalyticsRangeError,
   getPreviousRange,
-  shiftDate,
 } from '@admin/features/analytics/analyticsDateUtils';
 import {
   analyticsPeriods,
@@ -22,7 +21,7 @@ import { DashboardMetricCard } from './DashboardMetricCard';
 import { DashboardMetricTrend } from './DashboardMetricTrend';
 import { DashboardOverview, DashboardSnapshots } from './DashboardOverview';
 import { DashboardRangeGuide } from './DashboardRangeGuide';
-import type { DashboardDataset, DashboardInterval } from './dashboardTypes';
+import type { DashboardDataset } from './dashboardTypes';
 import { useDashboardMetrics } from './useDashboardMetrics';
 import { useDashboardReport } from './useDashboardReport';
 
@@ -79,61 +78,31 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
         }}
       />
       <div className="relative z-30 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <SegmentedControl<DashboardInterval>
-              ariaLabel="집계 표시 단위"
-              value={interval}
-              onValueChange={report.setInterval}
-              items={[
-                { label: '일별', value: 'day' },
-                { label: '주별', value: 'week' },
-                { label: '월별', value: 'month' },
-              ]}
-            />
+        <div
+          className="flex flex-wrap items-center gap-2"
+          aria-label="조회 기간 설정"
+        >
+          <SegmentedControl<'today' | '7' | '30' | 'custom'>
+            ariaLabel="빠른 기간 선택"
+            value={report.preset}
+            items={[
+              { value: 'today', label: '오늘' },
+              { value: '7', label: '7일' },
+              { value: '30', label: '30일' },
+              { value: 'custom', label: '직접 선택' },
+            ]}
+            onValueChange={report.setPreset}
+          />
+          {report.preset === 'custom' && (
             <DateRangePicker
               ariaLabel="대시보드 조회 기간"
-              selectionMode={interval}
+              selectionMode="day"
               value={range}
               onValueChange={report.setRange}
               placeholder="조회 기간 선택"
             />
-            <DashboardRangeGuide />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="flex items-center gap-1"
-              aria-label="빠른 기간 선택"
-            >
-              {[7, 30, 90].map((length) => {
-                const startDate = shiftDate(data.completedThrough, 1 - length);
-                const selected =
-                  range.startDate === startDate &&
-                  range.endDate === data.completedThrough;
-                return (
-                  <button
-                    key={length}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() =>
-                      report.setRange({
-                        startDate,
-                        endDate: data.completedThrough,
-                      })
-                    }
-                    className={
-                      'rounded-md px-3 py-2 text-caption-web font-medium transition-colors focus-visible:outline-2 focus-visible:outline-action-primary ' +
-                      (selected
-                        ? 'bg-surface-brand text-text-brand'
-                        : 'text-text-secondary hover:bg-surface-subtle')
-                    }
-                  >
-                    최근 {length}일
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
+          <DashboardRangeGuide />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-caption-web text-text-secondary">
           <span className="inline-flex items-center gap-1.5">
