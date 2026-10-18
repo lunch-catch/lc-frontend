@@ -6,8 +6,9 @@ import { getChangeLabel } from './dashboardUtils';
 
 interface DashboardMetricCardProps {
   label: ReactNode;
-  value: number;
-  previous?: number;
+  value: number | null;
+  previous?: number | null;
+  emptyLabel?: string;
   unit?: string;
   basis?: string;
   description?: string;
@@ -19,6 +20,7 @@ export const DashboardMetricCard = ({
   label,
   value,
   previous,
+  emptyLabel = '데이터 없음',
   unit = '건',
   basis,
   description,
@@ -26,7 +28,8 @@ export const DashboardMetricCard = ({
   onSelect,
 }: DashboardMetricCardProps) => {
   const Container = onSelect ? 'button' : 'div';
-  const direction = previous === undefined ? 0 : Math.sign(value - previous);
+  const canCompare = value !== null && previous != null;
+  const direction = canCompare ? Math.sign(value - previous) : 0;
   const ChangeIcon =
     direction > 0 ? ArrowUpRight : direction < 0 ? ArrowDownRight : Minus;
   const surfaceClassName = selected
@@ -70,14 +73,14 @@ export const DashboardMetricCard = ({
         )}
       </div>
       <p className="mt-2 flex flex-wrap items-baseline gap-1 text-h2-web font-semibold tracking-tight tabular-nums text-text-primary sm:text-h1">
-        {formatNumber(value)}
+        {value === null ? '—' : formatNumber(value)}
         <span className="text-body-sm-web font-normal text-text-secondary">
-          {unit}
+          {value === null ? emptyLabel : unit}
         </span>
       </p>
-      {(previous !== undefined || description) && (
+      {(canCompare || description) && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-caption-web">
-          {previous !== undefined && (
+          {canCompare && (
             <span
               className={`inline-flex items-center gap-1 ${changeTextClassName}`}
             >

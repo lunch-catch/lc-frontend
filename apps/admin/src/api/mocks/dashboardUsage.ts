@@ -55,17 +55,13 @@ const createSegments = (
   });
 };
 
-export const getMockDashboard = async (): Promise<DashboardDataset> => {
-  await new Promise((resolve) => setTimeout(resolve, 250));
+export const getMockDashboardUsage = (): DashboardDataset => {
   const today = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Seoul',
   }).format(new Date());
   const completedThrough = shiftDate(today, -1);
   const availableFrom = shiftDate(today, -430);
   const days: DashboardDailyAggregate[] = [];
-  let totalUsers = 4200;
-  let totalStores = 240;
-  let unspent = 3_500_000;
   for (let index = 0; index < 430; index += 1) {
     const date = shiftDate(availableFrom, index);
     const weekend = [0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay());
@@ -78,43 +74,19 @@ export const getMockDashboard = async (): Promise<DashboardDataset> => {
       issued: Math.round(impressions * 0.14),
       used: Math.round(impressions * (0.08 + (index % 4) * 0.006)),
     };
-    const newUsers = 12 + (index % 31);
-    const newStores = index % 3;
-    const charge = 90_000 + (index % 7) * 20_000;
     const spend = impressions * 10;
-    const refund = index % 9 === 0 ? 10_000 : 0;
-    const adjustment = index % 19 === 0 ? -1_000 : 0;
-    totalUsers += newUsers;
-    totalStores += newStores;
-    unspent += charge - spend - refund + adjustment;
     days.push({
       impressions: counts.impressions,
       saves: counts.saves,
       issued: counts.issued,
       date,
       totalImpressions: impressions + 120 + (index % 90),
-      newUsers,
-      newStores,
-      totalUsers,
-      totalStores,
-      activeUsers: Math.round(impressions * 0.32),
-      activeCampaigns: 45 + (index % 31),
-      withdrawnUsers: 80 + Math.floor(index / 5),
-      // 명세상 계정 정지 기능은 구현 제외이므로 예시에서도 정지 수를 0으로 유지한다.
-      suspendedUsers: 0,
-      charge,
-      spend,
-      refund,
-      adjustment,
-      unspent,
-      mismatchCount: index % 29 === 0 ? 1 : 0,
       segments: createSegments(counts, spend, index),
     });
   }
   return {
     today,
     completedThrough,
-    aggregatedAt: new Date().toISOString(),
     availableFrom,
     days,
   };

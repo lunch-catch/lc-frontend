@@ -1,12 +1,19 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
-import {
-  Button,
-  DateRangePicker,
-  SegmentedControl,
-  StatusBadge,
-} from '@repo/ui';
+import { Button, DateRangePicker, SegmentedControl } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 import { Clock3, ExternalLink } from 'lucide-react';
+
+import { getMockDashboardUsage } from '@admin/api/mocks/dashboardUsage';
+import {
+  getAnalyticsRangeError,
+  getPreviousRange,
+  shiftDate,
+} from '@admin/features/analytics/analyticsDateUtils';
+import {
+  analyticsPeriods,
+  sumAnalytics,
+} from '@admin/features/analytics/analyticsUtils';
 
 import { DashboardBreakdown } from './DashboardBreakdown';
 import { DashboardFunnel } from './DashboardFunnel';
@@ -16,8 +23,7 @@ import { DashboardRangeGuide } from './DashboardRangeGuide';
 import { DashboardSection } from './DashboardSection';
 import { DashboardTrendChart } from './DashboardTrendChart';
 import type { DashboardDataset, DashboardInterval } from './dashboardTypes';
-import { shiftDate } from './dashboardUtils';
-import { useDashboard } from './useDashboard';
+import { useDashboardMetrics } from './useDashboardMetrics';
 import { useDashboardReport } from './useDashboardReport';
 
 const DashboardReport = ({ data }: { data: DashboardDataset }) => {
@@ -29,16 +35,40 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
     validRange,
     rangeError,
     hasCompletedPeriod,
+    hasUsagePeriod,
     days,
     summary,
-    previous,
-    snapshot,
     trend,
     canCompare,
     previousDays,
-    previousRange,
-    pending,
   } = report;
+  const query = validRange
+    ? {
+        period: analyticsPeriods[interval],
+        from: range.startDate,
+        to: range.endDate,
+      }
+    : null;
+  const comparison = validRange ? getPreviousRange(range) : null;
+  const metrics = useDashboardMetrics(
+    query,
+    query && comparison && !getAnalyticsRangeError(comparison, interval)
+      ? { ...query, from: comparison.startDate, to: comparison.endDate }
+      : null,
+    query && hasCompletedPeriod
+      ? { ...query, to: completedRange.endDate }
+      : null,
+  );
+  const sales = metrics.sales;
+  const failures = [
+    metrics.members,
+    metrics.stores,
+    sales,
+    metrics.mismatches,
+    metrics.previousMembers,
+    metrics.previousStores,
+    metrics.previousSales,
+  ].filter((state) => state.error);
   const mismatchLink =
     '/settlements?' +
     new URLSearchParams({
@@ -104,26 +134,33 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                 );
               })}
             </div>
-            <StatusBadge variant="neutral">예시 데이터</StatusBadge>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-caption-web text-text-secondary">
           <span className="inline-flex items-center gap-1.5">
             <Clock3 aria-hidden className="size-3.5" />
-            마지막 집계 {formatDateTime(data.aggregatedAt)}
+            {[
+              ['회원', metrics.members.data?.aggregatedAt],
+              ['입점', metrics.stores.data?.aggregatedAt],
+              ['매출', sales.data?.aggregatedAt],
+            ]
+              .map(
+                ([name, at]) =>
+                  name + ' 집계 ' + (at ? formatDateTime(at) : '—'),
+              )
+              .join(' · ')}
           </span>
           {validRange && (
             <span
               title={
-                previousRange && canCompare
-                  ? formatDate(previousRange.startDate) +
+                comparison && !getAnalyticsRangeError(comparison, interval)
+                  ? formatDate(comparison.startDate) +
                     ' ~ ' +
-                    formatDate(previousRange.endDate)
+                    formatDate(comparison.endDate)
                   : undefined
               }
             >
-              {snapshot ? formatDate(snapshot.date) + ' 기준 · ' : ''}
-              {canCompare
+              {comparison && !getAnalyticsRangeError(comparison, interval)
                 ? '직전 동일 기간 대비'
                 : '이전 기간 비교 데이터 없음'}
             </span>
@@ -139,95 +176,101 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
         </p>
       ) : (
         <>
-          {pending && (
-            <p
-              role="status"
-              className="rounded-lg bg-surface-subtle px-3 py-2 text-caption-web text-text-secondary"
-            >
-              오늘 데이터는 집계 중입니다. {formatDate(data.completedThrough)}
-              까지 집계 완료된 날짜만 반영합니다.
-            </p>
-          )}
-          {!hasCompletedPeriod ? (
+          {failures.length > 0 && (
             <div
-              role="status"
-              className="rounded-xl border border-border-subtle bg-bg-surface px-5 py-16 text-center text-body-sm-web text-text-secondary"
+              role="alert"
+              className="flex flex-wrap items-center gap-3 text-body-sm-web text-status-danger-fg"
             >
-              선택한 기간에는 집계 완료된 데이터가 없습니다.
+              일부 지표를 불러오지 못했습니다. {failures[0].error}
+              <Button
+                variant="neutral"
+                onClick={() => failures.forEach((state) => state.retry())}
+              >
+                다시 시도
+              </Button>
             </div>
-          ) : (
-            <>
-              <DashboardOverview
+          )}
+          <DashboardOverview metrics={metrics} mismatchLink={mismatchLink} />
+          <div className="grid items-stretch gap-4 xl:grid-cols-2">
+            {hasUsagePeriod ? (
+              <DashboardFunnel
                 summary={summary}
-                previous={previous}
-                snapshot={snapshot}
-                previousSnapshot={canCompare ? previousDays.at(-1) : undefined}
+                trend={trend}
+                previousTrend={report.previousTrend}
+                metric={report.metric}
+                onMetricChange={report.setMetric}
+                compare={report.compare}
                 canCompare={canCompare}
-                mismatchLink={mismatchLink}
+                onCompareChange={report.setCompare}
+                validRatio={report.validRatio}
               />
-              <div className="grid items-stretch gap-4 xl:grid-cols-2">
-                <DashboardFunnel
-                  summary={summary}
-                  trend={trend}
-                  previousTrend={report.previousTrend}
-                  metric={report.metric}
-                  onMetricChange={report.setMetric}
-                  compare={report.compare}
-                  canCompare={canCompare}
-                  onCompareChange={report.setCompare}
-                  validRatio={report.validRatio}
-                />
-                <DashboardSection
-                  title="포인트 추이"
-                  action={
-                    <Link
-                      to="/settlements?tab=sales"
-                      className="inline-flex items-center gap-1 rounded-md text-caption-web text-text-secondary hover:text-text-brand focus-visible:outline-2 focus-visible:outline-action-primary"
-                    >
-                      매출 현황
-                      <ExternalLink aria-hidden className="size-3.5 shrink-0" />
-                    </Link>
-                  }
+            ) : (
+              <p className="rounded-xl border border-border-subtle bg-bg-surface p-5 text-body-sm-web text-text-secondary">
+                선택한 기간에는 이용현황 예시 데이터가 없습니다.
+              </p>
+            )}
+            <DashboardSection
+              title="포인트 추이"
+              action={
+                <Link
+                  to="/settlements?tab=sales"
+                  className="inline-flex items-center gap-1 text-caption-web text-text-secondary hover:text-text-brand"
                 >
-                  <div className="mb-4 grid grid-cols-2 gap-2">
-                    <DashboardMetricCard
-                      label="환불액"
-                      basis="선택 기간 합계"
-                      value={summary.refund}
-                      unit="P"
-                    />
-                    <DashboardMetricCard
-                      label="조정액"
-                      basis="선택 기간 합계"
-                      value={summary.adjustment}
-                      unit="P"
-                    />
-                  </div>
-                  <DashboardTrendChart
-                    key={'points-' + interval + range.startDate + range.endDate}
-                    title="충전·소진 추이"
-                    labels={trend.map((point) => point.label)}
-                    primary={{
-                      name: '충전액',
-                      values: trend.map((point) => point.charge),
-                    }}
-                    secondary={{
-                      name: '소진액',
-                      values: trend.map((point) => point.spend),
-                    }}
-                    unit="원"
-                  />
-                  <p className="mt-3 border-t border-border-subtle pt-3 text-caption-web text-text-secondary">
-                    1P = 1원 · 소진액에 과오 차감 정정 반영
-                  </p>
-                </DashboardSection>
+                  매출 현황
+                  <ExternalLink aria-hidden className="size-3.5" />
+                </Link>
+              }
+            >
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                <DashboardMetricCard
+                  label="환불액"
+                  basis="선택 기간 합계"
+                  value={sumAnalytics(sales.data, 'refundAmount')}
+                  unit="원"
+                />
+                <DashboardMetricCard
+                  label="조정액"
+                  basis="선택 기간 합계"
+                  value={sumAnalytics(sales.data, 'adjustAmount')}
+                  unit="P"
+                />
               </div>
-              <DashboardBreakdown
-                days={days}
-                previousDays={previousDays}
-                canCompare={canCompare}
-              />
-            </>
+              {sales.loading ? (
+                <p role="status">매출 데이터를 불러오는 중입니다.</p>
+              ) : sales.error ? (
+                <p>매출 데이터를 조회하지 못했습니다.</p>
+              ) : (
+                <DashboardTrendChart
+                  key={'points-' + interval + range.startDate + range.endDate}
+                  title="충전·소진 추이"
+                  labels={(sales.data?.items ?? []).map((item) => item.label)}
+                  primary={{
+                    name: '충전액',
+                    values: (sales.data?.items ?? []).map(
+                      (item) => item.chargeAmount,
+                    ),
+                  }}
+                  secondary={{
+                    name: '소진액',
+                    values: (sales.data?.items ?? []).map(
+                      (item) => item.spentAmount,
+                    ),
+                  }}
+                  unit="원"
+                />
+              )}
+              <p className="mt-3 border-t border-border-subtle pt-3 text-caption-web text-text-secondary">
+                1P = 1원 · 집계 중이거나 값이 없는 구간은 합계와 그래프 수치를
+                표시하지 않습니다.
+              </p>
+            </DashboardSection>
+          </div>
+          {hasUsagePeriod && (
+            <DashboardBreakdown
+              days={days}
+              previousDays={previousDays}
+              canCompare={canCompare}
+            />
           )}
         </>
       )}
@@ -236,33 +279,11 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
 };
 
 export const DashboardContent = () => {
-  const state = useDashboard();
+  const [usageData] = useState(getMockDashboardUsage);
   return (
     <section aria-label="대시보드">
       <h2 className="sr-only">대시보드</h2>
-      {state.status === 'loading' && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-xl border border-border-subtle bg-bg-surface p-12 text-center text-body-sm-web text-text-secondary"
-        >
-          대시보드 집계 데이터를 불러오고 있습니다.
-        </div>
-      )}
-      {state.status === 'error' && (
-        <div
-          role="alert"
-          className="space-y-4 rounded-xl border border-border-subtle bg-bg-surface p-8 text-center"
-        >
-          <p className="text-body-sm-web text-text-secondary">
-            집계 데이터를 불러오지 못했습니다. 다시 시도해 주세요.
-          </p>
-          <Button variant="neutral" onClick={state.retry}>
-            다시 시도
-          </Button>
-        </div>
-      )}
-      {state.status === 'success' && <DashboardReport data={state.data} />}
+      <DashboardReport data={usageData} />
     </section>
   );
 };

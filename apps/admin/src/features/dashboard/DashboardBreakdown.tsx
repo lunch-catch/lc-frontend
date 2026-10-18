@@ -95,6 +95,7 @@ export const DashboardBreakdown = ({
     });
   return (
     <DashboardSection
+      example
       title="지역·카테고리별 이용 현황"
       action={
         <SegmentedControl<BreakdownDimension>

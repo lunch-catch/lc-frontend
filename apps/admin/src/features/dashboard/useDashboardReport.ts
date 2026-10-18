@@ -8,7 +8,7 @@ import type {
   FunnelMetric,
 } from './dashboardTypes';
 import {
-  getDashboardRangeError,
+  getAnalyticsRangeError,
   getPreviousRange,
   getTrend,
   selectDays,
@@ -37,11 +37,7 @@ export const useDashboardReport = (data: DashboardDataset) => {
   const setMetric = (metric: FunnelMetric) => updateFilters({ metric });
   const setCompare = (compare: boolean) =>
     updateFilters({ compare: compare ? 'true' : 'false' });
-  const rangeError =
-    getDashboardRangeError(range, interval) ||
-    (range.startDate < data.availableFrom
-      ? `조회 가능한 기간은 ${data.availableFrom}부터입니다.`
-      : '');
+  const rangeError = getAnalyticsRangeError(range, interval);
   const validRange = !rangeError;
   const completedRange = {
     ...range,
@@ -52,21 +48,21 @@ export const useDashboardReport = (data: DashboardDataset) => {
   };
   const hasCompletedPeriod =
     validRange && completedRange.startDate <= completedRange.endDate;
-  const days = hasCompletedPeriod ? selectDays(data.days, completedRange) : [];
+  const hasUsagePeriod =
+    hasCompletedPeriod && completedRange.startDate >= data.availableFrom;
+  const days = hasUsagePeriod ? selectDays(data.days, completedRange) : [];
   const previousRange = hasCompletedPeriod
     ? getPreviousRange(completedRange)
     : undefined;
   const canCompare = Boolean(
     previousRange &&
     previousRange.startDate >= data.availableFrom &&
-    !getDashboardRangeError(previousRange, interval),
+    !getAnalyticsRangeError(previousRange, interval),
   );
   const previousDays =
     previousRange && canCompare ? selectDays(data.days, previousRange) : [];
   const summary = summarizeDays(days);
-  const previous = summarizeDays(previousDays);
-  const snapshot = days.at(-1);
-  const trend = hasCompletedPeriod
+  const trend = hasUsagePeriod
     ? getTrend(data.days, completedRange, interval)
     : [];
   // 이전 기간의 날짜를 같은 위치로 이동한 후 묶어 월·주 경계에서도 비교 구간을 일치시킨다.
@@ -76,7 +72,7 @@ export const useDashboardReport = (data: DashboardDataset) => {
       86_400_000
     : 0;
   const previousTrend =
-    hasCompletedPeriod && canCompare
+    hasUsagePeriod && canCompare
       ? getTrend(
           previousDays.map((day) => ({
             ...day,
@@ -89,7 +85,6 @@ export const useDashboardReport = (data: DashboardDataset) => {
   const validRatio = summary.totalImpressions
     ? (summary.impressions / summary.totalImpressions) * 100
     : null;
-  const pending = validRange && range.endDate >= data.today;
   return {
     range,
     completedRange,
@@ -103,16 +98,14 @@ export const useDashboardReport = (data: DashboardDataset) => {
     validRange,
     rangeError,
     hasCompletedPeriod,
+    hasUsagePeriod,
     days,
     previousRange,
     canCompare,
     previousDays,
     summary,
-    previous,
-    snapshot,
     trend,
     previousTrend,
     validRatio,
-    pending,
   };
 };

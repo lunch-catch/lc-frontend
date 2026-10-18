@@ -41,6 +41,7 @@ export const DashboardFunnel = ({
 
   return (
     <DashboardSection
+      example
       title="이용 추이"
       action={
         <Toggle
