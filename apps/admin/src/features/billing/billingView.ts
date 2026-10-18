@@ -6,8 +6,6 @@ import type {
   TableDensity,
 } from '@admin/components/DataTable';
 
-import type { BillingState } from './billingTypes';
-
 export const getMonthRange = (today: string): DateRangeValue => {
   const [year, month] = today.split('-').map(Number);
   return {
@@ -18,11 +16,6 @@ export const getMonthRange = (today: string): DateRangeValue => {
 export interface BillingTablePreferences {
   density: TableDensity;
   setDensity: Dispatch<SetStateAction<TableDensity>>;
-}
-export interface BillingTabProps {
-  state: BillingState;
-  today: string;
-  preferences: BillingTablePreferences;
 }
 export interface BillingCell {
   content: ReactNode;

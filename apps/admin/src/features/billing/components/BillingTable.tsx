@@ -10,7 +10,9 @@ import {
   DataTable,
   TableCell,
   TableEmpty,
+  TableError,
   TableHeaderCell,
+  TableLoading,
   TableRow,
   type TableSortDirection,
   useTableColumnSettings,
@@ -39,6 +41,8 @@ interface Sort {
 }
 
 interface BillingTableProps {
+  loading?: boolean;
+  error?: string;
   queryPrefix: string;
   preferences: BillingTablePreferences;
   columns: BillingColumn[];
@@ -66,6 +70,8 @@ export const BillingTable = ({
   extraFilters,
   onRowClick,
   preferences,
+  loading = false,
+  error,
 }: BillingTableProps) => {
   const tableColumns = columns.map((item) => ({
     align: item.align,
@@ -245,51 +251,65 @@ export const BillingTable = ({
           </tr>
         </thead>
         <tbody>
-          {!filteredRows.length && (
+          {loading ? (
             <tr>
-              <TableEmpty colSpan={columns.length}>
-                조회된 내역이 없습니다.
-              </TableEmpty>
+              <TableLoading colSpan={columns.length} />
             </tr>
+          ) : error ? (
+            <tr>
+              <TableError colSpan={columns.length} description={error} />
+            </tr>
+          ) : (
+            !filteredRows.length && (
+              <tr>
+                <TableEmpty colSpan={columns.length}>
+                  조회된 내역이 없습니다.
+                </TableEmpty>
+              </tr>
+            )
           )}
-          {filteredRows
-            .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-            .map((record) => {
-              const clickable = Boolean(onRowClick);
-              return (
-                <TableRow
-                  key={record.id}
-                  showDetailArrow={clickable}
-                  className={
-                    clickable
-                      ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary'
-                      : undefined
-                  }
-                  tabIndex={clickable ? 0 : undefined}
-                  role={clickable ? 'button' : undefined}
-                  aria-label={clickable ? record.id + ' 상세 보기' : undefined}
-                  onClick={
-                    clickable ? () => onRowClick?.(record.id) : undefined
-                  }
-                  onKeyDown={
-                    clickable
-                      ? (event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            onRowClick?.(record.id);
+          {!loading &&
+            !error &&
+            filteredRows
+              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+              .map((record) => {
+                const clickable = Boolean(onRowClick);
+                return (
+                  <TableRow
+                    key={record.id}
+                    showDetailArrow={clickable}
+                    className={
+                      clickable
+                        ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary'
+                        : undefined
+                    }
+                    tabIndex={clickable ? 0 : undefined}
+                    role={clickable ? 'button' : undefined}
+                    aria-label={
+                      clickable ? record.id + ' 상세 보기' : undefined
+                    }
+                    onClick={
+                      clickable ? () => onRowClick?.(record.id) : undefined
+                    }
+                    onKeyDown={
+                      clickable
+                        ? (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onRowClick?.(record.id);
+                            }
                           }
-                        }
-                      : undefined
-                  }
-                >
-                  {record.cells.map((item, index) => (
-                    <TableCell key={index} title={item.title}>
-                      {item.content}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              );
-            })}
+                        : undefined
+                    }
+                  >
+                    {record.cells.map((item, index) => (
+                      <TableCell key={index} title={item.title}>
+                        {item.content}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })}
         </tbody>
       </DataTable>
       <PaginationSummary {...pagination} />
