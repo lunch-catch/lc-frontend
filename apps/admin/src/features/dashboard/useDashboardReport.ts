@@ -18,6 +18,7 @@ import {
 
 export const useDashboardReport = (data: DashboardDataset) => {
   const { filters, updateFilters } = useUrlFilters('dashboard.', {
+    view: queryChoice(['owners', 'members'] as const, 'owners'),
     from: queryDate(shiftDate(data.completedThrough, -13)),
     to: queryDate(data.completedThrough),
     interval: queryChoice(['day', 'week', 'month'] as const, 'day'),
@@ -86,6 +87,8 @@ export const useDashboardReport = (data: DashboardDataset) => {
     ? (summary.impressions / summary.totalImpressions) * 100
     : null;
   return {
+    view: filters.view,
+    setView: (view: 'owners' | 'members') => updateFilters({ view }),
     range,
     completedRange,
     setRange,

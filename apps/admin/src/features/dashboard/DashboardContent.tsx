@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Button, DateRangePicker, SegmentedControl } from '@repo/ui';
+import { Button, DateRangePicker, SegmentedControl, Tabs } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 import { Clock3, ExternalLink } from 'lucide-react';
 
@@ -15,13 +15,13 @@ import {
   sumAnalytics,
 } from '@admin/features/analytics/analyticsUtils';
 
+import { DashboardActionQueue } from './DashboardActionQueue';
 import { DashboardBreakdown } from './DashboardBreakdown';
 import { DashboardFunnel } from './DashboardFunnel';
 import { DashboardMetricCard } from './DashboardMetricCard';
-import { DashboardOverview } from './DashboardOverview';
+import { DashboardMetricTrend } from './DashboardMetricTrend';
+import { DashboardOverview, DashboardSnapshots } from './DashboardOverview';
 import { DashboardRangeGuide } from './DashboardRangeGuide';
-import { DashboardSection } from './DashboardSection';
-import { DashboardTrendChart } from './DashboardTrendChart';
 import type { DashboardDataset, DashboardInterval } from './dashboardTypes';
 import { useDashboardMetrics } from './useDashboardMetrics';
 import { useDashboardReport } from './useDashboardReport';
@@ -29,12 +29,11 @@ import { useDashboardReport } from './useDashboardReport';
 const DashboardReport = ({ data }: { data: DashboardDataset }) => {
   const report = useDashboardReport(data);
   const {
+    view,
     range,
-    completedRange,
     interval,
     validRange,
     rangeError,
-    hasCompletedPeriod,
     hasUsagePeriod,
     days,
     summary,
@@ -55,30 +54,30 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
     query && comparison && !getAnalyticsRangeError(comparison, interval)
       ? { ...query, from: comparison.startDate, to: comparison.endDate }
       : null,
-    query && hasCompletedPeriod
-      ? { ...query, to: completedRange.endDate }
-      : null,
+    view,
   );
-  const sales = metrics.sales;
+  const { members, stores, sales } = metrics;
   const failures = [
-    metrics.members,
-    metrics.stores,
+    members,
+    stores,
     sales,
-    metrics.mismatches,
     metrics.previousMembers,
     metrics.previousStores,
     metrics.previousSales,
   ].filter((state) => state.error);
-  const mismatchLink =
-    '/settlements?' +
-    new URLSearchParams({
-      tab: 'mismatches',
-      'mismatches.from': range.startDate,
-      'mismatches.to': completedRange.endDate,
-    });
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <DashboardActionQueue />
+      <Tabs
+        items={[
+          { value: 'owners', label: '점주 현황' },
+          { value: 'members', label: '사용자 현황' },
+        ]}
+        value={view}
+        onValueChange={(value) => {
+          if (value === 'owners' || value === 'members') report.setView(value);
+        }}
+      />
       <div className="relative z-30 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -139,11 +138,13 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-caption-web text-text-secondary">
           <span className="inline-flex items-center gap-1.5">
             <Clock3 aria-hidden className="size-3.5" />
-            {[
-              ['회원', metrics.members.data?.aggregatedAt],
-              ['입점', metrics.stores.data?.aggregatedAt],
-              ['매출', sales.data?.aggregatedAt],
-            ]
+            {(view === 'members'
+              ? [['회원', metrics.members.data?.aggregatedAt]]
+              : [
+                  ['입점', metrics.stores.data?.aggregatedAt],
+                  ['매출', metrics.sales.data?.aggregatedAt],
+                ]
+            )
               .map(
                 ([name, at]) =>
                   name + ' 집계 ' + (at ? formatDateTime(at) : '—'),
@@ -190,88 +191,99 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
               </Button>
             </div>
           )}
-          <DashboardOverview metrics={metrics} mismatchLink={mismatchLink} />
-          <div className="grid items-stretch gap-4 xl:grid-cols-2">
-            {hasUsagePeriod ? (
-              <DashboardFunnel
-                summary={summary}
-                trend={trend}
-                previousTrend={report.previousTrend}
-                metric={report.metric}
-                onMetricChange={report.setMetric}
-                compare={report.compare}
-                canCompare={canCompare}
-                onCompareChange={report.setCompare}
-                validRatio={report.validRatio}
-              />
-            ) : (
-              <p className="rounded-xl border border-border-subtle bg-bg-surface p-5 text-body-sm-web text-text-secondary">
-                선택한 기간에는 이용현황 예시 데이터가 없습니다.
-              </p>
-            )}
-            <DashboardSection
-              title="포인트 추이"
-              action={
-                <Link
-                  to="/settlements?tab=sales"
-                  className="inline-flex items-center gap-1 text-caption-web text-text-secondary hover:text-text-brand"
-                >
-                  매출 현황
-                  <ExternalLink aria-hidden className="size-3.5" />
-                </Link>
-              }
-            >
-              <div className="mb-4 grid grid-cols-2 gap-2">
+          <DashboardOverview metrics={metrics} view={view} />
+          {view === 'members' ? (
+            <>
+              <div className="grid items-stretch gap-4 xl:grid-cols-2">
+                <DashboardMetricTrend
+                  title="신규 회원 추이"
+                  resource={members}
+                  primary={{ name: '신규 회원', field: 'newMemberCount' }}
+                  unit="명"
+                />
+                <DashboardMetricTrend
+                  title="활성 회원 추이"
+                  resource={members}
+                  primary={{
+                    name: '일평균 활성 회원',
+                    field: 'avgDailyActiveMembers',
+                  }}
+                  unit="명"
+                  note="각 구간의 일평균입니다. 주간·월간 순수 활성 회원 수와는 다릅니다."
+                />
+              </div>
+              {hasUsagePeriod ? (
+                <>
+                  <DashboardFunnel
+                    summary={summary}
+                    trend={trend}
+                    previousTrend={report.previousTrend}
+                    metric={report.metric}
+                    onMetricChange={report.setMetric}
+                    compare={report.compare}
+                    canCompare={canCompare}
+                    onCompareChange={report.setCompare}
+                    validRatio={report.validRatio}
+                  />
+                  <DashboardBreakdown
+                    days={days}
+                    previousDays={previousDays}
+                    canCompare={canCompare}
+                  />
+                </>
+              ) : (
+                <p className="text-body-sm-web text-text-secondary">
+                  선택한 기간에는 이용현황 예시 데이터가 없습니다.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="grid items-stretch gap-4 xl:grid-cols-2">
+                <DashboardMetricTrend
+                  title="충전·소진 추이"
+                  resource={sales}
+                  primary={{ name: '충전액', field: 'chargeAmount' }}
+                  secondary={{ name: '소진액', field: 'spentAmount' }}
+                  unit="원"
+                  note="1P = 1원 · 소진액에는 과오 차감 정정이 반영됩니다."
+                  action={
+                    <Link
+                      to="/settlements?tab=sales"
+                      className="inline-flex items-center gap-1 rounded-md text-caption-web text-text-secondary hover:text-text-brand focus-visible:outline-2 focus-visible:outline-action-primary"
+                    >
+                      매출 현황
+                      <ExternalLink aria-hidden className="size-3.5" />
+                    </Link>
+                  }
+                />
+                <DashboardMetricTrend
+                  title="신규 입점 추이"
+                  resource={stores}
+                  primary={{ name: '신규 입점 가게', field: 'newStoreCount' }}
+                  unit="개"
+                  note="선택한 구간에 최종 등록한 가게 수입니다."
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <DashboardMetricCard
                   label="환불액"
                   basis="선택 기간 합계"
                   value={sumAnalytics(sales.data, 'refundAmount')}
                   unit="원"
+                  size="compact"
                 />
                 <DashboardMetricCard
                   label="조정액"
                   basis="선택 기간 합계"
                   value={sumAnalytics(sales.data, 'adjustAmount')}
                   unit="P"
+                  size="compact"
                 />
               </div>
-              {sales.loading ? (
-                <p role="status">매출 데이터를 불러오는 중입니다.</p>
-              ) : sales.error ? (
-                <p>매출 데이터를 조회하지 못했습니다.</p>
-              ) : (
-                <DashboardTrendChart
-                  key={'points-' + interval + range.startDate + range.endDate}
-                  title="충전·소진 추이"
-                  labels={(sales.data?.items ?? []).map((item) => item.label)}
-                  primary={{
-                    name: '충전액',
-                    values: (sales.data?.items ?? []).map(
-                      (item) => item.chargeAmount,
-                    ),
-                  }}
-                  secondary={{
-                    name: '소진액',
-                    values: (sales.data?.items ?? []).map(
-                      (item) => item.spentAmount,
-                    ),
-                  }}
-                  unit="원"
-                />
-              )}
-              <p className="mt-3 border-t border-border-subtle pt-3 text-caption-web text-text-secondary">
-                1P = 1원 · 집계 중이거나 값이 없는 구간은 합계와 그래프 수치를
-                표시하지 않습니다.
-              </p>
-            </DashboardSection>
-          </div>
-          {hasUsagePeriod && (
-            <DashboardBreakdown
-              days={days}
-              previousDays={previousDays}
-              canCompare={canCompare}
-            />
+            </>
           )}
+          <DashboardSnapshots metrics={metrics} view={view} />
         </>
       )}
     </div>
