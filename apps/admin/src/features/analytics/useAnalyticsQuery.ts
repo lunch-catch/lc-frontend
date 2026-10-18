@@ -9,11 +9,11 @@ export const useAnalyticsQuery = <T>(
   query: AnalyticsQuery | null,
 ) => {
   const { admin } = useAdminAuth();
+  const adminId = admin?.adminId;
   const [revision, setRevision] = useState(0);
-  const [result, setResult] = useState<{
-    key: string;
-    data?: T;
-    error?: string;
+  const [cache, setCache] = useState<{
+    adminId: number;
+    entries: Map<string, { data?: T; error?: string }>;
   } | null>(null);
   const retry = useCallback(() => setRevision((value) => value + 1), []);
   const from = query?.from;
@@ -25,16 +25,30 @@ export const useAnalyticsQuery = <T>(
       : null;
 
   useEffect(() => {
-    if (!key || !from || !to || !period) return;
+    if (!key || !from || !to || !period || adminId === undefined) return;
+    const save = (entry: { data?: T; error?: string }) => {
+      setCache((previous) => {
+        const entries = new Map(
+          previous?.adminId === adminId ? previous.entries : [],
+        );
+        entries.delete(key);
+        entries.set(key, entry);
+        // 최근 조건만 보관해 기간 선택·재시도로 메모리가 계속 늘어나지 않게 한다.
+        if (entries.size > 8) {
+          const oldest = entries.keys().next().value;
+          if (oldest !== undefined) entries.delete(oldest);
+        }
+        return { adminId, entries };
+      });
+    };
     const controller = new AbortController();
     void load({ period, from, to }, controller.signal).then(
       (data) => {
-        if (!controller.signal.aborted) setResult({ key, data });
+        if (!controller.signal.aborted) save({ data });
       },
       (cause: unknown) => {
         if (!controller.signal.aborted)
-          setResult({
-            key,
+          save({
             error:
               cause instanceof ApiError && cause.code === 'ANALYTICS-001'
                 ? '조회 기간과 집계 단위를 확인해 주세요.'
@@ -45,9 +59,12 @@ export const useAnalyticsQuery = <T>(
       },
     );
     return () => controller.abort();
-  }, [key, from, to, period, load]);
-  // 조건이나 계정이 바뀌면 이전 응답을 새 조건의 수치로 표시하지 않는다.
-  const current = result?.key === key ? result : null;
+  }, [key, from, to, period, load, adminId]);
+  // 같은 계정·조건의 결과만 재사용하며, 다시 진입하면 백그라운드에서 최신 값으로 갱신한다.
+  const current =
+    key !== null && cache !== null && cache.adminId === adminId
+      ? cache.entries.get(key)
+      : undefined;
   return {
     data: current?.data,
     error: current?.error,
