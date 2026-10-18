@@ -39,27 +39,40 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
   });
   return (
     <DashboardSection title={title} action={action}>
-      {loading ? (
-        <p
-          role="status"
-          className="py-12 text-center text-body-sm-web text-text-secondary"
-        >
-          지표를 불러오고 있습니다.
-        </p>
-      ) : error ? (
-        <p className="py-12 text-center text-body-sm-web text-text-secondary">
-          지표를 조회하지 못했습니다.
-        </p>
-      ) : (
-        <DashboardTrendChart
-          key={`${data?.period}:${data?.from}:${data?.to}`}
-          title={title}
-          labels={rows.map((item) => item.label)}
-          primary={series(primary)}
-          secondary={secondary ? series(secondary) : undefined}
-          unit={unit}
-        />
-      )}
+      <div className="min-h-72">
+        {loading ? (
+          <div
+            role="status"
+            aria-label="지표를 불러오고 있습니다."
+            className="flex h-72 flex-col gap-3"
+          >
+            <div aria-hidden className="h-14 rounded-lg bg-bg-page" />
+            <div
+              aria-hidden
+              className="flex flex-1 flex-col justify-between px-4 py-5"
+            >
+              {[0, 1, 2, 3, 4].map((line) => (
+                <div
+                  key={line}
+                  className="border-t border-dashed border-border-subtle"
+                />
+              ))}
+            </div>
+          </div>
+        ) : error ? (
+          <p className="flex h-72 items-center justify-center text-body-sm-web text-text-secondary">
+            지표를 조회하지 못했습니다.
+          </p>
+        ) : (
+          <DashboardTrendChart
+            title={title}
+            labels={rows.map((item) => item.label)}
+            primary={series(primary)}
+            secondary={secondary ? series(secondary) : undefined}
+            unit={unit}
+          />
+        )}
+      </div>
       {note && (
         <p className="mt-3 border-t border-border-subtle pt-3 text-caption-web text-text-secondary">
           {note}

@@ -12,6 +12,7 @@ interface DashboardMetricCardProps {
   unit?: string;
   basis?: string;
   description?: string;
+  loading?: boolean;
   emphasis?: boolean;
   size?: 'default' | 'compact';
   selected?: boolean;
@@ -26,6 +27,7 @@ export const DashboardMetricCard = ({
   unit = '건',
   basis,
   description,
+  loading = false,
   emphasis = false,
   size = 'default',
   selected = false,
@@ -58,7 +60,7 @@ export const DashboardMetricCard = ({
             'aria-pressed': selected,
           }
         : {})}
-      className={`relative min-w-0 overflow-hidden rounded-xl border text-left transition-colors ${size === 'compact' ? 'p-3' : 'p-4'} ${surfaceClassName} ${interactionClassName}`}
+      className={`relative min-w-0 overflow-hidden rounded-xl border text-left transition-colors ${size === 'compact' ? 'min-h-20 p-3' : 'min-h-32 p-4'} ${surfaceClassName} ${interactionClassName}`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-body-sm-web font-medium text-text-secondary">
@@ -77,15 +79,27 @@ export const DashboardMetricCard = ({
         )}
       </div>
       <p
-        className={`mt-2 flex flex-wrap items-baseline gap-1 font-semibold tracking-tight tabular-nums ${size === 'compact' ? 'text-body-web' : 'text-h2-web sm:text-h1'} ${emphasis && value !== null ? 'text-text-brand' : 'text-text-primary'}`}
+        className={`mt-2 flex flex-wrap items-baseline gap-1 font-semibold tracking-tight tabular-nums ${size === 'compact' ? 'min-h-6 text-body-web' : 'min-h-9 text-h2-web sm:text-h1'} ${emphasis && value !== null ? 'text-text-brand' : 'text-text-primary'}`}
       >
-        {value === null ? '—' : formatNumber(value)}
+        {loading ? (
+          <>
+            <span className="sr-only">불러오는 중</span>
+            <span
+              aria-hidden
+              className="inline-block h-6 w-20 rounded bg-surface-subtle"
+            />
+          </>
+        ) : value === null ? (
+          '—'
+        ) : (
+          formatNumber(value)
+        )}
         <span className="text-body-sm-web font-normal text-text-secondary">
-          {value === null ? emptyLabel : unit}
+          {loading ? '' : value === null ? emptyLabel : unit}
         </span>
       </p>
-      {(canCompare || description) && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-caption-web">
+      {(canCompare || description || size === 'default') && (
+        <div className="mt-2 flex min-h-4 flex-wrap items-center justify-between gap-x-2 gap-y-1 text-caption-web">
           {canCompare && (
             <span
               className={`inline-flex items-center gap-1 ${changeTextClassName}`}

@@ -271,6 +271,7 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                   basis="선택 기간 합계"
                   value={sumAnalytics(sales.data, 'refundAmount')}
                   unit="원"
+                  loading={sales.loading}
                   size="compact"
                 />
                 <DashboardMetricCard
@@ -278,6 +279,7 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                   basis="선택 기간 합계"
                   value={sumAnalytics(sales.data, 'adjustAmount')}
                   unit="P"
+                  loading={sales.loading}
                   size="compact"
                 />
               </div>

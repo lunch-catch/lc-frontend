@@ -1,5 +1,5 @@
 import type { PointerEvent } from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { formatNumber } from '@repo/utils';
 
 import {
@@ -43,9 +43,12 @@ export const DashboardTrendChart = ({
   const [width, setWidth] = useState(640);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const hasLabels = labels.length > 0;
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = chartRef.current;
     if (!container) return;
+    setWidth(
+      Math.max(160, Math.round(container.getBoundingClientRect().width)),
+    );
     // 패널 너비에 맞춰 좌표계를 바꿔 좁은 화면에서도 축 글자가 축소되지 않게 한다.
     const observer = new ResizeObserver(([entry]) => {
       setWidth(Math.max(160, Math.round(entry.contentRect.width)));

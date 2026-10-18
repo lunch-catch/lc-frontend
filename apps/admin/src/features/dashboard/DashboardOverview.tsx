@@ -55,6 +55,7 @@ export const DashboardOverview = ({
             basis: '선택 기간 합계',
             unit: '명',
             emptyLabel: hint(members),
+            loading: members.loading,
             emphasis: true,
           },
           // 구간별로 반올림한 서버의 일평균을 다시 평균 내지 않는다.
@@ -65,6 +66,7 @@ export const DashboardOverview = ({
             basis: member ? member.label + ' 구간' : '마지막 구간',
             unit: '명',
             emptyLabel: hint(members),
+            loading: members.loading,
             description: '그날 이벤트가 발생한 회원 · 마지막 구간 일평균',
           },
         ]
@@ -76,6 +78,7 @@ export const DashboardOverview = ({
             basis: '선택 기간 합계',
             unit: 'P',
             emptyLabel: hint(sales),
+            loading: sales.loading,
             emphasis: true,
           },
           {
@@ -85,6 +88,7 @@ export const DashboardOverview = ({
             basis: '선택 기간 합계',
             unit: '원',
             emptyLabel: hint(sales),
+            loading: sales.loading,
           },
           {
             label: '활성 캠페인',
@@ -93,6 +97,7 @@ export const DashboardOverview = ({
             basis: basis(stores),
             unit: '개',
             emptyLabel: hint(stores),
+            loading: stores.loading,
           },
         ];
   return (
@@ -165,6 +170,7 @@ export const DashboardSnapshots = ({
               size="compact"
               basis={basis(resource)}
               emptyLabel={hint(resource)}
+              loading={resource.loading}
             />
           );
         })}
