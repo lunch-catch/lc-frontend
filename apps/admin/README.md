@@ -55,7 +55,7 @@ src/
 │   ├── billing/        # 포인트 · 정산
 │   ├── fraud/          # 부정 관리
 │   └── admin-account/  # 관리자 계정
-├── components/     # 여러 기능이 함께 쓰는 컴포넌트
+├── ui/             # 여러 기능이 함께 쓰는 컴포넌트
 ├── hooks/          # 여러 기능이 함께 쓰는 훅
 ├── layout/         # 사이드바 레이아웃
 ├── api/            # 서버 요청 함수와 mock 데이터
