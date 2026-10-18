@@ -5,8 +5,9 @@ import { formatPoints } from '@repo/utils';
 import { adjustPoints } from '@admin/api/pointAdjustments';
 import type { SettlementMismatch } from '@admin/api/settlementMismatches';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import { getPointAdjustmentError } from '@admin/features/billing/billingManagementUtils';
-import { useBillingMutation } from '@admin/features/billing/useBillingMutation';
+
+import { getPointAdjustmentError } from '../billingManagementUtils';
+import { useBillingMutation } from '../useBillingMutation';
 
 interface PointAdjustmentModalProps {
   ownerId?: string;

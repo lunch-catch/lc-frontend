@@ -9,22 +9,23 @@ import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { type AdminRefund, getRefunds } from '@admin/api/refunds';
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+
 import {
   getBillingRangeError,
   isBillingInputId,
   refundStatusLabels,
   refundVariants,
-} from '@admin/features/billing/billingManagementUtils';
-import { refundQuery } from '@admin/features/billing/billingQuery';
-import type { BillingTablePreferences } from '@admin/features/billing/billingView';
+} from '../billingManagementUtils';
+import { refundQuery } from '../billingQuery';
+import type { BillingTablePreferences } from '../billingView';
 import {
   type BillingServerColumn,
   BillingServerTable,
-} from '@admin/features/billing/components/BillingServerTable';
-import { RefundDetails } from '@admin/features/billing/components/RefundDetails';
-import { useBillingResource } from '@admin/features/billing/useBillingResource';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+} from '../components/BillingServerTable';
+import { RefundDetails } from '../components/RefundDetails';
+import { useBillingResource } from '../useBillingResource';
 
 const columns: BillingServerColumn<AdminRefund>[] = [
   {

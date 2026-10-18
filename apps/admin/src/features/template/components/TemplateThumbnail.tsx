@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { createSelectablePreviewHtml } from '@admin/features/template/templateSelection';
+import { createSelectablePreviewHtml } from '../templateSelection';
 
 const previewWidth = 420;
 const previewHeight = (previewWidth * 297) / 210;

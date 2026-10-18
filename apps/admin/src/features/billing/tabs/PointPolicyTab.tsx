@@ -8,15 +8,16 @@ import {
   getPointPolicyHistory,
   type PointPolicy,
 } from '@admin/api/pointPolicy';
-import { policyHistoryQuery } from '@admin/features/billing/billingQuery';
-import type { BillingTablePreferences } from '@admin/features/billing/billingView';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+
+import { policyHistoryQuery } from '../billingQuery';
+import type { BillingTablePreferences } from '../billingView';
 import {
   type BillingServerColumn,
   BillingServerTable,
-} from '@admin/features/billing/components/BillingServerTable';
-import { PointPolicyEditor } from '@admin/features/billing/components/PointPolicyEditor';
-import { useBillingResource } from '@admin/features/billing/useBillingResource';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+} from '../components/BillingServerTable';
+import { PointPolicyEditor } from '../components/PointPolicyEditor';
+import { useBillingResource } from '../useBillingResource';
 
 const columns: BillingServerColumn<PointPolicy>[] = [
   {

@@ -22,18 +22,19 @@ import {
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { paymentQuery } from '@admin/features/billing/billingQuery';
-import type { BillingTablePreferences } from '@admin/features/billing/billingView';
-import { PaymentDetails } from '@admin/features/billing/components/PaymentDetails';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+
+import { paymentQuery } from '../billingQuery';
+import type { BillingTablePreferences } from '../billingView';
+import { PaymentDetails } from '../components/PaymentDetails';
 import {
   getPaymentFilterError,
   paymentSearchOptions,
   paymentStatusLabels,
   paymentVariants,
-} from '@admin/features/billing/paymentUtils';
-import { usePayments } from '@admin/features/billing/usePayments';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+} from '../paymentUtils';
+import { usePayments } from '../usePayments';
 
 const columns: (DataTableColumn & { key: keyof AdminPayment })[] = [
   { key: 'requestedAt', label: '요청 시각', width: '12%', minWidth: 145 },

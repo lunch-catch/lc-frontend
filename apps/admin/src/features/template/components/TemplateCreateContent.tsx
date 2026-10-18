@@ -4,12 +4,12 @@ import { Code2, MousePointer2, Send, X } from 'lucide-react';
 
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+
 import {
   buildSelectedTemplatePrompt,
   type TemplateSelection,
-} from '@admin/features/template/templateSelection';
-import { useTemplateEditor } from '@admin/features/template/useTemplateEditor';
-
+} from '../templateSelection';
+import { useTemplateEditor } from '../useTemplateEditor';
 import { SelectableTemplatePreview } from './SelectableTemplatePreview';
 import { TemplateChatBubble } from './TemplateChatBubble';
 import { TemplateHtmlCode } from './TemplateHtmlCode';

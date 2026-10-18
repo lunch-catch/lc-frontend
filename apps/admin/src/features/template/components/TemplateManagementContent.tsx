@@ -4,12 +4,12 @@ import { Plus } from 'lucide-react';
 
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import type { PosterTemplate } from '@admin/features/template/templateTypes';
-import { getTemplateError } from '@admin/features/template/templateUtils';
 import { queryChoice, queryText } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 
+import type { PosterTemplate } from '../templateTypes';
+import { getTemplateError } from '../templateUtils';
 import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
 

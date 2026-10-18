@@ -19,12 +19,6 @@ import {
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { inDateRange } from '@admin/features/billing/billingUtils';
-import type {
-  BillingColumn,
-  BillingRecord,
-  BillingTablePreferences,
-} from '@admin/features/billing/billingView';
 import {
   queryChoice,
   queryDate,
@@ -34,6 +28,13 @@ import {
 } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+
+import { inDateRange } from '../billingUtils';
+import type {
+  BillingColumn,
+  BillingRecord,
+  BillingTablePreferences,
+} from '../billingView';
 
 interface Sort {
   index: number;

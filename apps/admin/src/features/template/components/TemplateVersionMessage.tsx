@@ -1,4 +1,4 @@
-import type { TemplateVersionAvailability } from '@admin/features/template/templateTypes';
+import type { TemplateVersionAvailability } from '../templateTypes';
 
 interface TemplateVersionMessageProps {
   versionNumber: number;

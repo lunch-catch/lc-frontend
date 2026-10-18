@@ -7,21 +7,22 @@ import {
   type SettlementMismatch,
 } from '@admin/api/settlementMismatches';
 import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+
 import {
   getBillingRangeError,
   mismatchLabels,
   resolutionLabels,
-} from '@admin/features/billing/billingManagementUtils';
-import { mismatchQuery } from '@admin/features/billing/billingQuery';
-import type { BillingTablePreferences } from '@admin/features/billing/billingView';
-import { DetailItem } from '@admin/features/billing/components/BillingDetails';
+} from '../billingManagementUtils';
+import { mismatchQuery } from '../billingQuery';
+import type { BillingTablePreferences } from '../billingView';
+import { DetailItem } from '../components/BillingDetails';
 import {
   type BillingServerColumn,
   BillingServerTable,
-} from '@admin/features/billing/components/BillingServerTable';
-import { PointAdjustmentModal } from '@admin/features/billing/components/PointAdjustmentModal';
-import { useBillingResource } from '@admin/features/billing/useBillingResource';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+} from '../components/BillingServerTable';
+import { PointAdjustmentModal } from '../components/PointAdjustmentModal';
+import { useBillingResource } from '../useBillingResource';
 
 const columns: BillingServerColumn<SettlementMismatch>[] = [
   {
