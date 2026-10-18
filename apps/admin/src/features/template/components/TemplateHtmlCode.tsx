@@ -1,11 +1,12 @@
 import { type MouseEvent, useEffect, useMemo, useRef } from 'react';
 
 import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
+
 import {
   findTemplateCodeElement,
   getTemplateCodeElements,
   type TemplateSelection,
-} from '@admin/features/template/templateSelection';
+} from '../templateSelection';
 
 interface TemplateHtmlCodeProps {
   html: string;

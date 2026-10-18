@@ -4,7 +4,7 @@ import {
   createSelectablePreviewHtml,
   selectTemplateElement,
   type TemplateSelection,
-} from '@admin/features/template/templateSelection';
+} from '../templateSelection';
 
 interface SelectableTemplatePreviewProps {
   html: string;

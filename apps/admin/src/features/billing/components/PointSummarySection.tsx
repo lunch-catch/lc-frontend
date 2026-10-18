@@ -22,15 +22,16 @@ import {
   useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { getSummaryQuery } from '@admin/features/billing/billingQuery';
-import type { BillingTablePreferences } from '@admin/features/billing/billingView';
-import { getMonthRange } from '@admin/features/billing/billingView';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+
+import { getSummaryQuery } from '../billingQuery';
+import type { BillingTablePreferences } from '../billingView';
+import { getMonthRange } from '../billingView';
 import {
   getPointSummaryRangeError,
   pointSummaryPeriods,
-} from '@admin/features/billing/pointSummaryUtils';
-import { usePointSummary } from '@admin/features/billing/usePointSummary';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+} from '../pointSummaryUtils';
+import { usePointSummary } from '../usePointSummary';
 
 const amounts: { key: keyof Omit<PointSummaryItem, 'label'>; label: string }[] =
   [

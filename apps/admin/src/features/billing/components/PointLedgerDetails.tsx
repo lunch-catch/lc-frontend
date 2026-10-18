@@ -4,8 +4,9 @@ import { formatDateTime, formatPoints } from '@repo/utils';
 import { ArrowRight, Check, Copy } from 'lucide-react';
 
 import type { PointLedgerItem } from '@admin/api/pointLedger';
-import { ledgerTypeLabels } from '@admin/features/billing/billingUtils';
-import { DetailItem } from '@admin/features/billing/components/BillingDetails';
+
+import { ledgerTypeLabels } from '../billingUtils';
+import { DetailItem } from './BillingDetails';
 
 const sourceLabels = {
   REALTIME: '실시간 처리',

@@ -14,7 +14,8 @@ import {
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
 import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
-import type { BillingTablePreferences } from '@admin/features/billing/billingView';
+
+import type { BillingTablePreferences } from '../billingView';
 
 export interface BillingServerColumn<T> extends DataTableColumn {
   key: string;

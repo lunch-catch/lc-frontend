@@ -5,12 +5,9 @@ import { formatDateTime, formatPoints } from '@repo/utils';
 import { ApiError } from '@admin/api/client';
 import { type AdminRefund, processRefund } from '@admin/api/refunds';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import {
-  refundStatusLabels,
-  refundVariants,
-} from '@admin/features/billing/billingManagementUtils';
-import { useBillingMutation } from '@admin/features/billing/useBillingMutation';
 
+import { refundStatusLabels, refundVariants } from '../billingManagementUtils';
+import { useBillingMutation } from '../useBillingMutation';
 import { DetailItem } from './BillingDetails';
 
 interface RefundDetailsProps {

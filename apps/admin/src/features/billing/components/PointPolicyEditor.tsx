@@ -5,8 +5,9 @@ import { Plus, X } from 'lucide-react';
 import { type PointPolicy, savePointPolicy } from '@admin/api/pointPolicy';
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
 import { ScrollArea } from '@admin/components/ScrollArea/ScrollArea';
-import { getPointPolicyError } from '@admin/features/billing/billingManagementUtils';
-import { useBillingMutation } from '@admin/features/billing/useBillingMutation';
+
+import { getPointPolicyError } from '../billingManagementUtils';
+import { useBillingMutation } from '../useBillingMutation';
 
 interface PointPolicyEditorProps {
   policy: PointPolicy;

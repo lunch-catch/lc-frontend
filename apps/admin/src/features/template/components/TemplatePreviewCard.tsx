@@ -1,8 +1,7 @@
 ﻿import { Button, StatusBadge, Toggle } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 
-import type { PosterTemplate } from '@admin/features/template/templateTypes';
-
+import type { PosterTemplate } from '../templateTypes';
 import { TemplateThumbnail } from './TemplateThumbnail';
 
 export interface TemplatePreviewCardProps {

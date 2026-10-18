@@ -22,15 +22,16 @@ import {
   sumAnalytics,
 } from '@admin/features/analytics/analyticsUtils';
 import { useAnalyticsQuery } from '@admin/features/analytics/useAnalyticsQuery';
+import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+
 import type {
   BillingColumn,
   BillingRecord,
   BillingTablePreferences,
-} from '@admin/features/billing/billingView';
-import { cell } from '@admin/features/billing/billingView';
-import { BillingTable } from '@admin/features/billing/components/BillingTable';
-import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+} from '../billingView';
+import { cell } from '../billingView';
+import { BillingTable } from '../components/BillingTable';
 
 const amountFields = [
   'chargeAmount',

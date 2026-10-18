@@ -4,13 +4,13 @@ import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { ApiError } from '@admin/api/client';
 import { type AdminPayment, recheckPayment } from '@admin/api/payments';
+
 import {
   getPaymentError,
   paymentStatusLabels,
   paymentVariants,
   reconciliationLabels,
-} from '@admin/features/billing/paymentUtils';
-
+} from '../paymentUtils';
 import { DetailItem } from './BillingDetails';
 
 interface PaymentDetailsProps {

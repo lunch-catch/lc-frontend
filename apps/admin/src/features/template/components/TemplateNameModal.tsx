@@ -2,7 +2,8 @@
 import { Button, Input } from '@repo/ui';
 
 import { AdminModal } from '@admin/components/AdminModal/AdminModal';
-import { getValidTemplateName } from '@admin/features/template/templateUtils';
+
+import { getValidTemplateName } from '../templateUtils';
 
 interface TemplateNameModalProps {
   onClose: () => void;

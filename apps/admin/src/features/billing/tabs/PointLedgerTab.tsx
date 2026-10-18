@@ -16,19 +16,17 @@ import {
   useTableColumnSettings,
 } from '@admin/components/DataTable';
 import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { getLedgerQuery } from '@admin/features/billing/billingQuery';
-import { ledgerTypeLabels } from '@admin/features/billing/billingUtils';
-import {
-  type BillingTablePreferences,
-  getMonthRange,
-} from '@admin/features/billing/billingView';
-import { PointAdjustmentModal } from '@admin/features/billing/components/PointAdjustmentModal';
-import { PointLedgerDetails } from '@admin/features/billing/components/PointLedgerDetails';
-import { PointSummarySection } from '@admin/features/billing/components/PointSummarySection';
-import { isPositivePointId } from '@admin/features/billing/pointSummaryUtils';
-import { usePointLedger } from '@admin/features/billing/usePointLedger';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+
+import { getLedgerQuery } from '../billingQuery';
+import { ledgerTypeLabels } from '../billingUtils';
+import { type BillingTablePreferences, getMonthRange } from '../billingView';
+import { PointAdjustmentModal } from '../components/PointAdjustmentModal';
+import { PointLedgerDetails } from '../components/PointLedgerDetails';
+import { PointSummarySection } from '../components/PointSummarySection';
+import { isPositivePointId } from '../pointSummaryUtils';
+import { usePointLedger } from '../usePointLedger';
 
 const columns: DataTableColumn[] = [
   { key: 'createdAt', label: '일시', width: '20%' },
