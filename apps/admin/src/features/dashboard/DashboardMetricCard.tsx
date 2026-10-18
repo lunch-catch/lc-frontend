@@ -12,6 +12,8 @@ interface DashboardMetricCardProps {
   unit?: string;
   basis?: string;
   description?: string;
+  emphasis?: boolean;
+  size?: 'default' | 'compact';
   selected?: boolean;
   onSelect?: () => void;
 }
@@ -24,6 +26,8 @@ export const DashboardMetricCard = ({
   unit = '건',
   basis,
   description,
+  emphasis = false,
+  size = 'default',
   selected = false,
   onSelect,
 }: DashboardMetricCardProps) => {
@@ -54,7 +58,7 @@ export const DashboardMetricCard = ({
             'aria-pressed': selected,
           }
         : {})}
-      className={`relative min-w-0 overflow-hidden rounded-xl border p-4 text-left transition-colors ${surfaceClassName} ${interactionClassName}`}
+      className={`relative min-w-0 overflow-hidden rounded-xl border text-left transition-colors ${size === 'compact' ? 'p-3' : 'p-4'} ${surfaceClassName} ${interactionClassName}`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-body-sm-web font-medium text-text-secondary">
@@ -72,7 +76,9 @@ export const DashboardMetricCard = ({
           />
         )}
       </div>
-      <p className="mt-2 flex flex-wrap items-baseline gap-1 text-h2-web font-semibold tracking-tight tabular-nums text-text-primary sm:text-h1">
+      <p
+        className={`mt-2 flex flex-wrap items-baseline gap-1 font-semibold tracking-tight tabular-nums ${size === 'compact' ? 'text-body-web' : 'text-h2-web sm:text-h1'} ${emphasis && value !== null ? 'text-text-brand' : 'text-text-primary'}`}
+      >
         {value === null ? '—' : formatNumber(value)}
         <span className="text-body-sm-web font-normal text-text-secondary">
           {value === null ? emptyLabel : unit}
