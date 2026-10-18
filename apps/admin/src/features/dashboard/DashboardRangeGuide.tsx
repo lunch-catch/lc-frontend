@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Info } from 'lucide-react';
 
-import { dashboardRangeLimits } from './dashboardUtils';
+import { analyticsRangeLimits } from '@admin/features/analytics/analyticsDateUtils';
 
 export const DashboardRangeGuide = () => {
   const id = useId();
@@ -78,10 +78,8 @@ export const DashboardRangeGuide = () => {
           className="absolute left-full top-1/2 z-40 w-max max-w-[calc(100vw-2rem)] px-1"
         >
           <div className="rounded-sm border border-border-subtle bg-bg-surface px-2 py-1 text-caption-web text-text-primary shadow-sm">
-            일별 최대 {dashboardRangeLimits.day}일 · 주별 최대{' '}
-            {dashboardRangeLimits.week}주 · 월별 최대{' '}
-            {dashboardRangeLimits.month}
-            개월. 주별은 월요일 기준입니다.
+            최대 {analyticsRangeLimits.day}일까지 일별로 조회합니다. 7일·30일은
+            어제까지이며, 오늘 데이터는 집계 중일 수 있습니다.
           </div>
         </div>
       )}

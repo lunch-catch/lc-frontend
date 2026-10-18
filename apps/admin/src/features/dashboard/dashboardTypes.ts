@@ -27,49 +27,24 @@ export interface DashboardSegment extends UsageCounts {
   spend: number;
 }
 
-/** 실제 API 응답과 분리된 화면 모델. 누적·상태 지표는 기간 말 스냅샷으로 읽는다. */
+/** 아직 API가 없는 이용현황 전용 예시 모델. */
 export interface DashboardDailyAggregate extends Omit<UsageCounts, 'used'> {
   date: string;
   totalImpressions: number;
-  newUsers: number;
-  newStores: number;
-  totalUsers: number;
-  totalStores: number;
-  activeUsers: number;
-  activeCampaigns: number;
-  withdrawnUsers: number;
-  suspendedUsers: number;
-  charge: number;
-  spend: number;
-  refund: number;
-  adjustment: number;
-  unspent: number;
-  mismatchCount: number;
   segments: DashboardSegment[];
 }
 
 export interface DashboardDataset {
   today: string;
   completedThrough: string;
-  aggregatedAt: string;
   availableFrom: string;
   days: DashboardDailyAggregate[];
 }
 
 export interface DashboardSummary extends Omit<UsageCounts, 'used'> {
   totalImpressions: number;
-  newUsers: number;
-  newStores: number;
-  activeUsers: number;
-  charge: number;
-  spend: number;
-  refund: number;
-  adjustment: number;
-  mismatchCount: number;
 }
 
 export interface DashboardTrendPoint extends Omit<UsageCounts, 'used'> {
   label: string;
-  charge: number;
-  spend: number;
 }

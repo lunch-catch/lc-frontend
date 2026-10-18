@@ -1,121 +1,180 @@
-import { Link } from 'react-router';
-import { formatDate, formatNumber } from '@repo/utils';
-import { ExternalLink } from 'lucide-react';
+import { formatDate } from '@repo/utils';
+
+import {
+  getBucketEnd,
+  sumAnalytics,
+} from '@admin/features/analytics/analyticsUtils';
 
 import { DashboardMetricCard } from './DashboardMetricCard';
-import type {
-  DashboardDailyAggregate,
-  DashboardSummary,
-} from './dashboardTypes';
+import type { useDashboardMetrics } from './useDashboardMetrics';
 
 interface DashboardOverviewProps {
-  summary: DashboardSummary;
-  previous: DashboardSummary;
-  snapshot?: DashboardDailyAggregate;
-  previousSnapshot?: DashboardDailyAggregate;
-  canCompare: boolean;
-  mismatchLink: string;
+  metrics: ReturnType<typeof useDashboardMetrics>;
+  view: 'members' | 'owners';
 }
+type MetricResource =
+  | DashboardOverviewProps['metrics']['members']
+  | DashboardOverviewProps['metrics']['stores']
+  | DashboardOverviewProps['metrics']['sales'];
+
+const basis = ({ data }: MetricResource) => {
+  const last = data?.items.at(-1);
+  return data && last
+    ? formatDate(getBucketEnd(last.label, data.period, data.to)) + ' 기준'
+    : '기간 말 기준';
+};
+const hint = (state: MetricResource) =>
+  state.loading
+    ? '불러오는 중'
+    : state.error
+      ? '조회 실패'
+      : state.data?.items.some((item) => item.status === 'IN_PROGRESS')
+        ? '집계 중'
+        : '데이터 없음';
 
 export const DashboardOverview = ({
-  summary,
-  previous,
-  snapshot,
-  previousSnapshot,
-  canCompare,
-  mismatchLink,
+  metrics,
+  view,
 }: DashboardOverviewProps) => {
-  // 누적·상태 지표는 기간 합계가 아니라 선택 범위의 마지막 집계일 값을 사용한다.
-  const snapshotBasis = snapshot
-    ? `${formatDate(snapshot.date)} 기준`
-    : '기간 말 기준';
-  const metrics = [
-    {
-      label: '누적 회원',
-      basis: snapshotBasis,
-      value: snapshot?.totalUsers ?? 0,
-      previous: previousSnapshot?.totalUsers,
-      unit: '명',
-      description: `기간 내 신규 ${formatNumber(summary.newUsers)}명 · 누적 탈퇴 ${formatNumber(snapshot?.withdrawnUsers ?? 0)}명 · 정지 ${formatNumber(snapshot?.suspendedUsers ?? 0)}명`,
-    },
-    {
-      label: '일평균 활성 회원',
-      basis: '선택 기간 일평균',
-      value: summary.activeUsers,
-      previous: canCompare ? previous.activeUsers : undefined,
-      unit: '명',
-      description: '이벤트 발생 사용자 기준',
-    },
-    {
-      label: '누적 입점 업체',
-      basis: snapshotBasis,
-      value: snapshot?.totalStores ?? 0,
-      previous: previousSnapshot?.totalStores,
-      unit: '개',
-      description: `기간 내 신규 ${formatNumber(summary.newStores)}개`,
-    },
-    {
-      label: '활성 캠페인',
-      basis: snapshotBasis,
-      value: snapshot?.activeCampaigns ?? 0,
-      previous: previousSnapshot?.activeCampaigns,
-      unit: '개',
-      description: '집행 중 캠페인',
-    },
-    {
-      label: '충전액',
-      basis: '선택 기간 합계',
-      value: summary.charge,
-      previous: canCompare ? previous.charge : undefined,
-      unit: '원',
-    },
-    {
-      label: '소진액',
-      basis: '선택 기간 합계',
-      value: summary.spend,
-      previous: canCompare ? previous.spend : undefined,
-      unit: 'P',
-      description: '과오 차감 정정 반영',
-    },
-    {
-      label: '미소진 잔액',
-      basis: snapshotBasis,
-      value: snapshot?.unspent ?? 0,
-      previous: previousSnapshot?.unspent,
-      unit: 'P',
-      description: '예약 중 포인트 포함',
-    },
-  ];
-
+  const {
+    members,
+    previousMembers,
+    stores,
+    previousStores,
+    sales,
+    previousSales,
+  } = metrics;
+  const member = members.data?.items.at(-1);
+  const cards =
+    view === 'members'
+      ? [
+          {
+            label: '신규 회원',
+            value: sumAnalytics(members.data, 'newMemberCount'),
+            previous: sumAnalytics(previousMembers.data, 'newMemberCount'),
+            basis: '선택 기간 합계',
+            unit: '명',
+            emptyLabel: hint(members),
+            loading: members.loading,
+            emphasis: true,
+          },
+          // 구간별로 반올림한 서버의 일평균을 다시 평균 내지 않는다.
+          {
+            label: '일평균 활성 회원',
+            value: member?.avgDailyActiveMembers ?? null,
+            previous: previousMembers.data?.items.at(-1)?.avgDailyActiveMembers,
+            basis: member ? member.label + ' 구간' : '마지막 구간',
+            unit: '명',
+            emptyLabel: hint(members),
+            loading: members.loading,
+            description: '그날 이벤트가 발생한 회원 · 마지막 구간 일평균',
+          },
+        ]
+      : [
+          {
+            label: '소진액 · 광고 매출',
+            value: sumAnalytics(sales.data, 'spentAmount'),
+            previous: sumAnalytics(previousSales.data, 'spentAmount'),
+            basis: '선택 기간 합계',
+            unit: 'P',
+            emptyLabel: hint(sales),
+            loading: sales.loading,
+            emphasis: true,
+          },
+          {
+            label: '충전액',
+            value: sumAnalytics(sales.data, 'chargeAmount'),
+            previous: sumAnalytics(previousSales.data, 'chargeAmount'),
+            basis: '선택 기간 합계',
+            unit: '원',
+            emptyLabel: hint(sales),
+            loading: sales.loading,
+          },
+          {
+            label: '활성 캠페인',
+            value: stores.data?.items.at(-1)?.activeCampaignCount ?? null,
+            previous: previousStores.data?.items.at(-1)?.activeCampaignCount,
+            basis: basis(stores),
+            unit: '개',
+            emptyLabel: hint(stores),
+            loading: stores.loading,
+          },
+        ];
   return (
     <section
-      aria-label="핵심 지표"
-      className="grid grid-cols-2 gap-3 xl:grid-cols-4"
+      aria-label={view === 'members' ? '사용자 주요 지표' : '점주 주요 지표'}
+      className={`grid gap-3 sm:grid-cols-2 ${view === 'owners' ? 'xl:grid-cols-3' : ''}`}
     >
-      {metrics.map((item) => (
-        <DashboardMetricCard key={item.label} {...item} />
+      {cards.map((card) => (
+        <DashboardMetricCard key={card.label} {...card} />
       ))}
-      <Link
-        to={mismatchLink}
-        aria-label="정산 불일치 상세 보기"
-        className={`group block rounded-xl focus-visible:outline-2 focus-visible:outline-action-primary [&>div]:h-full ${summary.mismatchCount ? '[&>div]:border-status-warning-border [&>div]:bg-status-warning-bg' : ''}`}
+    </section>
+  );
+};
+
+export const DashboardSnapshots = ({
+  metrics,
+  view,
+}: DashboardOverviewProps) => {
+  const { members, stores, sales } = metrics;
+  const member = members.data?.items.at(-1);
+  const cards =
+    view === 'members'
+      ? [
+          {
+            label: '누적 회원',
+            value: member?.cumulativeMemberCount ?? null,
+            unit: '명',
+          },
+          {
+            label: '누적 탈퇴',
+            value: member?.withdrawnCount ?? null,
+            unit: '명',
+          },
+          {
+            label: '정지 회원',
+            value: member?.suspendedCount ?? null,
+            unit: '명',
+          },
+        ]
+      : [
+          {
+            label: '누적 입점 업체',
+            value: stores.data?.items.at(-1)?.cumulativeStoreCount ?? null,
+            unit: '개',
+          },
+          {
+            label: '미소진 잔액',
+            value: sales.data?.items.at(-1)?.unspentBalance ?? null,
+            unit: 'P',
+          },
+        ];
+  return (
+    <section
+      aria-label="기간 말 현황"
+      className="space-y-3 border-t border-border-subtle pt-5"
+    >
+      <h3 className="text-body-sm-web font-medium text-text-secondary">
+        기간 말 현황
+      </h3>
+      <div
+        className={`grid gap-3 sm:grid-cols-2 ${view === 'members' ? 'xl:grid-cols-3' : ''}`}
       >
-        <DashboardMetricCard
-          label={
-            <span className="inline-flex items-center gap-1 transition-colors group-hover:text-text-brand group-focus-visible:text-text-brand">
-              정산 불일치
-              <ExternalLink aria-hidden className="size-3.5 shrink-0" />
-            </span>
-          }
-          value={summary.mismatchCount}
-          basis="선택 기간 조회 건수"
-          description={
-            summary.mismatchCount
-              ? '확인 필요 · 상세 보기'
-              : '선택 기간 불일치 없음'
-          }
-        />
-      </Link>
+        {cards.map((card, index) => {
+          const resource =
+            view === 'members' ? members : index === 0 ? stores : sales;
+          return (
+            <DashboardMetricCard
+              key={card.label}
+              {...card}
+              size="compact"
+              basis={basis(resource)}
+              emptyLabel={hint(resource)}
+              loading={resource.loading}
+            />
+          );
+        })}
+      </div>
     </section>
   );
 };

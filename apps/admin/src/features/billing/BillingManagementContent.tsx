@@ -1,13 +1,12 @@
 ﻿import { useState } from 'react';
 import { Tabs } from '@repo/ui';
 
-import { createMockBillingState } from '@admin/api/mocks/billing';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import type { TableDensity } from '@admin/components/DataTable';
 import { queryChoice } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
-import { createDailyCache, getKoreaDate } from './billingUtils';
+import { getKoreaDate } from './billingUtils';
 import { PaymentHistoryTab } from './tabs/PaymentHistoryTab';
 import { PointLedgerTab } from './tabs/PointLedgerTab';
 import { PointPolicyTab } from './tabs/PointPolicyTab';
@@ -29,7 +28,7 @@ const tabs: BillingTabItem[] = [
   { label: '환불 요청', value: 'refunds' },
   { label: '충전 정책', value: 'policy' },
   { label: '정산 검증', value: 'mismatches' },
-  { label: '매출 현황 (예시 데이터)', value: 'sales' },
+  { label: '매출 현황', value: 'sales' },
 ];
 const tabQuery = {
   tab: queryChoice(
@@ -43,16 +42,12 @@ export const BillingManagementContent = () => {
   const [ledgerRevision, setLedgerRevision] = useState(0);
   const [ledgerNotice, setLedgerNotice] = useState('');
   const [today] = useState(getKoreaDate);
-  // 매출 현황은 집계 API 연동 전까지 예시 원장으로 계산하며 다른 탭 조회에는 사용하지 않는다.
-  const [state] = useState(() => createMockBillingState(today));
-  const [dailyCache] = useState(() => createDailyCache(state.ledger, today));
   const {
     filters: { tab },
     updateFilters,
   } = useUrlFilters('', tabQuery);
   const [density, setDensity] = useState<TableDensity>('normal');
   const preferences = { density, setDensity };
-  const salesProps = { state, today, preferences };
 
   return (
     <section className="flex flex-col gap-4">
@@ -110,7 +105,7 @@ export const BillingManagementContent = () => {
         />
       )}
       {tab === 'sales' && (
-        <SalesOverviewTab {...salesProps} dailyCache={dailyCache} />
+        <SalesOverviewTab today={today} preferences={preferences} />
       )}
     </section>
   );

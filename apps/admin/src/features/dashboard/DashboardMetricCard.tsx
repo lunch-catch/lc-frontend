@@ -6,11 +6,15 @@ import { getChangeLabel } from './dashboardUtils';
 
 interface DashboardMetricCardProps {
   label: ReactNode;
-  value: number;
-  previous?: number;
+  value: number | null;
+  previous?: number | null;
+  emptyLabel?: string;
   unit?: string;
   basis?: string;
   description?: string;
+  loading?: boolean;
+  emphasis?: boolean;
+  size?: 'default' | 'compact';
   selected?: boolean;
   onSelect?: () => void;
 }
@@ -19,14 +23,19 @@ export const DashboardMetricCard = ({
   label,
   value,
   previous,
+  emptyLabel = '데이터 없음',
   unit = '건',
   basis,
   description,
+  loading = false,
+  emphasis = false,
+  size = 'default',
   selected = false,
   onSelect,
 }: DashboardMetricCardProps) => {
   const Container = onSelect ? 'button' : 'div';
-  const direction = previous === undefined ? 0 : Math.sign(value - previous);
+  const canCompare = value !== null && previous != null;
+  const direction = canCompare ? Math.sign(value - previous) : 0;
   const ChangeIcon =
     direction > 0 ? ArrowUpRight : direction < 0 ? ArrowDownRight : Minus;
   const surfaceClassName = selected
@@ -51,7 +60,7 @@ export const DashboardMetricCard = ({
             'aria-pressed': selected,
           }
         : {})}
-      className={`relative min-w-0 overflow-hidden rounded-xl border p-4 text-left transition-colors ${surfaceClassName} ${interactionClassName}`}
+      className={`relative min-w-0 overflow-hidden rounded-xl border text-left transition-colors ${size === 'compact' ? 'min-h-20 p-3' : 'min-h-32 p-4'} ${surfaceClassName} ${interactionClassName}`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-body-sm-web font-medium text-text-secondary">
@@ -69,15 +78,29 @@ export const DashboardMetricCard = ({
           />
         )}
       </div>
-      <p className="mt-2 flex flex-wrap items-baseline gap-1 text-h2-web font-semibold tracking-tight tabular-nums text-text-primary sm:text-h1">
-        {formatNumber(value)}
+      <p
+        className={`mt-2 flex flex-wrap items-baseline gap-1 font-semibold tracking-tight tabular-nums ${size === 'compact' ? 'min-h-6 text-body-web' : 'min-h-9 text-h2-web sm:text-h1'} ${emphasis && value !== null ? 'text-text-brand' : 'text-text-primary'}`}
+      >
+        {loading ? (
+          <>
+            <span className="sr-only">불러오는 중</span>
+            <span
+              aria-hidden
+              className="inline-block h-6 w-20 rounded bg-surface-subtle"
+            />
+          </>
+        ) : value === null ? (
+          '—'
+        ) : (
+          formatNumber(value)
+        )}
         <span className="text-body-sm-web font-normal text-text-secondary">
-          {unit}
+          {loading ? '' : value === null ? emptyLabel : unit}
         </span>
       </p>
-      {(previous !== undefined || description) && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-caption-web">
-          {previous !== undefined && (
+      {(canCompare || description || size === 'default') && (
+        <div className="mt-2 flex min-h-4 flex-wrap items-center justify-between gap-x-2 gap-y-1 text-caption-web">
+          {canCompare && (
             <span
               className={`inline-flex items-center gap-1 ${changeTextClassName}`}
             >
