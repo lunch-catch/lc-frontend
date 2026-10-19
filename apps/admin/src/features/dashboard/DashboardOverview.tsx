@@ -1,9 +1,6 @@
 import { formatDate, formatNumber } from '@repo/utils';
 
-import {
-  getBucketEnd,
-  sumAnalytics,
-} from '@admin/features/analytics/analyticsUtils';
+import { getBucketEnd, sumAnalytics } from '@admin/api/analyticsUtils';
 
 import { DashboardMetricCard } from './DashboardMetricCard';
 import { getDashboardMetricHint } from './dashboardUtils';

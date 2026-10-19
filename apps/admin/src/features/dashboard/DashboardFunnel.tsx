@@ -4,7 +4,7 @@ import { formatNumber } from '@repo/utils';
 import { ExternalLink } from 'lucide-react';
 
 import type { AnalyticsSeries, FunnelMetrics } from '@admin/api/analytics';
-import { sumAnalytics } from '@admin/features/analytics/analyticsUtils';
+import { sumAnalytics } from '@admin/api/analyticsUtils';
 
 import { DashboardMetricCard } from './DashboardMetricCard';
 import { DashboardSection } from './DashboardSection';

@@ -2,7 +2,7 @@ import type {
   AnalyticsBucket,
   AnalyticsPeriod,
   AnalyticsSeries,
-} from '@admin/api/analytics';
+} from './analytics';
 
 export const analyticsPeriods: Record<
   'day' | 'week' | 'month',

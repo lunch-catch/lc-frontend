@@ -5,7 +5,7 @@ import {
   getSales,
   getStoreMetrics,
 } from '@admin/api/analytics';
-import { useAnalyticsQuery } from '@admin/features/analytics/useAnalyticsQuery';
+import { useAnalyticsQuery } from '@admin/hooks/useAnalyticsQuery';
 
 export const useDashboardMetrics = (
   query: AnalyticsQuery | null,
