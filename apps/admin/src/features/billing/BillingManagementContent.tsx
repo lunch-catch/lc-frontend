@@ -23,17 +23,17 @@ interface BillingTabItem {
 }
 
 const tabs: BillingTabItem[] = [
+  { label: '정산 검증', value: 'mismatches' },
+  { label: '환불 요청', value: 'refunds' },
   { label: '결제 내역', value: 'payments' },
   { label: '포인트 변동 내역', value: 'ledger' },
-  { label: '환불 요청', value: 'refunds' },
-  { label: '충전 정책', value: 'policy' },
-  { label: '정산 검증', value: 'mismatches' },
   { label: '매출 현황', value: 'sales' },
+  { label: '충전 정책', value: 'policy' },
 ];
 const tabQuery = {
   tab: queryChoice(
-    ['payments', 'ledger', 'refunds', 'policy', 'mismatches', 'sales'] as const,
-    'payments',
+    tabs.map((item) => item.value),
+    'mismatches',
   ),
 };
 
