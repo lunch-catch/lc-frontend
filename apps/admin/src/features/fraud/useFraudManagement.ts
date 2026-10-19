@@ -1,144 +1,131 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
+import { getCampaignWarnings, getInvalidImpressions } from '@admin/api/fraud';
 import {
   queryChoice,
   queryDate,
   queryPage,
-  queryPageSize,
+  querySize,
   queryText,
 } from '@admin/hooks/urlQuery';
+import { useApiResource } from '@admin/hooks/useApiResource';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import type { TableDensity } from '@admin/ui/DataTable';
 
-import type {
-  FraudFilters,
-  FraudSort,
-  FraudSortKey,
-  FraudTableRow,
-} from './fraudTypes';
-import { buildFraudView, sortFraudRows } from './fraudUtils';
-import { useFraudReport } from './useFraudReport';
+import { getFraudRangeError } from './fraudUtils';
 
-const fraudQuery = {
-  tab: queryChoice(['impressions', 'requests'] as const, 'impressions'),
-  keyword: queryText(),
-  page: queryPage,
-  size: queryPageSize(10),
-  from: queryDate(),
-  to: queryDate(),
-  reason: queryChoice(
-    ['ALL', 'EXPIRED_OR_UNKNOWN', 'NOT_OWNER'] as const,
-    'ALL',
-  ),
-  sortBy: queryChoice(
-    ['', 'campaignId', 'userId', 'reasonCode', 'count'] as const,
-    '',
-  ),
-  sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
-};
 export const useFraudManagement = () => {
-  const { filters: query, updateFilters } = useUrlFilters('fraud.', fraudQuery);
-  const { tab, page: currentPage, size: pageSize, reason: reasonCode } = query;
-  const period = useMemo(
-    () => ({ startDate: query.from, endDate: query.to }),
-    [query.from, query.to],
+  const { filters, updateFilters } = useUrlFilters('fraud.', {
+    tab: queryChoice(['impressions', 'warnings'] as const, 'impressions'),
+    from: queryDate(),
+    to: queryDate(),
+    reason: queryChoice(
+      ['ALL', 'EXPIRED_OR_UNKNOWN', 'NOT_OWNER'] as const,
+      'ALL',
+    ),
+    type: queryChoice(
+      ['ALL', 'INVALID_RATIO', 'CONCENTRATION'] as const,
+      'ALL',
+    ),
+    campaignId: queryText(),
+    memberId: queryText(),
+    page: queryPage,
+    size: querySize,
+    sortBy: queryChoice(
+      [
+        '',
+        'count',
+        'campaignId',
+        'memberId',
+        'invalidRatio',
+        'topMembersShare',
+      ] as const,
+      '',
+    ),
+    sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
+  });
+  const campaign = useUrlSearch(filters.campaignId, (campaignId) =>
+    updateFilters({ campaignId, page: 1 }),
   );
-  const sort = useMemo<FraudSort | null>(
-    () =>
-      query.sortBy ? { key: query.sortBy, direction: query.sortDir } : null,
-    [query.sortBy, query.sortDir],
+  const member = useUrlSearch(filters.memberId, (memberId) =>
+    updateFilters({ memberId, page: 1 }),
   );
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
-    null,
+  const idError =
+    filters.tab === 'impressions' &&
+    [filters.campaignId, filters.memberId].some(
+      (value) =>
+        value.trim() &&
+        (!/^[1-9]\d*$/.test(value.trim()) ||
+          !Number.isSafeInteger(Number(value))),
+    )
+      ? '캠페인 ID와 사용자 ID는 양의 정수로 입력해 주세요.'
+      : '';
+  const validation = getFraudRangeError(filters.from, filters.to) || idError;
+  const allowedSorts =
+    filters.tab === 'impressions'
+      ? ['count', 'campaignId', 'memberId']
+      : ['invalidRatio', 'topMembersShare', 'campaignId'];
+  const sortBy = allowedSorts.includes(filters.sortBy)
+    ? filters.sortBy
+    : filters.tab === 'impressions'
+      ? 'count'
+      : 'invalidRatio';
+  const params = new URLSearchParams({
+    from: filters.from,
+    to: filters.to,
+    page: String(filters.page - 1),
+    size: String(filters.size),
+    sortBy,
+    sortDir: filters.sortDir,
+  });
+  if (filters.tab === 'impressions') {
+    if (filters.reason !== 'ALL') params.set('reasonCode', filters.reason);
+    if (filters.campaignId.trim())
+      params.set('campaignId', filters.campaignId.trim());
+    if (filters.memberId.trim())
+      params.set('memberId', filters.memberId.trim());
+  } else if (filters.type !== 'ALL') params.set('type', filters.type);
+  const invalid = useApiResource(
+    getInvalidImpressions,
+    !validation && filters.tab === 'impressions' ? params.toString() : null,
   );
-  const search = useUrlSearch(query.keyword, (keyword) =>
-    updateFilters({ keyword, page: 1 }),
+  const warnings = useApiResource(
+    getCampaignWarnings,
+    !validation && filters.tab === 'warnings' ? params.toString() : null,
   );
-  const state = useFraudReport();
-  // 화면과 상세 패널이 동일한 기간·검색 조건을 공유한다.
-  const filters = useMemo<FraudFilters>(
-    () => ({
-      ...period,
-      reasonCode,
-      keyword: search.keyword,
-    }),
-    [period, reasonCode, search.keyword],
-  );
-  const view = useMemo(
-    () => (state.report ? buildFraudView(state.report, filters) : null),
-    [state.report, filters],
-  );
-  const warningCampaigns =
-    view?.campaigns.filter(
-      (campaign) => campaign.highInvalidRate || campaign.concentrated,
-    ) ?? [];
-  const selectedCampaign = view?.campaigns.find(
-    (campaign) => campaign.campaignId === selectedCampaignId,
-  );
-  const rows: FraudTableRow[] =
-    tab === 'impressions'
-      ? (view?.invalidRows ?? [])
-      : (view?.rejectionRows.map((row) => ({ ...row, id: row.userId })) ?? []);
-  const sortedRows = sortFraudRows(rows, sort);
+  const resource = filters.tab === 'impressions' ? invalid : warnings;
   const pagination = {
-    currentPage,
-    pageSize,
-    totalCount: rows.length,
-    totalPages: Math.ceil(rows.length / pageSize),
+    currentPage: filters.page,
+    pageSize: filters.size,
+    totalCount: resource.data?.totalElements ?? 0,
+    totalPages: Math.ceil((resource.data?.totalElements ?? 0) / filters.size),
     onPageChange: (page: number) => updateFilters({ page }),
-    onPageSizeChange: (value: number) => {
-      // 표시 개수가 줄면 현재 페이지가 사라질 수 있어 첫 페이지로 이동한다.
-      updateFilters({ size: value, page: 1 });
-    },
+    onPageSizeChange: (size: number) => updateFilters({ size, page: 1 }),
   };
-  const handleSortChange = (key: FraudSortKey) => {
+  const sort = (
+    key:
+      'count' | 'campaignId' | 'memberId' | 'invalidRatio' | 'topMembersShare',
+  ) =>
     updateFilters({
+      sortBy: key,
+      sortDir: key === sortBy && filters.sortDir === 'desc' ? 'asc' : 'desc',
       page: 1,
-      sortBy: sort?.key !== key ? key : sort.direction === 'desc' ? key : '',
-      sortDir: sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc',
     });
-  };
-  const changeTab = (value: string) => {
-    updateFilters({
-      tab: value as typeof tab,
-      page: 1,
-      sortBy: '',
-      sortDir: 'desc',
-    });
-    setSelectedCampaignId(null);
-  };
-  const changeReason = (value: string) =>
-    updateFilters({ reason: value as typeof reasonCode, page: 1 });
-  const changePeriod = (value: { startDate: string; endDate: string }) => {
-    updateFilters({ from: value.startDate, to: value.endDate, page: 1 });
-    setSelectedCampaignId(null);
-  };
-
   return {
-    tab,
+    filters,
+    updateFilters,
+    campaign,
+    member,
+    invalid,
+    warnings,
+    resource,
+    validation,
     density,
     setDensity,
-    period,
-    reasonCode,
-    sort,
-    selectedCampaignId,
-    setSelectedCampaignId,
-    search,
-    state,
-    filters,
-    view,
-    warningCampaigns,
-    selectedCampaign,
-    visibleRows: sortedRows.slice(
-      (currentPage - 1) * pageSize,
-      currentPage * pageSize,
-    ),
     pagination,
-    handleSortChange,
-    changeTab,
-    changeReason,
-    changePeriod,
+    sortBy,
+    sort,
   };
 };

@@ -3,6 +3,7 @@
 import { RequireAdminAuth } from '@admin/auth/RequireAdminAuth';
 import { AdminLayout } from '@admin/layout/AdminLayout';
 import { AdminAccountManagementPage } from '@admin/pages/AdminAccountManagementPage';
+import { BatchOperationsPage } from '@admin/pages/BatchOperationsPage';
 import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
 import { DashboardPage } from '@admin/pages/DashboardPage';
 import { FraudManagementPage } from '@admin/pages/FraudManagementPage';
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
           { path: '/settlements', element: <PointSettlementPage /> },
           { path: '/members', element: <MemberManagementPage /> },
           { path: '/fraud', element: <FraudManagementPage /> },
+          { path: '/operations', element: <BatchOperationsPage /> },
           { path: '/admin-accounts', element: <AdminAccountManagementPage /> },
           // 정의되지 않은 주소가 빈 화면으로 남지 않도록 기본 메뉴로 보낸다.
           { path: '*', element: <Navigate replace to="/dashboard" /> },

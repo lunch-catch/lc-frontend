@@ -26,19 +26,3 @@ export const memberQuery = {
     '',
   ),
 };
-
-export const ownerQuery = {
-  ...listQuery,
-  sortBy: queryChoice(
-    [
-      '',
-      'id',
-      'storeName',
-      'status',
-      'storeRegistrationCompleted',
-      'joinedAt',
-      'lastAccessedAt',
-    ] as const,
-    '',
-  ),
-};

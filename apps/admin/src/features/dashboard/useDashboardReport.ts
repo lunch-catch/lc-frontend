@@ -9,10 +9,8 @@ import type {
 import {
   getAnalyticsRangeError,
   getPreviousRange,
-  getTrend,
   selectDays,
   shiftDate,
-  summarizeDays,
 } from './dashboardUtils';
 
 export const useDashboardReport = (data: DashboardDataset) => {
@@ -22,7 +20,7 @@ export const useDashboardReport = (data: DashboardDataset) => {
     to: queryDate(data.completedThrough),
     preset: queryChoice(['today', '7', '30', 'custom'] as const, '7'),
     metric: queryChoice(
-      ['impressions', 'saves', 'issued'] as const,
+      ['impressions', 'saves', 'issued', 'used'] as const,
       'impressions',
     ),
     compare: queryChoice(['true', 'false'] as const, 'true'),
@@ -87,30 +85,6 @@ export const useDashboardReport = (data: DashboardDataset) => {
   );
   const previousDays =
     previousRange && canCompare ? selectDays(data.days, previousRange) : [];
-  const summary = summarizeDays(days);
-  const trend = hasUsagePeriod
-    ? getTrend(data.days, completedRange, interval)
-    : [];
-  // 이전 기간의 날짜를 같은 위치로 옮겨 일별 추이를 비교한다.
-  const offset = previousRange
-    ? (Date.parse(completedRange.startDate) -
-        Date.parse(previousRange.startDate)) /
-      86_400_000
-    : 0;
-  const previousTrend =
-    hasUsagePeriod && canCompare
-      ? getTrend(
-          previousDays.map((day) => ({
-            ...day,
-            date: shiftDate(day.date, offset),
-          })),
-          completedRange,
-          interval,
-        )
-      : [];
-  const validRatio = summary.totalImpressions
-    ? (summary.impressions / summary.totalImpressions) * 100
-    : null;
   return {
     view: filters.view,
     setView: (view: 'owners' | 'members') => updateFilters({ view }),
@@ -132,9 +106,5 @@ export const useDashboardReport = (data: DashboardDataset) => {
     previousRange,
     canCompare,
     previousDays,
-    summary,
-    trend,
-    previousTrend,
-    validRatio,
   };
 };

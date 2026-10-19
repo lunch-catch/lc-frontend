@@ -9,11 +9,10 @@ import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import type { PosterTemplate } from '../templateTypes';
-import { getTemplateError } from '../templateUtils';
+import { getTemplateError, TEMPLATE_LIMIT } from '../templateUtils';
 import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
 
-const templateLimit = 10;
 const templateQuery = {
   keyword: queryText(),
   activation: queryChoice(['ALL', 'ACTIVE', 'INACTIVE'] as const, 'ALL'),
@@ -63,7 +62,7 @@ export const TemplateManagementContent = ({
   const [limitTooltipOpen, setLimitTooltipOpen] = useState(false);
   const limitTooltipId = useId();
   // 검색·상태 필터와 무관하게 서버가 반환한 전체 템플릿 수로 생성 한도를 판단한다.
-  const atTemplateLimit = templates.length >= templateLimit;
+  const atTemplateLimit = templates.length >= TEMPLATE_LIMIT;
   const canCreate = !loading && !error && !atTemplateLimit;
   const [activationError, setActivationError] = useState<string | null>(null);
   const [changingActive, setChangingActive] = useState(false);
@@ -168,7 +167,7 @@ export const TemplateManagementContent = ({
               role="tooltip"
               className="absolute right-0 top-full z-40 mt-1 w-max max-w-[calc(100vw-2rem)] rounded-sm border border-border-subtle bg-bg-surface px-2 py-1 text-caption-web text-text-primary shadow-sm"
             >
-              템플릿은 최대 {templateLimit}개까지 등록할 수 있습니다.
+              템플릿은 최대 {TEMPLATE_LIMIT}개까지 등록할 수 있습니다.
             </span>
           )}
         </span>

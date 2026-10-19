@@ -8,226 +8,339 @@ import {
 } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
-import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
+import type { CampaignWarning, InvalidImpression } from '@admin/api/fraud';
 import { useTableColumnSettings } from '@admin/ui/DataTable';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
-import { FraudCampaignDetail } from './FraudCampaignDetail';
-import { FraudTable } from './FraudTable';
-import { impressionHeaders, requestHeaders } from './fraudTableColumns';
-import { invalidReasonDescriptions } from './fraudUtils';
+import { type FraudColumn, FraudTable } from './FraudTable';
+import { formatFraudRatio, invalidReasonLabels } from './fraudUtils';
 import { useFraudManagement } from './useFraudManagement';
 
-interface FraudManagementContentProps {
-  onManageMember: (userId: string) => void;
-}
-
-const tabs = [
-  { label: '무효 노출', value: 'impressions' },
-  { label: '피드 요청 제한 초과', value: 'requests' },
+const invalidColumns: FraudColumn<InvalidImpression>[] = [
+  {
+    key: 'memberId',
+    label: '사용자 ID',
+    minWidth: 110,
+    sortable: true,
+    render: (item) => item.memberId,
+  },
+  {
+    key: 'campaignId',
+    label: '캠페인 ID',
+    minWidth: 110,
+    sortable: true,
+    render: (item) => item.campaignId,
+  },
+  {
+    key: 'reasonCode',
+    label: '무효 사유',
+    minWidth: 230,
+    render: (item) => (
+      <span title={item.reasonCode}>
+        {invalidReasonLabels[item.reasonCode]}
+      </span>
+    ),
+  },
+  {
+    key: 'count',
+    label: '무효 노출 수',
+    align: 'right',
+    minWidth: 130,
+    sortable: true,
+    render: (item) => formatNumber(item.count) + '건',
+  },
 ];
-const reasonOptions = [
-  { label: '무효 사유 전체', value: 'ALL' },
-  { label: 'EXPIRED_OR_UNKNOWN', value: 'EXPIRED_OR_UNKNOWN' },
-  { label: 'NOT_OWNER', value: 'NOT_OWNER' },
-];
-
-export const FraudManagementContent = ({
-  onManageMember,
-}: FraudManagementContentProps) => {
-  // 조회·정렬·페이지 상태는 훅에서 관리하고 공통 UI와 도메인 상세를 조합한다.
+export const FraudManagementContent = () => {
+  const state = useFraudManagement();
   const {
-    tab,
+    filters,
+    updateFilters,
+    invalid,
+    warnings,
+    resource,
+    validation,
     density,
     setDensity,
-    period,
-    reasonCode,
-    sort,
-    selectedCampaignId,
-    setSelectedCampaignId,
-    search,
-    state,
-    filters,
-    view,
-    warningCampaigns,
-    selectedCampaign,
-    visibleRows,
     pagination,
-    handleSortChange,
-    changeTab,
-    changeReason,
-    changePeriod,
-  } = useFraudManagement();
-  const headers = tab === 'impressions' ? impressionHeaders : requestHeaders;
-  const columnSettings = useTableColumnSettings(
-    'fraud.' + tab,
-    headers.map(({ key, label }) => ({ key: key ?? label, label })),
-  );
-  const summaryCards = [
+    sortBy,
+  } = state;
+  const warningColumns: FraudColumn<CampaignWarning>[] = [
     {
-      label: 'EXPIRED_OR_UNKNOWN',
-      count: view?.expiredOrUnknownCount,
-      description: invalidReasonDescriptions.EXPIRED_OR_UNKNOWN,
+      key: 'campaignId',
+      label: '캠페인 ID',
+      minWidth: 110,
+      sortable: true,
+      render: (item) => item.campaignId,
     },
     {
-      label: 'NOT_OWNER',
-      count: view?.notOwnerCount,
-      description: invalidReasonDescriptions.NOT_OWNER,
+      key: 'validCount',
+      label: '유효 노출',
+      align: 'right',
+      minWidth: 100,
+      render: (item) => formatNumber(item.validCount),
     },
     {
-      label: '피드 요청 제한 초과',
-      count: view?.rejectionCount,
-      description: '사용자별 피드 요청 제한으로 거부된 건수',
+      key: 'invalidCount',
+      label: '무효 노출',
+      align: 'right',
+      minWidth: 100,
+      render: (item) => formatNumber(item.invalidCount),
+    },
+    {
+      key: 'invalidRatio',
+      label: '무효 / 유효 비율',
+      align: 'right',
+      minWidth: 150,
+      sortable: true,
+      render: (item) => formatFraudRatio(item.invalidRatio),
+    },
+    {
+      key: 'distinctMemberCount',
+      label: '집중일 회원 수',
+      align: 'right',
+      minWidth: 140,
+      render: (item) => formatNumber(item.distinctMemberCount),
+    },
+    {
+      key: 'topMembersShare',
+      label: '상위 회원 점유율',
+      align: 'right',
+      minWidth: 155,
+      sortable: true,
+      render: (item) => formatFraudRatio(item.topMembersShare),
+    },
+    {
+      key: 'warnings',
+      label: '경고',
+      minWidth: 230,
+      render: (item) => (
+        <div className="flex flex-wrap gap-1">
+          {item.invalidRatioWarning && (
+            <StatusBadge variant="danger">무효 비율</StatusBadge>
+          )}
+          {item.concentrationWarning && (
+            <StatusBadge variant="warning">소수 회원 집중</StatusBadge>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'action',
+      label: '무효 내역',
+      minWidth: 120,
+      render: (item) => (
+        <button
+          type="button"
+          className="rounded-md text-text-brand hover:underline focus-visible:outline-2 focus-visible:outline-action-primary"
+          onClick={() => {
+            state.campaign.setDraftKeyword(String(item.campaignId));
+            state.member.setDraftKeyword('');
+            updateFilters({
+              tab: 'impressions',
+              campaignId: String(item.campaignId),
+              memberId: '',
+              reason: 'ALL',
+              sortBy: 'count',
+              page: 1,
+            });
+          }}
+        >
+          내역 보기
+        </button>
+      ),
     },
   ];
-
+  const columns =
+    filters.tab === 'impressions' ? invalidColumns : warningColumns;
+  const settings = useTableColumnSettings('fraud.' + filters.tab, columns);
+  const onSort = (key: string) => {
+    if (
+      key === 'count' ||
+      key === 'memberId' ||
+      key === 'campaignId' ||
+      key === 'invalidRatio' ||
+      key === 'topMembersShare'
+    )
+      state.sort(key);
+  };
   return (
     <section className="flex flex-col">
       <header className="mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-display-web font-semibold text-text-primary">
-            부정 관리
-          </h2>
-          <StatusBadge variant="neutral">예시 데이터</StatusBadge>
-        </div>
+        <h2 className="text-display-web font-semibold text-text-primary">
+          부정 관리
+        </h2>
         <p className="mt-2 text-body-sm-web text-text-secondary">
-          무효 노출과 피드 요청 제한 초과 내역을 조회하고 부정 의심 계정을
-          검토합니다.
+          무효 노출과 캠페인 경고를 조회합니다. 조회 기간은 최대 31일입니다.
         </p>
       </header>
-      <div className="mb-5 grid gap-3 lg:grid-cols-3">
-        {summaryCards.map(({ label, count, description }) => (
-          <div
-            className="rounded-xl border border-border-subtle bg-bg-surface p-5"
-            key={label}
-          >
-            <p className="text-caption-web font-medium text-text-secondary">
-              {label}
-            </p>
-            <p className="mt-2 text-title-sm-web font-semibold text-text-primary">
-              {count === undefined ? '—' : `${formatNumber(count)}건`}
-            </p>
-            <p className="mt-2 text-caption-web text-text-secondary">
-              {description}
-            </p>
-          </div>
-        ))}
-      </div>
-      {tab === 'impressions' && warningCampaigns.length > 0 && (
-        <section
-          aria-label="부정 의심 캠페인 경고"
-          className="mb-5 rounded-xl border border-status-warning-border bg-bg-surface p-4"
-        >
-          <h3 className="text-body-sm-web font-semibold text-text-primary">
-            확인이 필요한 캠페인 {warningCampaigns.length}개
-          </h3>
-          <p className="mt-1 text-caption-web text-text-secondary">
-            무효 비율은 무효 / (유효 + 무효)입니다. 20% 초과 또는 소수 계정의
-            반복 노출이 감지되면 경고합니다.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {warningCampaigns.map((campaign) => (
-              <button
-                className="flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-bg-surface px-3 py-2 text-caption-web focus-visible:outline-2 focus-visible:outline-action-primary"
-                key={campaign.campaignId}
-                onClick={() => setSelectedCampaignId(campaign.campaignId)}
-                type="button"
-              >
-                <span className="font-medium text-text-primary">
-                  {campaign.campaignId}
-                </span>
-                {campaign.highInvalidRate && (
-                  <StatusBadge variant="danger">
-                    무효 {(campaign.invalidRate * 100).toFixed(1)}%
-                  </StatusBadge>
-                )}
-                {campaign.concentrated && (
-                  <StatusBadge variant="warning">소수 계정 집중</StatusBadge>
-                )}
-                <span className="text-action-primary">사용자별 노출 보기</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-      <Tabs items={tabs} value={tab} onValueChange={changeTab} />
+      <Tabs
+        items={[
+          { label: '무효 노출', value: 'impressions' },
+          { label: '캠페인 경고', value: 'warnings' },
+        ]}
+        value={filters.tab}
+        onValueChange={(tab) => {
+          if (tab === 'impressions' || tab === 'warnings')
+            updateFilters({ tab, page: 1, sortBy: '', sortDir: 'desc' });
+        }}
+      />
       <FilterBar
-        columnSettings={columnSettings}
-        className="mb-2 mt-3"
+        className="mb-3 mt-3"
+        columnSettings={settings}
         density={{ value: density, onValueChange: setDensity }}
         pagination={pagination}
       >
-        {/* 캠페인·사용자 ID를 함께 검색하고 피드 요청 탭에서는 사용자 ID만 검색한다. */}
-        <SearchField
-          aria-label={
-            tab === 'impressions'
-              ? '캠페인 ID 또는 사용자 ID 검색'
-              : '사용자 ID 검색'
-          }
-          placeholder={
-            tab === 'impressions'
-              ? '캠페인 ID, 사용자 ID 등을 검색'
-              : '사용자 ID 등을 검색'
-          }
-          value={search.draftKeyword}
-          onChange={(event) => search.setDraftKeyword(event.target.value)}
-        />
-        {tab === 'impressions' && (
+        {filters.tab === 'impressions' ? (
+          <>
+            <SearchField
+              aria-label="캠페인 ID 검색"
+              placeholder="캠페인 ID"
+              value={state.campaign.draftKeyword}
+              onChange={(event) =>
+                state.campaign.setDraftKeyword(event.target.value)
+              }
+            />
+            <SearchField
+              aria-label="사용자 ID 검색"
+              placeholder="사용자 ID"
+              value={state.member.draftKeyword}
+              onChange={(event) =>
+                state.member.setDraftKeyword(event.target.value)
+              }
+            />
+            <SelectField
+              aria-label="무효 사유"
+              fitContent
+              value={filters.reason}
+              options={[
+                { label: '사유 전체', value: 'ALL' },
+                ...Object.entries(invalidReasonLabels).map(
+                  ([value, label]) => ({ value, label }),
+                ),
+              ]}
+              onValueChange={(reason) => {
+                if (
+                  reason === 'ALL' ||
+                  reason === 'EXPIRED_OR_UNKNOWN' ||
+                  reason === 'NOT_OWNER'
+                )
+                  updateFilters({ reason, page: 1 });
+              }}
+            />
+          </>
+        ) : (
           <SelectField
-            aria-label="무효 사유 코드"
+            aria-label="경고 유형"
             fitContent
-            options={reasonOptions}
-            value={reasonCode}
-            onValueChange={changeReason}
+            value={filters.type}
+            options={[
+              { label: '경고 전체', value: 'ALL' },
+              { label: '무효 비율', value: 'INVALID_RATIO' },
+              { label: '소수 회원 집중', value: 'CONCENTRATION' },
+            ]}
+            onValueChange={(type) => {
+              if (
+                type === 'ALL' ||
+                type === 'INVALID_RATIO' ||
+                type === 'CONCENTRATION'
+              )
+                updateFilters({ type, page: 1 });
+            }}
           />
         )}
         <DateRangePicker
-          aria-label="집계 기간"
-          value={period}
-          onValueChange={changePeriod}
+          ariaLabel="부정 관리 조회 기간"
+          value={{ startDate: filters.from, endDate: filters.to }}
+          onValueChange={(value) =>
+            updateFilters({ from: value.startDate, to: value.endDate, page: 1 })
+          }
         />
       </FilterBar>
-      <p className="mb-3 px-3 text-caption-web text-text-secondary">
-        {tab === 'impressions'
-          ? '기간·캠페인·사용자·사유별 합산 결과입니다. 캠페인 경고는 선택 기간의 전체 사용자·사유 기준입니다.'
-          : '기간·사용자별 합산 결과입니다. 사용자 ID로 검색하며 무효 사유 조건은 적용하지 않습니다.'}
-      </p>
-      <FraudTable
-        columnSettings={columnSettings}
-        tab={tab}
-        rows={visibleRows}
-        campaigns={view?.campaigns ?? []}
-        density={density}
-        status={state.status}
-        sort={sort}
-        onSortChange={handleSortChange}
-        onManageMember={onManageMember}
-      />
-      {state.status === 'error' && (
+      {filters.tab === 'impressions' && (
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          {Object.entries(invalidReasonLabels)
+            .filter(
+              ([reason]) =>
+                filters.reason === 'ALL' || filters.reason === reason,
+            )
+            .map(([reason, label]) => {
+              const count = invalid.data
+                ? (invalid.data.summaryByReason.find(
+                    (item) => item.reasonCode === reason,
+                  )?.count ?? 0)
+                : undefined;
+              return (
+                <div
+                  key={reason}
+                  className="rounded-xl border border-border-subtle bg-bg-surface p-4"
+                >
+                  <p className="text-caption-web text-text-secondary">
+                    {label}
+                  </p>
+                  <p className="mt-2 text-h2-web font-semibold">
+                    {count === undefined ? '—' : formatNumber(count) + '건'}
+                  </p>
+                  <p className="mt-1 text-caption-web text-text-secondary">
+                    {reason}
+                  </p>
+                </div>
+              );
+            })}
+        </div>
+      )}
+      {filters.tab === 'warnings' && (
+        <p className="mb-3 text-caption-web text-text-secondary">
+          무효 비율 = 무효 ÷ 유효로 100%를 넘을 수 있습니다. 경고 판정은 서버
+          결과를 따릅니다. 상위 회원 점유율은 가장 집중된 하루 기준입니다.
+        </p>
+      )}
+      {validation && (
+        <p role="status" className="mb-3 text-body-sm-web text-text-secondary">
+          {validation}
+        </p>
+      )}
+      {filters.tab === 'impressions' ? (
+        <FraudTable
+          label="무효 노출 목록"
+          columns={invalidColumns}
+          rows={invalid.data?.items ?? []}
+          rowKey={(item) =>
+            [item.memberId, item.campaignId, item.reasonCode].join(':')
+          }
+          loading={invalid.loading}
+          error={invalid.error}
+          emptyMessage={validation || '조회된 무효 노출이 없습니다.'}
+          density={density}
+          settings={settings}
+          sortBy={sortBy}
+          sortDir={filters.sortDir}
+          onSort={onSort}
+        />
+      ) : (
+        <FraudTable
+          label="캠페인 경고 목록"
+          columns={warningColumns}
+          rows={warnings.data?.items ?? []}
+          rowKey={(item) => item.campaignId}
+          loading={warnings.loading}
+          error={warnings.error}
+          emptyMessage={validation || '조회된 캠페인 경고가 없습니다.'}
+          density={density}
+          settings={settings}
+          sortBy={sortBy}
+          sortDir={filters.sortDir}
+          onSort={onSort}
+        />
+      )}
+      {resource.error && (
         <div className="mt-3 flex justify-end">
-          <Button variant="neutral" onClick={state.retry}>
+          <Button variant="neutral" onClick={resource.refresh}>
             다시 시도
           </Button>
         </div>
       )}
-      {state.status === 'success' && <PaginationSummary {...pagination} />}
-      <AdminDrawer
-        open={Boolean(selectedCampaign && state.report)}
-        onClose={() => setSelectedCampaignId(null)}
-        title={`${selectedCampaignId ?? ''} 노출 집계`}
-        width={680}
-        resizable
-      >
-        {selectedCampaign && state.report && (
-          <FraudCampaignDetail
-            campaign={selectedCampaign}
-            report={state.report}
-            filters={filters}
-            onManageMember={onManageMember}
-          />
-        )}
-      </AdminDrawer>
+      <PaginationSummary {...pagination} />
     </section>
   );
 };

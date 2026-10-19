@@ -1,11 +1,13 @@
 ﻿import { ApiError } from '@admin/api/client';
 
+export const TEMPLATE_LIMIT = 100;
+
 const templateErrors: Record<string, string> = {
   'POSTER-001':
     '필수 영역을 갖춘 템플릿을 만들지 못했습니다. 요청 내용을 바꿔 다시 시도해 주세요.',
   'POSTER-002':
     '기존 템플릿의 영역 구조를 유지하지 못했습니다. 다른 수정 요청을 입력해 주세요.',
-  'POSTER-003': '템플릿은 최대 10개까지 등록할 수 있습니다.',
+  'POSTER-003': `템플릿은 최대 ${TEMPLATE_LIMIT}개까지 등록할 수 있습니다.`,
   'POSTER-004':
     '템플릿 생성이 지연되고 있습니다. 잠시 후 같은 요청으로 다시 시도해 주세요.',
   'POSTER-005': '템플릿을 찾을 수 없습니다.',

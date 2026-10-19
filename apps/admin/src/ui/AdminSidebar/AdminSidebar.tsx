@@ -7,6 +7,7 @@ import {
   LogOut,
   Megaphone,
   Moon,
+  RefreshCw,
   ShieldAlert,
   Sun,
   UserCog,
@@ -47,6 +48,7 @@ const defaultNavigationItems: AdminNavigationItem[] = [
   { icon: CircleDollarSign, id: 'settlement', label: '포인트/정산 관리' },
   { icon: Users, id: 'member', label: '회원 관리' },
   { icon: ShieldAlert, id: 'fraud', label: '부정 관리' },
+  { icon: RefreshCw, id: 'operations', label: '배치 운영' },
   { icon: UserCog, id: 'account', label: '계정 관리' },
 ];
 
