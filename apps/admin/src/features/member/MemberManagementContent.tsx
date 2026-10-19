@@ -1,3 +1,4 @@
+import { Activity } from 'react';
 import { Tabs } from '@repo/ui';
 
 import type { MemberType } from './memberTypes';
@@ -34,13 +35,15 @@ export const MemberManagementContent = ({
           onReviewEnd?.(value);
       }}
     />
-    {activeTab === 'owner' ? (
+    {/* 조회 결과·열 너비를 보존하고 숨긴 탭의 조회 효과는 중단한다. */}
+    <Activity mode={activeTab === 'owner' ? 'visible' : 'hidden'}>
       <OwnerMemberListContent />
-    ) : (
+    </Activity>
+    <Activity mode={activeTab === 'member' ? 'visible' : 'hidden'}>
       <UserMemberListContent
         initialMemberId={initialMemberId}
         onReviewEnd={() => onReviewEnd?.('member')}
       />
-    )}
+    </Activity>
   </section>
 );
