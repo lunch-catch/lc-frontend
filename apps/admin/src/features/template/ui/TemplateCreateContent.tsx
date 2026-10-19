@@ -150,11 +150,18 @@ export const TemplateCreateContent = ({
     });
   }, [messages, pendingMessage, editor.busy, editor.error, editor.loading]);
 
-  const handleSend = async () => {
-    if (sendingRef.current || locked || published || !prompt.trim()) return;
+  const handleSend = async (quickPrompt?: string) => {
+    const submittedPrompt = quickPrompt ?? prompt;
+    if (sendingRef.current || locked || published || !submittedPrompt.trim())
+      return;
+    const targetLabel =
+      quickPrompt === undefined ? selectedTarget?.label : undefined;
     let requestPrompt: string;
     try {
-      requestPrompt = buildSelectedTemplatePrompt(prompt, selectedTarget);
+      // 추천 문구는 서버가 준 원문 그대로 보내며, 부분 선택 문맥을 덧붙이지 않는다.
+      requestPrompt =
+        quickPrompt ??
+        buildSelectedTemplatePrompt(submittedPrompt, selectedTarget);
     } catch (cause) {
       setSelectionError(
         cause instanceof Error
@@ -164,13 +171,13 @@ export const TemplateCreateContent = ({
       return;
     }
     setSelectionError('');
-    const submittedPrompt = prompt;
     sendingRef.current = true;
     // 응답 전에 말풍선을 표시하고, 실패하면 원문을 복구해 같은 요청을 재시도할 수 있게 한다.
     setPrompt('');
+    if (quickPrompt !== undefined) setSelectionContext(null);
     setPendingMessage({
       text: submittedPrompt.trim(),
-      targetLabel: selectedTarget?.label,
+      targetLabel,
     });
     try {
       const generated = await editor.generate(
@@ -190,7 +197,7 @@ export const TemplateCreateContent = ({
           versionNumber: generated.versionNumber,
           html: generated.html,
           text: submittedPrompt.trim(),
-          targetLabel: selectedTarget?.label,
+          targetLabel,
           hasRemovedElements: generated.removedElements.length > 0,
         },
       ]);
@@ -315,6 +322,27 @@ export const TemplateCreateContent = ({
             </ScrollArea>
             {!published && (
               <div className="flex flex-col gap-3 border-t border-border-subtle p-4">
+                {!prompt.trim() &&
+                editor.generation?.suggestedPrompts.length ? (
+                  <div
+                    className="flex flex-wrap gap-2"
+                    aria-label="추천 수정 요청"
+                  >
+                    {editor.generation.suggestedPrompts.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        disabled={
+                          locked || versionNumber !== latestVersionNumber
+                        }
+                        className="rounded-full border border-border-subtle px-3 py-1.5 text-caption-web text-text-secondary transition-colors hover:border-action-primary hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => void handleSend(suggestion)}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
                 <label htmlFor="template-request" className="sr-only">
                   템플릿 생성·수정 요청
                 </label>

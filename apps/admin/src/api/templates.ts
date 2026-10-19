@@ -34,6 +34,7 @@ export interface TemplateGeneration {
   status: 'DRAFT';
   html: string;
   removedElements: string[];
+  suggestedPrompts: string[];
 }
 
 const basePath = '/v1/admin/templates';
@@ -137,7 +138,11 @@ export const generateTemplate = async (
     typeof data.name !== 'string' ||
     typeof data.html !== 'string' ||
     !Array.isArray(data.removedElements) ||
-    data.removedElements.some((item) => typeof item !== 'string')
+    data.removedElements.some((item) => typeof item !== 'string') ||
+    !Array.isArray(data.suggestedPrompts) ||
+    data.suggestedPrompts.some(
+      (item) => typeof item !== 'string' || !item.trim(),
+    )
   )
     throw new ApiError('템플릿 생성 응답 형식을 확인할 수 없습니다.', 201);
   return data;
