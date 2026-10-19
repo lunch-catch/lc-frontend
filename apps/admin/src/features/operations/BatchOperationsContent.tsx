@@ -89,7 +89,6 @@ export const BatchOperationsContent = () => {
           pattern=".*\S.*"
           title="공백을 제외한 작업명을 입력해 주세요."
           value={jobName}
-          disabled={pending}
           onChange={(event) => setJobName(event.target.value)}
           helperText="00:00 묶음의 작업명은 DAILY_0000입니다. 다른 작업은 등록된 정확한 작업명을 입력해 주세요."
         />
@@ -104,7 +103,6 @@ export const BatchOperationsContent = () => {
             ariaLabel="영업일 선택 (필수)"
             placeholder="영업일 선택"
             value={businessDate}
-            disabled={pending}
             onValueChange={(value) => {
               setBusinessDate(value);
               setDateError('');
