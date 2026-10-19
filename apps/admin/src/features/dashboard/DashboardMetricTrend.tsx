@@ -63,6 +63,17 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
           <p className="flex h-72 items-center justify-center text-body-sm-web text-text-secondary">
             지표를 조회하지 못했습니다.
           </p>
+        ) : rows.length > 0 &&
+          rows.every((row) => row.status === 'IN_PROGRESS') ? (
+          <div
+            role="status"
+            className="flex h-72 flex-col items-center justify-center gap-2 text-body-sm-web text-text-secondary"
+          >
+            <p className="font-medium">집계 미완료</p>
+            <p className="text-caption-web">
+              선택한 기간의 통계가 아직 확정되지 않았습니다.
+            </p>
+          </div>
         ) : (
           <DashboardTrendChart
             title={title}

@@ -1,3 +1,5 @@
+import type { AnalyticsBucket } from '@admin/api/analytics';
+
 import type {
   BreakdownDimension,
   BreakdownMetric,
@@ -13,6 +15,20 @@ export {
   shiftDate,
 } from '@admin/features/analytics/analyticsDateUtils';
 
+/** API 조회 대기와 서버의 집계 미완료를 구분한다. */
+export const getDashboardMetricHint = (resource: {
+  loading: boolean;
+  error?: string;
+  data?: { items: AnalyticsBucket[] };
+}) =>
+  resource.loading
+    ? '불러오는 중'
+    : resource.error
+      ? '조회 실패'
+      : resource.data?.items.some((item) => item.status === 'IN_PROGRESS')
+        ? '집계 미완료'
+        : '데이터 없음';
+
 export const usageMetrics: { value: UsageMetric; label: string }[] = [
   { value: 'impressions', label: '노출' },
   { value: 'saves', label: '찜' },
@@ -20,7 +36,6 @@ export const usageMetrics: { value: UsageMetric; label: string }[] = [
   { value: 'used', label: '사용' },
 ];
 
-// 퍼널 지표의 발생량은 서버 구간별 건수를 합산한다.
 export const funnelMetrics: { value: FunnelMetric; label: string }[] = [
   { value: 'impressions', label: '유효 노출' },
   { value: 'saves', label: '찜' },

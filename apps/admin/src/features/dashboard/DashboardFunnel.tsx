@@ -10,7 +10,7 @@ import { DashboardMetricCard } from './DashboardMetricCard';
 import { DashboardSection } from './DashboardSection';
 import { DashboardTrendChart } from './DashboardTrendChart';
 import type { FunnelMetric } from './dashboardTypes';
-import { funnelMetrics } from './dashboardUtils';
+import { funnelMetrics, getDashboardMetricHint } from './dashboardUtils';
 
 interface FunnelResource {
   data?: AnalyticsSeries<FunnelMetrics>;
@@ -75,13 +75,8 @@ export const DashboardFunnel = ({
             label={item.label}
             value={sumAnalytics(resource.data, fields[item.value])}
             loading={resource.loading}
-            emptyLabel={
-              resource.error
-                ? '조회 실패'
-                : rows.some((row) => row.status === 'IN_PROGRESS')
-                  ? '집계 중'
-                  : '데이터 없음'
-            }
+            emptyLabel={getDashboardMetricHint(resource)}
+            emphasis={metric === item.value}
             selected={metric === item.value}
             onSelect={() => onMetricChange(item.value)}
           />
@@ -99,6 +94,17 @@ export const DashboardFunnel = ({
           <p className="flex h-72 items-center justify-center text-body-sm-web text-text-secondary">
             이용 추이를 조회하지 못했습니다.
           </p>
+        ) : rows.length > 0 &&
+          rows.every((row) => row.status === 'IN_PROGRESS') ? (
+          <div
+            role="status"
+            className="flex h-72 flex-col items-center justify-center gap-2 text-body-sm-web text-text-secondary"
+          >
+            <p className="font-medium">집계 미완료</p>
+            <p className="text-caption-web">
+              선택한 기간의 통계가 아직 확정되지 않았습니다.
+            </p>
+          </div>
         ) : (
           <DashboardTrendChart
             title={selected.label + ' 추이'}
@@ -135,8 +141,8 @@ export const DashboardFunnel = ({
         </span>
       </div>
       <p className="mt-2 text-caption-web text-text-secondary">
-        찜은 피드 카드에서 발생한 건수입니다. 집계 중인 구간은 확정 수치와
-        합계로 표시하지 않습니다.
+        찜은 피드 카드에서 발생한 건수입니다. 집계 미완료 구간이 포함되면 기간
+        합계를 확정 수치로 표시하지 않습니다.
       </p>
     </DashboardSection>
   );
