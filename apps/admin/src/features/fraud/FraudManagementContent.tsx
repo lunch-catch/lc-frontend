@@ -265,9 +265,11 @@ export const FraudManagementContent = () => {
                 filters.reason === 'ALL' || filters.reason === reason,
             )
             .map(([reason, label]) => {
-              const count = invalid.data?.summaryByReason.find(
-                (item) => item.reasonCode === reason,
-              )?.count;
+              const count = invalid.data
+                ? (invalid.data.summaryByReason.find(
+                    (item) => item.reasonCode === reason,
+                  )?.count ?? 0)
+                : undefined;
               return (
                 <div
                   key={reason}
