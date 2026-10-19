@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Button, Input } from '@repo/ui';
+import { Button, DatePicker, Input } from '@repo/ui';
 import { formatDate } from '@repo/utils';
 
 import {
@@ -23,6 +23,7 @@ const getRetryError = (cause: unknown) => {
 export const BatchOperationsContent = () => {
   const [jobName, setJobName] = useState('DAILY_0000');
   const [businessDate, setBusinessDate] = useState('');
+  const [dateError, setDateError] = useState('');
   const [target, setTarget] = useState<{
     jobName: string;
     businessDate: string;
@@ -67,7 +68,17 @@ export const BatchOperationsContent = () => {
         className="max-w-xl space-y-4 rounded-xl border border-border-subtle bg-bg-surface p-5"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!jobName.trim() || !businessDate || pendingRef.current) return;
+          if (!jobName.trim() || pendingRef.current) return;
+          if (!businessDate) {
+            setDateError('영업일을 선택해 주세요.');
+            event.currentTarget
+              .querySelector<HTMLButtonElement>(
+                '[aria-label="영업일 선택 (필수)"]',
+              )
+              ?.focus();
+            return;
+          }
+          setDateError('');
           setError('');
           setTarget({ jobName: jobName.trim(), businessDate });
         }}
@@ -82,15 +93,30 @@ export const BatchOperationsContent = () => {
           onChange={(event) => setJobName(event.target.value)}
           helperText="00:00 묶음의 작업명은 DAILY_0000입니다. 다른 작업은 등록된 정확한 작업명을 입력해 주세요."
         />
-        <Input
-          label="영업일"
-          type="date"
-          required
-          value={businessDate}
-          disabled={pending}
-          onChange={(event) => setBusinessDate(event.target.value)}
-          helperText="작업이 실패한 대상 영업일을 선택해 주세요."
-        />
+        <fieldset className="min-w-0 space-y-2">
+          <legend className="mb-2 text-caption-web font-medium text-text-primary">
+            영업일
+            <span aria-hidden="true" className="ml-1 text-status-danger-fg">
+              *
+            </span>
+          </legend>
+          <DatePicker
+            ariaLabel="영업일 선택 (필수)"
+            placeholder="영업일 선택"
+            value={businessDate}
+            disabled={pending}
+            onValueChange={(value) => {
+              setBusinessDate(value);
+              setDateError('');
+            }}
+          />
+          <p
+            role={dateError ? 'alert' : undefined}
+            className={`ml-1 text-caption-web ${dateError ? 'text-status-danger-fg' : 'text-text-secondary'}`}
+          >
+            {dateError || '작업이 실패한 대상 영업일을 선택해 주세요.'}
+          </p>
+        </fieldset>
         <div className="flex justify-end">
           <Button type="submit" disabled={pending}>
             재실행 요청
