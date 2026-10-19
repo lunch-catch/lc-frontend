@@ -76,11 +76,7 @@ export const getMockDashboardUsage = (): DashboardDataset => {
     };
     const spend = impressions * 10;
     days.push({
-      impressions: counts.impressions,
-      saves: counts.saves,
-      issued: counts.issued,
       date,
-      totalImpressions: impressions + 120 + (index % 90),
       segments: createSegments(counts, spend, index),
     });
   }

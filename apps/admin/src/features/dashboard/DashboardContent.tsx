@@ -35,8 +35,6 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
     rangeError,
     hasUsagePeriod,
     days,
-    summary,
-    trend,
     canCompare,
     previousDays,
   } = report;
@@ -60,6 +58,8 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
     members,
     stores,
     sales,
+    metrics.funnel,
+    metrics.previousFunnel,
     metrics.previousMembers,
     metrics.previousStores,
     metrics.previousSales,
@@ -108,7 +108,10 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
           <span className="inline-flex items-center gap-1.5">
             <Clock3 aria-hidden className="size-3.5" />
             {(view === 'members'
-              ? [['회원', metrics.members.data?.aggregatedAt]]
+              ? [
+                  ['회원', metrics.members.data?.aggregatedAt],
+                  ['이용', metrics.funnel.data?.aggregatedAt],
+                ]
               : [
                   ['입점', metrics.stores.data?.aggregatedAt],
                   ['매출', metrics.sales.data?.aggregatedAt],
@@ -181,29 +184,20 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                   note="각 구간의 일평균입니다. 주간·월간 순수 활성 회원 수와는 다릅니다."
                 />
               </div>
-              {hasUsagePeriod ? (
-                <>
-                  <DashboardFunnel
-                    summary={summary}
-                    trend={trend}
-                    previousTrend={report.previousTrend}
-                    metric={report.metric}
-                    onMetricChange={report.setMetric}
-                    compare={report.compare}
-                    canCompare={canCompare}
-                    onCompareChange={report.setCompare}
-                    validRatio={report.validRatio}
-                  />
-                  <DashboardBreakdown
-                    days={days}
-                    previousDays={previousDays}
-                    canCompare={canCompare}
-                  />
-                </>
-              ) : (
-                <p className="text-body-sm-web text-text-secondary">
-                  선택한 기간에는 이용현황 예시 데이터가 없습니다.
-                </p>
+              <DashboardFunnel
+                resource={metrics.funnel}
+                previousResource={metrics.previousFunnel}
+                metric={report.metric}
+                onMetricChange={report.setMetric}
+                compare={report.compare}
+                onCompareChange={report.setCompare}
+              />
+              {hasUsagePeriod && (
+                <DashboardBreakdown
+                  days={days}
+                  previousDays={previousDays}
+                  canCompare={canCompare}
+                />
               )}
             </>
           ) : (

@@ -36,11 +36,21 @@ export interface SalesMetrics extends AnalyticsBucket {
   unspentBalance: number | null;
 }
 
+export interface FunnelMetrics extends AnalyticsBucket {
+  validImpressionCount: number | null;
+  invalidImpressionCount: number | null;
+  validRatio: number | null;
+  wishCount: number | null;
+  issueCount: number | null;
+  redeemCount: number | null;
+}
+
 const readSeries = async <T extends AnalyticsBucket>(
   path: string,
   query: AnalyticsQuery,
   fields: readonly string[],
   signal: AbortSignal,
+  fractions: readonly string[] = [],
 ): Promise<AnalyticsSeries<T>> => {
   const params = new URLSearchParams({ ...query });
   const data = await requestData<AnalyticsSeries<T>>(
@@ -72,7 +82,13 @@ const readSeries = async <T extends AnalyticsBucket>(
       return fields.some((field) =>
         item.status === 'IN_PROGRESS'
           ? values[field] !== null
-          : values[field] !== null && !Number.isSafeInteger(values[field]),
+          : values[field] !== null &&
+            (fractions.includes(field)
+              ? typeof values[field] !== 'number' ||
+                !Number.isFinite(values[field]) ||
+                (values[field] as number) < 0 ||
+                (values[field] as number) > 1
+              : !Number.isSafeInteger(values[field])),
       );
     })
   )
@@ -112,4 +128,20 @@ export const getSales = (query: AnalyticsQuery, signal: AbortSignal) =>
       'unspentBalance',
     ],
     signal,
+  );
+
+export const getFunnel = (query: AnalyticsQuery, signal: AbortSignal) =>
+  readSeries<FunnelMetrics>(
+    '/v1/admin/dashboard/funnel',
+    query,
+    [
+      'validImpressionCount',
+      'invalidImpressionCount',
+      'validRatio',
+      'wishCount',
+      'issueCount',
+      'redeemCount',
+    ],
+    signal,
+    ['validRatio'],
   );

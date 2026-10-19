@@ -1,6 +1,6 @@
 export type DashboardInterval = 'day' | 'week' | 'month';
 export type UsageMetric = 'impressions' | 'saves' | 'issued' | 'used';
-export type FunnelMetric = Exclude<UsageMetric, 'used'>;
+export type FunnelMetric = UsageMetric;
 export type BreakdownMetric = UsageMetric | 'spend';
 export type BreakdownDimension = 'region' | 'category';
 
@@ -28,9 +28,8 @@ export interface DashboardSegment extends UsageCounts {
 }
 
 /** 아직 API가 없는 이용현황 전용 예시 모델. */
-export interface DashboardDailyAggregate extends Omit<UsageCounts, 'used'> {
+export interface DashboardDailyAggregate {
   date: string;
-  totalImpressions: number;
   segments: DashboardSegment[];
 }
 
@@ -39,12 +38,4 @@ export interface DashboardDataset {
   completedThrough: string;
   availableFrom: string;
   days: DashboardDailyAggregate[];
-}
-
-export interface DashboardSummary extends Omit<UsageCounts, 'used'> {
-  totalImpressions: number;
-}
-
-export interface DashboardTrendPoint extends Omit<UsageCounts, 'used'> {
-  label: string;
 }

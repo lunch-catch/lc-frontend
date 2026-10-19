@@ -1,5 +1,6 @@
 import {
   type AnalyticsQuery,
+  getFunnel,
   getMemberMetrics,
   getSales,
   getStoreMetrics,
@@ -13,6 +14,11 @@ export const useDashboardMetrics = (
 ) => {
   const memberQuery = view === 'members' ? query : null;
   const ownerQuery = view === 'owners' ? query : null;
+  const funnel = useAnalyticsQuery(getFunnel, memberQuery);
+  const previousFunnel = useAnalyticsQuery(
+    getFunnel,
+    view === 'members' ? previousQuery : null,
+  );
   const members = useAnalyticsQuery(getMemberMetrics, memberQuery);
   const stores = useAnalyticsQuery(getStoreMetrics, ownerQuery);
   const sales = useAnalyticsQuery(getSales, ownerQuery);
@@ -29,6 +35,8 @@ export const useDashboardMetrics = (
     view === 'owners' ? previousQuery : null,
   );
   return {
+    funnel,
+    previousFunnel,
     members,
     stores,
     sales,
