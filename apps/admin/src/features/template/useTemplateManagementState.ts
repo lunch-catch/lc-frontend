@@ -1,6 +1,10 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 
-import { changeTemplateActive, getTemplates } from '@admin/api/templates';
+import {
+  changeTemplateActive,
+  deleteTemplate,
+  getTemplates,
+} from '@admin/api/templates';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 
 import type { PosterTemplate } from './templateTypes';
@@ -12,6 +16,7 @@ export interface TemplateManagement {
   error: string | null;
   refresh: () => void;
   changeActive: (template: PosterTemplate) => Promise<void>;
+  removeTemplate: (template: PosterTemplate) => Promise<void>;
 }
 
 interface TemplateListResult {
@@ -80,11 +85,18 @@ export const useTemplateManagementState = (): TemplateManagement => {
     );
   };
 
+  const removeTemplate = async (template: PosterTemplate) => {
+    await deleteTemplate(String(template.templateId));
+    // 삭제 성공 후 목록과 생성 한도를 서버의 최신 값으로 다시 판단한다.
+    refresh();
+  };
+
   return {
     templates,
     loading: adminId !== undefined && !current,
     error: current?.error ?? null,
     refresh,
     changeActive,
+    removeTemplate,
   };
 };
