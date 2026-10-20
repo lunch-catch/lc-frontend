@@ -1,4 +1,5 @@
 import { ApiError, requestData } from './client';
+import { isRecord } from './listResponse';
 
 export type AdminAccountRole = 'ADMIN' | 'SUPER_ADMIN';
 
@@ -18,7 +19,7 @@ export interface IssuedAdminAccount {
 export const issueAdminAccount = async (
   values: IssueAdminAccountRequest,
 ): Promise<IssuedAdminAccount> => {
-  const account = await requestData<IssuedAdminAccount>(
+  const account = await requestData<unknown>(
     '/v1/admin/admins',
     {
       method: 'POST',
@@ -28,9 +29,10 @@ export const issueAdminAccount = async (
     201,
   );
   if (
+    !isRecord(account) ||
     typeof account.loginId !== 'string' ||
     typeof account.name !== 'string' ||
-    !['ADMIN', 'SUPER_ADMIN'].includes(account.role)
+    (account.role !== 'ADMIN' && account.role !== 'SUPER_ADMIN')
   )
     throw new ApiError('발급된 관리자 정보를 확인할 수 없습니다.', 201);
   return { loginId: account.loginId, name: account.name, role: account.role };
