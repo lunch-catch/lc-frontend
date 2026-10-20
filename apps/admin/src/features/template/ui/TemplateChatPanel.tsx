@@ -43,15 +43,32 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
             {editor.loadingMore ? '불러오는 중' : '이전 버전 불러오기'}
           </Button>
         )}
-        {previousVersions.map((number) => (
-          <TemplateVersionMessage
-            key={number}
-            versionNumber={number}
-            current={number === versionNumber}
-            disabled={locked}
-            availability={editor.getVersionAvailability(number)}
-            onSelect={requestVersionChange}
-          />
+        {/* 버전 이력의 요청·설명을 복원하되 이번 대화에 있는 버전은 훅에서 제외한다. */}
+        {previousVersions.map((version) => (
+          <Fragment key={version.versionNumber}>
+            {version.requestPrompt.trim() && (
+              <TemplateChatBubble variant="user">
+                {version.requestPrompt}
+              </TemplateChatBubble>
+            )}
+            {version.message.trim() && (
+              <TemplateChatBubble
+                variant="assistant"
+                className="whitespace-pre-wrap"
+              >
+                {version.message}
+              </TemplateChatBubble>
+            )}
+            <TemplateVersionMessage
+              versionNumber={version.versionNumber}
+              current={version.versionNumber === versionNumber}
+              disabled={locked}
+              availability={editor.getVersionAvailability(
+                version.versionNumber,
+              )}
+              onSelect={requestVersionChange}
+            />
+          </Fragment>
         ))}
         {messages.map((message) => (
           <Fragment key={message.versionNumber}>
@@ -63,6 +80,15 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
               )}
               {message.text}
             </TemplateChatBubble>
+            {/* LLM 설명은 검증되지 않은 텍스트이므로 HTML로 해석하지 않는다. */}
+            {message.assistantMessage.trim() && (
+              <TemplateChatBubble
+                variant="assistant"
+                className="whitespace-pre-wrap"
+              >
+                {message.assistantMessage}
+              </TemplateChatBubble>
+            )}
             <TemplateVersionMessage
               versionNumber={message.versionNumber}
               current={message.versionNumber === versionNumber}

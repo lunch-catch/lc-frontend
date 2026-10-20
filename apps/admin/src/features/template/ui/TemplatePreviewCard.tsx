@@ -1,5 +1,6 @@
 ﻿import { Button, StatusBadge, Toggle } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
+import { Trash2 } from 'lucide-react';
 
 import type { PosterTemplate } from '../templateTypes';
 import { TemplateThumbnail } from './TemplateThumbnail';
@@ -7,12 +8,14 @@ import { TemplateThumbnail } from './TemplateThumbnail';
 export interface TemplatePreviewCardProps {
   onActivationRequest: (template: PosterTemplate) => void;
   onOpenTemplate: (template: PosterTemplate) => void;
+  onDeleteRequest: (template: PosterTemplate) => void;
   template: PosterTemplate;
 }
 
 export const TemplatePreviewCard = ({
   onActivationRequest,
   onOpenTemplate,
+  onDeleteRequest,
   template,
 }: TemplatePreviewCardProps) => {
   const canChangeActivation = template.status === 'PUBLISHED';
@@ -75,9 +78,15 @@ export const TemplatePreviewCard = ({
             onChange={() => onActivationRequest(template)}
           />
         ) : (
-          <span className="text-caption-web text-text-secondary">
-            게시 전 초안
-          </span>
+          <Button
+            aria-label={`${template.name} 삭제`}
+            className="!min-h-8 !px-2 !py-1 text-caption-web"
+            variant="neutral"
+            leadingIcon={<Trash2 aria-hidden="true" className="size-3.5" />}
+            onClick={() => onDeleteRequest(template)}
+          >
+            삭제
+          </Button>
         )}
         <Button
           className="shrink-0 !min-h-8 !px-2 !py-1 text-caption-web"
