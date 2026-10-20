@@ -215,7 +215,13 @@ const WishlistScreen = () => {
   const handleUndoRemove = (wish: WishItem, index: number) => {
     putBack(wish, index);
     setToast(null);
-    restoreWish(wish.campaignId);
+    // 다시 찜하지 못했으면 서버에는 지워진 채라, 카드를 다시 빼고 알린다
+    restoreWish(wish.campaignId).catch(() => {
+      setWishes((current) =>
+        current.filter((item) => item.campaignId !== wish.campaignId),
+      );
+      setToast({ message: '찜을 되돌리지 못했어요', tone: 'error' });
+    });
   };
 
   // 응답을 기다리지 않고 바로 목록에서 빼서, 실수로 지웠을 때 곧바로 되돌릴 수 있게 한다

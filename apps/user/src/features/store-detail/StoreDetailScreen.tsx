@@ -218,7 +218,11 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const handleUndoRemove = (campaignId: string) => {
     setWished(true);
     setToast(null);
-    restoreWish(campaignId);
+    // 다시 찜하지 못했으면 서버에는 취소된 채라, 하트를 다시 비우고 알린다
+    restoreWish(campaignId).catch(() => {
+      setWished(false);
+      setToast({ message: '찜을 되돌리지 못했어요', tone: 'error' });
+    });
   };
 
   // 응답을 기다리지 않고 바로 하트를 비워, 실수로 눌렀을 때 곧바로 되돌릴 수 있게 한다

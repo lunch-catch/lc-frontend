@@ -28,11 +28,9 @@ export interface WishItem {
   discount: WishDiscount | null;
 }
 
-// 찜 목록 조회와 가게 상세 찜(POST /v1/wishlist)은 서버 구현이 끝나 실제 API를 쓴다
+// 찜 목록 조회, 가게 상세 찜(POST /v1/wishlist), 찜 삭제(DELETE /v1/wishlist/{campaignId})는
+// 서버 구현이 끝나 실제 API를 쓴다
 const USE_WISHLIST_API = true;
-// 찜 삭제(DELETE /v1/wishlist/{campaignId})는 명세에는 있지만 아직 서버에 없어 mock이다
-// 서버에 올라오면 켠다. 그 전까지는 지운 찜이 새로 불러올 때 다시 보인다
-const USE_WISH_REMOVE_API = false;
 
 const MOCK_DELAY_MS = 600;
 
@@ -127,15 +125,24 @@ export const addWish = async (campaignId: string): Promise<void> => {
   if (card) addMockWish(card);
 };
 
+// 보낸 뒤 아직 끝나지 않은 찜 삭제 요청. 되돌리기가 삭제보다 먼저 서버에 닿지 않게 기다리는 데 쓴다
+const pendingRemovals = new Map<string, Promise<void>>();
+
 // 찜을 지운다 (DELETE /v1/wishlist/{campaignId}). 찜 목록에 없어도 성공이다
 // 지운 캠페인은 당일 피드에 다시 나오지 않고 10:50 오픈 알림 대상에서도 빠진다 (서버 처리)
 export const removeWish = async (campaignId: string): Promise<void> => {
-  if (isServerId(campaignId)) {
-    // 삭제 API가 없는데 성공처럼 보이면 새로고침 뒤 다시 나타난다. 실패로 돌려 화면이 카드를 되돌리게 한다
-    if (!USE_WISH_REMOVE_API) {
-      throw new Error('찜 삭제 API가 아직 없습니다');
+  if (USE_WISHLIST_API && isServerId(campaignId)) {
+    const removal = request<void>(`/v1/wishlist/${campaignId}`, {
+      method: 'DELETE',
+    });
+    pendingRemovals.set(campaignId, removal);
+    try {
+      await removal;
+    } finally {
+      if (pendingRemovals.get(campaignId) === removal) {
+        pendingRemovals.delete(campaignId);
+      }
     }
-    await request(`/v1/wishlist/${campaignId}`, { method: 'DELETE' });
     return;
   }
 
@@ -145,9 +152,12 @@ export const removeWish = async (campaignId: string): Promise<void> => {
 };
 
 // 삭제를 되돌린다. 서버에서는 같은 캠페인을 다시 찜하는 요청이다
-// 삭제가 mock인 동안은 서버 찜이 그대로 남아 있어, 다시 찜해도 이미 찜한 것(200)으로 성공한다
+// 삭제가 아직 진행 중이면 끝난 뒤에 보낸다. 먼저 닿으면 뒤이어 온 삭제가 되돌린 찜을 지운다
+// 오늘 노출 중인 캠페인이 아니면 다시 찜할 수 없어 404 ADSERVING-004로 실패한다
 export const restoreWish = async (campaignId: string): Promise<void> => {
   if (USE_WISHLIST_API && isServerId(campaignId)) {
+    // 삭제가 실패했어도 다시 찜하는 요청은 결과가 같아 그대로 보낸다
+    await pendingRemovals.get(campaignId)?.catch(() => {});
     await addWish(campaignId);
     return;
   }
