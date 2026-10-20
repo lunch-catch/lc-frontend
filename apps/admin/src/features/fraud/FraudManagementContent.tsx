@@ -295,11 +295,6 @@ export const FraudManagementContent = () => {
           결과를 따릅니다. 상위 회원 점유율은 가장 집중된 하루 기준입니다.
         </p>
       )}
-      {validation && (
-        <p role="status" className="mb-3 text-body-sm-web text-text-secondary">
-          {validation}
-        </p>
-      )}
       {filters.tab === 'impressions' ? (
         <FraudTable
           label="무효 노출 목록"
