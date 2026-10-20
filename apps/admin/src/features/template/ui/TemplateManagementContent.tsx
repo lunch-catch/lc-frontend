@@ -1,48 +1,19 @@
-import { useId, useMemo, useRef, useState } from 'react';
-import { Button, SearchField, SelectField } from '@repo/ui';
+import { useId, useRef, useState } from 'react';
+import { Button } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
-import { queryChoice, queryText } from '@admin/hooks/urlQuery';
-import { useUrlFilters } from '@admin/hooks/useUrlFilters';
-import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
-import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import type { PosterTemplate } from '../templateTypes';
 import { getTemplateError, TEMPLATE_LIMIT } from '../templateUtils';
 import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
 
-const templateQuery = {
-  keyword: queryText(),
-  activation: queryChoice(['ALL', 'ACTIVE', 'INACTIVE'] as const, 'ALL'),
-  status: queryChoice(['ALL', 'DRAFT', 'PUBLISHED'] as const, 'ALL'),
-  sort: queryChoice(
-    ['ACTIVE_FIRST', 'INACTIVE_FIRST', 'REGISTERED'] as const,
-    'REGISTERED',
-  ),
-};
-
-const activationOptions = [
-  { label: '활성 여부 전체', value: 'ALL' },
-  { label: '활성', value: 'ACTIVE' },
-  { label: '비활성', value: 'INACTIVE' },
-];
-const statusOptions = [
-  { label: '상태 전체', value: 'ALL' },
-  { label: '임시저장 중', value: 'DRAFT' },
-  { label: '게시됨', value: 'PUBLISHED' },
-];
-const sortOptions = [
-  { label: '최신 등록순', value: 'REGISTERED' },
-  { label: '활성 템플릿 우선', value: 'ACTIVE_FIRST' },
-  { label: '비활성 템플릿 우선', value: 'INACTIVE_FIRST' },
-];
-
 export interface TemplateManagementContentProps {
   onCreate: (name: string) => void;
   onOpenTemplate: (template: PosterTemplate) => void;
   changeActive: (template: PosterTemplate) => Promise<void>;
+  removeTemplate: (template: PosterTemplate) => Promise<void>;
   loading: boolean;
   error: string | null;
   templates: PosterTemplate[];
@@ -52,55 +23,37 @@ export const TemplateManagementContent = ({
   onCreate,
   onOpenTemplate,
   changeActive,
+  removeTemplate,
   loading,
   error,
   templates,
 }: TemplateManagementContentProps) => {
-  const { filters, updateFilters } = useUrlFilters('templates.', templateQuery);
-  const { activation, status, sort } = filters;
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [limitTooltipOpen, setLimitTooltipOpen] = useState(false);
   const limitTooltipId = useId();
-  // 검색·상태 필터와 무관하게 서버가 반환한 전체 템플릿 수로 생성 한도를 판단한다.
+  // 필터 없는 전체 응답으로 생성 한도를 판단하고, 서버의 최신 등록순을 그대로 표시한다.
   const atTemplateLimit = templates.length >= TEMPLATE_LIMIT;
   const canCreate = !loading && !error && !atTemplateLimit;
   const [activationError, setActivationError] = useState<string | null>(null);
   const [changingActive, setChangingActive] = useState(false);
+  // 상태 반영 전의 연속 클릭도 막도록 요청 잠금은 ref로 관리한다.
   const activationLock = useRef(false);
   const [pendingActivationTemplate, setPendingActivationTemplate] =
     useState<PosterTemplate | null>(null);
-  const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
-    filters.keyword,
-    (keyword) => updateFilters({ keyword }),
+  const [pendingDeletion, setPendingDeletion] = useState<PosterTemplate | null>(
+    null,
   );
+  const [deletionError, setDeletionError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deletionNotice, setDeletionNotice] = useState('');
+  const deletionLock = useRef(false);
 
-  const filteredTemplates = useMemo(() => {
-    const query = keyword.trim().toLowerCase();
-    const result = templates.filter((template) => {
-      const matchesActivation =
-        activation === 'ALL' ||
-        (activation === 'ACTIVE' ? template.active : !template.active);
-      const matchesStatus = status === 'ALL' || template.status === status;
-      const matchesKeyword =
-        !query ||
-        [String(template.templateId), template.name].some((value) =>
-          value.toLowerCase().includes(query),
-        );
-
-      return matchesActivation && matchesKeyword && matchesStatus;
-    });
-
-    return [...result].sort((first, second) => {
-      if (sort === 'ACTIVE_FIRST') {
-        return Number(second.active) - Number(first.active);
-      }
-      if (sort === 'INACTIVE_FIRST') {
-        return Number(first.active) - Number(second.active);
-      }
-
-      return second.createdAt.localeCompare(first.createdAt);
-    });
-  }, [activation, keyword, sort, status, templates]);
+  const closeActivationModal = () => {
+    if (!activationLock.current) setPendingActivationTemplate(null);
+  };
+  const closeDeletionModal = () => {
+    if (!deletionLock.current) setPendingDeletion(null);
+  };
 
   const handleConfirmActivation = async () => {
     if (!pendingActivationTemplate || activationLock.current) return;
@@ -115,6 +68,28 @@ export const TemplateManagementContent = ({
     } finally {
       activationLock.current = false;
       setChangingActive(false);
+    }
+  };
+
+  const handleConfirmDeletion = async () => {
+    if (
+      !pendingDeletion ||
+      pendingDeletion.status !== 'DRAFT' ||
+      deletionLock.current
+    )
+      return;
+    deletionLock.current = true;
+    setDeleting(true);
+    setDeletionError(null);
+    try {
+      await removeTemplate(pendingDeletion);
+      setDeletionNotice(`${pendingDeletion.name} 템플릿을 삭제했습니다.`);
+      setPendingDeletion(null);
+    } catch (cause) {
+      setDeletionError(getTemplateError(cause));
+    } finally {
+      deletionLock.current = false;
+      setDeleting(false);
     }
   };
   const isActivating = pendingActivationTemplate?.active === false;
@@ -173,36 +148,14 @@ export const TemplateManagementContent = ({
         </span>
       </header>
 
-      <FilterBar className="mb-4 shrink-0">
-        <SearchField
-          onChange={(event) => setDraftKeyword(event.target.value)}
-          value={draftKeyword}
-        />
-        <SelectField
-          fitContent
-          onValueChange={(value) => {
-            updateFilters({ status: value as typeof status });
-          }}
-          options={statusOptions}
-          value={status}
-        />
-        <SelectField
-          fitContent
-          onValueChange={(value) => {
-            updateFilters({ activation: value as typeof activation });
-          }}
-          options={activationOptions}
-          value={activation}
-        />
-        <SelectField
-          fitContent
-          onValueChange={(value) => {
-            updateFilters({ sort: value as typeof sort });
-          }}
-          options={sortOptions}
-          value={sort}
-        />
-      </FilterBar>
+      {deletionNotice && (
+        <p
+          role="status"
+          className="mb-4 text-body-sm-web text-status-success-fg"
+        >
+          {deletionNotice}
+        </p>
+      )}
 
       {loading || error ? (
         <div
@@ -211,11 +164,17 @@ export const TemplateManagementContent = ({
         >
           {error ?? '템플릿을 불러오는 중입니다.'}
         </div>
-      ) : filteredTemplates.length > 0 ? (
+      ) : templates.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 @sm:grid-cols-2 @xl:grid-cols-3 @3xl:grid-cols-4 @5xl:grid-cols-5">
-          {filteredTemplates.map((template) => (
+          {templates.map((template) => (
             <TemplatePreviewCard
               key={template.templateId}
+              onDeleteRequest={(target) => {
+                if (target.status !== 'DRAFT' || deletionLock.current) return;
+                setDeletionError(null);
+                setDeletionNotice('');
+                setPendingDeletion(target);
+              }}
               onActivationRequest={(template) => {
                 setActivationError(null);
                 setPendingActivationTemplate(template);
@@ -242,9 +201,41 @@ export const TemplateManagementContent = ({
         />
       )}
       <AdminModal
-        onClose={() => {
-          if (!changingActive) setPendingActivationTemplate(null);
-        }}
+        title="템플릿 삭제"
+        open={pendingDeletion !== null}
+        onClose={closeDeletionModal}
+      >
+        <div className="flex flex-col gap-6">
+          <p className="text-body-sm-web text-text-secondary">
+            {pendingDeletion?.name} 템플릿을 삭제하시겠습니까? 모든 임시저장
+            버전과 대화가 함께 삭제되며 복구할 수 없습니다.
+          </p>
+          {deletionError && (
+            <p role="alert" className="text-caption-web text-status-danger-fg">
+              {deletionError}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              disabled={deleting}
+              onClick={closeDeletionModal}
+            >
+              취소
+            </Button>
+            <Button
+              variant="danger"
+              isLoading={deleting}
+              onClick={() => void handleConfirmDeletion()}
+            >
+              삭제
+            </Button>
+          </div>
+        </div>
+      </AdminModal>
+
+      <AdminModal
+        onClose={closeActivationModal}
         open={pendingActivationTemplate !== null}
         title={`템플릿 ${isActivating ? '활성화' : '비활성화'}`}
       >
@@ -264,7 +255,7 @@ export const TemplateManagementContent = ({
           <div className="flex justify-end gap-2">
             <Button
               disabled={changingActive}
-              onClick={() => setPendingActivationTemplate(null)}
+              onClick={closeActivationModal}
               variant="secondary"
             >
               취소

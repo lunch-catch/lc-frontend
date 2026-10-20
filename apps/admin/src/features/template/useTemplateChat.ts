@@ -16,6 +16,7 @@ interface TemplateChatEntry {
   versionNumber: number;
   html: string;
   text: string;
+  assistantMessage: string;
   targetLabel?: string;
   hasRemovedElements: boolean;
 }
@@ -110,8 +111,7 @@ export const useTemplateChat = ({
   );
   const previousVersions = editor.versions
     .filter((item) => !messageVersions.has(item.versionNumber))
-    .map((item) => item.versionNumber)
-    .sort((a, b) => a - b);
+    .sort((a, b) => a.versionNumber - b.versionNumber);
   const requestVersionChange = (nextVersion: number) => {
     if (
       !locked &&
@@ -186,6 +186,7 @@ export const useTemplateChat = ({
           versionNumber: generated.versionNumber,
           html: generated.html,
           text: submittedPrompt.trim(),
+          assistantMessage: generated.message,
           targetLabel,
           hasRemovedElements: generated.removedElements.length > 0,
         },
