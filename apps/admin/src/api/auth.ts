@@ -1,13 +1,14 @@
 import type { AdminInfo, AdminLoginValues } from '@admin/auth/adminAuthContext';
 
 import { ApiError, request, requestData } from './client';
+import { isId, isRecord } from './listResponse';
 
-const parseAdmin = (admin: AdminInfo): AdminInfo => {
+const parseAdmin = (admin: unknown): AdminInfo => {
   if (
-    !Number.isSafeInteger(admin.adminId) ||
-    admin.adminId <= 0 ||
+    !isRecord(admin) ||
+    !isId(admin.adminId) ||
     typeof admin.name !== 'string' ||
-    !['ADMIN', 'SUPER_ADMIN'].includes(admin.role)
+    (admin.role !== 'ADMIN' && admin.role !== 'SUPER_ADMIN')
   )
     throw new ApiError('관리자 정보를 확인할 수 없습니다.', 200);
   return { adminId: admin.adminId, name: admin.name, role: admin.role };
@@ -17,7 +18,7 @@ export const loginAdmin = async (
   values: AdminLoginValues,
 ): Promise<AdminInfo> =>
   parseAdmin(
-    await requestData<AdminInfo>(
+    await requestData<unknown>(
       '/v1/admin/auth/tokens',
       {
         method: 'POST',
@@ -30,7 +31,7 @@ export const loginAdmin = async (
 
 export const refreshAdmin = async (): Promise<AdminInfo> =>
   parseAdmin(
-    await requestData<AdminInfo>(
+    await requestData<unknown>(
       '/v1/admin/auth/tokens:refresh',
       { method: 'POST' },
       200,

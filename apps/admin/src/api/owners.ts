@@ -15,9 +15,10 @@ const isOwner = (value: unknown): value is AdminOwner =>
   isRecord(value) &&
   isId(value.ownerId) &&
   isNullableText(value.storeName) &&
-  ['ONBOARDING', 'ACTIVE', 'SUSPENDED', 'WITHDRAWN'].includes(
-    String(value.status),
-  ) &&
+  (value.status === 'ONBOARDING' ||
+    value.status === 'ACTIVE' ||
+    value.status === 'SUSPENDED' ||
+    value.status === 'WITHDRAWN') &&
   typeof value.storeRegistered === 'boolean' &&
   isNullableText(value.businessNo) &&
   typeof value.joinedAt === 'string' &&

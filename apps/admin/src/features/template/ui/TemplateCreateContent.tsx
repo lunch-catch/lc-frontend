@@ -1,23 +1,17 @@
 import '../templateEditor.css';
 
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { Button, StatusBadge } from '@repo/ui';
-import { Code2, MousePointer2, Send, X } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@repo/ui';
 
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
-import {
-  buildSelectedTemplatePrompt,
-  type TemplateSelection,
-} from '../templateSelection';
-import { useTemplateEditor } from '../useTemplateEditor';
+import { useTemplateChat } from '../useTemplateChat';
 import { SelectableTemplatePreview } from './SelectableTemplatePreview';
-import { TemplateChatBubble } from './TemplateChatBubble';
+import { TemplateChatPanel } from './TemplateChatPanel';
 import { TemplateHtmlCode } from './TemplateHtmlCode';
 import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewEmptyState } from './TemplatePreviewEmptyState';
-import { TemplateVersionMessage } from './TemplateVersionMessage';
 
 export interface TemplateCreateContentProps {
   templateId?: string;
@@ -27,14 +21,6 @@ export interface TemplateCreateContentProps {
   onCreated: (id: number) => void;
 }
 
-interface TemplateChatEntry {
-  versionNumber: number;
-  html: string;
-  text: string;
-  targetLabel?: string;
-  hasRemovedElements: boolean;
-}
-
 export const TemplateCreateContent = ({
   templateId,
   initialName,
@@ -42,177 +28,23 @@ export const TemplateCreateContent = ({
   onPublished,
   onCreated,
 }: TemplateCreateContentProps) => {
-  const editor = useTemplateEditor(templateId);
-  const [name, setName] = useState(initialName ?? '');
-  const [prompt, setPrompt] = useState('');
-  const [messages, setMessages] = useState<TemplateChatEntry[]>([]);
-  const [pendingMessage, setPendingMessage] = useState<Pick<
-    TemplateChatEntry,
-    'text' | 'targetLabel'
-  > | null>(null);
-  const sendingRef = useRef(false);
-  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const chat = useTemplateChat({ templateId, initialName, onCreated });
+  const {
+    editor,
+    name,
+    setName,
+    published,
+    locked,
+    versionNumber,
+    previewHtml,
+    displayName,
+    selectedTarget,
+    selectTarget,
+    pendingVersion,
+    setPendingVersion,
+    confirmVersionChange,
+  } = chat;
   const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [pendingVersion, setPendingVersion] = useState<number | null>(null);
-  const [selectionContext, setSelectionContext] = useState<{
-    html: string;
-    version?: number;
-    target: TemplateSelection;
-  } | null>(null);
-  const [selectionError, setSelectionError] = useState('');
-  const promptRef = useRef<HTMLTextAreaElement>(null);
-  const chatHistoryRef = useRef<HTMLDivElement>(null);
-  const published = editor.template?.status === 'PUBLISHED';
-  const locked =
-    editor.busy ||
-    editor.isWaiting ||
-    editor.loadingMore ||
-    pendingMessage !== null;
-  const latestVersionNumber =
-    Math.max(
-      0,
-      editor.generation &&
-        editor.getVersionAvailability(editor.generation.versionNumber) ===
-          'available'
-        ? editor.generation.versionNumber
-        : 0,
-      ...editor.versions
-        .filter(
-          (item) =>
-            editor.getVersionAvailability(item.versionNumber) === 'available',
-        )
-        .map((item) => item.versionNumber),
-    ) || undefined;
-  const versionNumber =
-    selectedVersion !== null &&
-    editor.getVersionAvailability(selectedVersion) === 'available'
-      ? selectedVersion
-      : latestVersionNumber;
-  const version = editor.versions.find(
-    (item) => item.versionNumber === versionNumber,
-  );
-  // 대화의 HTML은 서버에 남아 있는 버전만 미리보기와 저장에 사용할 수 있다.
-  const localVersion = messages.find(
-    (message) =>
-      message.versionNumber === versionNumber &&
-      editor.getVersionAvailability(message.versionNumber) === 'available',
-  );
-  const generatedHtml =
-    editor.generation && editor.generation.versionNumber === versionNumber
-      ? editor.generation.html
-      : undefined;
-  const previewHtml =
-    version?.html ??
-    localVersion?.html ??
-    generatedHtml ??
-    editor.template?.html;
-  const displayName = editor.template?.name ?? editor.generation?.name ?? name;
-  // 다른 버전의 코드를 현재 버전의 수정 대상으로 보내지 않는다.
-  const selectedTarget =
-    selectionContext &&
-    selectionContext.html === previewHtml &&
-    selectionContext.version === versionNumber
-      ? selectionContext.target
-      : null;
-  const selectTarget = (target: TemplateSelection) => {
-    if (locked || published || !previewHtml) return;
-    setSelectionContext({ html: previewHtml, version: versionNumber, target });
-    setSelectionError('');
-    promptRef.current?.focus({ preventScroll: true });
-  };
-
-  // 이번 대화에서 이미 표시한 버전은 서버 이력과 중복해서 표시하지 않는다.
-  const messageVersions = new Set(
-    messages.map((message) => message.versionNumber),
-  );
-  const previousVersions = editor.versions
-    .filter((item) => !messageVersions.has(item.versionNumber))
-    .map((item) => item.versionNumber)
-    .sort((a, b) => a - b);
-  const requestVersionChange = (nextVersion: number) => {
-    if (
-      !locked &&
-      nextVersion !== versionNumber &&
-      editor.getVersionAvailability(nextVersion) === 'available'
-    )
-      setPendingVersion(nextVersion);
-  };
-  const confirmVersionChange = () => {
-    if (
-      locked ||
-      pendingVersion === null ||
-      editor.getVersionAvailability(pendingVersion) !== 'available'
-    )
-      return;
-    // 버전 이동은 조회 상태만 바꾼다. 서버의 최신 버전이나 이후 이력은 변경하지 않는다.
-    setSelectedVersion(pendingVersion);
-    setSelectionContext(null);
-    setSelectionError('');
-    setPendingVersion(null);
-  };
-  useEffect(() => {
-    chatHistoryRef.current?.scrollTo({
-      top: chatHistoryRef.current.scrollHeight,
-    });
-  }, [messages, pendingMessage, editor.busy, editor.error, editor.loading]);
-
-  const handleSend = async (quickPrompt?: string) => {
-    const submittedPrompt = quickPrompt ?? prompt;
-    if (sendingRef.current || locked || published || !submittedPrompt.trim())
-      return;
-    const targetLabel =
-      quickPrompt === undefined ? selectedTarget?.label : undefined;
-    let requestPrompt: string;
-    try {
-      // 추천 문구는 서버가 준 원문 그대로 보내며, 부분 선택 문맥을 덧붙이지 않는다.
-      requestPrompt =
-        quickPrompt ??
-        buildSelectedTemplatePrompt(submittedPrompt, selectedTarget);
-    } catch (cause) {
-      setSelectionError(
-        cause instanceof Error
-          ? cause.message
-          : '수정 대상을 다시 선택해 주세요.',
-      );
-      return;
-    }
-    setSelectionError('');
-    sendingRef.current = true;
-    // 응답 전에 말풍선을 표시하고, 실패하면 원문을 복구해 같은 요청을 재시도할 수 있게 한다.
-    setPrompt('');
-    if (quickPrompt !== undefined) setSelectionContext(null);
-    setPendingMessage({
-      text: submittedPrompt.trim(),
-      targetLabel,
-    });
-    try {
-      const generated = await editor.generate(
-        displayName,
-        requestPrompt,
-        versionNumber,
-      );
-      if (!generated) {
-        setPrompt(submittedPrompt);
-        return;
-      }
-      setSelectionContext(null);
-      setSelectedVersion(generated.versionNumber);
-      setMessages((current) => [
-        ...current,
-        {
-          versionNumber: generated.versionNumber,
-          html: generated.html,
-          text: submittedPrompt.trim(),
-          targetLabel,
-          hasRemovedElements: generated.removedElements.length > 0,
-        },
-      ]);
-      if (!templateId) onCreated(generated.templateId);
-    } finally {
-      sendingRef.current = false;
-      setPendingMessage(null);
-    }
-  };
 
   const handleSave = async () => {
     if (versionNumber === undefined) return;
@@ -250,215 +82,7 @@ export const TemplateCreateContent = ({
       >
         {/* 세 영역을 함께 보며 편집할 수 있도록 최소 작업 너비 아래에서만 가로로 스크롤한다. */}
         <div className="grid h-full min-h-0 min-w-[800px] grid-cols-[minmax(240px,0.8fr)_minmax(240px,1fr)_minmax(300px,1.2fr)]">
-          <section className="template-editor__chat flex min-h-0 min-w-0 flex-col border-r">
-            <ScrollArea
-              className="flex flex-col gap-4 p-4"
-              ref={chatHistoryRef}
-            >
-              {published && (
-                <TemplateChatBubble variant="assistant">
-                  최종 저장된 템플릿입니다. 이후에는 수정할 수 없습니다.
-                </TemplateChatBubble>
-              )}
-              {editor.nextPageToken && (
-                <Button
-                  className="!min-h-8 self-center"
-                  variant="tertiary"
-                  disabled={locked}
-                  onClick={() => void editor.loadMore()}
-                >
-                  {editor.loadingMore ? '불러오는 중' : '이전 버전 불러오기'}
-                </Button>
-              )}
-              {previousVersions.map((number) => (
-                <TemplateVersionMessage
-                  key={number}
-                  versionNumber={number}
-                  current={number === versionNumber}
-                  disabled={locked}
-                  availability={editor.getVersionAvailability(number)}
-                  onSelect={requestVersionChange}
-                />
-              ))}
-              {messages.map((message) => (
-                <Fragment key={message.versionNumber}>
-                  <TemplateChatBubble variant="user">
-                    {message.targetLabel && (
-                      <span className="template-editor__hint mb-1 block text-caption-web">
-                        수정 대상 · {message.targetLabel}
-                      </span>
-                    )}
-                    {message.text}
-                  </TemplateChatBubble>
-                  <TemplateVersionMessage
-                    versionNumber={message.versionNumber}
-                    current={message.versionNumber === versionNumber}
-                    disabled={locked}
-                    availability={editor.getVersionAvailability(
-                      message.versionNumber,
-                    )}
-                    onSelect={requestVersionChange}
-                  />
-                  {message.hasRemovedElements && (
-                    <TemplateChatBubble variant="assistant">
-                      안전하지 않은 태그와 속성은 제거했습니다.
-                    </TemplateChatBubble>
-                  )}
-                </Fragment>
-              ))}
-              {pendingMessage && (
-                <TemplateChatBubble variant="user">
-                  {pendingMessage.targetLabel && (
-                    <span className="template-editor__hint mb-1 block text-caption-web">
-                      수정 대상 · {pendingMessage.targetLabel}
-                    </span>
-                  )}
-                  {pendingMessage.text}
-                </TemplateChatBubble>
-              )}
-              {editor.busy && <TemplateChatBubble variant="loading" />}
-              {editor.error && (
-                <p
-                  role="alert"
-                  className="text-body-sm-web text-status-danger-fg"
-                >
-                  {editor.error}
-                </p>
-              )}
-            </ScrollArea>
-            {!published && (
-              <div
-                aria-busy={editor.busy}
-                className="template-editor__composer flex flex-col gap-3 border-t p-4"
-              >
-                {!prompt.trim() &&
-                editor.generation?.suggestedPrompts.length ? (
-                  <div
-                    className="flex flex-wrap gap-2"
-                    aria-label="추천 수정 요청"
-                  >
-                    {editor.generation.suggestedPrompts.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        disabled={
-                          locked || versionNumber !== latestVersionNumber
-                        }
-                        className="template-editor__suggestion rounded-full border px-3 py-1.5 text-caption-web transition-colors focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => void handleSend(suggestion)}
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-                <label htmlFor="template-request" className="sr-only">
-                  템플릿 생성·수정 요청
-                </label>
-                <div
-                  data-has-selection={selectedTarget !== null}
-                  className="template-editor__input relative flex flex-col rounded-xl border transition-colors"
-                >
-                  {selectedTarget && (
-                    <StatusBadge
-                      variant="neutral"
-                      className="template-editor__target ml-3 mt-2 h-6 max-w-[calc(100%-1.5rem)] gap-1.5 self-start border"
-                      style={{
-                        paddingBlock: 0,
-                        paddingInline: 'var(--space-2)',
-                      }}
-                    >
-                      {selectedTarget.source === 'code' ? (
-                        <Code2 aria-hidden="true" className="size-3 shrink-0" />
-                      ) : (
-                        <MousePointer2
-                          aria-hidden="true"
-                          className="size-3 shrink-0"
-                        />
-                      )}
-                      <span
-                        id="template-selection-label"
-                        className="min-w-0 truncate"
-                        title={selectedTarget.label}
-                      >
-                        <span className="sr-only">수정 대상: </span>
-                        {selectedTarget.label}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label="수정 대상 선택 해제"
-                        disabled={locked}
-                        className="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-text-primary/10 focus-visible:outline-2 focus-visible:outline-action-primary disabled:opacity-50"
-                        onClick={() => {
-                          setSelectionContext(null);
-                          setSelectionError('');
-                          promptRef.current?.focus();
-                        }}
-                      >
-                        <X aria-hidden="true" className="size-3" />
-                      </button>
-                    </StatusBadge>
-                  )}
-                  <textarea
-                    ref={promptRef}
-                    id="template-request"
-                    className="ui-scrollbar block h-20 w-full resize-none overflow-y-auto overscroll-y-contain rounded-md border-0 bg-transparent px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:outline-none"
-                    aria-describedby={
-                      selectedTarget ? 'template-selection-label' : undefined
-                    }
-                    maxLength={500}
-                    disabled={locked}
-                    value={prompt}
-                    onChange={(event) => {
-                      setPrompt(event.target.value);
-                      setSelectionError('');
-                    }}
-                    placeholder={
-                      selectedTarget
-                        ? '선택한 부분의 수정 내용을 입력해 주세요'
-                        : '원하는 분위기나 수정 내용을 입력해 주세요'
-                    }
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === 'Enter' &&
-                        !event.shiftKey &&
-                        !event.nativeEvent.isComposing
-                      ) {
-                        event.preventDefault();
-                        void handleSend();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    aria-label="생성·수정 요청 보내기"
-                    className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-md text-action-primary enabled:hover:bg-surface-brand enabled:hover:text-action-primary-hover disabled:cursor-not-allowed disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-action-primary"
-                    disabled={locked || !displayName.trim() || !prompt.trim()}
-                    onClick={() => void handleSend()}
-                  >
-                    <Send aria-hidden="true" className="size-4" />
-                  </button>
-                </div>
-                {editor.isWaiting && (
-                  <p
-                    role="status"
-                    className="template-editor__hint text-caption-web"
-                  >
-                    {editor.retryAfterSeconds}초 후 같은 요청을 다시 보낼 수
-                    있습니다.
-                  </p>
-                )}
-                {selectionError && (
-                  <p
-                    role="alert"
-                    className="text-caption-web text-status-danger-fg"
-                  >
-                    {selectionError}
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
+          <TemplateChatPanel chat={chat} />
           <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col border-r p-3">
             <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
               <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
