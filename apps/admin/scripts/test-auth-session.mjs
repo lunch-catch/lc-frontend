@@ -37,6 +37,7 @@ const setup = (fetchMock) => {
   const modules = {};
   for (const [key, path] of [
     ['client', 'api/client.ts'],
+    ['listResponse', 'api/listResponse.ts'],
     ['auth', 'api/auth.ts'],
     ['store', 'auth/adminAuthStore.ts'],
   ]) {
@@ -53,7 +54,7 @@ const setup = (fetchMock) => {
     const exports = {};
     vm.runInContext(`(function(exports, require) { ${outputText}\n})`, context)(
       exports,
-      (name) => modules[name === '@admin/api/auth' ? 'auth' : 'client'],
+      (name) => modules[name.split('/').at(-1)],
     );
     modules[key] = exports;
   }

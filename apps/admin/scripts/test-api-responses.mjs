@@ -16,7 +16,14 @@ const setup = (data, status = 200) => {
     URLSearchParams,
   });
   const modules = {};
-  for (const name of ['client', 'listResponse', 'members', 'adminAccounts']) {
+  for (const name of [
+    'client',
+    'listResponse',
+    'members',
+    'adminAccounts',
+    'owners',
+    'auth',
+  ]) {
     const source = readFileSync(
       new URL(`../src/api/${name}.ts`, import.meta.url),
       'utf8',
@@ -124,6 +131,61 @@ test('잘못된 관리자 발급 응답은 TypeError 대신 ApiError로 처리�
     const { adminAccounts, client } = setup(data, 201);
     await assert.rejects(
       adminAccounts.issueAdminAccount(issueRequest),
+      isApiError(client),
+    );
+  }
+});
+
+test('로그인과 재발급은 실제 관리자 객체·권한만 허용한다', async () => {
+  const admin = { adminId: 1, name: '테스트', role: 'SUPER_ADMIN' };
+  for (const method of ['loginAdmin', 'refreshAdmin']) {
+    const { auth } = setup(admin);
+    const result = await auth[method]({ loginId: 'test', password: 'test' });
+    assert.equal(result.adminId, 1);
+    assert.equal(result.role, 'SUPER_ADMIN');
+    for (const data of [
+      null,
+      {},
+      [],
+      1,
+      'invalid',
+      { ...admin, adminId: '1' },
+      { ...admin, adminId: 0 },
+      { ...admin, name: null },
+      { ...admin, role: ['SUPER_ADMIN'] },
+      { ...admin, role: 'UNKNOWN' },
+    ]) {
+      const { auth, client } = setup(data);
+      await assert.rejects(
+        auth[method]({ loginId: 'test', password: 'test' }),
+        isApiError(client),
+      );
+    }
+  }
+});
+
+test('점주 상태는 문자열만 허용하고 배열의 문자열 변환을 허용하지 않는다', async () => {
+  const owner = {
+    ownerId: 1,
+    storeName: null,
+    status: 'ONBOARDING',
+    storeRegistered: false,
+    businessNo: null,
+    joinedAt: '2026-10-20',
+    lastLoginAt: null,
+  };
+  for (const status of ['ONBOARDING', 'ACTIVE', 'SUSPENDED', 'WITHDRAWN']) {
+    const { owners } = setup({ ...page, items: [{ ...owner, status }] });
+    const result = await owners.getOwners('page=0', signal);
+    assert.equal(result.items[0].status, status);
+  }
+  for (const status of [['ACTIVE'], ['ONBOARDING'], null, {}, 1, 'UNKNOWN']) {
+    const { owners, client } = setup({
+      ...page,
+      items: [{ ...owner, status }],
+    });
+    await assert.rejects(
+      owners.getOwners('page=0', signal),
       isApiError(client),
     );
   }
