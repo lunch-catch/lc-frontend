@@ -13,6 +13,10 @@ import {
   useMyLocation,
 } from '@user/features/location/useMyLocation';
 import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
+import {
+  getIssuePhase,
+  type IssuePhase,
+} from '@user/features/wishlist/useOpenCountdown';
 import { useWishCount } from '@user/features/wishlist/useWishCount';
 import AppHeader from '@user/ui/AppHeader/AppHeader';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
@@ -44,6 +48,13 @@ import { useSwipeGesture } from './useSwipeGesture';
 
 const TOAST_DURATION_MS = 2500;
 const FIRST_WISH_STORAGE_KEY = 'launch-catch-first-wish-date';
+
+// 그날 첫 찜 토스트에서 쿠폰을 언제 받는지. 카드 아래 안내(SwipeHint)와 같은 때를 말한다
+const WISH_TOAST_TIMING: Record<IssuePhase, string> = {
+  beforeOpen: '11:00부터 쿠폰을 받을 수 있어요',
+  issuing: '지금 바로 쿠폰을 받을 수 있어요',
+  closed: '내일 11:00부터 쿠폰을 받을 수 있어요',
+};
 
 // 오늘 처음 찜했는지 확인하고, 처음이면 오늘 날짜를 기록한다
 const checkFirstWishToday = () => {
@@ -295,9 +306,12 @@ const SwipeFeed = () => {
     if (action === 'wish') {
       increaseWishCount();
 
-      // 찜은 발급이 아니라는 걸 그날 첫 찜에서 한 번만 알려준다
+      // 찜은 발급이 아니라는 걸 그날 첫 찜에서 한 번만 알려준다. 받을 수 있는 때는 카드 아래 안내와 맞춘다
+      // 한 줄에 다 들어가지 않아, 어색하게 끊기지 않도록 받는 때를 둘째 줄에 둔다
       if (checkFirstWishToday()) {
-        setToastMessage('찜 목록에 담았어요 · 11:00부터 받을 수 있어요');
+        setToastMessage(
+          `찜 목록에 담았어요\n${WISH_TOAST_TIMING[getIssuePhase()]}`,
+        );
       }
     }
   };
