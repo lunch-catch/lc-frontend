@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-import type { AdminAccountRole } from '@admin/features/admin-account/adminAccountTypes';
+import type { AdminAccountRole } from '@admin/api/adminAccounts';
 
 export interface AdminLoginValues {
   loginId: string;
