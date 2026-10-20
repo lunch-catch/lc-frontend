@@ -17,12 +17,12 @@ export const TemplateChatBubble = ({
     }
     aria-live={variant === 'loading' ? 'polite' : undefined}
     className={[
-      'max-w-[92%] rounded-md px-3 py-2.5 text-body-sm-web leading-6',
+      'max-w-[92%] rounded-xl border px-3 py-2.5 text-body-sm-web leading-6',
       variant === 'assistant'
-        ? 'self-start bg-surface-subtle text-text-primary'
+        ? 'template-editor__bubble-assistant self-start'
         : variant === 'user'
-          ? 'self-end bg-brand-200 text-text-primary'
-          : 'flex self-start items-center gap-1 bg-surface-subtle py-3',
+          ? 'template-editor__bubble-user self-end'
+          : 'template-editor__bubble-assistant flex self-start items-center gap-1 py-3',
       className,
     ]
       .filter(Boolean)

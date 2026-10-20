@@ -3,6 +3,7 @@ interface AnalyticsRange {
   startDate: string;
   endDate: string;
 }
+// 날짜 범위가 걸치는 구간 수의 한도이며, 시작·종료 구간을 모두 포함한다.
 export const analyticsRangeLimits = { day: 92, week: 53, month: 13 };
 
 /** 선택 기간이 걸치는 일·주·월 구간 수를 기준으로 조회 한도를 검증한다. */
@@ -24,16 +25,18 @@ export const getAnalyticsRangeError = (
       ? `월별 조회는 최대 ${analyticsRangeLimits.month}개월까지 가능합니다.`
       : '';
   }
-  const count = (Date.parse(endBucket) - Date.parse(startBucket)) / 86_400_000;
+  const dayDifference =
+    (Date.parse(endBucket) - Date.parse(startBucket)) / 86_400_000;
   if (interval === 'week')
-    return count / 7 >= analyticsRangeLimits.week
+    return dayDifference / 7 >= analyticsRangeLimits.week
       ? `주별 조회는 최대 ${analyticsRangeLimits.week}주까지 가능합니다.`
       : '';
-  return count >= analyticsRangeLimits.day
+  return dayDifference >= analyticsRangeLimits.day
     ? `일별 조회는 최대 ${analyticsRangeLimits.day}일까지 가능합니다.`
     : '';
 };
 
+// KST 영업일 문자열을 날짜로만 계산해 실행 환경의 시간대·서머타임 영향을 피한다.
 export const shiftDate = (value: string, amount: number) => {
   const date = new Date(`${value}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + amount);
