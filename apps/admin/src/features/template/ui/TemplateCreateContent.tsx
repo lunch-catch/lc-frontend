@@ -61,7 +61,11 @@ export const TemplateCreateContent = ({
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const published = editor.template?.status === 'PUBLISHED';
-  const locked = editor.busy || editor.loadingMore || pendingMessage !== null;
+  const locked =
+    editor.busy ||
+    editor.isWaiting ||
+    editor.loadingMore ||
+    pendingMessage !== null;
   const latestVersionNumber =
     Math.max(
       0,
@@ -321,7 +325,10 @@ export const TemplateCreateContent = ({
               )}
             </ScrollArea>
             {!published && (
-              <div className="flex flex-col gap-3 border-t border-border-subtle p-4">
+              <div
+                aria-busy={editor.busy}
+                className="flex flex-col gap-3 border-t border-border-subtle p-4"
+              >
                 {!prompt.trim() &&
                 editor.generation?.suggestedPrompts.length ? (
                   <div
@@ -429,6 +436,15 @@ export const TemplateCreateContent = ({
                     <Send aria-hidden="true" className="size-4" />
                   </button>
                 </div>
+                {editor.isWaiting && (
+                  <p
+                    role="status"
+                    className="text-caption-web text-text-secondary"
+                  >
+                    {editor.retryAfterSeconds}초 후 같은 요청을 다시 보낼 수
+                    있습니다.
+                  </p>
+                )}
                 {selectionError && (
                   <p
                     role="alert"
