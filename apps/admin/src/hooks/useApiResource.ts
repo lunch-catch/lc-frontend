@@ -3,10 +3,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@admin/api/client';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 
-/** 조건·계정이 바뀌면 이전 목록을 숨기고 진행 중인 조회를 취소한다. */
+const getResourceError = (cause: unknown) =>
+  cause instanceof ApiError ? cause.message : '데이터를 불러오지 못했습니다.';
+
+/** query가 null이면 조회를 보류하고, 조건·계정이 바뀌면 이전 결과를 숨긴다. */
+// load와 formatError는 참조가 바뀌면 다시 조회하므로 모듈 함수나 useCallback으로 고정한다.
 export const useApiResource = <T>(
   load: (query: string, signal: AbortSignal) => Promise<T>,
   query: string | null,
+  formatError: (cause: unknown) => string = getResourceError,
 ) => {
   const { admin } = useAdminAuth();
   const [revision, setRevision] = useState(0);
@@ -31,15 +36,13 @@ export const useApiResource = <T>(
         if (!controller.signal.aborted)
           setResult({
             key,
-            error:
-              cause instanceof ApiError
-                ? cause.message
-                : '데이터를 불러오지 못했습니다.',
+            error: formatError(cause),
           });
       },
     );
+    // 취소를 무시하고 완료되는 요청도 위의 signal 검사로 이전 결과 반영을 막는다.
     return () => controller.abort();
-  }, [key, query, load]);
+  }, [key, query, load, formatError]);
   const current = key !== null && result?.key === key ? result : null;
   return {
     data: current?.data,
