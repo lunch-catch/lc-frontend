@@ -9,10 +9,14 @@ import Card from '@user/ui/Card/Card';
 import { formatWishAmount, formatWishTarget } from './wishFormat';
 import type { WishState } from './wishState';
 
+// 카드가 보여줄 상태. unknown은 발급 상태를 불러오지 못해 받을 수 있는지 모르는 상태라 받기 버튼을 두지 않는다
+export type WishCardState = WishState | 'unknown';
+
 interface WishCardProps {
   wish: WishItem;
-  issueStatus: CampaignIssueStatus;
-  state: WishState;
+  // 발급 상태를 불러오지 못했으면 null이다. 이때 state는 unknown이다
+  issueStatus: CampaignIssueStatus | null;
+  state: WishCardState;
   dailyLimit: number;
   onIssue?: () => void;
   // 이 카드의 쿠폰을 받는 중인지
@@ -36,7 +40,7 @@ const WishCard = ({
   const navigate = useNavigate();
   // 받은 쿠폰은 쿠폰함에서 관리하므로, 받았거나 받는 중인 카드는 찜에서 지울 수 없다
   const canRemove = onRemove && state !== 'issued' && !isIssuing;
-  const remaining = `잔여 ${issueStatus.remainingCount}장`;
+  const remaining = `잔여 ${issueStatus?.remainingCount ?? 0}장`;
   // 오늘 노출 후보가 아니면 서버가 가게 이름을 비워 준다. 그런 캠페인은 발급 상태도 없어 보통 목록에 나오지 않는다
   const storeName = wish.storeName ?? '가게';
 
@@ -89,22 +93,25 @@ const WishCard = ({
             </p>
           )}
           {/* 받은 카드는 자리를 지키므로, 받았다는 걸 초록 체크로 분명하게 보여준다 */}
-          <p
-            className={`flex items-center gap-1 truncate text-caption-mobile font-medium ${
-              state === 'issued'
-                ? 'text-status-success-fg'
-                : 'text-text-secondary'
-            }`}
-          >
-            {state === 'issued' && (
-              <Check
-                aria-hidden="true"
-                className="size-3.5 shrink-0"
-                strokeWidth={3}
-              />
-            )}
-            {statusTextByState[state]}
-          </p>
+          {/* 발급 상태를 모르면 목록 맨 위 안내가 이유를 말해 주므로 카드마다 반복하지 않는다 */}
+          {state !== 'unknown' && (
+            <p
+              className={`flex items-center gap-1 truncate text-caption-mobile font-medium ${
+                state === 'issued'
+                  ? 'text-status-success-fg'
+                  : 'text-text-secondary'
+              }`}
+            >
+              {state === 'issued' && (
+                <Check
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0"
+                  strokeWidth={3}
+                />
+              )}
+              {statusTextByState[state]}
+            </p>
+          )}
         </div>
         {/* 하루에 받을 수 있는 수가 정해져 있어, 카드끼리 할인을 쉽게 비교하도록 오른쪽 끝에 맞춘다 */}
         {/* 오른쪽 위는 삭제 버튼 자리라 아래쪽에 붙인다 */}
@@ -114,9 +121,12 @@ const WishCard = ({
           </strong>
         )}
       </div>
-      <p className="text-caption-mobile text-text-secondary">
-        사용 {issueStatus.usableFrom}–{issueStatus.usableTo} · 오늘
-      </p>
+      {/* 사용 시간은 발급 상태에서 온다. 불러오지 못했으면 틀린 시간 대신 줄을 뺀다 */}
+      {issueStatus && (
+        <p className="text-caption-mobile text-text-secondary">
+          사용 {issueStatus.usableFrom}–{issueStatus.usableTo} · 오늘
+        </p>
+      )}
       {/* 마감과 하루 한도는 상태 줄로 알 수 있어 버튼을 두지 않고, */}
       {/* 오픈 전에는 11:00에 같은 자리가 받기로 바뀌도록 자리를 미리 잡아 둔다 */}
       {state === 'beforeOpen' && (
