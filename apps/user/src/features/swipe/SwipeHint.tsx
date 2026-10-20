@@ -14,9 +14,18 @@ interface Hint {
   short: string;
 }
 
+// 오픈 전과 마감 뒤는 같은 틀로 두어, 언제 받는지만 바뀌는 게 보이게 한다
+// 받는 곳(찜 목록)은 찜한 뒤 토스트와 찜 목록 화면이 알려줘서 여기서는 받는 때만 말한다
 const BEFORE_OPEN_HINT: Hint = {
-  long: '찜은 발급 전 단계예요 · 11:00부터 찜 목록에서 받기',
-  short: '11:00부터 찜 목록에서 받기',
+  long: '찜해 두면 11:00부터 쿠폰을 받을 수 있어요',
+  short: '11:00부터 쿠폰을 받을 수 있어요',
+};
+
+// 14:00 발급 마감 뒤에도 피드는 열려 있어, 지금 찜하면 내일 오픈에 받는다고 알려준다
+// 오후에 '11:00'만 쓰면 이미 지난 오늘 11:00로 읽힐 수 있어 '내일'을 넣는다
+const AFTER_CLOSE_HINT: Hint = {
+  long: '찜해 두면 내일 11:00부터 쿠폰을 받을 수 있어요',
+  short: '내일 11:00부터 쿠폰을 받을 수 있어요',
 };
 
 // 오픈 뒤에 보여줄 안내. 하루 한도를 다 채웠으면 더 찜해도 오늘은 받을 수 없다고 알려준다
@@ -37,18 +46,19 @@ const getOpenHint = (issuance: TodayIssuance | null): Hint => {
   }
   return {
     long: `오늘 받은 쿠폰 ${issuedCount}/${dailyLimit}장 · 찜 목록에서 바로 받을 수 있어요`,
-    short: `오늘 받은 쿠폰 ${issuedCount}/${dailyLimit}장 · 찜 목록에서 받기`,
+    short: `오늘 받은 쿠폰 ${issuedCount}/${dailyLimit}장 · 찜 목록에서 받아요`,
   };
 };
 
-// 카드 아래 안내. 11:00 오픈 전에는 찜이 무엇인지, 오픈 뒤에는 오늘 받은 쿠폰 수를 알려준다
+// 카드 아래 안내. 11:00 오픈 전에는 찜하면 언제 받는지, 발급 중에는 오늘 받은 쿠폰 수를, 마감 뒤에는 다음 오픈을 알려준다
 const SwipeHint = () => {
-  const { isOpen } = useOpenCountdown();
-  // 오픈 뒤에만 불러온다. 불러오기 전이거나 실패하면 수 없이 안내한다
+  const { isIssueClosed, isOpen } = useOpenCountdown();
+  const isIssuing = isOpen && !isIssueClosed;
+  // 발급 중에만 불러온다. 불러오기 전이거나 실패하면 수 없이 안내한다
   const [issuance, setIssuance] = useState<TodayIssuance | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isIssuing) return;
 
     let ignore = false;
     fetchTodayIssuance()
@@ -61,9 +71,13 @@ const SwipeHint = () => {
     return () => {
       ignore = true;
     };
-  }, [isOpen]);
+  }, [isIssuing]);
 
-  const hint = isOpen ? getOpenHint(issuance) : BEFORE_OPEN_HINT;
+  const getHint = () => {
+    if (isIssueClosed) return AFTER_CLOSE_HINT;
+    return isOpen ? getOpenHint(issuance) : BEFORE_OPEN_HINT;
+  };
+  const hint = getHint();
 
   return (
     // 로딩 중에도 보여서 카드가 뜰 때 위치가 들썩이지 않게 한다

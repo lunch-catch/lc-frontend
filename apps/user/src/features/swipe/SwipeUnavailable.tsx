@@ -13,7 +13,7 @@ interface SwipeUnavailableProps {
   onRetry: () => void;
 }
 
-// 서빙 시간 안인데 카드를 보여줄 수 없을 때 피드 대신 보여주는 화면
+// 카드를 보여줄 수 없을 때 피드 대신 보여주는 화면
 const SwipeUnavailable = ({ onRetry, reason }: SwipeUnavailableProps) => {
   const navigate = useNavigate();
 

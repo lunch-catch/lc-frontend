@@ -34,11 +34,10 @@ export interface FeedCard {
   posterUrl: string;
 }
 
-// serving: 카드 있음, closed: 서빙 시간대(10:00~12:59) 밖, empty: 주변에 오늘 보여줄 카드가 없음
+// serving: 카드 있음, empty: 주변에 지금 보여줄 카드가 없음. 피드는 시간대 없이 하루 종일 받는다
 // nextFeedAt: 다음 피드를 요청해도 거부되지 않는 가장 이른 시각 (이 휴대폰 시계 기준 ms). mock이면 null
 export type FeedResponse =
   | { status: 'serving'; cards: FeedCard[]; nextFeedAt: number | null }
-  | { status: 'closed' }
   | { status: 'empty' };
 
 export type SwipeAction = 'wish' | 'pass';
@@ -68,9 +67,9 @@ interface FeedCardResponse {
 }
 
 interface FeedApiResponse {
-  status: 'SERVING' | 'OUT_OF_SERVING_HOURS' | 'NO_CANDIDATE';
+  status: 'SERVING' | 'NO_CANDIDATE';
   feedId: string | null;
-  radiusM: number | null;
+  radiusM: number;
   nextFeedAvailableAt: string;
   cards: FeedCardResponse[];
 }
@@ -128,12 +127,6 @@ const fromMockCard = (card: MockFeedCard): FeedCard => ({
 const fetchMockFeed = async (): Promise<FeedResponse> => {
   await wait(MOCK_DELAY_MS);
 
-  // 개발 중에는 시간과 상관없이 피드를 보여주고,
-  // 주소에 ?mockFeedClosed를 붙이면 서빙 시간 외 화면을 확인할 수 있다
-  if (new URLSearchParams(window.location.search).has('mockFeedClosed')) {
-    return { status: 'closed' };
-  }
-
   return {
     status: 'serving',
     // 찜 목록에서 삭제한 캠페인은 당일 피드에 다시 보여주지 않는다
@@ -150,7 +143,6 @@ const loadFeed = async (): Promise<FeedResponse> => {
 
   const data = await request<FeedApiResponse>('/v1/feed');
 
-  if (data.status === 'OUT_OF_SERVING_HOURS') return { status: 'closed' };
   if (data.status === 'NO_CANDIDATE' || data.cards.length === 0) {
     return { status: 'empty' };
   }

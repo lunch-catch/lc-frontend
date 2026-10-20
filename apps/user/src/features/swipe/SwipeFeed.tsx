@@ -33,7 +33,6 @@ import GestureRail from './GestureRail';
 import OpenCountdown from './OpenCountdown';
 import PosterCard from './PosterCard';
 import PosterSkeleton from './PosterSkeleton';
-import SwipeClosed from './SwipeClosed';
 import SwipeDone from './SwipeDone';
 import SwipeHint from './SwipeHint';
 import SwipeUnavailable, {
@@ -64,12 +63,7 @@ const checkFirstWishToday = () => {
 
 // waiting: 다음 피드를 받을 수 있을 때까지 기다리는 중, done: 오늘 받을 수 있는 카드를 모두 넘김
 type FeedStatus =
-  | 'loading'
-  | 'serving'
-  | 'waiting'
-  | 'done'
-  | 'closed'
-  | SwipeUnavailableReason;
+  'loading' | 'serving' | 'waiting' | 'done' | SwipeUnavailableReason;
 
 // 피드를 받지 못한 이유를 화면에 맞게 나눈다. 저장한 위치가 없으면 위치 설정으로 안내한다
 const getFeedFailure = (error: unknown): SwipeUnavailableReason =>
@@ -326,7 +320,6 @@ const SwipeFeed = () => {
             <FeedbackToast message={toastMessage} />
           </div>
         )}
-        {status === 'closed' && <SwipeClosed />}
         {(status === 'empty' ||
           status === 'needsLocation' ||
           status === 'error') && (
