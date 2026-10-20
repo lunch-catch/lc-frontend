@@ -10,7 +10,9 @@ const setup = (data, status = 200) => {
   const context = vm.createContext({
     fetch: async (url, options) => {
       calls.push({ url, options });
-      return Response.json({ code: 'SUCCESS', data }, { status });
+      return status === 204
+        ? new Response(null, { status })
+        : Response.json({ code: 'SUCCESS', data }, { status });
     },
     Response,
     URLSearchParams,
@@ -23,6 +25,7 @@ const setup = (data, status = 200) => {
     'adminAccounts',
     'owners',
     'auth',
+    'templates',
   ]) {
     const source = readFileSync(
       new URL(`../src/api/${name}.ts`, import.meta.url),
@@ -188,5 +191,95 @@ test('점주 상태는 문자열만 허용하고 배열의 문자열 변환을 �
       owners.getOwners('page=0', signal),
       isApiError(client),
     );
+  }
+});
+
+const generatedTemplate = {
+  templateId: 1,
+  name: '테스트',
+  versionNumber: 1,
+  status: 'DRAFT',
+  html: '<div>template</div>',
+  message: '요청하신 색상으로 만들었어요.',
+  removedElements: [],
+  suggestedPrompts: ['배경을 더 밝게 해줘'],
+};
+const templateRequest = {
+  name: '테스트',
+  requestPrompt: '요청',
+  requestId: 'request-1',
+};
+
+test('템플릿 생성·수정은 data.message와 서버 추천 문구를 유지한다', async () => {
+  for (const id of [undefined, '1']) {
+    const { templates, calls } = setup(generatedTemplate, 201);
+    const result = await templates.generateTemplate(templateRequest, id);
+    assert.equal(result.message, generatedTemplate.message);
+    assert.equal(
+      result.suggestedPrompts[0],
+      generatedTemplate.suggestedPrompts[0],
+    );
+    const body = JSON.parse(calls[0].options.body);
+    assert.equal(body.requestId, 'request-1');
+    assert.equal(body.requestPrompt, '요청');
+    assert.equal(body.name, id ? undefined : '테스트');
+  }
+});
+
+test('템플릿 설명은 빈 문자열을 허용하고 누락·잘못된 타입은 거부한다', async () => {
+  const valid = setup({ ...generatedTemplate, message: '' }, 201);
+  assert.equal(
+    (await valid.templates.generateTemplate(templateRequest)).message,
+    '',
+  );
+  for (const message of [undefined, null, [], {}, 1]) {
+    const { templates, client } = setup({ ...generatedTemplate, message }, 201);
+    await assert.rejects(
+      templates.generateTemplate(templateRequest),
+      isApiError(client),
+    );
+  }
+});
+
+test('템플릿 버전 이력의 요청과 설명을 복원할 수 있다', async () => {
+  const version = {
+    versionNumber: 1,
+    requestPrompt: '요청',
+    html: '<div></div>',
+    message: '만들었어요.',
+    createdAt: '2026-10-20T10:00:00',
+  };
+  for (const message of ['만들었어요.', '']) {
+    const { templates } = setup({
+      items: [{ ...version, message }],
+      nextPageToken: null,
+    });
+    const result = await templates.getTemplateVersions('1');
+    assert.equal(result.items[0].message, message);
+    assert.equal(result.items[0].requestPrompt, '요청');
+  }
+  for (const message of [undefined, null, [], 1]) {
+    const { templates, client } = setup({
+      items: [{ ...version, message }],
+      nextPageToken: null,
+    });
+    await assert.rejects(
+      templates.getTemplateVersions('1'),
+      isApiError(client),
+    );
+  }
+});
+
+test('템플릿 삭제는 DELETE의 빈 204 응답을 허용한다', async () => {
+  const { templates, calls } = setup(null, 204);
+  await templates.deleteTemplate('1');
+  assert.equal(calls[0].options.method, 'DELETE');
+  assert.equal(calls[0].url, 'http://test/v1/admin/templates/1');
+});
+
+test('템플릿 삭제의 예상하지 못한 성공 상태와 서버 실패를 거부한다', async () => {
+  for (const status of [200, 404, 409]) {
+    const { templates, client } = setup({}, status);
+    await assert.rejects(templates.deleteTemplate('1'), isApiError(client));
   }
 });

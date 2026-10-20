@@ -1,4 +1,4 @@
-﻿import { ApiError, requestData } from './client';
+﻿import { ApiError, request, requestData } from './client';
 
 export type TemplateStatus = 'DRAFT' | 'PUBLISHED';
 
@@ -18,6 +18,7 @@ export interface TemplateRecord {
 export interface TemplateVersionRecord {
   versionNumber: number;
   requestPrompt: string;
+  message: string;
   createdAt: string;
   html: string;
 }
@@ -33,6 +34,8 @@ export interface TemplateGeneration {
   versionNumber: number;
   status: 'DRAFT';
   html: string;
+  /** LLM 설명은 HTML로 해석하지 않으며 설명이 없는 응답은 빈 문자열이다. */
+  message: string;
   removedElements: string[];
   suggestedPrompts: string[];
 }
@@ -97,6 +100,7 @@ export const getTemplateVersions = async (
         item.versionNumber <= 0 ||
         typeof item.html !== 'string' ||
         typeof item.requestPrompt !== 'string' ||
+        typeof item.message !== 'string' ||
         typeof item.createdAt !== 'string',
     )
   )
@@ -137,6 +141,7 @@ export const generateTemplate = async (
     data.status !== 'DRAFT' ||
     typeof data.name !== 'string' ||
     typeof data.html !== 'string' ||
+    typeof data.message !== 'string' ||
     !Array.isArray(data.removedElements) ||
     data.removedElements.some((item) => typeof item !== 'string') ||
     !Array.isArray(data.suggestedPrompts) ||
@@ -190,4 +195,16 @@ export const changeTemplateActive = async (id: string, active: boolean) => {
   )
     throw new ApiError('템플릿 활성 상태 응답 형식을 확인할 수 없습니다.', 200);
   return data;
+};
+
+/** 초안과 모든 버전을 삭제하며, 성공한 204 응답은 JSON 본문을 읽지 않는다. */
+export const deleteTemplate = async (id: string): Promise<void> => {
+  const response = await request(`${basePath}/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (response.status !== 204)
+    throw new ApiError(
+      '템플릿 삭제 응답을 확인할 수 없습니다.',
+      response.status,
+    );
 };
