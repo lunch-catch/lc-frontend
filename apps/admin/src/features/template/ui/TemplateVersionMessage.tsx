@@ -27,7 +27,7 @@ export const TemplateVersionMessage = ({
           : undefined
     }
     onClick={() => onSelect(versionNumber)}
-    className={`group flex w-full items-center gap-2 rounded-md px-2 py-2 text-center text-caption-web transition-colors enabled:hover:text-text-brand focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-50 ${current ? 'font-semibold text-text-brand' : 'text-text-secondary'}`}
+    className={`template-editor__version group flex w-full items-center gap-2 rounded-md px-2 py-2 text-center text-caption-web transition-colors focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-50 ${current ? 'font-semibold' : ''}`}
   >
     <span
       aria-hidden="true"

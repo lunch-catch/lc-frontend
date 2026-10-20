@@ -1,3 +1,5 @@
+import '../templateEditor.css';
+
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Button, StatusBadge } from '@repo/ui';
 import { Code2, MousePointer2, Send, X } from 'lucide-react';
@@ -238,17 +240,17 @@ export const TemplateCreateContent = ({
     );
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col">
+    <section className="template-editor flex h-full min-h-0 min-w-0 flex-col">
       <ScrollArea
         aria-label="템플릿 편집 영역"
         orientation="horizontal"
         hideScrollbar
         tabIndex={0}
-        className="min-w-0 rounded-xl border border-border-subtle shadow-sm focus-visible:outline-2 focus-visible:outline-action-primary"
+        className="template-editor__frame min-w-0 rounded-xl border shadow-sm focus-visible:outline-2 focus-visible:outline-action-primary"
       >
         {/* 세 영역을 함께 보며 편집할 수 있도록 최소 작업 너비 아래에서만 가로로 스크롤한다. */}
         <div className="grid h-full min-h-0 min-w-[800px] grid-cols-[minmax(240px,0.8fr)_minmax(240px,1fr)_minmax(300px,1.2fr)]">
-          <section className="flex min-h-0 min-w-0 flex-col border-r border-border-subtle">
+          <section className="template-editor__chat flex min-h-0 min-w-0 flex-col border-r">
             <ScrollArea
               className="flex flex-col gap-4 p-4"
               ref={chatHistoryRef}
@@ -282,7 +284,7 @@ export const TemplateCreateContent = ({
                 <Fragment key={message.versionNumber}>
                   <TemplateChatBubble variant="user">
                     {message.targetLabel && (
-                      <span className="mb-1 block text-caption-web text-text-secondary">
+                      <span className="template-editor__hint mb-1 block text-caption-web">
                         수정 대상 · {message.targetLabel}
                       </span>
                     )}
@@ -307,7 +309,7 @@ export const TemplateCreateContent = ({
               {pendingMessage && (
                 <TemplateChatBubble variant="user">
                   {pendingMessage.targetLabel && (
-                    <span className="mb-1 block text-caption-web text-text-secondary">
+                    <span className="template-editor__hint mb-1 block text-caption-web">
                       수정 대상 · {pendingMessage.targetLabel}
                     </span>
                   )}
@@ -327,7 +329,7 @@ export const TemplateCreateContent = ({
             {!published && (
               <div
                 aria-busy={editor.busy}
-                className="flex flex-col gap-3 border-t border-border-subtle p-4"
+                className="template-editor__composer flex flex-col gap-3 border-t p-4"
               >
                 {!prompt.trim() &&
                 editor.generation?.suggestedPrompts.length ? (
@@ -342,7 +344,7 @@ export const TemplateCreateContent = ({
                         disabled={
                           locked || versionNumber !== latestVersionNumber
                         }
-                        className="rounded-full border border-border-subtle px-3 py-1.5 text-caption-web text-text-secondary transition-colors hover:border-action-primary hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-50"
+                        className="template-editor__suggestion rounded-full border px-3 py-1.5 text-caption-web transition-colors focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => void handleSend(suggestion)}
                       >
                         {suggestion}
@@ -354,12 +356,13 @@ export const TemplateCreateContent = ({
                   템플릿 생성·수정 요청
                 </label>
                 <div
-                  className={`relative flex flex-col rounded-lg border bg-bg-surface transition-colors focus-within:border-action-primary ${selectedTarget ? 'border-action-primary/40' : 'border-border-subtle'}`}
+                  data-has-selection={selectedTarget !== null}
+                  className="template-editor__input relative flex flex-col rounded-xl border transition-colors"
                 >
                   {selectedTarget && (
                     <StatusBadge
                       variant="neutral"
-                      className="ml-3 mt-2 h-6 max-w-[calc(100%-1.5rem)] gap-1.5 self-start border border-border-subtle"
+                      className="template-editor__target ml-3 mt-2 h-6 max-w-[calc(100%-1.5rem)] gap-1.5 self-start border"
                       style={{
                         paddingBlock: 0,
                         paddingInline: 'var(--space-2)',
@@ -439,7 +442,7 @@ export const TemplateCreateContent = ({
                 {editor.isWaiting && (
                   <p
                     role="status"
-                    className="text-caption-web text-text-secondary"
+                    className="template-editor__hint text-caption-web"
                   >
                     {editor.retryAfterSeconds}초 후 같은 요청을 다시 보낼 수
                     있습니다.
@@ -456,7 +459,7 @@ export const TemplateCreateContent = ({
               </div>
             )}
           </section>
-          <section className="flex min-h-0 min-w-0 flex-col border-r border-border-subtle bg-surface-subtle p-2">
+          <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col border-r p-3">
             <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
               <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
                 {previewHtml ? (
@@ -473,7 +476,7 @@ export const TemplateCreateContent = ({
               </div>
             </div>
           </section>
-          <section className="flex min-h-0 min-w-0 flex-col gap-4 bg-bg-surface p-4">
+          <section className="template-editor__panel flex min-h-0 min-w-0 flex-col gap-4 p-4">
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={locked} onClick={onBack}>
                 목록으로
@@ -497,12 +500,12 @@ export const TemplateCreateContent = ({
                 onSelect={selectTarget}
               />
             ) : (
-              <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-border-subtle bg-surface-subtle p-4 text-center text-body-sm-web text-text-secondary">
+              <div className="template-editor__code flex min-h-0 flex-1 items-center justify-center rounded-xl border p-4 text-center text-body-sm-web">
                 템플릿을 생성하면 HTML이 표시됩니다.
               </div>
             )}
             {previewHtml && !published && (
-              <p className="text-caption-web text-text-secondary">
+              <p className="template-editor__hint text-caption-web">
                 미리보기 요소를 클릭하거나 HTML 코드를 선택해 수정할 부분을
                 지정하세요.
               </p>
