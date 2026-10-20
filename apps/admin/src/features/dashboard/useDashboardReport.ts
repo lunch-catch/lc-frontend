@@ -1,3 +1,8 @@
+import {
+  getAnalyticsRangeError,
+  getPreviousRange,
+  shiftDate,
+} from '@admin/api/analyticsDateUtils';
 import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
@@ -6,12 +11,7 @@ import type {
   DashboardRange,
   FunnelMetric,
 } from './dashboardTypes';
-import {
-  getAnalyticsRangeError,
-  getPreviousRange,
-  selectDays,
-  shiftDate,
-} from './dashboardUtils';
+import { selectDays } from './dashboardUtils';
 
 export const useDashboardReport = (data: DashboardDataset) => {
   const { filters, updateFilters } = useUrlFilters('dashboard.', {

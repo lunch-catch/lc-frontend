@@ -9,11 +9,6 @@ import type {
   UsageBreakdown,
   UsageMetric,
 } from './dashboardTypes';
-export {
-  getAnalyticsRangeError,
-  getPreviousRange,
-  shiftDate,
-} from '@admin/features/analytics/analyticsDateUtils';
 
 /** API 조회 대기와 서버의 집계 미완료를 구분한다. */
 export const getDashboardMetricHint = (resource: {
