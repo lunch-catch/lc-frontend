@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 
 import {
+  type CampaignIssueStatus,
   fetchIssueStatus,
   issueCoupon,
   type IssueResult,
@@ -21,7 +22,7 @@ import FeedbackToast, {
 } from '@user/ui/FeedbackToast/FeedbackToast';
 
 import { formatCountdown, useOpenCountdown } from './useOpenCountdown';
-import WishCard from './WishCard';
+import WishCard, { type WishCardState } from './WishCard';
 import WishlistEmpty from './WishlistEmpty';
 import WishlistSkeleton from './WishlistSkeleton';
 import WishlistSummary from './WishlistSummary';
@@ -54,13 +55,35 @@ const markIssued = (
   dailyRemaining: Math.max(0, status.dailyRemaining - 1),
 });
 
+interface WishEntry {
+  state: WishCardState;
+  // 발급 상태를 받지 못했거나 끝난 캠페인이면 null
+  status: CampaignIssueStatus | null;
+  wish: WishItem;
+}
+
+// 카드 순서. 끝난 찜은 받을 수 있는 게 없어, 11:00에 받기 버튼을 가리지 않도록 맨 아래에 모은다
+// 서버는 끝난 찜을 찜한 순서에 섞어 보내고, 화면에서만 이렇게 정렬한다
+const CARD_STATE_ORDER: Record<WishCardState, number> = {
+  ...WISH_STATE_ORDER,
+  unknown: 0,
+  ended: 3,
+};
+
+// 발급 상태를 물을 찜. 끝난 캠페인은 오늘 쿠폰 이벤트가 없어 묻지 않는다
+const getIssueTargets = (wishes: WishItem[]) =>
+  wishes.filter((wish) => !wish.isEnded);
+
 // 찜마다 발급 상태를 붙이고 카드 상태를 정한다
+// 끝나지 않았는데 발급 상태가 없는 찜(오늘 쿠폰 이벤트가 없음)은 받을 수 없어 보여주지 않는다
 const toEntries = (
   wishes: WishItem[],
   { campaigns, dailyRemaining }: IssueStatusResponse,
   isOpen: boolean,
-) =>
-  wishes.flatMap((wish) => {
+): WishEntry[] =>
+  wishes.flatMap((wish): WishEntry[] => {
+    if (wish.isEnded) return [{ state: 'ended', status: null, wish }];
+
     const status = campaigns.find(
       (campaign) => campaign.campaignId === wish.campaignId,
     );
@@ -82,7 +105,7 @@ const getSortedIds = (
   isOpen: boolean,
 ) =>
   toEntries(wishes, issueStatus, isOpen)
-    .sort((a, b) => WISH_STATE_ORDER[a.state] - WISH_STATE_ORDER[b.state])
+    .sort((a, b) => CARD_STATE_ORDER[a.state] - CARD_STATE_ORDER[b.state])
     .map(({ wish }) => wish.campaignId);
 
 // loading: 불러오는 중, ready: 찜 목록을 받음, error: 찜 목록을 받지 못함
@@ -132,7 +155,9 @@ const WishlistScreen = () => {
         return;
       }
 
-      const status = await fetchIssueStatus(items).catch(() => null);
+      const status = await fetchIssueStatus(getIssueTargets(items)).catch(
+        () => null,
+      );
       if (ignore) return;
 
       setWishes(items);
@@ -188,7 +213,7 @@ const WishlistScreen = () => {
     // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
     // 다시 받지 못해도 발급 결과는 그대로 알린다. 받았으면 그 카드만 받음으로 바꾼다
     try {
-      setIssueStatus(await fetchIssueStatus(wishes));
+      setIssueStatus(await fetchIssueStatus(getIssueTargets(wishes)));
     } catch {
       if (result === 'issued') {
         setIssueStatus((status) => status && markIssued(status, campaignId));
@@ -235,10 +260,13 @@ const WishlistScreen = () => {
     );
     setToast({
       message: '찜 목록에서 삭제했어요',
-      action: {
-        label: '되돌리기',
-        onClick: () => handleUndoRemove(wish, index),
-      },
+      // 끝난 캠페인은 다시 찜할 수 없어 되돌리기를 두지 않는다
+      action: wish.isEnded
+        ? undefined
+        : {
+            label: '되돌리기',
+            onClick: () => handleUndoRemove(wish, index),
+          },
     });
 
     removeWish(wish.campaignId).catch(() => {
@@ -276,14 +304,16 @@ const WishlistScreen = () => {
   };
 
   // 정해 둔 순서대로 놓는다. 순서를 정한 뒤 다시 넣은 카드는 맨 뒤에 둔다
-  // 발급 상태가 없으면 받을 수 있는지 몰라 찜한 순서 그대로 둔다
-  const getOrderedEntries = () => {
+  // 발급 상태가 없으면 받을 수 있는지 몰라 찜한 순서 그대로 둔다. 끝난 찜은 그래도 종료로 맨 아래에 둔다
+  const getOrderedEntries = (): WishEntry[] => {
     if (!issueStatus) {
-      return wishes.map((wish) => ({
-        state: 'unknown' as const,
-        status: null,
-        wish,
-      }));
+      return wishes
+        .map((wish): WishEntry => ({
+          state: wish.isEnded ? 'ended' : 'unknown',
+          status: null,
+          wish,
+        }))
+        .sort((a, b) => CARD_STATE_ORDER[a.state] - CARD_STATE_ORDER[b.state]);
     }
     const rank = (campaignId: string) => {
       const index = order?.ids.indexOf(campaignId) ?? -1;

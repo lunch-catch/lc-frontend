@@ -26,6 +26,9 @@ export interface WishItem {
   storeName: string | null;
   imageUrl: string | null;
   discount: WishDiscount | null;
+  // 캠페인이 끝났는지. 끝난 찜은 끝난 날을 빼고 3일 동안 목록에 남았다가 서버가 지운다
+  // 끝난 캠페인은 그날 후보가 아니라 가게 이름, 사진, 할인이 비어 있다
+  isEnded: boolean;
 }
 
 // 찜 목록 조회, 가게 상세 찜(POST /v1/wishlist), 찜 삭제(DELETE /v1/wishlist/{campaignId})는
@@ -42,6 +45,8 @@ interface WishlistItemResponse {
   storeName: string | null;
   storeImageUrl: string | null;
   discount: WishDiscount | null;
+  // 서버 배포 전에는 오지 않을 수 있어 없으면 끝나지 않은 것으로 본다
+  campaignEnded?: boolean;
   wishedAt: string;
 }
 
@@ -51,6 +56,7 @@ const toWishItem = (item: WishlistItemResponse): WishItem => ({
   storeName: item.storeName,
   imageUrl: item.storeImageUrl,
   discount: item.discount,
+  isEnded: item.campaignEnded ?? false,
 });
 
 // mock 카드를 찜 목록 모양으로 바꾼다. 할인은 정가와 할인가로 할인율을 계산한다
@@ -65,6 +71,7 @@ const fromMockCard = (card: MockFeedCard): WishItem => ({
     value: Math.round((1 - card.salePrice / card.originalPrice) * 100),
     menuName: card.offerTitle.startsWith('전 메뉴') ? null : card.offerTitle,
   },
+  isEnded: false,
 });
 
 // 서버 캠페인 ID는 숫자다. 가게 상세처럼 아직 mock 데이터(campaign-1 같은 ID)를 쓰는 화면은 mock으로 처리한다
@@ -105,8 +112,11 @@ export const fetchIsWished = async (campaignId: string): Promise<boolean> => {
 
 // 찜한 캠페인 수. 피드와 탐색 헤더의 "찜 목록 N"에 쓴다
 // 오늘 노출 후보가 아닌 캠페인(가게 이름이 비어 옴)은 찜 목록 화면에 나오지 않아 세지 않는다
+// 끝난 캠페인은 목록에 남지만 받을 수 없어 세지 않는다
 export const fetchWishCount = async () =>
-  (await fetchWishlist()).filter((wish) => wish.storeName !== null).length;
+  (await fetchWishlist()).filter(
+    (wish) => wish.storeName !== null && !wish.isEnded,
+  ).length;
 
 // 가게 상세에서 찜한다 (POST /v1/wishlist). 이미 찜했어도 성공이다
 // 오늘 노출 중인 캠페인이 아니면 404 ADSERVING-004로 실패한다
