@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Button,
   DateRangePicker,
@@ -9,11 +9,8 @@ import {
 import { formatDate, formatDateTime } from '@repo/utils';
 
 import { ApiError } from '@admin/api/client';
-import {
-  getMembers,
-  type MemberPage,
-  type MemberSortKey,
-} from '@admin/api/members';
+import { getMembers, type MemberSortKey } from '@admin/api/members';
+import { useApiResource } from '@admin/hooks/useApiResource';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import {
@@ -46,6 +43,11 @@ const statusMeta = {
   WITHDRAWN: { label: '탈퇴', variant: 'danger' },
 } as const;
 
+const getMemberError = (cause: unknown) =>
+  cause instanceof ApiError
+    ? cause.message
+    : '서버에 연결하지 못했습니다. 다시 시도해 주세요.';
+
 interface UserMemberListContentProps {
   initialMemberId?: string;
   onReviewEnd?: () => void;
@@ -70,12 +72,6 @@ export const UserMemberListContent = ({
     },
   );
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [result, setResult] = useState<{
-    key: string;
-    data?: MemberPage;
-    error?: string;
-  } | null>(null);
-
   // 화면 페이지는 1부터 표시하고 API는 0부터 받으므로 요청할 때만 1을 뺀다.
   const query = new URLSearchParams({
     page: String(page - 1),
@@ -96,33 +92,13 @@ export const UserMemberListContent = ({
       ? '가입일 시작 날짜는 종료 날짜보다 늦을 수 없습니다.'
       : undefined;
 
-  useEffect(() => {
-    if (validationError) return;
-    const controller = new AbortController();
-    // 조건이 바뀌거나 화면을 떠나면 이전 요청을 취소해 늦은 응답이 새 목록을 덮지 않게 한다.
-    void getMembers(queryString, controller.signal).then(
-      (data) => {
-        if (!controller.signal.aborted) setResult({ key: queryString, data });
-      },
-      (error: unknown) => {
-        if (controller.signal.aborted) return;
-        setResult({
-          key: queryString,
-          error:
-            error instanceof ApiError
-              ? error.message
-              : '서버에 연결하지 못했습니다. 다시 시도해 주세요.',
-        });
-      },
-    );
-    return () => controller.abort();
-  }, [queryString, validationError]);
-
-  // 현재 조건에 해당하는 응답만 표시해 새 검색을 기다리는 동안 이전 목록을 새 결과처럼 보여 주지 않는다.
-  const currentResult = result?.key === queryString ? result : null;
-  const error = validationError ?? currentResult?.error;
-  const loading = !validationError && !currentResult;
-  const data = currentResult?.data;
+  const resource = useApiResource(
+    getMembers,
+    validationError ? null : queryString,
+    getMemberError,
+  );
+  const error = validationError ?? resource.error;
+  const { data, loading } = resource;
   const pagination = {
     currentPage: page,
     pageSize: size,
