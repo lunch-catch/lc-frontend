@@ -23,6 +23,7 @@ const setup = (data, status = 200) => {
     'adminAccounts',
     'owners',
     'auth',
+    'campaigns',
   ]) {
     const source = readFileSync(
       new URL(`../src/api/${name}.ts`, import.meta.url),
@@ -189,4 +190,163 @@ test('점주 상태는 문자열만 허용하고 배열의 문자열 변환을 �
       isApiError(client),
     );
   }
+});
+
+const campaign = {
+  campaignId: 501,
+  ownerId: 7,
+  storeId: 20,
+  storeName: null,
+  status: 'DRAFT',
+  discountTargetType: 'ALL',
+  discountType: 'PERCENT',
+  discountValue: 15,
+  dailyBudget: null,
+  startDate: null,
+  endDate: null,
+  createdAt: '2026-10-20T11:00:00',
+};
+const campaignDetail = {
+  ...campaign,
+  pausedReason: null,
+  targetMenuId: null,
+  issueQuantity: 100,
+  usableStartTime: '11:30:00',
+  usableEndTime: '13:00:00',
+  minOrderAmount: null,
+  notice: null,
+  targetRadius: 1000,
+  targetGender: 'ALL',
+  targetAgeGroups: [],
+  statusChangedAt: '2026-10-20T11:00:00',
+  statusLogs: [],
+  poster: null,
+};
+
+test('캠페인 목록은 미설정 초안과 커서를 유지하고 조회 조건·취소 신호를 전달한다', async () => {
+  const { campaigns, calls } = setup({
+    items: [campaign],
+    nextPageToken: 'next+cursor=',
+  });
+  const query = new URLSearchParams({
+    storeId: '20',
+    status: 'DRAFT',
+    pageSize: '5',
+    pageToken: 'previous+cursor=',
+  }).toString();
+  const result = await campaigns.getCampaigns(query, signal);
+  assert.equal(result.items[0].storeName, null);
+  assert.equal(result.items[0].dailyBudget, null);
+  assert.equal(result.items[0].startDate, null);
+  assert.equal(result.nextPageToken, 'next+cursor=');
+  assert.equal(calls[0].url, `http://test/v1/admin/campaigns?${query}`);
+  assert.equal(calls[0].options.signal, signal);
+  assert.equal(calls[0].options.credentials, 'include');
+});
+
+test('빈 캠페인 목록과 마지막 페이지의 null 커서를 허용한다', async () => {
+  const { campaigns } = setup({ items: [], nextPageToken: null });
+  const result = await campaigns.getCampaigns('pageSize=20', signal);
+  assert.equal(result.items.length, 0);
+  assert.equal(result.nextPageToken, null);
+});
+
+test('캠페인 목록은 잘못된 항목과 커서를 ApiError로 처리한다', async () => {
+  const page = { items: [campaign], nextPageToken: null };
+  for (const data of [
+    null,
+    {},
+    { ...page, items: null },
+    { ...page, nextPageToken: '' },
+    { ...page, nextPageToken: [] },
+    { ...page, items: [{ ...campaign, campaignId: '501' }] },
+    { ...page, items: [{ ...campaign, status: ['ACTIVE'] }] },
+    { ...page, items: [{ ...campaign, dailyBudget: -1 }] },
+    { ...page, items: [{ ...campaign, discountType: 'UNKNOWN' }] },
+  ]) {
+    const { campaigns, client } = setup(data);
+    await assert.rejects(
+      campaigns.getCampaigns('pageSize=20', signal),
+      isApiError(client),
+    );
+  }
+});
+
+test('캠페인 상세의 상태 이력·포스터와 노출 대상을 검증한다', async () => {
+  const detail = {
+    ...campaignDetail,
+    status: 'PAUSED',
+    pausedReason: 'NO_POINTS',
+    targetAgeGroups: ['AGE_20S', 'AGE_50_PLUS'],
+    statusLogs: [
+      {
+        fromStatus: 'ACTIVE',
+        toStatus: 'PAUSED',
+        actorType: 'SYSTEM',
+        reason: null,
+        changedAt: '2026-10-20T12:00:00',
+      },
+    ],
+    poster: {
+      posterId: 9,
+      templateId: 3,
+      title: '점심 특선',
+      html: '<div>poster</div>',
+    },
+  };
+  const { campaigns, calls } = setup(detail);
+  const result = await campaigns.getCampaign('501', signal);
+  assert.equal(result.pausedReason, 'NO_POINTS');
+  assert.equal(result.poster.html, '<div>poster</div>');
+  assert.equal(result.statusLogs[0].actorType, 'SYSTEM');
+  assert.equal(result.targetAgeGroups[1], 'AGE_50_PLUS');
+  assert.equal(calls[0].url, 'http://test/v1/admin/campaigns/501');
+});
+
+test('포스터와 상태 이력이 없는 캠페인 상세도 허용한다', async () => {
+  const { campaigns } = setup(campaignDetail);
+  const result = await campaigns.getCampaign('501', signal);
+  assert.equal(result.poster, null);
+  assert.equal(result.statusLogs.length, 0);
+});
+
+test('요청과 다른 캠페인과 잘못된 상세 필드를 거부한다', async () => {
+  for (const data of [
+    { ...campaignDetail, campaignId: 502 },
+    { ...campaignDetail, pausedReason: 'UNKNOWN' },
+    { ...campaignDetail, targetAgeGroups: ['AGE_10S'] },
+    { ...campaignDetail, issueQuantity: -1 },
+    { ...campaignDetail, targetGender: ['ALL'] },
+    { ...campaignDetail, statusLogs: null },
+    {
+      ...campaignDetail,
+      statusLogs: [
+        {
+          fromStatus: 'ACTIVE',
+          toStatus: 'ENDED',
+          actorType: 'UNKNOWN',
+          reason: null,
+          changedAt: '',
+        },
+      ],
+    },
+    {
+      ...campaignDetail,
+      poster: { posterId: 1, templateId: 1, title: 'test', html: null },
+    },
+  ]) {
+    const { campaigns, client } = setup(data);
+    await assert.rejects(
+      campaigns.getCampaign('501', signal),
+      isApiError(client),
+    );
+  }
+});
+
+test('캠페인 상세 404 오류를 성공 응답으로 처리하지 않는다', async () => {
+  const { campaigns, client } = setup({}, 404);
+  await assert.rejects(
+    campaigns.getCampaign('501', signal),
+    (error) => error instanceof client.ApiError && error.status === 404,
+  );
 });
