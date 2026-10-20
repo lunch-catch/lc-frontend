@@ -7,11 +7,11 @@ import {
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { getSales } from '@admin/api/analytics';
-import { analyticsPeriods, sumAnalytics } from '@admin/api/analyticsUtils';
 import {
   getAnalyticsRangeError,
   shiftDate,
-} from '@admin/features/analytics/analyticsDateUtils';
+} from '@admin/api/analyticsDateUtils';
+import { analyticsPeriods, sumAnalytics } from '@admin/api/analyticsUtils';
 import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
 import { useAnalyticsQuery } from '@admin/hooks/useAnalyticsQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';

@@ -8,6 +8,7 @@ import {
   publishTemplate,
   type TemplateGeneration,
 } from '@admin/api/templates';
+import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
 
 import type {
   PosterTemplate,
@@ -30,6 +31,7 @@ export const useTemplateEditor = (initialId?: string) => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { isWaiting, retryAfterSeconds, reportError } = useRequestFeedback();
   const [loadingMore, setLoadingMore] = useState(false);
   const [versionsFresh, setVersionsFresh] = useState(false);
   const [deletedVersions, setDeletedVersions] = useState<number[]>([]);
@@ -93,7 +95,7 @@ export const useTemplateEditor = (initialId?: string) => {
     requestPrompt: string,
     selectedVersionNumber?: number,
   ) => {
-    if (operationRef.current || moreRef.current) return null;
+    if (operationRef.current || moreRef.current || isWaiting) return null;
     const trimmedName = name.trim();
     const trimmedPrompt = requestPrompt.trim();
     if (
@@ -156,6 +158,7 @@ export const useTemplateEditor = (initialId?: string) => {
         },
         id,
       );
+      // 503·네트워크 오류에는 ID를 보존하고, 성공한 요청만 다음 전송과 구분한다.
       pendingRequest.current = null;
       if (!mounted.current) return null;
       savedId.current = String(generated.templateId);
@@ -182,7 +185,11 @@ export const useTemplateEditor = (initialId?: string) => {
         );
       return mounted.current ? generated : null;
     } catch (cause) {
-      if (mounted.current) setError(getTemplateError(cause));
+      if (mounted.current) {
+        setError(getTemplateError(cause));
+        if (cause instanceof ApiError && cause.code === 'POSTER-004')
+          reportError(cause);
+      }
       return null;
     } finally {
       operationRef.current = false;
@@ -297,6 +304,8 @@ export const useTemplateEditor = (initialId?: string) => {
     loadError: hasGeneratedTemplate ? null : loadError,
     error: error ?? (hasGeneratedTemplate ? loadError : null),
     busy,
+    isWaiting,
+    retryAfterSeconds,
     loadingMore,
     generate,
     publish,

@@ -1,24 +1,29 @@
-import type {
-  AdminAccountForm,
-  IssuedAdminAccount,
-} from '@admin/features/admin-account/adminAccountTypes';
-
 import { ApiError, requestData } from './client';
 
+export type AdminAccountRole = 'ADMIN' | 'SUPER_ADMIN';
+
+export interface IssueAdminAccountRequest {
+  loginId: string;
+  initialPassword: string;
+  name: string;
+  role: AdminAccountRole;
+}
+
+export interface IssuedAdminAccount {
+  loginId: string;
+  name: string;
+  role: AdminAccountRole;
+}
+
 export const issueAdminAccount = async (
-  form: AdminAccountForm,
+  values: IssueAdminAccountRequest,
 ): Promise<IssuedAdminAccount> => {
   const account = await requestData<IssuedAdminAccount>(
     '/v1/admin/admins',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        loginId: form.id,
-        initialPassword: form.password,
-        name: form.name.trim(),
-        role: form.role,
-      }),
+      body: JSON.stringify(values),
     },
     201,
   );

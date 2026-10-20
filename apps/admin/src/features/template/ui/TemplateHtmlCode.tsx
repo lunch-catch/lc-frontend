@@ -112,9 +112,9 @@ export const TemplateHtmlCode = ({
       aria-label="선택한 템플릿의 HTML"
       role="region"
       tabIndex={0}
-      className="min-w-0 overflow-x-auto overscroll-x-contain rounded-md border border-border-subtle bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+      className="template-editor__code min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border focus-visible:outline-2 focus-visible:outline-action-primary"
     >
-      <pre className="m-0 w-max min-w-full p-3 font-mono text-caption-web text-text-primary">
+      <pre className="m-0 w-max min-w-full p-4 font-mono text-caption-web leading-6">
         <code ref={codeRef} onMouseUp={handleMouseUp}>
           {chunks.map((chunk) => {
             const isSelected = Boolean(

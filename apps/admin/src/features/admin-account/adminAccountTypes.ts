@@ -1,10 +1,4 @@
-export type AdminAccountRole = 'ADMIN' | 'SUPER_ADMIN';
-
-export interface IssuedAdminAccount {
-  loginId: string;
-  name: string;
-  role: AdminAccountRole;
-}
+import type { AdminAccountRole } from '@admin/api/adminAccounts';
 
 export interface AdminAccountForm {
   id: string;

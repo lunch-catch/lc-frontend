@@ -1,10 +1,10 @@
+import { shiftDate } from '@admin/api/analyticsDateUtils';
 import type {
   DashboardDailyAggregate,
   DashboardDataset,
   DashboardSegment,
   UsageCounts,
 } from '@admin/features/dashboard/dashboardTypes';
-import { shiftDate } from '@admin/features/dashboard/dashboardUtils';
 
 const createSegments = (
   counts: UsageCounts,

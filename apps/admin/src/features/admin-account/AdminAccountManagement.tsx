@@ -2,7 +2,11 @@ import { useMemo, useRef, useState } from 'react';
 import { Button, Input, Radio, SearchField, SelectField } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
-import { issueAdminAccount } from '@admin/api/adminAccounts';
+import {
+  type AdminAccountRole,
+  issueAdminAccount,
+  type IssuedAdminAccount,
+} from '@admin/api/adminAccounts';
 import { ApiError } from '@admin/api/client';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import {
@@ -31,8 +35,6 @@ import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 import type {
   AdminAccountForm,
   AdminAccountFormErrors,
-  AdminAccountRole,
-  IssuedAdminAccount,
 } from './adminAccountTypes';
 import { validateAdminAccount } from './adminAccountValidation';
 
@@ -142,7 +144,13 @@ export const AdminAccountManagement = () => {
     clearError();
     setNotice('');
     try {
-      const issued = await issueAdminAccount(form);
+      // 비밀번호 확인은 화면에서만 검증하고 API 계약의 필드만 전달한다.
+      const issued = await issueAdminAccount({
+        loginId: form.id,
+        initialPassword: form.password,
+        name: form.name.trim(),
+        role: form.role,
+      });
       setAccounts((current) => [issued, ...current]);
       updateFilters({ page: 1 }, true);
       setForm(emptyForm);
