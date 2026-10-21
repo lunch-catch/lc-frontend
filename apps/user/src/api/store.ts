@@ -1,4 +1,4 @@
-import { request } from './client';
+import { ApiError, request } from './client';
 import { mockFeedCards } from './mocks/feed';
 import { mockStoreDetails, mockStores } from './mocks/stores';
 
@@ -91,8 +91,11 @@ export interface StoreListQuery {
   pageToken?: string | null;
 }
 
-// 가게 목록은 서버 구현이 끝나 실제 API를 쓴다. 가게 상세와 걸어가는 경로는 아직 서버에 없어 mock이다
+// 가게 목록, 가게 상세, 캠페인 포스터는 서버 구현이 끝나 실제 API를 쓴다
+// 걸어가는 경로 API는 만들지 않기로 해서, 도보 시간은 화면에서 직선거리로 계산한다
 const USE_STORE_LIST_API = true;
+const USE_STORE_DETAIL_API = true;
+const USE_POSTER_API = true;
 
 // 한 번에 받는 가게 수. 지도에 핀을 넉넉히 찍도록 기본(20)보다 크게 받는다
 const STORE_PAGE_SIZE = 50;
@@ -107,9 +110,6 @@ interface StoreListItemResponse {
   hasActiveCampaign: boolean;
   activeCampaign: StoreActiveCampaign | null;
 }
-
-// 서버 목록에서 받은 가게. 가게 상세 API가 생기기 전까지 상세 화면을 이 정보로 채운다
-const listedStores = new Map<number, StoreListItem>();
 
 const toStoreListItem = (item: StoreListItemResponse): StoreListItem => ({
   ...item,
@@ -149,12 +149,6 @@ const fetchServerStores = async ({
     items: data.items.map(toStoreListItem),
     nextPageToken: data.nextPageToken,
   };
-};
-
-// 화면에 반영한 목록의 가게를 기억한다. 가게 상세와 걸어가는 시간을 이 정보로 채운다
-// 조건이 바뀐 뒤 늦게 온 응답이 거리를 덮어쓰지 않도록, 받은 곳이 아니라 화면에 반영할 때 부른다
-export const rememberListedStores = (items: StoreListItem[]) => {
-  items.forEach((item) => listedStores.set(item.storeId, item));
 };
 
 // 주변 가게 목록. mock일 때 주소에 ?mockStoresEmpty를 붙이면 주변에 가게가 없는 상태를 확인할 수 있다
@@ -203,7 +197,7 @@ export type DayOfWeek =
   | 'SATURDAY'
   | 'SUNDAY';
 
-// 요일별 영업시간. 휴무일이면 시간이 모두 null
+// 요일별 영업시간. 휴무일이면 시간이 모두 null. 시각은 HH:MM
 export interface StoreBusinessHour {
   dayOfWeek: DayOfWeek;
   openTime: string | null;
@@ -220,7 +214,8 @@ export interface StoreMenu {
   price: number;
 }
 
-// 가게 상세의 활성 캠페인. 쿠폰 사용 가능 시간이 함께 온다
+// 가게 상세의 활성 캠페인. 쿠폰 사용 가능 시간(HH:MM)이 함께 온다
+// 발급 오픈(11:00)이나 받을 수 있는지는 이 값이 아니라 쿠폰 API로 판단한다
 export interface StoreDetailCampaign extends StoreActiveCampaign {
   campaignId: string;
   usableStartTime: string;
@@ -228,7 +223,6 @@ export interface StoreDetailCampaign extends StoreActiveCampaign {
 }
 
 // 가게 상세 (GET /v1/stores/{storeId})
-// 상세 API가 아직 없어 서버 목록의 가게는 목록 정보만으로 채운다 (isPartial). 주소, 전화, 메뉴, 영업시간이 비어 있다
 export interface StoreDetail {
   storeId: number;
   name: string;
@@ -238,31 +232,69 @@ export interface StoreDetail {
   latitude: number;
   longitude: number;
   businessHours: StoreBusinessHour[];
-  // 명세는 objectKey로 되어 있고 URL로 줄지는 아직 정하지 않았다. 화면에서는 URL로 받는다고 가정한다
+  // 가게 대표 이미지(로고) 주소
   imageUrl: string | null;
   menus: StoreMenu[];
+  // 서울 날짜 기준 오늘의 ACTIVE 캠페인. 없으면 null이다
+  // null이어도 가게 조회 실패나 종료된 이벤트로 단정하지 않는다 (명세)
   activeCampaign: StoreDetailCampaign | null;
-  // 목록 정보로만 채운 상세인지
-  isPartial?: boolean;
-  // isPartial일 때 목록에서 받은 오늘 할인 요약. 찜·발급에 필요한 캠페인 ID가 없어 쿠폰 영역 대신 보여준다
-  campaignSummary?: StoreActiveCampaign | null;
 }
 
-// 서버 목록에서 본 가게를 상세 모양으로 채운다. 목록에 없는 정보는 비워 둔다
-const toPartialDetail = (store: StoreListItem): StoreDetail => ({
-  storeId: store.storeId,
-  name: store.name,
-  businessCategory: store.businessCategory,
-  roadAddress: '',
-  phone: '',
-  latitude: store.latitude,
-  longitude: store.longitude,
-  businessHours: [],
-  imageUrl: store.thumbnailUrl,
-  menus: [],
-  activeCampaign: null,
-  isPartial: true,
-  campaignSummary: store.activeCampaign,
+interface StoreImageResponse {
+  objectKey: string;
+  url: string;
+  sortOrder: number | null;
+}
+
+interface StoreDetailResponse {
+  storeId: number;
+  name: string;
+  businessCategory: BusinessCategory;
+  roadAddress: string;
+  phone: string;
+  latitude: number;
+  longitude: number;
+  businessHours: StoreBusinessHour[];
+  logoImage: StoreImageResponse | null;
+  interiorImages: StoreImageResponse[];
+  menus: (StoreMenu & {
+    description: string | null;
+    sortOrder: number;
+    image: StoreImageResponse | null;
+  })[];
+  activeCampaign:
+    (Omit<StoreDetailCampaign, 'campaignId'> & { campaignId: number }) | null;
+}
+
+// 서버 시각(HH:MM:SS)을 화면에 쓰는 HH:MM으로 줄인다
+const toClockTime = <T extends string | null>(time: T): T =>
+  (time === null ? null : time.slice(0, 5)) as T;
+
+const toStoreDetail = (data: StoreDetailResponse): StoreDetail => ({
+  storeId: data.storeId,
+  name: data.name,
+  businessCategory: data.businessCategory,
+  roadAddress: data.roadAddress,
+  phone: data.phone,
+  latitude: data.latitude,
+  longitude: data.longitude,
+  businessHours: data.businessHours.map((hour) => ({
+    ...hour,
+    openTime: toClockTime(hour.openTime),
+    closeTime: toClockTime(hour.closeTime),
+    breakStartTime: toClockTime(hour.breakStartTime),
+    breakEndTime: toClockTime(hour.breakEndTime),
+    lastOrderTime: toClockTime(hour.lastOrderTime),
+  })),
+  imageUrl: data.logoImage?.url ?? null,
+  // 내부 이미지, 메뉴 설명과 사진은 화면 시안이 정해지면 붙인다
+  menus: data.menus.map(({ menuId, name, price }) => ({ menuId, name, price })),
+  activeCampaign: data.activeCampaign && {
+    ...data.activeCampaign,
+    campaignId: String(data.activeCampaign.campaignId),
+    usableStartTime: toClockTime(data.activeCampaign.usableStartTime),
+    usableEndTime: toClockTime(data.activeCampaign.usableEndTime),
+  },
 });
 
 const DAYS_OF_WEEK: DayOfWeek[] = [
@@ -300,19 +332,14 @@ const createMockBusinessHours = (
         },
   );
 
-// 없는 가게면 null (서버는 404)
-export const fetchStoreDetail = async (
+const fetchMockStoreDetail = async (
   storeId: number,
 ): Promise<StoreDetail | null> => {
   await wait(MOCK_DELAY_MS);
 
   const store = mockStores.find((item) => item.storeId === storeId);
   const detail = mockStoreDetails[storeId];
-  if (!store || !detail) {
-    // 상세 API가 없어, 서버 목록에서 본 가게면 목록 정보로 채운다
-    const listed = listedStores.get(storeId);
-    return listed ? toPartialDetail(listed) : null;
-  }
+  if (!store || !detail) return null;
 
   const campaignCard = mockFeedCards.find(
     (card) => card.campaignId === detail.campaignId,
@@ -341,38 +368,41 @@ export const fetchStoreDetail = async (
   };
 };
 
-// 현재 위치에서 가게까지 걸어가는 거리와 시간 (GET /v1/stores/{storeId}/walking-route)
-// 경로 좌표도 오지만 지도를 붙이기 전이라 거리와 시간만 쓴다
-export interface WalkingRoute {
-  totalDistanceMeters: number;
-  totalDurationSeconds: number;
-}
-
-// 분당 약 70m로 걷는다고 보고 시간을 만든다
-const MOCK_WALK_METERS_PER_SECOND = 70 / 60;
-
-export const fetchWalkingRoute = async (
+// 없거나 아직 최종 등록되지 않은 가게면 null (서버는 404 STORE-016). 두 경우를 구분하지 않는다
+// 그 밖의 오류는 그대로 던진다. 이미지나 메뉴가 없는 정상 응답으로 취급하지 않는다 (명세)
+export const fetchStoreDetail = async (
   storeId: number,
-): Promise<WalkingRoute | null> => {
-  await wait(MOCK_DELAY_MS);
+): Promise<StoreDetail | null> => {
+  if (!USE_STORE_DETAIL_API) return fetchMockStoreDetail(storeId);
 
-  // 경로 API가 없어, 가게 목록에서 받은 직선거리로 대신한다
-  const distance =
-    listedStores.get(storeId)?.distanceMeters ??
-    mockStores.find((store) => store.storeId === storeId)?.distanceMeters;
-  if (distance == null) return null;
-
-  return {
-    totalDistanceMeters: distance,
-    totalDurationSeconds: Math.round(distance / MOCK_WALK_METERS_PER_SECOND),
-  };
+  try {
+    return toStoreDetail(
+      await request<StoreDetailResponse>(`/v1/stores/${storeId}`),
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
 };
 
 // 점주가 만든 캠페인 포스터 HTML (GET /v1/campaigns/{campaignId}/poster)
 // 관리자 검증을 거쳐 스크립트와 외부 리소스가 없는 것만 내려온다
+// 비공개, 없는 캠페인, 포스터 없음은 404 POSTER-022라 null로 돌려준다. 그 밖의 오류는 던진다
 export const fetchCampaignPoster = async (
   campaignId: string,
 ): Promise<string | null> => {
+  if (USE_POSTER_API && /^\d+$/.test(campaignId)) {
+    try {
+      const { html } = await request<{ html: string }>(
+        `/v1/campaigns/${campaignId}/poster`,
+      );
+      return html;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
   await wait(MOCK_DELAY_MS);
 
   return (

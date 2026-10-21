@@ -6,7 +6,6 @@ import {
   BUSINESS_CATEGORY_LABELS,
   type CategoryFilter,
   fetchStores,
-  rememberListedStores,
   type StoreListItem,
 } from '@user/api/store';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
@@ -97,7 +96,6 @@ const ExploreScreen = () => {
     })
       .then((response) => {
         if (ignore || current !== generation.current) return;
-        rememberListedStores(response.items);
         setStores(response.items);
         setNextPageToken(response.nextPageToken);
         setHasMoreError(false);
@@ -136,7 +134,6 @@ const ExploreScreen = () => {
     })
       .then((response) => {
         if (current !== generation.current) return;
-        rememberListedStores(response.items);
         // 같은 가게가 두 번 오면 한 번만 둔다
         setStores((prev) => {
           const seen = new Set(prev?.map((store) => store.storeId));

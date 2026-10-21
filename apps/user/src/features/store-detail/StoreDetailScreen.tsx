@@ -19,9 +19,7 @@ import {
   BUSINESS_CATEGORY_LABELS,
   fetchCampaignPoster,
   fetchStoreDetail,
-  fetchWalkingRoute,
   type StoreDetail,
-  type WalkingRoute,
 } from '@user/api/store';
 import {
   addWish,
@@ -30,6 +28,8 @@ import {
   restoreWish,
 } from '@user/api/wishlist';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
+import mascotError from '@user/assets/illustrations/mascot-error.webp';
+import { useMyLocation } from '@user/hooks/useMyLocation';
 import { useOpenCountdown } from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import Card, { cardClassName } from '@user/ui/Card/Card';
@@ -37,7 +37,11 @@ import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
 } from '@user/ui/FeedbackToast/FeedbackToast';
-import { formatDiscount } from '@user/ui/storeFormat';
+import {
+  formatDiscount,
+  formatWalkDistance,
+  getDistanceMeters,
+} from '@user/ui/storeFormat';
 
 import BusinessHoursSection from './BusinessHoursSection';
 import CouponCta from './CouponCta';
@@ -93,19 +97,26 @@ const loadCouponInfo = async (
   };
 };
 
-// 가게 상세. 탐색 목록이나 지도에서 가게를 눌러 들어온다
+// 가게 상세. 탐색 목록, 지도, 알림에서 가게를 눌러 들어온다
 // 찜 목록까지 가지 않아도 여기서 바로 찜하고, 11:00 오픈 뒤에는 바로 쿠폰을 받을 수 있다
 const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const navigate = useNavigate();
   // undefined: 불러오는 중, null: 없는 가게
   const [store, setStore] = useState<StoreDetail | null | undefined>();
-  const [route, setRoute] = useState<WalkingRoute | null>(null);
+  // 가게 정보를 받지 못했는지. 없는 가게(null)와 달리 다시 시도할 수 있다
+  const [hasLoadError, setHasLoadError] = useState(false);
+  // 다시 시도할 때마다 올려서 처음부터 다시 받는다
+  const [attempt, setAttempt] = useState(0);
   const [couponInfo, setCouponInfo] = useState<CouponInfo | null>(null);
+  // 활성 캠페인은 있는데 찜 여부나 발급 상태를 받지 못했는지. 이때는 받기와 찜 버튼 없이 할인만 보여준다
+  const [hasCouponError, setHasCouponError] = useState(false);
   const [posterHtml, setPosterHtml] = useState<string | null | undefined>();
   const [isPending, setIsPending] = useState(false);
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 버튼이 받기로 바뀐다
   const { isOpen, remainingMs } = useOpenCountdown();
+  // 도보 시간은 저장 위치와 가게 좌표의 직선거리로 계산한다. 걷는 길 API는 만들지 않기로 했다
+  const myLocation = useMyLocation();
 
   useEffect(() => {
     let ignore = false;
@@ -113,22 +124,28 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     // 가게 정보와 쿠폰 상태를 모두 받은 뒤에 그려, 버튼이 중간에 바뀌지 않게 한다
     // 포스터는 크고 화면 아래쪽에 있어 따로 받는다
     const load = async () => {
-      const [detail, walkingRoute] = await Promise.all([
-        fetchStoreDetail(storeId),
-        fetchWalkingRoute(storeId),
-      ]);
+      let detail: StoreDetail | null;
+      try {
+        detail = await fetchStoreDetail(storeId);
+      } catch {
+        if (!ignore) setHasLoadError(true);
+        return;
+      }
+
+      // 활성 캠페인이 있어도 받을 수 있다는 뜻은 아니라, 발급 상태를 받지 못하면 쿠폰 영역만 줄여 보여준다
       const campaignId = detail?.activeCampaign?.campaignId;
       const info = campaignId
-        ? await loadCouponInfo(campaignId, storeId)
+        ? await loadCouponInfo(campaignId, storeId).catch(() => null)
         : null;
       if (ignore) return;
 
       setStore(detail);
-      setRoute(walkingRoute);
       setCouponInfo(info);
+      setHasCouponError(Boolean(campaignId) && !info);
 
       if (campaignId) {
-        const html = await fetchCampaignPoster(campaignId);
+        // 포스터를 받지 못하면 포스터 없이 보여준다
+        const html = await fetchCampaignPoster(campaignId).catch(() => null);
         if (!ignore) setPosterHtml(html);
       }
     };
@@ -138,7 +155,16 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     return () => {
       ignore = true;
     };
-  }, [storeId]);
+  }, [attempt, storeId]);
+
+  const retry = () => {
+    setHasLoadError(false);
+    setStore(undefined);
+    setCouponInfo(null);
+    setHasCouponError(false);
+    setPosterHtml(undefined);
+    setAttempt((value) => value + 1);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -158,6 +184,23 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
       navigate('/explore', { replace: true });
     }
   };
+
+  if (hasLoadError) {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page">
+        <EmptyState
+          description="잠시 후 다시 시도해 주세요"
+          image={mascotError}
+          title="가게 정보를 불러오지 못했어요"
+        >
+          <ActionButton onClick={retry}>다시 시도</ActionButton>
+          <ActionButton onClick={goBack} variant="ghost">
+            뒤로 가기
+          </ActionButton>
+        </EmptyState>
+      </div>
+    );
+  }
 
   if (store === undefined) {
     return (
@@ -288,13 +331,19 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
       .catch(() => setToast({ message: '복사하지 못했어요', tone: 'error' }));
   };
 
-  const meta = [
-    route &&
-      `도보 ${Math.max(1, Math.round(route.totalDurationSeconds / 60))}분`,
-    route && `${route.totalDistanceMeters.toLocaleString('ko-KR')}m`,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  // 저장 위치를 모르면(불러오는 중이거나 위치를 설정하지 않음) 거리 줄을 숨긴다
+  const meta =
+    myLocation && myLocation.latitude !== null && myLocation.longitude !== null
+      ? formatWalkDistance(
+          getDistanceMeters(
+            {
+              latitude: myLocation.latitude,
+              longitude: myLocation.longitude,
+            },
+            store,
+          ),
+        )
+      : null;
 
   // 받은 쿠폰은 쿠폰함에서 관리하므로 받은 뒤에는 찜을 취소할 수 없다
   const canToggleWish = couponInfo && couponState !== 'issued' && !isPending;
@@ -372,7 +421,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
               {meta}
             </p>
           )}
-          {/* 전화번호를 모르면(목록 정보로만 채운 가게) 전화 버튼을 빼고 둘로 나눈다 */}
+          {/* 전화번호가 비어 오면 전화 버튼을 빼고 둘로 나눈다 */}
           <div
             className={`mt-4 grid py-2 ${store.phone ? 'grid-cols-3' : 'grid-cols-2'} ${cardClassName}`}
           >
@@ -394,18 +443,31 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           </div>
         </section>
 
-        {store.isPartial && store.campaignSummary ? (
-          // 가게 상세 API가 없어 캠페인 ID를 몰라 여기서는 찜하거나 받을 수 없다. 할인만 알려 주고 피드로 안내한다
-          <p className="rounded-xl bg-surface-brand px-4 py-3 text-body-sm-mobile text-text-primary">
-            오늘{' '}
-            <strong className="font-bold text-text-brand">
-              {/* 메뉴 할인이면 어느 메뉴인지 앞에 붙인다 (예: 김치찌개 20% 할인) */}
-              {store.campaignSummary.targetMenu &&
-                `${store.campaignSummary.targetMenu.name} `}
-              {formatDiscount(store.campaignSummary)}
-            </strong>{' '}
-            쿠폰이 있어요 · 찜은 오늘 점심 피드에서 할 수 있어요
-          </p>
+        {campaign && hasCouponError ? (
+          // 찜 여부나 발급 상태를 받지 못하면 받을 수 있는지 몰라, 할인만 알려 주고 다시 불러오게 한다
+          <section className="flex flex-col gap-2 rounded-xl bg-surface-brand px-4 py-3">
+            <p className="text-body-sm-mobile text-text-primary">
+              오늘{' '}
+              <strong className="font-bold text-text-brand">
+                {/* 메뉴 할인이면 어느 메뉴인지 앞에 붙인다 (예: 김치찌개 20% 할인) */}
+                {campaign.targetMenu && `${campaign.targetMenu.name} `}
+                {formatDiscount(campaign)}
+              </strong>{' '}
+              쿠폰이 있어요
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-caption-mobile text-text-secondary">
+                쿠폰 정보를 불러오지 못했어요
+              </p>
+              <button
+                className="-my-2 shrink-0 px-2 py-2 text-caption-mobile font-bold text-text-brand underline underline-offset-2"
+                onClick={retry}
+                type="button"
+              >
+                다시 시도
+              </button>
+            </div>
+          </section>
         ) : campaign && couponInfo && couponState ? (
           <CouponSection
             campaign={campaign}
@@ -421,7 +483,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           </p>
         )}
 
-        {/* 메뉴와 영업시간을 모르면(목록 정보로만 채운 가게) 구역을 숨긴다 */}
+        {/* 대표 메뉴가 없으면(menus=[]는 정상 응답) 구역을 숨긴다 */}
         {store.menus.length > 0 && (
           <section className="flex flex-col gap-3">
             <h2 className="text-h3-mobile font-bold text-text-primary">

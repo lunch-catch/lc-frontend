@@ -14,7 +14,7 @@ const LocationSection = ({ onCopyAddress, store }: LocationSectionProps) => {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-h3-mobile font-bold text-text-primary">위치</h2>
-      {/* 가게 상세 API가 없어 목록 정보로만 채운 가게는 주소가 비어 있어, 지도만 보여준다 */}
+      {/* 주소가 비어 오면 주소 줄 없이 지도만 보여준다 */}
       {store.roadAddress && (
         <div className="flex items-start justify-between gap-3">
           <p className="text-body-sm-mobile text-text-primary">
