@@ -116,7 +116,8 @@ const TutorialStep = () => {
       >
         {/* 세 장의 그림을 겹쳐 두고 지금 장만 보여, 넘길 때 그림을 새로 불러오며 깜빡이지 않게 한다 */}
         {/* 지금 장이 된 그림에 움직임 클래스가 붙는 순간 넘긴 방향에서 밀려 들어온다 */}
-        <div className="relative aspect-700/540 w-full">
+        {/* 화면 너비를 다 채우면 그림이 글보다 먼저 크게 보여서 폭을 256px로 묶는다 (멘토링 피드백: 전체 크기가 큼) */}
+        <div className="relative mx-auto aspect-700/540 w-full max-w-64">
           {pages.map((item, index) => (
             <img
               alt=""
@@ -133,7 +134,7 @@ const TutorialStep = () => {
           ))}
         </div>
         {/* 지금 장의 점이 가로로 길어져 몇 번째 장인지 잘 보이게 한다 */}
-        <div aria-hidden="true" className="mt-6 flex justify-center gap-3">
+        <div aria-hidden="true" className="mt-5 flex justify-center gap-3">
           {pages.map((item, index) => (
             <span
               className={`h-1.75 rounded-full transition-all duration-300 motion-reduce:transition-none ${
@@ -146,18 +147,19 @@ const TutorialStep = () => {
           ))}
         </div>
         {/* 화면 읽기 프로그램이 장이 바뀔 때 새 안내를 읽도록 알린다 */}
-        <div aria-live="polite" className="mt-10 text-center">
+        <div aria-live="polite" className="mt-8 text-center">
           <p className="sr-only">
             {pages.length}장 중 {pageIndex + 1}번째
           </p>
           {/* 장이 바뀔 때마다 새로 그려 그림과 같은 움직임으로 들어온다 */}
           <div className={slideInClassNames[direction]} key={pageIndex}>
-            <h1 className="text-display-mobile leading-snug font-black text-text-primary">
+            {/* 앞 온보딩 화면 제목(19px)과 같은 크기로 두어 마지막 단계만 튀어 보이지 않게 한다 */}
+            <h1 className="text-h2-mobile font-bold text-text-primary">
               {page.title[0]}
               <br />
               {page.title[1]}
             </h1>
-            <p className="mt-2 text-body-sm-mobile leading-snug text-text-secondary">
+            <p className="mt-1.5 text-body-sm-mobile text-text-secondary">
               {page.description[0]}
               <br />
               {page.description[1]}
