@@ -27,6 +27,11 @@ import StoreMap from './StoreMap';
 
 type ExploreView = 'list' | 'map';
 
+const viewOptions = [
+  { value: 'list', label: '목록으로 보기', Icon: List },
+  { value: 'map', label: '지도로 보기', Icon: MapIcon },
+] as const;
+
 // 탐색 탭. 주변 가게를 업종별로 보고 가게명이나 메뉴로 검색한다 (Figma 4. 홈의 목록·지도 보기)
 // 목록과 지도는 같은 가게 목록을 보여주는 방식만 다르다
 const ExploreScreen = () => {
@@ -349,43 +354,68 @@ const ExploreScreen = () => {
   return (
     <>
       <AppHeader locationName={locationName} wishCount={wishCount} />
-      {/* 목록에서는 마지막 카드가 떠 있는 전환 버튼에 가리지 않도록 아래를 더 비운다 */}
-      {/* 지도는 버튼 위에서 끝나게 해서, 지도 오른쪽 아래의 카카오 로고를 버튼이 가리지 않게 한다 */}
-      <div
-        className={`flex flex-1 flex-col gap-3 px-page pt-2 ${
-          view === 'list' ? 'pb-20' : 'pb-16'
-        }`}
-      >
-        <form
-          className="flex h-11 items-center gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 focus-within:border-action-primary"
-          onSubmit={handleSearch}
-          role="search"
-        >
-          <Search
-            aria-hidden="true"
-            className="size-4.5 shrink-0 text-text-secondary"
-          />
-          <input
-            aria-label="가게, 메뉴 검색"
-            className="h-full min-w-0 flex-1 bg-transparent text-body-sm-mobile text-text-primary placeholder:text-text-tertiary focus:outline-none"
-            // 브라우저가 search 입력칸에 붙이는 지우기 버튼과 겹치지 않도록 text로 두고, 키보드에는 검색 키를 띄운다
-            enterKeyHint="search"
-            onChange={(event) => setInputValue(event.target.value)}
-            placeholder="가게, 메뉴 검색"
-            type="text"
-            value={inputValue}
-          />
-          {inputValue && (
-            <button
-              aria-label="검색어 지우기"
-              className="-mr-2 flex size-9 shrink-0 items-center justify-center text-text-tertiary"
-              onClick={clearSearch}
-              type="button"
-            >
-              <X aria-hidden="true" className="size-4.5" />
-            </button>
-          )}
-        </form>
+      <div className="flex flex-1 flex-col gap-3 px-page pt-2 pb-6">
+        {/* 목록·지도 전환은 검색창 옆에 둔다. 떠 있는 버튼은 목록을 내리는 내내 카드 글자를 가렸고,
+            켜진 쪽이 보이는 탭이라 지금 어떤 보기인지도 바로 알 수 있다. 줄을 새로 만들지 않아 목록이 밀려 내려가지 않는다 */}
+        <div className="flex gap-2">
+          <form
+            className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 focus-within:border-action-primary"
+            onSubmit={handleSearch}
+            role="search"
+          >
+            <Search
+              aria-hidden="true"
+              className="size-4.5 shrink-0 text-text-secondary"
+            />
+            <input
+              aria-label="가게, 메뉴 검색"
+              className="h-full min-w-0 flex-1 bg-transparent text-body-sm-mobile text-text-primary placeholder:text-text-tertiary focus:outline-none"
+              // 브라우저가 search 입력칸에 붙이는 지우기 버튼과 겹치지 않도록 text로 두고, 키보드에는 검색 키를 띄운다
+              enterKeyHint="search"
+              onChange={(event) => setInputValue(event.target.value)}
+              placeholder="가게, 메뉴 검색"
+              type="text"
+              value={inputValue}
+            />
+            {inputValue && (
+              <button
+                aria-label="검색어 지우기"
+                className="-mr-2 flex size-9 shrink-0 items-center justify-center text-text-tertiary"
+                onClick={clearSearch}
+                type="button"
+              >
+                <X aria-hidden="true" className="size-4.5" />
+              </button>
+            )}
+          </form>
+          <div
+            aria-label="보기 방식"
+            className="flex h-11 shrink-0 items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1"
+            role="group"
+          >
+            {viewOptions.map(({ Icon, label, value }) => (
+              <button
+                aria-label={label}
+                aria-pressed={view === value}
+                className={`flex h-full w-9 items-center justify-center rounded-lg transition-colors ${
+                  view === value
+                    ? 'bg-surface-brand text-text-brand'
+                    : 'text-text-tertiary'
+                }`}
+                key={value}
+                onClick={() =>
+                  // 보기만 바꾸는 것이라 뒤로 가기 기록을 쌓지 않는다
+                  setSearchParams(value === 'map' ? { view: 'map' } : {}, {
+                    replace: true,
+                  })
+                }
+                type="button"
+              >
+                <Icon aria-hidden="true" className="size-4.5" />
+              </button>
+            ))}
+          </div>
+        </div>
         <CategoryIconRow onChange={changeCategory} value={category} />
         {/* 결과가 없으면 아래 안내 화면이 같은 말을 하므로 숨긴다 */}
         {query && stores?.length !== 0 && (
@@ -404,32 +434,6 @@ const ExploreScreen = () => {
         )}
         {renderContent()}
       </div>
-      {/* 무엇을 볼지(업종)와 어떻게 볼지(목록·지도)를 나누어, 전환은 탭바 위에 떠 있는 버튼으로 둔다 */}
-      {/* 목록을 내리는 중에도 엄지가 닿는 아래에 있다. 보여줄 가게가 없으면 숨긴다 */}
-      {stores && stores.length > 0 && (
-        <button
-          className="fixed inset-x-0 bottom-[calc(94px+env(safe-area-inset-bottom))] z-10 mx-auto flex h-10 w-fit items-center gap-1.5 rounded-full bg-bg-inverse px-4 text-body-sm-mobile font-bold text-text-on-inverse shadow-lg"
-          onClick={() =>
-            // 보기만 바꾸는 것이라 뒤로 가기 기록을 쌓지 않는다
-            setSearchParams(view === 'list' ? { view: 'map' } : {}, {
-              replace: true,
-            })
-          }
-          type="button"
-        >
-          {view === 'list' ? (
-            <>
-              <MapIcon aria-hidden="true" className="size-4" />
-              지도로 보기
-            </>
-          ) : (
-            <>
-              <List aria-hidden="true" className="size-4" />
-              목록으로 보기
-            </>
-          )}
-        </button>
-      )}
     </>
   );
 };
