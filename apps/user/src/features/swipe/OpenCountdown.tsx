@@ -3,7 +3,7 @@ import { Clock } from 'lucide-react';
 import {
   formatCountdown,
   useOpenCountdown,
-} from '@user/features/wishlist/useOpenCountdown';
+} from '@user/hooks/useOpenCountdown';
 
 // 카드 위 줄 오른쪽, 필터 옆에 두는 11:00 오픈까지 남은 시간. 오픈 뒤에는 보여주지 않는다
 const OpenCountdown = () => {

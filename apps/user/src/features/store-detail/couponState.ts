@@ -1,7 +1,4 @@
-import {
-  getWishState,
-  type WishState,
-} from '@user/features/wishlist/wishState';
+import { getWishState, type WishState } from '@user/ui/wishState';
 
 // 가게 상세 하단 버튼이 보여줄 쿠폰 상태
 // 찜 목록과 같은 상태에, 오픈 전에는 찜했는지에 따라 할 일이 달라 둘로 나눈다

@@ -6,9 +6,9 @@ import type { CampaignIssueStatus } from '@user/api/coupon';
 import type { WishItem } from '@user/api/wishlist';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import Card from '@user/ui/Card/Card';
+import type { WishState } from '@user/ui/wishState';
 
 import { formatWishAmount, formatWishTarget } from './wishFormat';
-import type { WishState } from './wishState';
 
 // 카드가 보여줄 상태. unknown은 발급 상태를 불러오지 못해 받을 수 있는지 모르는 상태라 받기 버튼을 두지 않는다
 // ended는 캠페인이 끝나 받을 수 없는 상태라 지우기만 할 수 있다

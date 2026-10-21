@@ -10,12 +10,12 @@ import {
   type StoreListItem,
 } from '@user/api/store';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
+import { useHasUnreadNotifications } from '@user/hooks/useHasUnreadNotifications';
 import {
   getHeaderLocationName,
   useMyLocation,
-} from '@user/features/location/useMyLocation';
-import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
-import { useWishCount } from '@user/features/wishlist/useWishCount';
+} from '@user/hooks/useMyLocation';
+import { useWishCount } from '@user/hooks/useWishCount';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import AppHeader from '@user/ui/AppHeader/AppHeader';
 import EmptyState from '@user/ui/EmptyState/EmptyState';

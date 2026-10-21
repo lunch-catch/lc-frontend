@@ -4,9 +4,9 @@ import type { StoreListItem } from '@user/api/store';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import MapOverlay from '@user/ui/KakaoMap/MapOverlay';
 import { useKakaoMap } from '@user/ui/KakaoMap/useKakaoMap';
+import { formatDiscount } from '@user/ui/storeFormat';
 
 import StoreCard from './StoreCard';
-import { formatDiscount } from './storeFormat';
 
 export interface MapCenter {
   latitude: number;

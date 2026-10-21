@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { fetchTodayIssuance } from '@user/api/coupon';
-import { useOpenCountdown } from '@user/features/wishlist/useOpenCountdown';
+import { useOpenCountdown } from '@user/hooks/useOpenCountdown';
 
 interface TodayIssuance {
   issuedCount: number;

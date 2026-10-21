@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 
-import { formatCountdown } from '@user/features/wishlist/useOpenCountdown';
+import { formatCountdown } from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import FeedbackToast, {
   type FeedbackToastProps,

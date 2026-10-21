@@ -8,16 +8,13 @@ import {
   sendSwipeAction,
   type SwipeAction,
 } from '@user/api/feed';
+import { useHasUnreadNotifications } from '@user/hooks/useHasUnreadNotifications';
 import {
   getHeaderLocationName,
   useMyLocation,
-} from '@user/features/location/useMyLocation';
-import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
-import {
-  getIssuePhase,
-  type IssuePhase,
-} from '@user/features/wishlist/useOpenCountdown';
-import { useWishCount } from '@user/features/wishlist/useWishCount';
+} from '@user/hooks/useMyLocation';
+import { getIssuePhase, type IssuePhase } from '@user/hooks/useOpenCountdown';
+import { useWishCount } from '@user/hooks/useWishCount';
 import AppHeader from '@user/ui/AppHeader/AppHeader';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 

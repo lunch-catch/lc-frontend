@@ -30,14 +30,14 @@ import {
   restoreWish,
 } from '@user/api/wishlist';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import { formatDiscount } from '@user/features/explore/storeFormat';
-import { useOpenCountdown } from '@user/features/wishlist/useOpenCountdown';
+import { useOpenCountdown } from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import Card, { cardClassName } from '@user/ui/Card/Card';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
 } from '@user/ui/FeedbackToast/FeedbackToast';
+import { formatDiscount } from '@user/ui/storeFormat';
 
 import BusinessHoursSection from './BusinessHoursSection';
 import CouponCta from './CouponCta';

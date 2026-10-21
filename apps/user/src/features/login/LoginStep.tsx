@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import loginDiscover from '@user/assets/illustrations/login-discover.webp';
+import { startKakaoLogin } from '@user/auth/kakaoLogin';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 import Wordmark from '@user/ui/Wordmark/Wordmark';
 
-import { startKakaoLogin } from './kakaoLogin';
 import KakaoLoginButton from './KakaoLoginButton';
 import LoginStatusScreen, { loginScreenClassName } from './LoginStatusScreen';
 

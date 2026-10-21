@@ -3,8 +3,7 @@ import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
 import { cardClassName } from '@user/ui/Card/Card';
-
-import { formatDiscount, formatWalkTime } from './storeFormat';
+import { formatDiscount, formatWalkTime } from '@user/ui/storeFormat';
 
 interface StoreCardProps {
   store: StoreListItem;
