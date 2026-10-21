@@ -10,6 +10,10 @@ import {
   saveMyLocation,
 } from '@user/api/location';
 import { fetchMyProfile } from '@user/api/member';
+import {
+  getLocationLabel,
+  rememberMyLocation,
+} from '@user/hooks/useMyLocation';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import { cardClassName } from '@user/ui/Card/Card';
 import FeedbackToast, {
@@ -24,7 +28,6 @@ import { getCurrentPosition, PositionError } from './currentPosition';
 import { type AddressResult, findAddress } from './kakaoSearch';
 import LocationNameSheet from './LocationNameSheet';
 import { useAddressSearch } from './useAddressSearch';
-import { getLocationLabel, rememberMyLocation } from './useMyLocation';
 
 const TOAST_DURATION_MS = 2500;
 

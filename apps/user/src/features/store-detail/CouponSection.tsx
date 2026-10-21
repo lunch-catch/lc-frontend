@@ -1,5 +1,5 @@
 import type { StoreDetailCampaign } from '@user/api/store';
-import { formatDiscount } from '@user/features/explore/storeFormat';
+import { formatDiscount } from '@user/ui/storeFormat';
 
 import type { CouponState } from './couponState';
 

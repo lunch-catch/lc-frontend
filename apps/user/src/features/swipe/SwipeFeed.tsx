@@ -8,12 +8,13 @@ import {
   sendSwipeAction,
   type SwipeAction,
 } from '@user/api/feed';
+import { useHasUnreadNotifications } from '@user/hooks/useHasUnreadNotifications';
 import {
   getHeaderLocationName,
   useMyLocation,
-} from '@user/features/location/useMyLocation';
-import { useHasUnreadNotifications } from '@user/features/notification/useHasUnreadNotifications';
-import { useWishCount } from '@user/features/wishlist/useWishCount';
+} from '@user/hooks/useMyLocation';
+import { getIssuePhase, type IssuePhase } from '@user/hooks/useOpenCountdown';
+import { useWishCount } from '@user/hooks/useWishCount';
 import AppHeader from '@user/ui/AppHeader/AppHeader';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 
@@ -33,7 +34,6 @@ import GestureRail from './GestureRail';
 import OpenCountdown from './OpenCountdown';
 import PosterCard from './PosterCard';
 import PosterSkeleton from './PosterSkeleton';
-import SwipeClosed from './SwipeClosed';
 import SwipeDone from './SwipeDone';
 import SwipeHint from './SwipeHint';
 import SwipeUnavailable, {
@@ -44,32 +44,17 @@ import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
 const TOAST_DURATION_MS = 2500;
-const FIRST_WISH_STORAGE_KEY = 'launch-catch-first-wish-date';
 
-// 오늘 처음 찜했는지 확인하고, 처음이면 오늘 날짜를 기록한다
-const checkFirstWishToday = () => {
-  const today = new Date().toLocaleDateString('sv-SE');
-
-  try {
-    if (window.localStorage.getItem(FIRST_WISH_STORAGE_KEY) === today) {
-      return false;
-    }
-    window.localStorage.setItem(FIRST_WISH_STORAGE_KEY, today);
-  } catch {
-    // 저장소를 쓸 수 없으면 매번 처음으로 본다
-  }
-
-  return true;
+// 첫 찜 토스트에서 쿠폰을 언제 받는지. 카드 아래 안내(SwipeHint)와 같은 때를 말한다
+const WISH_TOAST_TIMING: Record<IssuePhase, string> = {
+  beforeOpen: '11:00부터 쿠폰을 받을 수 있어요',
+  issuing: '지금 바로 쿠폰을 받을 수 있어요',
+  closed: '내일 11:00부터 쿠폰을 받을 수 있어요',
 };
 
 // waiting: 다음 피드를 받을 수 있을 때까지 기다리는 중, done: 오늘 받을 수 있는 카드를 모두 넘김
 type FeedStatus =
-  | 'loading'
-  | 'serving'
-  | 'waiting'
-  | 'done'
-  | 'closed'
-  | SwipeUnavailableReason;
+  'loading' | 'serving' | 'waiting' | 'done' | SwipeUnavailableReason;
 
 // 피드를 받지 못한 이유를 화면에 맞게 나눈다. 저장한 위치가 없으면 위치 설정으로 안내한다
 const getFeedFailure = (error: unknown): SwipeUnavailableReason =>
@@ -151,6 +136,9 @@ const SwipeFeed = () => {
   const hasRetriedRateLimit = useRef(initial.hasRetriedRateLimit);
   // 같은 카드의 노출이 두 번 기록되지 않도록 보낸 serveId를 기억한다. 탭을 오가거나 새로고침해도 이어서 기억한다
   const impressedServeIds = useRef(new Set(loadImpressedServeIds()));
+  // 이 화면에 들어온 뒤 찜 토스트를 띄웠는지. 새로고침하거나 다른 탭에 갔다 오면 다시 띄운다
+  // 시간이 지나 다시 들어오면 그때의 받는 때(11:00부터, 지금 바로, 내일)를 다시 알려주려는 것이다
+  const hasShownWishToast = useRef(false);
   const [setCardArea, cardMaxWidth] = usePosterFitWidth();
 
   useEffect(() => {
@@ -301,9 +289,13 @@ const SwipeFeed = () => {
     if (action === 'wish') {
       increaseWishCount();
 
-      // 찜은 발급이 아니라는 걸 그날 첫 찜에서 한 번만 알려준다
-      if (checkFirstWishToday()) {
-        setToastMessage('찜 목록에 담았어요 · 11:00부터 받을 수 있어요');
+      // 찜은 발급이 아니라는 걸 화면에 들어온 뒤 첫 찜에서 한 번만 알려준다. 받을 수 있는 때는 카드 아래 안내와 맞춘다
+      // 한 줄에 다 들어가지 않아, 어색하게 끊기지 않도록 받는 때를 둘째 줄에 둔다
+      if (!hasShownWishToast.current) {
+        hasShownWishToast.current = true;
+        setToastMessage(
+          `찜 목록에 담았어요\n${WISH_TOAST_TIMING[getIssuePhase()]}`,
+        );
       }
     }
   };
@@ -326,7 +318,30 @@ const SwipeFeed = () => {
             <FeedbackToast message={toastMessage} />
           </div>
         )}
-        {status === 'closed' && <SwipeClosed />}
+        {/* 카드 바로 위 줄. 왼쪽은 피드에 거는 필터("필터"라고 적어 처음 보는 사람도 알 수 있게 한다) */}
+        {/* 오른쪽은 11:00 오픈까지 남은 시간. 오픈 뒤에는 비워 둔다 */}
+        {/* 필터 때문에 카드가 없을 수도 있어, 카드가 없는 화면에도 둔다. 위치가 없을 때만 위치 설정이 먼저라 뺀다 */}
+        {status !== 'needsLocation' && (
+          <div className="flex items-center justify-between gap-3 px-page pt-1">
+            <FeedFilterButton
+              onLoadError={() => setToastMessage('필터를 불러오지 못했어요')}
+              onSaved={() => {
+                // 보던 카드가 있으면 이미 받은 카드에는 적용되지 않고, 다 본 뒤 새로 받는 피드부터 적용된다
+                if (topCard) {
+                  setToastMessage(
+                    '필터를 저장했어요 · 새로 받는 카드부터 적용돼요',
+                  );
+                  return;
+                }
+                // 보여줄 카드가 없으면 기다리지 않고 바뀐 필터로 바로 다시 받는다
+                // 요청 제한에 걸려 기다리는 중이면 그 시각에 바뀐 필터로 받는다
+                setToastMessage('필터를 저장했어요');
+                if (status !== 'loading' && status !== 'waiting') retry();
+              }}
+            />
+            <OpenCountdown />
+          </div>
+        )}
         {(status === 'empty' ||
           status === 'needsLocation' ||
           status === 'error') && (
@@ -335,22 +350,6 @@ const SwipeFeed = () => {
         {status === 'done' && <SwipeDone />}
         {status === 'waiting' && <SwipeWaiting until={waitUntil} />}
         {/* 불러오는 중에는 카드 자리에 회색 틀을 보여준다 */}
-        {/* 카드 바로 위 줄. 왼쪽은 피드에 거는 필터("필터"라고 적어 처음 보는 사람도 알 수 있게 한다) */}
-        {/* 오른쪽은 11:00 오픈까지 남은 시간. 오픈 뒤에는 비워 둔다 */}
-        {(status === 'loading' || topCard) && (
-          <div className="flex items-center justify-between gap-3 px-page pt-1">
-            <FeedFilterButton
-              onLoadError={() => setToastMessage('필터를 불러오지 못했어요')}
-              // 필터는 이미 받은 카드에는 적용되지 않고, 지금 카드를 다 본 뒤 새로 받는 피드부터 적용된다
-              onSaved={() =>
-                setToastMessage(
-                  '필터를 저장했어요 · 새로 받는 카드부터 적용돼요',
-                )
-              }
-            />
-            <OpenCountdown />
-          </div>
-        )}
         {(status === 'loading' || topCard) && (
           // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
           <section

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Checkbox, ChoiceChip } from '@repo/ui';
 
-import { startKakaoWithdrawAuth } from '@user/features/login/kakaoLogin';
+import { startKakaoWithdrawAuth } from '@user/auth/kakaoLogin';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import Card from '@user/ui/Card/Card';
 import FixedBottom from '@user/ui/FixedBottom/FixedBottom';

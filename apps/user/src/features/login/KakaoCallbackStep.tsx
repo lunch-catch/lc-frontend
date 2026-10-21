@@ -4,17 +4,17 @@ import { useNavigate } from 'react-router';
 import { loginWithKakaoCode } from '@user/api/auth';
 import { ApiError } from '@user/api/client';
 import { withdrawMember } from '@user/api/member';
-import { useAuth } from '@user/auth/useAuth';
-import WithdrawStatusScreen, {
-  type WithdrawFailure,
-} from '@user/features/mypage/WithdrawStatusScreen';
-
 import {
   consumeKakaoAuth,
   type KakaoAuthIntent,
   startKakaoLogin,
-} from './kakaoLogin';
+} from '@user/auth/kakaoLogin';
+import { useAuth } from '@user/auth/useAuth';
+
 import LoginStatusScreen from './LoginStatusScreen';
+import WithdrawStatusScreen, {
+  type WithdrawFailure,
+} from './WithdrawStatusScreen';
 
 // 카카오에서 돌아온 결과가 올바르지 않음 (취소했거나 다른 탭에서 시작함)
 class InvalidCallbackError extends Error {}

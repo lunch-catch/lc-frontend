@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 
 import {
+  type CampaignIssueStatus,
   fetchIssueStatus,
   issueCoupon,
   type IssueResult,
@@ -13,16 +14,22 @@ import {
   restoreWish,
   type WishItem,
 } from '@user/api/wishlist';
+import mascotError from '@user/assets/illustrations/mascot-error.webp';
+import {
+  formatCountdown,
+  useOpenCountdown,
+} from '@user/hooks/useOpenCountdown';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
 } from '@user/ui/FeedbackToast/FeedbackToast';
+import { getWishState, WISH_STATE_ORDER } from '@user/ui/wishState';
 
-import { formatCountdown, useOpenCountdown } from './useOpenCountdown';
-import WishCard from './WishCard';
+import WishCard, { type WishCardState } from './WishCard';
 import WishlistEmpty from './WishlistEmpty';
 import WishlistSkeleton from './WishlistSkeleton';
 import WishlistSummary from './WishlistSummary';
-import { getWishState, WISH_STATE_ORDER } from './wishState';
 
 const TOAST_DURATION_MS = 2500;
 // 되돌리기 버튼을 누를 시간을 조금 더 준다
@@ -36,13 +43,50 @@ const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   notOpen: '지금은 받을 수 없는 시간이에요',
 };
 
+// 받기에 성공했는데 발급 상태를 다시 받지 못하면, 받은 카드와 남은 횟수만 직접 바꾼다
+// 그대로 두면 받은 카드에 받기 버튼이 남아 다시 누르게 된다
+const markIssued = (
+  status: IssueStatusResponse,
+  campaignId: string,
+): IssueStatusResponse => ({
+  ...status,
+  campaigns: status.campaigns.map((campaign) =>
+    campaign.campaignId === campaignId
+      ? { ...campaign, isIssued: true }
+      : campaign,
+  ),
+  dailyRemaining: Math.max(0, status.dailyRemaining - 1),
+});
+
+interface WishEntry {
+  state: WishCardState;
+  // 발급 상태를 받지 못했거나 끝난 캠페인이면 null
+  status: CampaignIssueStatus | null;
+  wish: WishItem;
+}
+
+// 카드 순서. 끝난 찜은 받을 수 있는 게 없어, 11:00에 받기 버튼을 가리지 않도록 맨 아래에 모은다
+// 서버는 끝난 찜을 찜한 순서에 섞어 보내고, 화면에서만 이렇게 정렬한다
+const CARD_STATE_ORDER: Record<WishCardState, number> = {
+  ...WISH_STATE_ORDER,
+  unknown: 0,
+  ended: 3,
+};
+
+// 발급 상태를 물을 찜. 끝난 캠페인은 오늘 쿠폰 이벤트가 없어 묻지 않는다
+const getIssueTargets = (wishes: WishItem[]) =>
+  wishes.filter((wish) => !wish.isEnded);
+
 // 찜마다 발급 상태를 붙이고 카드 상태를 정한다
+// 끝나지 않았는데 발급 상태가 없는 찜(오늘 쿠폰 이벤트가 없음)은 받을 수 없어 보여주지 않는다
 const toEntries = (
   wishes: WishItem[],
   { campaigns, dailyRemaining }: IssueStatusResponse,
   isOpen: boolean,
-) =>
-  wishes.flatMap((wish) => {
+): WishEntry[] =>
+  wishes.flatMap((wish): WishEntry[] => {
+    if (wish.isEnded) return [{ state: 'ended', status: null, wish }];
+
     const status = campaigns.find(
       (campaign) => campaign.campaignId === wish.campaignId,
     );
@@ -64,11 +108,18 @@ const getSortedIds = (
   isOpen: boolean,
 ) =>
   toEntries(wishes, issueStatus, isOpen)
-    .sort((a, b) => WISH_STATE_ORDER[a.state] - WISH_STATE_ORDER[b.state])
+    .sort((a, b) => CARD_STATE_ORDER[a.state] - CARD_STATE_ORDER[b.state])
     .map(({ wish }) => wish.campaignId);
+
+// loading: 불러오는 중, ready: 찜 목록을 받음, error: 찜 목록을 받지 못함
+type LoadState = 'loading' | 'ready' | 'error';
 
 const WishlistScreen = () => {
   const [wishes, setWishes] = useState<WishItem[]>([]);
+  const [loadState, setLoadState] = useState<LoadState>('loading');
+  // 다시 시도할 때마다 올려서 처음부터 다시 받는다
+  const [attempt, setAttempt] = useState(0);
+  // 찜 목록을 받았는데 발급 상태만 받지 못했으면 null이다. 이때는 받기 버튼 없이 찜만 보여준다
   const [issueStatus, setIssueStatus] = useState<IssueStatusResponse | null>(
     null,
   );
@@ -97,19 +148,39 @@ const WishlistScreen = () => {
     let ignore = false;
 
     // 찜 목록을 먼저 받고, 그 캠페인과 가게 ID로 쿠폰 발급 상태를 받아 합친다
-    fetchWishlist().then(async (items) => {
-      const status = await fetchIssueStatus(items);
+    // 발급 상태는 받기 버튼에만 필요해서, 받지 못해도 찜 목록은 보여준다
+    const load = async () => {
+      let items: WishItem[];
+      try {
+        items = await fetchWishlist();
+      } catch {
+        if (!ignore) setLoadState('error');
+        return;
+      }
+
+      const status = await fetchIssueStatus(getIssueTargets(items)).catch(
+        () => null,
+      );
       if (ignore) return;
 
       setWishes(items);
       setIssueStatus(status);
-    });
+      setLoadState('ready');
+    };
+    load();
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [attempt]);
+
+  const retry = () => {
+    setLoadState('loading');
+    setIssueStatus(null);
+    setOrder(null);
+    setAttempt((value) => value + 1);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -126,44 +197,60 @@ const WishlistScreen = () => {
 
     setIssuingCampaignId(campaignId);
 
+    // 발급은 발급 상태에서 받아 둔 오늘 이벤트 ID로 한다
+    const current = issueStatus?.campaigns.find(
+      (campaign) => campaign.campaignId === campaignId,
+    );
+    let result: IssueResult;
     try {
-      // 발급은 발급 상태에서 받아 둔 오늘 이벤트 ID로 한다
-      const current = issueStatus?.campaigns.find(
-        (campaign) => campaign.campaignId === campaignId,
-      );
-      const result = await issueCoupon({
+      result = await issueCoupon({
         campaignId,
         eventId: current?.eventId ?? null,
       });
-      // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
-      const status = await fetchIssueStatus(wishes);
-      setIssueStatus(status);
-
-      if (result === 'issued') {
-        setHasIssued(true);
-      } else {
-        setToast({ message: ISSUE_FAIL_MESSAGES[result], tone: 'error' });
-      }
     } catch {
       setToast({ message: '쿠폰 발급에 실패했어요', tone: 'error' });
-    } finally {
       setIssuingCampaignId(null);
+      return;
     }
+
+    // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
+    // 다시 받지 못해도 발급 결과는 그대로 알린다. 받았으면 그 카드만 받음으로 바꾼다
+    try {
+      setIssueStatus(await fetchIssueStatus(getIssueTargets(wishes)));
+    } catch {
+      if (result === 'issued') {
+        setIssueStatus((status) => status && markIssued(status, campaignId));
+      }
+    }
+
+    if (result === 'issued') {
+      setHasIssued(true);
+    } else {
+      setToast({ message: ISSUE_FAIL_MESSAGES[result], tone: 'error' });
+    }
+    setIssuingCampaignId(null);
   };
 
   // 지운 카드를 원래 자리에 다시 넣는다
+  // 되돌린 뒤 삭제 실패가 늦게 오면 두 번 불릴 수 있어, 이미 있으면 넣지 않는다
   const putBack = (wish: WishItem, index: number) => {
-    setWishes((current) => [
-      ...current.slice(0, index),
-      wish,
-      ...current.slice(index),
-    ]);
+    setWishes((current) =>
+      current.some((item) => item.campaignId === wish.campaignId)
+        ? current
+        : [...current.slice(0, index), wish, ...current.slice(index)],
+    );
   };
 
   const handleUndoRemove = (wish: WishItem, index: number) => {
     putBack(wish, index);
     setToast(null);
-    restoreWish(wish.campaignId);
+    // 다시 찜하지 못했으면 서버에는 지워진 채라, 카드를 다시 빼고 알린다
+    restoreWish(wish.campaignId).catch(() => {
+      setWishes((current) =>
+        current.filter((item) => item.campaignId !== wish.campaignId),
+      );
+      setToast({ message: '찜을 되돌리지 못했어요', tone: 'error' });
+    });
   };
 
   // 응답을 기다리지 않고 바로 목록에서 빼서, 실수로 지웠을 때 곧바로 되돌릴 수 있게 한다
@@ -177,10 +264,13 @@ const WishlistScreen = () => {
     );
     setToast({
       message: '찜 목록에서 삭제했어요',
-      action: {
-        label: '되돌리기',
-        onClick: () => handleUndoRemove(wish, index),
-      },
+      // 끝난 캠페인은 다시 찜할 수 없어 되돌리기를 두지 않는다
+      action: wish.isEnded
+        ? undefined
+        : {
+            label: '되돌리기',
+            onClick: () => handleUndoRemove(wish, index),
+          },
     });
 
     removeWish(wish.campaignId).catch(() => {
@@ -218,17 +308,100 @@ const WishlistScreen = () => {
   };
 
   // 정해 둔 순서대로 놓는다. 순서를 정한 뒤 다시 넣은 카드는 맨 뒤에 둔다
-  const getOrderedEntries = (status: IssueStatusResponse) => {
+  // 발급 상태가 없으면 받을 수 있는지 몰라 찜한 순서 그대로 둔다. 끝난 찜은 그래도 종료로 맨 아래에 둔다
+  const getOrderedEntries = (): WishEntry[] => {
+    if (!issueStatus) {
+      return wishes
+        .map((wish): WishEntry => ({
+          state: wish.isEnded ? 'ended' : 'unknown',
+          status: null,
+          wish,
+        }))
+        .sort((a, b) => CARD_STATE_ORDER[a.state] - CARD_STATE_ORDER[b.state]);
+    }
     const rank = (campaignId: string) => {
       const index = order?.ids.indexOf(campaignId) ?? -1;
       return index === -1 ? Number.MAX_SAFE_INTEGER : index;
     };
-    return toEntries(wishes, status, isOpen).sort(
+    return toEntries(wishes, issueStatus, isOpen).sort(
       (a, b) => rank(a.wish.campaignId) - rank(b.wish.campaignId),
     );
   };
 
-  const isEmpty = issueStatus !== null && wishes.length === 0;
+  const renderContent = () => {
+    // 요청 두 번이 차례로 끝나야 그릴 수 있어, 그동안 빈 화면 대신 회색 틀을 보여준다
+    if (loadState === 'loading') {
+      return (
+        <div className="flex flex-col gap-4 px-page pt-4 pb-6">
+          <WishlistSkeleton />
+          <p className="sr-only" role="status">
+            찜 목록을 불러오는 중이에요
+          </p>
+        </div>
+      );
+    }
+
+    if (loadState === 'error') {
+      return (
+        <EmptyState
+          description="잠시 후 다시 시도해 주세요"
+          image={mascotError}
+          title="찜 목록을 불러오지 못했어요"
+        >
+          <ActionButton onClick={retry}>다시 시도</ActionButton>
+        </EmptyState>
+      );
+    }
+
+    if (wishes.length === 0) return <WishlistEmpty />;
+
+    return (
+      <div className="flex flex-col gap-4 px-page pt-4 pb-6">
+        {issueStatus ? (
+          <WishlistSummary
+            dailyLimit={issueStatus.dailyLimit}
+            dailyRemaining={issueStatus.dailyRemaining}
+            showNotice={!isOpen}
+            title={getSummaryTitle(issueStatus.dailyRemaining)}
+          />
+        ) : (
+          // 발급 상태를 받지 못하면 받을 수 있는지 모르니, 찜은 보여주되 받기는 다시 불러온 뒤에 하게 한다
+          <section
+            className="flex items-center justify-between gap-3 rounded-xl bg-status-danger-bg px-4 py-3"
+            role="alert"
+          >
+            <p className="min-w-0 text-body-sm-mobile font-medium text-status-danger-fg">
+              발급 상태를 불러오지 못해
+              <br />
+              지금은 쿠폰을 받을 수 없어요
+            </p>
+            <button
+              className="-my-2 shrink-0 px-2 py-2 text-body-sm-mobile font-bold text-status-danger-fg underline underline-offset-2"
+              onClick={retry}
+              type="button"
+            >
+              다시 시도
+            </button>
+          </section>
+        )}
+        <ul className="flex flex-col gap-4">
+          {getOrderedEntries().map(({ state, status, wish }) => (
+            <WishCard
+              dailyLimit={issueStatus?.dailyLimit ?? 0}
+              isIssueBlocked={issuingCampaignId !== null}
+              isIssuing={issuingCampaignId === wish.campaignId}
+              issueStatus={status}
+              key={wish.campaignId}
+              onIssue={() => handleIssue(wish.campaignId)}
+              onRemove={() => handleRemove(wish)}
+              state={state}
+              wish={wish}
+            />
+          ))}
+        </ul>
+      </div>
+    );
+  };
 
   return (
     // 토스트를 탭 바로 아래에 띄우기 위한 기준 영역. 마지막 찜을 지워 빈 화면이 돼도 토스트를 보여준다
@@ -238,48 +411,7 @@ const WishlistScreen = () => {
           <FeedbackToast {...toast} />
         </div>
       )}
-      {isEmpty ? (
-        <WishlistEmpty />
-      ) : (
-        <div className="flex flex-col gap-4 px-page pt-4 pb-6">
-          {/* 요청 두 번이 차례로 끝나야 그릴 수 있어, 그동안 빈 화면 대신 회색 틀을 보여준다 */}
-          {!issueStatus && (
-            <>
-              <WishlistSkeleton />
-              <p className="sr-only" role="status">
-                찜 목록을 불러오는 중이에요
-              </p>
-            </>
-          )}
-          {issueStatus && (
-            <>
-              <WishlistSummary
-                dailyLimit={issueStatus.dailyLimit}
-                dailyRemaining={issueStatus.dailyRemaining}
-                showNotice={!isOpen}
-                title={getSummaryTitle(issueStatus.dailyRemaining)}
-              />
-              <ul className="flex flex-col gap-4">
-                {getOrderedEntries(issueStatus).map(
-                  ({ state, status, wish }) => (
-                    <WishCard
-                      dailyLimit={issueStatus.dailyLimit}
-                      isIssueBlocked={issuingCampaignId !== null}
-                      isIssuing={issuingCampaignId === wish.campaignId}
-                      issueStatus={status}
-                      key={wish.campaignId}
-                      onIssue={() => handleIssue(wish.campaignId)}
-                      onRemove={() => handleRemove(wish)}
-                      state={state}
-                      wish={wish}
-                    />
-                  ),
-                )}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
+      {renderContent()}
     </div>
   );
 };

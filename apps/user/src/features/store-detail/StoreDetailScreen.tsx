@@ -30,14 +30,14 @@ import {
   restoreWish,
 } from '@user/api/wishlist';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import { formatDiscount } from '@user/features/explore/storeFormat';
-import { useOpenCountdown } from '@user/features/wishlist/useOpenCountdown';
+import { useOpenCountdown } from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import Card, { cardClassName } from '@user/ui/Card/Card';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
 } from '@user/ui/FeedbackToast/FeedbackToast';
+import { formatDiscount } from '@user/ui/storeFormat';
 
 import BusinessHoursSection from './BusinessHoursSection';
 import CouponCta from './CouponCta';
@@ -218,7 +218,11 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const handleUndoRemove = (campaignId: string) => {
     setWished(true);
     setToast(null);
-    restoreWish(campaignId);
+    // 다시 찜하지 못했으면 서버에는 취소된 채라, 하트를 다시 비우고 알린다
+    restoreWish(campaignId).catch(() => {
+      setWished(false);
+      setToast({ message: '찜을 되돌리지 못했어요', tone: 'error' });
+    });
   };
 
   // 응답을 기다리지 않고 바로 하트를 비워, 실수로 눌렀을 때 곧바로 되돌릴 수 있게 한다

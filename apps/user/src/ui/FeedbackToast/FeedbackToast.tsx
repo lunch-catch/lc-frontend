@@ -34,7 +34,8 @@ const FeedbackToast = ({
       role="status"
     >
       <Icon aria-hidden="true" className="size-5 shrink-0" />
-      <span className="min-w-0 flex-1">{message}</span>
+      {/* 두 줄이 될 문구는 message에 줄바꿈(\n)을 넣어 끊는 자리를 정한다 */}
+      <span className="min-w-0 flex-1 whitespace-pre-line">{message}</span>
       {action && (
         <button
           className="-my-3 -mr-2 h-11 shrink-0 px-2 font-bold underline underline-offset-2"
