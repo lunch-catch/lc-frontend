@@ -8,6 +8,7 @@ import { useAuth } from '@user/auth/useAuth';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 
 // 서비스의 흐름(넘기기 → 찜 → 11시에 받기)을 한 장씩 보여준다 (Figma 2. 튜토리얼)
+// 말 걸듯 읽는 소개 문장이라 시각은 "11시"로 쓴다. 찜 카드·배너처럼 상태를 보여주는 곳은 "11:00"으로 쓴다
 const pages = [
   {
     image: tutorialBrowse,
@@ -22,7 +23,7 @@ const pages = [
   {
     image: tutorialCoupon,
     title: ['11시에', '쿠폰 받기'],
-    description: ['찜 목록에서 쿠폰을 받은 뒤', '매장에서 QR로 사용하세요'],
+    description: ['찜 목록에서 쿠폰을 받은 뒤', '가게에서 QR로 사용하세요'],
   },
 ];
 

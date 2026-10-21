@@ -177,7 +177,7 @@ interface CouponQrProps {
   coupon: Coupon;
 }
 
-// 매장에서 직원에게 보여주는 쿠폰 QR. 쿠폰함에서 시트로 띄운다
+// 가게에서 직원에게 보여주는 쿠폰 QR. 쿠폰함에서 시트로 띄운다
 // 띄워 둔 동안 점주가 스캔하면 단건 조회로 알아채고 사용 완료로 바꾼다
 const CouponQr = ({ coupon: listCoupon }: CouponQrProps) => {
   const coupon = useLatestCoupon(listCoupon);
