@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import mascotCoupon from '@user/assets/illustrations/mascot-coupon.webp';
+import mascotDone from '@user/assets/illustrations/mascot-done.webp';
 
 interface WishlistSummaryProps {
   title: ReactNode;
@@ -30,7 +31,8 @@ const WishlistSummary = ({
     if (dailyRemaining === 0) return '내일 11:00에 또 만나요';
     return `오늘 ${dailyRemaining}개 더 받을 수 있어요 · 하루 최대 ${dailyLimit}개`;
   };
-
+  // 오늘은 더 받을 수 없는 때(14:00 마감 뒤, 하루 한도를 다 채움)는 상자를 닫는 마스코트로 바꿔 그림만 봐도 오늘은 끝났다는 걸 알린다
+  const isDoneForToday = isClosed || (!showNotice && dailyRemaining === 0);
   return (
     <section className="flex items-center gap-3 overflow-hidden rounded-2xl bg-surface-brand px-4 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -45,7 +47,7 @@ const WishlistSummary = ({
         alt=""
         className="size-14 shrink-0 object-contain"
         height={56}
-        src={mascotCoupon}
+        src={isDoneForToday ? mascotDone : mascotCoupon}
         width={56}
       />
     </section>
