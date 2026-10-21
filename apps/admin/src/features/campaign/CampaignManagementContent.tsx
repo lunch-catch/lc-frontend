@@ -255,38 +255,39 @@ export const CampaignManagementContent = () => {
           {resource.error}
         </p>
       )}
-      {resource.data?.nextPageToken && (
-        <LoadMoreButton
-          loading={resource.loading}
-          retry={Boolean(resource.error)}
-          onClick={resource.loadMore}
-        />
-      )}
-      <div className="relative mt-3 flex flex-wrap items-center justify-end gap-3 [&:has([aria-expanded=true])]:z-30">
-        {/* 커서 응답에는 전체 건수가 없으므로 현재까지 불러온 개수만 표시한다. */}
-        {resource.data && (
-          <span className="text-caption-web text-text-secondary">
-            불러온 캠페인 {items.length}건
-          </span>
-        )}
-        {resource.error && !resource.data && (
-          <Button variant="neutral" onClick={resource.refresh}>
-            다시 조회
-          </Button>
-        )}
-        <SelectField
-          aria-label="한 번에 불러올 항목 수"
-          fitContent
-          menuPlacement="top"
-          size="compact"
-          value={String(filters.size)}
-          options={[5, 10, 20, 50].map((size) => ({
-            label: `${size}개씩 불러오기`,
-            value: String(size),
-          }))}
-          onValueChange={(value) => updateFilters({ size: Number(value) })}
-        />
-      </div>
+      <LoadMoreButton
+        hasMore={Boolean(resource.data?.nextPageToken)}
+        loading={resource.loading}
+        retry={Boolean(resource.error)}
+        onClick={resource.loadMore}
+        controls={
+          <>
+            {/* 커서 응답에는 전체 건수가 없으므로 현재까지 불러온 개수만 표시한다. */}
+            {resource.data && (
+              <span className="text-caption-web text-text-secondary">
+                불러온 캠페인 {items.length}건
+              </span>
+            )}
+            {resource.error && !resource.data && (
+              <Button variant="neutral" onClick={resource.refresh}>
+                다시 조회
+              </Button>
+            )}
+            <SelectField
+              aria-label="한 번에 불러올 항목 수"
+              fitContent
+              menuPlacement="top"
+              size="compact"
+              value={String(filters.size)}
+              options={[5, 10, 20, 50].map((size) => ({
+                label: `${size}개씩 불러오기`,
+                value: String(size),
+              }))}
+              onValueChange={(value) => updateFilters({ size: Number(value) })}
+            />
+          </>
+        }
+      />
       <AdminDrawer
         open={Boolean(filters.detail)}
         onClose={() => updateFilters({ detail: '' })}
