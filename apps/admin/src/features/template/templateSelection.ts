@@ -162,7 +162,6 @@ const slotLabels: Record<string, string> = {
   discount: '할인 내용',
   period: '기간',
   image: '이미지',
-  adLabel: '광고 라벨',
 };
 
 /** 서버 원본 HTML에서도 찾을 수 있도록 편집기 장식은 제외하고 구조 기반 경로를 만든다. */

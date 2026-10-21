@@ -362,12 +362,14 @@ test('캠페인 상세 404 오류를 성공 응답으로 처리하지 않는다'
   );
 });
 
+const templateHtml =
+  '<div><h1 data-slot="eventName">이벤트명</h1><p data-slot="discount">할인 내용</p><p data-slot="period">기간</p><img data-slot="image" alt="메뉴 이미지"></div>';
 const generatedTemplate = {
   templateId: 1,
   name: '테스트',
   versionNumber: 1,
   status: 'DRAFT',
-  html: '<div>template</div>',
+  html: templateHtml,
   message: '요청하신 색상으로 만들었어요.',
   removedElements: [],
   suggestedPrompts: ['배경을 더 밝게 해줘'],
@@ -382,6 +384,7 @@ test('템플릿 생성·수정은 data.message와 서버 추천 문구를 유지
   for (const id of [undefined, '1']) {
     const { templates, calls } = setup(generatedTemplate, 201);
     const result = await templates.generateTemplate(templateRequest, id);
+    assert.equal(result.html, templateHtml);
     assert.equal(result.message, generatedTemplate.message);
     assert.equal(
       result.suggestedPrompts[0],
@@ -413,7 +416,7 @@ test('템플릿 버전 이력의 요청과 설명을 복원할 수 있다', asyn
   const version = {
     versionNumber: 1,
     requestPrompt: '요청',
-    html: '<div></div>',
+    html: templateHtml,
     message: '만들었어요.',
     createdAt: '2026-10-20T10:00:00',
   };
@@ -423,6 +426,7 @@ test('템플릿 버전 이력의 요청과 설명을 복원할 수 있다', asyn
       nextPageToken: null,
     });
     const result = await templates.getTemplateVersions('1');
+    assert.equal(result.items[0].html, templateHtml);
     assert.equal(result.items[0].message, message);
     assert.equal(result.items[0].requestPrompt, '요청');
   }
