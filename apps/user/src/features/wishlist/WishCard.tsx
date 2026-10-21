@@ -179,7 +179,7 @@ const WishCard = ({
       {/* 마감과 하루 한도는 상태 줄로 알 수 있어 버튼을 두지 않고, */}
       {/* 오픈 전에는 11:00에 같은 자리가 받기로 바뀌도록 자리를 미리 잡아 둔다 */}
       {state === 'beforeOpen' && (
-        <ActionButton disabled>11:00 오픈</ActionButton>
+        <ActionButton disabled>쿠폰 11:00 오픈</ActionButton>
       )}
       {/* 받는 동안 다시 누르지 못하게 막아 같은 요청이 두 번 가지 않게 한다 */}
       {state === 'available' && (

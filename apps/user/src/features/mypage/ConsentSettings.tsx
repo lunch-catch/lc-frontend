@@ -13,7 +13,7 @@ const consentItems: {
 }[] = [
   {
     key: 'notificationOptIn',
-    label: '오픈 알림',
+    label: '쿠폰 오픈 알림',
     description: '찜한 쿠폰이 열리기 전 10:50에 알려드려요',
   },
   {

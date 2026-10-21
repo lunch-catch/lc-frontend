@@ -13,11 +13,12 @@ interface CouponSectionProps {
   posterHtml: string | null | undefined;
 }
 
-const TARGET_LABELS: Record<StoreDetailCampaign['discountTargetType'], string> =
-  {
-    ALL: '전 메뉴',
-    MENU: '지정 메뉴',
-  };
+// 할인 대상. 메뉴 할인이면 그 메뉴 이름을 쓰고, 이름이 없는 예전 응답이면 '지정 메뉴'로 둔다
+const getTargetLabel = ({
+  discountTargetType,
+  targetMenu,
+}: StoreDetailCampaign) =>
+  discountTargetType === 'ALL' ? '전 메뉴' : (targetMenu?.name ?? '지정 메뉴');
 
 // 오늘의 쿠폰과 점주가 만든 포스터
 const CouponSection = ({
@@ -47,8 +48,7 @@ const CouponSection = ({
           매일 11:00 선착순 발급
         </p>
         <p className="mt-1 text-h2-mobile font-bold text-text-primary">
-          {TARGET_LABELS[campaign.discountTargetType]}{' '}
-          {formatDiscount(campaign)}
+          {getTargetLabel(campaign)} {formatDiscount(campaign)}
         </p>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-dashed border-action-primary/30 pt-3 text-caption-mobile">
           <span className="text-text-secondary">

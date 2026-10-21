@@ -296,7 +296,7 @@ const WishlistScreen = () => {
       return (
         // 숫자 폭을 같게 해 1초마다 글자가 좌우로 흔들리지 않게 한다
         <span>
-          11:00 오픈까지{' '}
+          쿠폰 오픈까지{' '}
           <span className="text-text-brand tabular-nums">
             {formatCountdown(remainingMs)}
           </span>

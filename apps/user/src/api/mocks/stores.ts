@@ -154,7 +154,7 @@ export const mockStoreDetails: Record<
     phone: string;
     // 쉬는 요일. 없으면 매일 영업
     closedDays?: DayOfWeek[];
-    menus: Omit<StoreMenu, 'menuId'>[];
+    menus: Pick<StoreMenu, 'name' | 'price'>[];
     campaignId: string | null;
   }
 > = {

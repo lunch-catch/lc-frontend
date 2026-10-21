@@ -37,13 +37,14 @@ const CouponCta = ({
 
   const renderNotice = () => {
     if (state === 'beforeOpenNotWished') {
-      return '찜해두면 10:50에 오픈 알림을 보내드려요';
+      return '찜해두면 10:50에 쿠폰 오픈 알림을 보내드려요';
     }
     if (state === 'beforeOpenWished') {
       return (
         // 숫자 폭을 같게 해 1초마다 글자가 좌우로 흔들리지 않게 한다
         <>
-          11:00 오픈까지{' '}
+          {/* 바로 아래 버튼이 '쿠폰 11:00 오픈'이라 여기서는 '쿠폰'을 되풀이하지 않는다 */}
+          오픈까지{' '}
           <span className="font-bold text-text-brand tabular-nums">
             {formatCountdown(remainingMs)}
           </span>
@@ -66,7 +67,7 @@ const CouponCta = ({
         // 11:00이 되면 같은 자리가 받기로 바뀐다
         return (
           <ActionButton disabled size="large">
-            11:00 오픈
+            쿠폰 11:00 오픈
           </ActionButton>
         );
       case 'available':
