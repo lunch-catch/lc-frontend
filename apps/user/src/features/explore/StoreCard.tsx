@@ -3,7 +3,11 @@ import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
 import { cardClassName } from '@user/ui/Card/Card';
-import { formatDiscount, formatWalkTime } from '@user/ui/storeFormat';
+import {
+  formatDiscount,
+  formatDiscountTarget,
+  formatWalkTime,
+} from '@user/ui/storeFormat';
 
 interface StoreCardProps {
   store: StoreListItem;
@@ -17,6 +21,8 @@ const StoreCard = ({ store }: StoreCardProps) => {
   ]
     .filter(Boolean)
     .join(' · ');
+  const target =
+    store.activeCampaign && formatDiscountTarget(store.activeCampaign);
 
   return (
     <li>
@@ -42,19 +48,28 @@ const StoreCard = ({ store }: StoreCardProps) => {
             <Store className="size-6" />
           </div>
         )}
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="truncate text-body-mobile font-bold text-text-primary">
+        {/* 가게 이름과 할인이 같은 크기·굵기면 둘 다 커 보여서, 찜 카드처럼 이름은 작게 낮추고 할인만 주황으로 띄운다 */}
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className="truncate text-body-sm-mobile font-medium text-text-primary">
             {store.name}
           </p>
           <p className="truncate text-caption-mobile text-text-secondary">
             {meta}
           </p>
           {store.activeCampaign ? (
-            <p className="text-body-mobile font-bold text-text-primary">
-              {formatDiscount(store.activeCampaign)}
+            // 무엇을 할인하는지는 같은 줄 옆에 두어 카드가 한 줄 덜 길어지게 한다 (찜 카드와 같은 모양)
+            <p className="mt-0.5 flex min-w-0 items-baseline gap-1.5">
+              <strong className="shrink-0 text-body-mobile font-bold text-text-brand">
+                {formatDiscount(store.activeCampaign)}
+              </strong>
+              {target && (
+                <span className="min-w-0 truncate text-caption-mobile text-text-secondary">
+                  {target}
+                </span>
+              )}
             </p>
           ) : (
-            <p className="text-caption-mobile text-text-tertiary">
+            <p className="mt-0.5 text-caption-mobile text-text-tertiary">
               진행 중인 쿠폰 없음
             </p>
           )}

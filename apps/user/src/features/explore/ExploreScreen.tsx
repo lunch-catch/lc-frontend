@@ -1,9 +1,16 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
-import { List, Map as MapIcon, Search, X } from 'lucide-react';
+import {
+  type FormEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { useNavigate, useNavigationType, useSearchParams } from 'react-router';
+import { Search, X } from 'lucide-react';
 
 import {
   BUSINESS_CATEGORY_LABELS,
+  CATEGORY_FILTER_OPTIONS,
   type CategoryFilter,
   fetchStores,
   type StoreListItem,
@@ -20,30 +27,58 @@ import AppHeader from '@user/ui/AppHeader/AppHeader';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 import CategoryIconRow from './CategoryIconRow';
+import { readExploreSnapshot, saveExploreSnapshot } from './exploreSnapshot';
 import FeaturedStoreCard from './FeaturedStoreCard';
+import IssuePhaseLabel from './IssuePhaseLabel';
 import StoreCard from './StoreCard';
 import StoreListSkeleton from './StoreListSkeleton';
 import StoreMap from './StoreMap';
 
 type ExploreView = 'list' | 'map';
 
+// 주소의 업종 값을 고를 수 있는 업종으로 바꾼다. 모르는 값이면 전체로 본다
+const toCategoryFilter = (value: string | null): CategoryFilter =>
+  CATEGORY_FILTER_OPTIONS.find((option) => option.value === value)?.value ??
+  'ALL';
+
+// 줄 세 개 아이콘은 메뉴·정렬로도 읽혀서, 뜻이 바로 보이는 두 글자로 쓴다
 const viewOptions = [
-  { value: 'list', label: '목록으로 보기', Icon: List },
-  { value: 'map', label: '지도로 보기', Icon: MapIcon },
+  { value: 'list', label: '목록' },
+  { value: 'map', label: '지도' },
 ] as const;
 
 // 탐색 탭. 주변 가게를 업종별로 보고 가게명이나 메뉴로 검색한다 (Figma 4. 홈의 목록·지도 보기)
 // 목록과 지도는 같은 가게 목록을 보여주는 방식만 다르다
 const ExploreScreen = () => {
-  const [inputValue, setInputValue] = useState('');
+  // 가게 상세에 들어갔다 돌아와도 보던 조건이 그대로 남도록 보기 방식(?view=map), 업종(?category=), 검색어(?q=)를 주소에 둔다
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
   // 검색 버튼을 눌러 확정한 검색어. 입력 중에는 목록을 다시 받지 않는다
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<CategoryFilter>('ALL');
+  const query = searchParams.get('q') ?? '';
+  const category = toCategoryFilter(searchParams.get('category'));
+  const [inputValue, setInputValue] = useState(query);
+  const navigationType = useNavigationType();
+  const navigate = useNavigate();
+  const { wishCount } = useWishCount();
+  // 가게까지 거리는 저장 위치를 기준으로 잰다. 지도 가운데도 이 위치다
+  const myLocation = useMyLocation();
+  const locationName = getHeaderLocationName(myLocation);
+  const latitude = myLocation?.latitude ?? null;
+  const longitude = myLocation?.longitude ?? null;
+  const locationKey = `${latitude},${longitude}`;
+  // 이 조건으로 받은 목록인지 알아보는 값. 떠날 때 저장한 목록은 조건이 같을 때만 다시 쓴다
+  const listKey = `${query}|${category}|${locationKey}`;
+  // 방금 이 조건으로 보던 목록이 있으면 다시 받지 않고 바로 그린다
+  const [snapshot] = useState(() => readExploreSnapshot(listKey));
   // undefined면 불러오는 중, null이면 첫 페이지를 받지 못함
-  const [stores, setStores] = useState<StoreListItem[] | null | undefined>();
+  const [stores, setStores] = useState<StoreListItem[] | null | undefined>(
+    snapshot?.stores,
+  );
   const showSkeleton = useDelayedLoading(stores === undefined);
   // 다음 페이지 커서. 마지막 페이지면 null
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(
+    snapshot?.nextPageToken ?? null,
+  );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreError, setHasMoreError] = useState(false);
   // 다시 시도할 때마다 올려서 첫 페이지를 새로 받는다
@@ -52,16 +87,14 @@ const ExploreScreen = () => {
   const generation = useRef(0);
   // 목록 끝에 두어, 화면에 가까워지면 다음 페이지를 받는다
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-  // 가게 상세에 들어갔다 돌아와도 보던 방식이 유지되도록 주소(?view=map)에 둔다
-  const [searchParams, setSearchParams] = useSearchParams();
-  const view: ExploreView = searchParams.get('view') === 'map' ? 'map' : 'list';
-  const { wishCount } = useWishCount();
-  // 가게까지 거리는 저장 위치를 기준으로 잰다. 지도 가운데도 이 위치다
-  const myLocation = useMyLocation();
-  const locationName = getHeaderLocationName(myLocation);
-  const latitude = myLocation?.latitude ?? null;
-  const longitude = myLocation?.longitude ?? null;
+  // 저장해 둔 목록으로 그렸으면 같은 조건의 첫 요청을 건너뛴다. 조건이 바뀌면 비운다
+  const skipFetchKey = useRef(snapshot ? `${listKey}#0` : null);
+  // 떠날 때 저장할 지금 목록과 스크롤 위치. 화면을 벗어나는 순간에는 상태를 읽을 수 없어 늘 최신으로 담아 둔다
+  const latest = useRef({ listKey, nextPageToken, stores });
+  useEffect(() => {
+    latest.current = { listKey, nextPageToken, stores };
+  });
+  const scrollYRef = useRef(0);
   // 저장 위치를 받았는데 좌표가 없으면 위치부터 설정하게 한다
   const needsLocation =
     myLocation !== undefined &&
@@ -79,7 +112,6 @@ const ExploreScreen = () => {
 
   // 저장 위치를 다시 받아 좌표가 바뀌면 이전 위치의 목록과 다음 페이지 상태를 비운다
   // effect에서 비우면 이전 목록이 한 번 더 그려져서, 렌더 중에 바로 비운다
-  const locationKey = `${latitude},${longitude}`;
   const [listedLocationKey, setListedLocationKey] = useState(locationKey);
   if (listedLocationKey !== locationKey) {
     setListedLocationKey(locationKey);
@@ -90,6 +122,10 @@ const ExploreScreen = () => {
     // 좌표가 없어져도 세대를 올려, 이전 위치로 보낸 요청의 응답을 버린다
     const current = ++generation.current;
     if (latitude === null || longitude === null) return;
+    // 돌아와서 저장한 목록으로 그린 조건이면 다시 받지 않는다 (개발 모드에서 두 번 돌아도 건너뛴다)
+    const fetchKey = `${listKey}#${attempt}`;
+    if (skipFetchKey.current === fetchKey) return;
+    skipFetchKey.current = null;
 
     let ignore = false;
 
@@ -113,7 +149,42 @@ const ExploreScreen = () => {
     return () => {
       ignore = true;
     };
-  }, [attempt, latitude, longitude, query, storeCategory]);
+  }, [attempt, latitude, listKey, longitude, query, storeCategory]);
+
+  // 스크롤 위치를 따라 담아 두고, 화면을 떠날 때 받은 목록과 함께 저장한다
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollYRef.current = window.scrollY;
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      const {
+        listKey: key,
+        nextPageToken: token,
+        stores: list,
+      } = latest.current;
+      if (!list) return;
+      saveExploreSnapshot({
+        key,
+        nextPageToken: token,
+        savedAt: Date.now(),
+        scrollY: scrollYRef.current,
+        stores: list,
+      });
+    };
+  }, []);
+
+  // 뒤로 가기로 돌아왔을 때만 보던 자리로 내려 준다. 탭을 눌러 들어오면 맨 위에서 시작한다
+  // 저장한 목록을 이미 그린 뒤라, 화면에 보이기 전에 옮겨 위에서 내려가는 모습이 보이지 않게 한다
+  useLayoutEffect(() => {
+    if (snapshot && navigationType === 'POP') {
+      window.scrollTo(0, snapshot.scrollY);
+    }
+    // 처음 그릴 때 한 번만 옮긴다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 다음 페이지를 이어 받는다. 검색어, 업종, 위치는 첫 페이지와 같게 보낸다
   const loadMore = () => {
@@ -185,10 +256,25 @@ const ExploreScreen = () => {
     setAttempt((value) => value + 1);
   };
 
+  // 주소의 조건만 바꾼다. 보기 방식처럼 뒤로 가기 기록은 쌓지 않는다
+  const updateParams = (patch: Record<string, string | null>) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        Object.entries(patch).forEach(([name, value]) => {
+          if (value) next.set(name, value);
+          else next.delete(name);
+        });
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
   const changeQuery = (nextQuery: string) => {
     if (nextQuery === query) return;
     resetStores();
-    setQuery(nextQuery);
+    updateParams({ q: nextQuery || null });
   };
 
   const handleSearch = (event: FormEvent) => {
@@ -202,8 +288,9 @@ const ExploreScreen = () => {
   };
 
   const changeCategory = (nextCategory: CategoryFilter) => {
+    if (nextCategory === category) return;
     resetStores();
-    setCategory(nextCategory);
+    updateParams({ category: nextCategory === 'ALL' ? null : nextCategory });
   };
 
   const renderContent = () => {
@@ -295,10 +382,12 @@ const ExploreScreen = () => {
       {
         title: '쿠폰 진행 중',
         items: stores.filter((store) => store.hasActiveCampaign),
+        showPhase: true,
       },
       {
         title: '다른 가게',
         items: stores.filter((store) => !store.hasActiveCampaign),
+        showPhase: false,
       },
     ].filter((group) => group.items.length > 0);
     // 처음 둘러볼 때만 가장 가까운 쿠폰 가게(쿠폰 구역 첫 가게)를 크게 보여준다
@@ -314,6 +403,7 @@ const ExploreScreen = () => {
               <span className="font-medium text-text-secondary tabular-nums">
                 {group.items.length}
               </span>
+              {group.showPhase && <IssuePhaseLabel />}
             </h3>
             <ul aria-label={group.title} className="flex flex-col gap-3">
               {group.items.map((store, index) =>
@@ -393,25 +483,22 @@ const ExploreScreen = () => {
             className="flex h-11 shrink-0 items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1"
             role="group"
           >
-            {viewOptions.map(({ Icon, label, value }) => (
+            {viewOptions.map(({ label, value }) => (
               <button
-                aria-label={label}
                 aria-pressed={view === value}
-                className={`flex h-full w-9 items-center justify-center rounded-lg transition-colors ${
+                className={`flex h-full items-center justify-center rounded-lg px-2.5 text-body-sm-mobile font-bold transition-colors ${
                   view === value
                     ? 'bg-surface-brand text-text-brand'
                     : 'text-text-tertiary'
                 }`}
                 key={value}
                 onClick={() =>
-                  // 보기만 바꾸는 것이라 뒤로 가기 기록을 쌓지 않는다
-                  setSearchParams(value === 'map' ? { view: 'map' } : {}, {
-                    replace: true,
-                  })
+                  // 업종·검색어는 그대로 두고 보기 방식만 바꾼다
+                  updateParams({ view: value === 'map' ? 'map' : null })
                 }
                 type="button"
               >
-                <Icon aria-hidden="true" className="size-4.5" />
+                {label}
               </button>
             ))}
           </div>
