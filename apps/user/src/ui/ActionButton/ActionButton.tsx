@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
-export type ActionButtonSize = 'medium' | 'large';
+export type ActionButtonSize = 'small' | 'medium' | 'large';
 export type ActionButtonVariant =
   'brand' | 'soft' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
@@ -13,7 +13,9 @@ export interface ActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 // 디자인 시스템 Core UI Button의 모바일 크기
+// small: 목록 카드 안처럼 같은 버튼이 여러 번 나오는 곳. 카드가 덜 길어져 한 화면에 더 많이 보인다
 const sizeClassNames: Record<ActionButtonSize, string> = {
+  small: 'h-10 text-body-sm-mobile',
   medium: 'h-12 text-body-sm-mobile',
   large: 'h-13 text-body-mobile',
 };

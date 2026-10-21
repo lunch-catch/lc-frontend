@@ -8,21 +8,23 @@ import { useAuth } from '@user/auth/useAuth';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 
 // 서비스의 흐름(넘기기 → 찜 → 11시에 받기)을 한 장씩 보여준다 (Figma 2. 튜토리얼)
+// 화면에서는 넘기고 찜하는 것을 "포스터", 11시에 받아 쓰는 것을 "쿠폰"이라 부른다. "캠페인"은 사용자에게 낯선 내부 용어라 쓰지 않는다
+// 말 걸듯 읽는 소개 문장이라 시각은 "11시"로 쓴다. 찜 카드·배너처럼 상태를 보여주는 곳은 "11:00"으로 쓴다
 const pages = [
   {
     image: tutorialBrowse,
     title: ['왼쪽은 패스,', '오른쪽은 찜'],
-    description: ['주변 가게의 캠페인을 보고', '관심 없는 카드는 패스해요'],
+    description: ['주변 가게의 포스터를 보고', '관심 없는 카드는 패스해요'],
   },
   {
     image: tutorialLike,
-    title: ['마음에 드는', '캠페인은 찜하기'],
+    title: ['마음에 드는', '포스터는 찜하기'],
     description: ['찜은 11시 선착순 발급에', '참여하기 위한 단계예요'],
   },
   {
     image: tutorialCoupon,
     title: ['11시에', '쿠폰 받기'],
-    description: ['찜 목록에서 쿠폰을 받은 뒤', '매장에서 QR로 사용하세요'],
+    description: ['찜 목록에서 쿠폰을 받은 뒤', '가게에서 QR로 사용하세요'],
   },
 ];
 
@@ -116,7 +118,8 @@ const TutorialStep = () => {
       >
         {/* 세 장의 그림을 겹쳐 두고 지금 장만 보여, 넘길 때 그림을 새로 불러오며 깜빡이지 않게 한다 */}
         {/* 지금 장이 된 그림에 움직임 클래스가 붙는 순간 넘긴 방향에서 밀려 들어온다 */}
-        <div className="relative aspect-700/540 w-full">
+        {/* 화면 너비를 다 채우면 그림이 글보다 먼저 크게 보여서 폭을 256px로 묶는다 (멘토링 피드백: 전체 크기가 큼) */}
+        <div className="relative mx-auto aspect-700/540 w-full max-w-64">
           {pages.map((item, index) => (
             <img
               alt=""
@@ -133,7 +136,7 @@ const TutorialStep = () => {
           ))}
         </div>
         {/* 지금 장의 점이 가로로 길어져 몇 번째 장인지 잘 보이게 한다 */}
-        <div aria-hidden="true" className="mt-6 flex justify-center gap-3">
+        <div aria-hidden="true" className="mt-5 flex justify-center gap-3">
           {pages.map((item, index) => (
             <span
               className={`h-1.75 rounded-full transition-all duration-300 motion-reduce:transition-none ${
@@ -146,18 +149,19 @@ const TutorialStep = () => {
           ))}
         </div>
         {/* 화면 읽기 프로그램이 장이 바뀔 때 새 안내를 읽도록 알린다 */}
-        <div aria-live="polite" className="mt-10 text-center">
+        <div aria-live="polite" className="mt-8 text-center">
           <p className="sr-only">
             {pages.length}장 중 {pageIndex + 1}번째
           </p>
           {/* 장이 바뀔 때마다 새로 그려 그림과 같은 움직임으로 들어온다 */}
           <div className={slideInClassNames[direction]} key={pageIndex}>
-            <h1 className="text-display-mobile leading-snug font-black text-text-primary">
+            {/* 앞 온보딩 화면 제목(19px)과 같은 크기로 두어 마지막 단계만 튀어 보이지 않게 한다 */}
+            <h1 className="text-h2-mobile font-bold text-text-primary">
               {page.title[0]}
               <br />
               {page.title[1]}
             </h1>
-            <p className="mt-2 text-body-sm-mobile leading-snug text-text-secondary">
+            <p className="mt-1.5 text-body-sm-mobile text-text-secondary">
               {page.description[0]}
               <br />
               {page.description[1]}

@@ -35,6 +35,8 @@ const CouponSection = ({
     available: `발급 가능 · 잔여 ${remainingCount}장`,
     soldOut: '마감 · 수량 소진',
     limitReached: `발급 제한 · 오늘 ${dailyLimit}개 완료`,
+    closedNotWished: '오늘 발급 마감',
+    closedWished: '오늘 발급 마감 · 찜 완료',
     issued: '발급 완료 · 쿠폰함에서 확인',
   };
 
@@ -56,7 +58,10 @@ const CouponSection = ({
           </span>
           <span
             className={`shrink-0 font-bold ${
-              state === 'soldOut' || state === 'limitReached'
+              state === 'soldOut' ||
+              state === 'limitReached' ||
+              state === 'closedWished' ||
+              state === 'closedNotWished'
                 ? 'text-text-tertiary'
                 : 'text-text-brand'
             }`}

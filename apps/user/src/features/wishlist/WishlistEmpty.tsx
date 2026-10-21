@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 
-import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
+import mascotWishEmpty from '@user/assets/illustrations/mascot-wish-empty.webp';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 
@@ -11,8 +11,8 @@ const WishlistEmpty = () => {
   return (
     <EmptyState
       description="스와이프에서 마음에 드는 포스터를 찜해 보세요"
-      image={mascotEmpty}
-      title="아직 찜한 캠페인이 없어요"
+      image={mascotWishEmpty}
+      title="아직 찜한 포스터가 없어요"
     >
       <ActionButton onClick={() => navigate('/swipe')}>
         점심 포스터 보기

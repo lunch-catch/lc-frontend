@@ -1,7 +1,7 @@
 import { mockUserTerms } from './mocks/terms';
 
 // 가입할 때 동의받는 항목
-export type ConsentKey = 'terms' | 'privacy' | 'location' | 'marketing';
+export type ConsentKey = 'terms' | 'privacy' | 'location';
 
 export interface TermsSection {
   heading: string;

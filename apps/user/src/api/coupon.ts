@@ -330,7 +330,7 @@ export interface CouponSummary {
 export const fetchCouponSummary = () =>
   request<CouponSummary>('/v1/coupons/summary');
 
-// 매장에서 보여줄 1회용 QR. 서버가 그려 준 QR 이미지와 만료 시각
+// 가게에서 보여줄 1회용 QR. 서버가 그려 준 QR 이미지와 만료 시각
 export interface QrToken {
   // <img src>에 바로 넣을 수 있는 이미지 주소 (data URL)
   imageSrc: string;

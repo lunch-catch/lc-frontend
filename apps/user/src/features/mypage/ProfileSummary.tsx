@@ -4,6 +4,7 @@ import { User } from 'lucide-react';
 import { type CouponSummary, fetchCouponSummary } from '@user/api/coupon';
 import type { MyProfile } from '@user/api/member';
 import { useAuth } from '@user/auth/useAuth';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import { cardClassName } from '@user/ui/Card/Card';
 
 import NicknameSheet from './NicknameSheet';
@@ -44,11 +45,11 @@ const ProfileCard = ({
   onEdit: () => void;
   profile: MyProfile;
 }) => (
-  <section className={`flex items-center gap-4 p-4 ${cardClassName}`}>
+  <section className={`flex items-center gap-3 p-4 ${cardClassName}`}>
     {profile.profileImageUrl ? (
       <img
         alt=""
-        className="size-14 shrink-0 rounded-full bg-surface-subtle object-cover"
+        className="size-12 shrink-0 rounded-full bg-surface-subtle object-cover"
         height={56}
         src={profile.profileImageUrl}
         width={56}
@@ -56,7 +57,7 @@ const ProfileCard = ({
     ) : (
       <div
         aria-hidden="true"
-        className="flex size-14 shrink-0 items-center justify-center rounded-full bg-surface-subtle text-text-tertiary"
+        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-subtle text-text-tertiary"
       >
         <User className="size-6" />
       </div>
@@ -93,7 +94,7 @@ const CouponStats = ({ coupons }: { coupons: CouponSummary }) => {
 
   return (
     <dl
-      className={`grid grid-cols-3 divide-x divide-border-subtle py-4 ${cardClassName}`}
+      className={`grid grid-cols-3 divide-x divide-border-subtle py-3 ${cardClassName}`}
     >
       {stats.map(({ label, value }) => (
         <div className="flex flex-col-reverse items-center gap-1" key={label}>
@@ -112,6 +113,8 @@ const CouponStats = ({ coupons }: { coupons: CouponSummary }) => {
 // 내 정보는 아래 설정에서도 쓰여서 마이 탭이 한 번 불러와 넘겨준다
 const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
   const coupons = useLoad(fetchCouponSummary);
+  const showProfileSkeleton = useDelayedLoading(profile.data === undefined);
+  const showCouponsSkeleton = useDelayedLoading(coupons.data === undefined);
   const auth = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -124,7 +127,8 @@ const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      {profile.data === undefined && (
+      {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
+      {showProfileSkeleton && (
         <div
           aria-hidden="true"
           className="h-22 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
@@ -147,7 +151,7 @@ const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
         />
       )}
 
-      {coupons.data === undefined && (
+      {showCouponsSkeleton && (
         <div
           aria-hidden="true"
           className="h-20 animate-pulse rounded-xl bg-surface-subtle/60 motion-reduce:animate-none"

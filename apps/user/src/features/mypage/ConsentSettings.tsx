@@ -4,18 +4,14 @@ import { Toggle } from '@repo/ui';
 import { type MyProfile, updateMyProfile } from '@user/api/member';
 import Card from '@user/ui/Card/Card';
 
-type ConsentKey = keyof MyProfile['consents'];
+// 알림 기능을 빼서 알림 수신 동의(notificationOptIn)는 보여주지 않는다
+type ConsentKey = Exclude<keyof MyProfile['consents'], 'notificationOptIn'>;
 
 const consentItems: {
   key: ConsentKey;
   label: string;
   description: string;
 }[] = [
-  {
-    key: 'notificationOptIn',
-    label: '쿠폰 오픈 알림',
-    description: '찜한 쿠폰이 열리기 전 10:50에 알려드려요',
-  },
   {
     key: 'locationOptIn',
     label: '위치 정보 이용',
@@ -29,7 +25,7 @@ interface ConsentSettingsProps {
   onSaved: (profile: MyProfile) => void;
 }
 
-// 알림과 위치 정보 이용 동의. 누르면 바로 저장하고, 실패하면 원래대로 되돌린다
+// 위치 정보 이용 동의. 누르면 바로 저장하고, 실패하면 원래대로 되돌린다
 const ConsentSettings = ({ consents, onSaved }: ConsentSettingsProps) => {
   // 저장을 기다리는 동안에도 바뀐 쪽으로 먼저 보여준다
   const [values, setValues] = useState(consents);
@@ -61,7 +57,7 @@ const ConsentSettings = ({ consents, onSaved }: ConsentSettingsProps) => {
         className="mb-2 px-1 text-body-sm-mobile font-bold text-text-primary"
         id="consent-settings-title"
       >
-        알림·위치
+        위치
       </h2>
       <Card as="ul" className="divide-y divide-border-subtle overflow-hidden">
         {consentItems.map(({ description, key, label }) => {

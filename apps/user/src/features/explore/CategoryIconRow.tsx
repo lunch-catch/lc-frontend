@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import { CATEGORY_FILTER_OPTIONS, type CategoryFilter } from '@user/api/store';
 import {
   categoryIcons,
@@ -9,63 +11,92 @@ interface CategoryIconRowProps {
   onChange: (value: CategoryFilter) => void;
 }
 
-// 탐색 탭의 업종 고르기. 열 개를 다섯 개씩 두 줄로 두어 넘기지 않고 한눈에 보게 한다
+// 탐색 탭의 업종 고르기. 열 개를 한 줄에 두고 옆으로 밀어 본다
+// 두 줄로 다 펼치면 목록이 그만큼 밀려 내려가서, 배민·쿠팡이츠처럼 한 줄로 둔다
+// 한 칸을 52px로 두어 화면 끝에 다음 아이콘이 걸쳐 보이게 해서 옆에 더 있다는 걸 알린다
 const CategoryIconRow = ({ onChange, value }: CategoryIconRowProps) => {
-  return (
-    // fieldset은 기본으로 내용보다 좁아지지 않아(min-width: min-content) 화면을 넓힐 수 있어 min-w-0으로 푼다
-    <fieldset className="relative grid min-w-0 grid-cols-5 gap-y-1">
-      <legend className="sr-only">업종</legend>
-      {CATEGORY_FILTER_OPTIONS.map((option) => {
-        const isSelected = value === option.value;
+  const rowRef = useRef<HTMLDivElement>(null);
 
-        return (
-          <label
-            className="flex cursor-pointer flex-col items-center gap-1 py-1"
-            key={option.value}
-          >
-            <input
-              checked={isSelected}
-              className="peer sr-only"
-              name="store-category"
-              onChange={() => onChange(option.value)}
-              type="radio"
-              value={option.value}
-            />
-            <span
-              className={`flex size-14 items-center justify-center rounded-full border bg-bg-surface transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-action-primary ${
-                isSelected
-                  ? 'border-2 border-action-primary'
-                  : 'border-border-subtle'
-              }`}
+  // 고른 업종이 화면 밖에 있으면 보이도록 줄만 옆으로 민다
+  // scrollIntoView는 화면 전체를 세로로도 움직일 수 있어서 줄의 가로 위치만 직접 바꾼다
+  useEffect(() => {
+    const row = rowRef.current;
+    const selected = row?.querySelector<HTMLElement>(
+      'label:has(input:checked)',
+    );
+    if (!row || !selected) return;
+
+    const left = selected.offsetLeft;
+    const right = left + selected.offsetWidth;
+    if (left < row.scrollLeft || right > row.scrollLeft + row.clientWidth) {
+      row.scrollTo({
+        left: left - (row.clientWidth - selected.offsetWidth) / 2,
+        behavior: 'smooth',
+      });
+    }
+  }, [value]);
+
+  return (
+    // 줄은 화면 양끝까지 밀리게 좌우 여백 밖으로 넓히고, 첫·마지막 칸만 여백만큼 안쪽에서 시작한다
+    // 숨긴 라디오(sr-only)는 절대 위치라 relative로 이 줄 안에 가둔다. 안 그러면 화면 밖 칸의 라디오가 화면 전체를 옆으로 넓힌다
+    <div
+      className="relative -mx-page min-w-0 snap-x overflow-x-auto scroll-px-page px-page"
+      ref={rowRef}
+    >
+      <fieldset className="flex w-max">
+        <legend className="sr-only">업종</legend>
+        {CATEGORY_FILTER_OPTIONS.map((option) => {
+          const isSelected = value === option.value;
+
+          return (
+            <label
+              className="flex w-13 shrink-0 cursor-pointer snap-start flex-col items-center gap-1 py-1"
+              key={option.value}
             >
-              <img
-                alt=""
-                className="size-10 object-contain"
-                height={40}
-                src={categoryIcons[option.value]}
-                width={40}
+              <input
+                checked={isSelected}
+                className="peer sr-only"
+                name="store-category"
+                onChange={() => onChange(option.value)}
+                type="radio"
+                value={option.value}
               />
-            </span>
-            <span
-              className={`text-caption-mobile whitespace-nowrap ${
-                isSelected
-                  ? 'font-bold text-text-brand'
-                  : 'font-medium text-text-primary'
-              }`}
-            >
-              {shortLabels[option.value] ? (
-                <>
-                  <span aria-hidden="true">{shortLabels[option.value]}</span>
-                  <span className="sr-only">{option.label}</span>
-                </>
-              ) : (
-                option.label
-              )}
-            </span>
-          </label>
-        );
-      })}
-    </fieldset>
+              <span
+                className={`flex size-11 items-center justify-center rounded-full border bg-bg-surface transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-action-primary ${
+                  isSelected
+                    ? 'border-2 border-action-primary'
+                    : 'border-border-subtle'
+                }`}
+              >
+                <img
+                  alt=""
+                  className="size-7 object-contain"
+                  height={28}
+                  src={categoryIcons[option.value]}
+                  width={28}
+                />
+              </span>
+              <span
+                className={`text-caption-mobile whitespace-nowrap ${
+                  isSelected
+                    ? 'font-bold text-text-brand'
+                    : 'font-medium text-text-primary'
+                }`}
+              >
+                {shortLabels[option.value] ? (
+                  <>
+                    <span aria-hidden="true">{shortLabels[option.value]}</span>
+                    <span className="sr-only">{option.label}</span>
+                  </>
+                ) : (
+                  option.label
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </fieldset>
+    </div>
   );
 };
 

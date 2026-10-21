@@ -11,10 +11,10 @@ const CouponListSkeleton = () => {
     >
       {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
         <div
-          className={`flex items-center gap-3 p-4 ${cardClassName}`}
+          className={`flex items-center gap-3 p-3 ${cardClassName}`}
           key={index}
         >
-          <div className="size-18 shrink-0 rounded-lg bg-surface-subtle" />
+          <div className="size-14 shrink-0 rounded-lg bg-surface-subtle" />
           <div className="flex flex-1 flex-col gap-2">
             <div className="h-5 w-24 rounded-sm bg-surface-subtle" />
             <div className="h-4 w-36 rounded-sm bg-surface-subtle/60" />

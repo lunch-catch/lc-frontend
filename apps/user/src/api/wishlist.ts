@@ -139,7 +139,7 @@ export const addWish = async (campaignId: string): Promise<void> => {
 const pendingRemovals = new Map<string, Promise<void>>();
 
 // 찜을 지운다 (DELETE /v1/wishlist/{campaignId}). 찜 목록에 없어도 성공이다
-// 지운 캠페인은 당일 피드에 다시 나오지 않고 10:50 오픈 알림 대상에서도 빠진다 (서버 처리)
+// 지운 캠페인은 당일 피드에 다시 나오지 않는다 (서버 처리)
 export const removeWish = async (campaignId: string): Promise<void> => {
   if (USE_WISHLIST_API && isServerId(campaignId)) {
     const removal = request<void>(`/v1/wishlist/${campaignId}`, {

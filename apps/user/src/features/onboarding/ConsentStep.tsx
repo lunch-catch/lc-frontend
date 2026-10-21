@@ -17,7 +17,6 @@ const consentItems: { key: ConsentKey; label: string; required: boolean }[] = [
   { key: 'terms', label: '서비스 이용약관', required: true },
   { key: 'privacy', label: '개인정보 수집 및 이용', required: true },
   { key: 'location', label: '위치정보 수집·이용 동의', required: false },
-  { key: 'marketing', label: '광고성 알림 수신 동의', required: false },
 ];
 
 const ConsentStep = () => {
@@ -34,7 +33,6 @@ const ConsentStep = () => {
   const handleAllChange = (checked: boolean) => {
     setConsents({
       location: checked,
-      marketing: checked,
       privacy: checked,
       terms: checked,
     });

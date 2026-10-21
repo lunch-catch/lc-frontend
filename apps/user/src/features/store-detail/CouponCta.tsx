@@ -37,7 +37,8 @@ const CouponCta = ({
 
   const renderNotice = () => {
     if (state === 'beforeOpenNotWished') {
-      return '찜해두면 10:50에 쿠폰 오픈 알림을 보내드려요';
+      // 알림 기능을 빼서 알림 대신 받는 때와 곳을 알려준다
+      return '찜해두면 11:00부터 찜 목록에서 쿠폰을 받을 수 있어요';
     }
     if (state === 'beforeOpenWished') {
       return (
@@ -52,6 +53,10 @@ const CouponCta = ({
       );
     }
     if (state === 'available') return '선착순이라 금방 마감될 수 있어요';
+    // 14:00 마감 뒤에도 찜할 수 있어, 지금 찜하면 언제 받는지 알려준다
+    if (state === 'closedNotWished') {
+      return '오늘 발급은 끝났어요 · 찜해두면 내일 11:00부터 받을 수 있어요';
+    }
     return null;
   };
 
@@ -81,6 +86,19 @@ const CouponCta = ({
         return (
           <ActionButton onClick={() => navigate('/coupons')} size="large">
             쿠폰함에서 보기
+          </ActionButton>
+        );
+      case 'closedNotWished':
+        return (
+          <ActionButton loading={isPending} onClick={onWish} size="large">
+            찜해두기
+          </ActionButton>
+        );
+      case 'closedWished':
+        // 찜해 둔 쿠폰은 다음 오픈에 받는다
+        return (
+          <ActionButton disabled size="large">
+            쿠폰 내일 11:00 오픈
           </ActionButton>
         );
       case 'soldOut':

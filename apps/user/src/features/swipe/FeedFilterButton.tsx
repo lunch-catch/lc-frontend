@@ -1,43 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ListFilter } from 'lucide-react';
 
-import { type FeedFilter, fetchFeedFilter } from '@user/api/feedFilter';
+import type { FeedFilter } from '@user/api/feedFilter';
 import { BUSINESS_CATEGORY_LABELS } from '@user/api/store';
 
 import FeedFilterSheet from './FeedFilterSheet';
 
 interface FeedFilterButtonProps {
-  // 저장하면 부른다. 필터는 다음 피드 요청부터 적용된다
-  onSaved: () => void;
+  // 지금 걸린 필터. null이면 아직 받지 못함 (useFeedFilter)
+  filter: FeedFilter | null;
+  // 처음 불러오기에 실패했는지. 실패했으면 눌러서 다시 불러온다
+  hasLoadError: boolean;
+  // 필터를 다시 불러온다. 받지 못하면 null
+  onReload: () => Promise<FeedFilter | null>;
+  // 저장하면 저장된 필터로 부른다. 필터는 다음 피드 요청부터 적용된다
+  onSaved: (saved: FeedFilter) => void;
   // 눌렀을 때 다시 불러와도 필터를 받지 못하면 부른다
   onLoadError: () => void;
 }
 
 // 피드 카드 위 필터 버튼. 흰 칩에 "필터"라고 적어 처음 보는 사람도 알 수 있게 한다
 // 기본값(전체 업종, 거리순)과 다르게 골랐으면 "필터" 대신 걸린 필터를 보여준다 (예: 한식·일식 · 할인율순)
-const FeedFilterButton = ({ onLoadError, onSaved }: FeedFilterButtonProps) => {
-  const [filter, setFilter] = useState<FeedFilter | null>(null);
-  // 처음 불러오기에 실패했는지. 기본값으로 시트를 열면 저장할 때 서버에 저장된 필터를 덮어써서, 다시 불러온다
-  const [hasLoadError, setHasLoadError] = useState(false);
+const FeedFilterButton = ({
+  filter,
+  hasLoadError,
+  onLoadError,
+  onReload,
+  onSaved,
+}: FeedFilterButtonProps) => {
   const [isReloading, setIsReloading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    let ignore = false;
-
-    fetchFeedFilter()
-      .then((result) => {
-        if (!ignore) setFilter(result);
-      })
-      .catch(() => {
-        if (!ignore) setHasLoadError(true);
-      });
-
-    // 응답 전에 화면을 벗어나면 결과를 버린다
-    return () => {
-      ignore = true;
-    };
-  }, []);
 
   const handleClick = async () => {
     if (filter) {
@@ -47,15 +39,10 @@ const FeedFilterButton = ({ onLoadError, onSaved }: FeedFilterButtonProps) => {
 
     // 처음 불러오기에 실패했으면 다시 불러와, 받은 필터로만 시트를 연다
     setIsReloading(true);
-    try {
-      setFilter(await fetchFeedFilter());
-      setHasLoadError(false);
-      setIsOpen(true);
-    } catch {
-      onLoadError();
-    } finally {
-      setIsReloading(false);
-    }
+    const reloaded = await onReload();
+    setIsReloading(false);
+    if (reloaded) setIsOpen(true);
+    else onLoadError();
   };
 
   // 지금 걸린 필터를 짧게 (예: 한식·일식 · 할인율순, 한식 외 2). 기본값이면 빈 문자열
@@ -101,9 +88,8 @@ const FeedFilterButton = ({ onLoadError, onSaved }: FeedFilterButtonProps) => {
           filter={filter}
           onClose={() => setIsOpen(false)}
           onSaved={(saved) => {
-            setFilter(saved);
             setIsOpen(false);
-            onSaved();
+            onSaved(saved);
           }}
         />
       )}

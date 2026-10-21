@@ -22,8 +22,13 @@ import {
 } from '@user/api/wishlist';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import { useMyLocation } from '@user/hooks/useMyLocation';
-import { useOpenCountdown } from '@user/hooks/useOpenCountdown';
+import {
+  getIssuePhase,
+  useOpenCountdown,
+  WISH_ISSUE_TIMING,
+} from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import Card, { cardClassName } from '@user/ui/Card/Card';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
@@ -98,6 +103,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const navigate = useNavigate();
   // undefined: 불러오는 중, null: 없는 가게
   const [store, setStore] = useState<StoreDetail | null | undefined>();
+  const showSkeleton = useDelayedLoading(store === undefined);
   // 가게 정보를 받지 못했는지. 없는 가게(null)와 달리 다시 시도할 수 있다
   const [hasLoadError, setHasLoadError] = useState(false);
   // 다시 시도할 때마다 올려서 처음부터 다시 받는다
@@ -109,7 +115,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const [isPending, setIsPending] = useState(false);
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 버튼이 받기로 바뀐다
-  const { isOpen, remainingMs } = useOpenCountdown();
+  const { isIssueClosed, isOpen, remainingMs } = useOpenCountdown();
   // 도보 시간은 저장 위치와 가게 좌표의 직선거리로 계산한다. 걷는 길 API는 만들지 않기로 했다
   const myLocation = useMyLocation();
 
@@ -200,7 +206,8 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   if (store === undefined) {
     return (
       <>
-        <StoreDetailSkeleton onBack={goBack} />
+        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 뒤로 가기만 두고 회색 틀은 조금 기다린 뒤에 보여준다 */}
+        <StoreDetailSkeleton onBack={goBack} showBlocks={showSkeleton} />
         <p className="sr-only" role="status">
           가게 정보를 불러오는 중이에요
         </p>
@@ -230,6 +237,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     couponInfo &&
     getCouponState({
       dailyRemaining: couponInfo.dailyRemaining,
+      isClosed: isIssueClosed,
       isIssued: couponInfo.status.isIssued,
       isOpen,
       isWished: couponInfo.isWished,
@@ -246,7 +254,8 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     try {
       await addWish(campaign.campaignId);
       setWished(true);
-      setToast({ message: '찜했어요 · 10:50에 쿠폰 오픈 알림을 보내드릴게요' });
+      // 사진 위 하트로 아무 때나 찜할 수 있어, 지금 찜하면 언제 받는지는 스와이프 찜 토스트와 같은 기준으로 알려준다
+      setToast({ message: `찜했어요 · ${WISH_ISSUE_TIMING[getIssuePhase()]}` });
     } catch {
       setToast({ message: '찜하지 못했어요', tone: 'error' });
     } finally {

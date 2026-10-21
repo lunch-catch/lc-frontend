@@ -26,7 +26,7 @@ const CouponCard = ({
   footer,
   onRemove,
 }: CouponCardProps) => (
-  <Card as="li" className="relative flex flex-col gap-3 p-4">
+  <Card as="li" className="relative flex flex-col gap-2.5 p-3">
     {onRemove && (
       <button
         aria-label={`${coupon.storeName} 쿠폰 삭제`}
@@ -41,7 +41,7 @@ const CouponCard = ({
       {coupon.storeImageUrl ? (
         <img
           alt=""
-          className={`size-18 shrink-0 rounded-lg bg-surface-subtle object-cover ${
+          className={`size-14 shrink-0 rounded-lg bg-surface-subtle object-cover ${
             dimmed ? 'opacity-60 grayscale' : ''
           }`}
           height={72}
@@ -52,7 +52,7 @@ const CouponCard = ({
         // 가게 사진이 없으면 회색 바탕에 가게 아이콘을 둔다
         <div
           aria-hidden="true"
-          className="flex size-18 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"
+          className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"
         >
           <Store className="size-6" />
         </div>

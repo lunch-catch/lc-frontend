@@ -67,7 +67,8 @@ const PersonalizationStep = () => {
         gender: genderValues[gender],
         ageGroup: ageGroupValues[ageGroup],
         locationOptIn: consents.location,
-        notificationOptIn: consents.marketing,
+        // 알림 기능을 뺐지만 서버가 이 값을 필수로 받아서(빠지면 400) 항상 동의하지 않음으로 보낸다
+        notificationOptIn: false,
       });
       navigate('/onboarding/location', { replace: true });
     } catch {

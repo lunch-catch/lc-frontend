@@ -47,3 +47,11 @@ export const formatDiscount = ({
   discountType === 'PERCENT'
     ? `${discountValue}% 할인`
     : `${discountValue.toLocaleString('ko-KR')}원 할인`;
+
+// 할인 대상 (예: 치즈버거, 전 메뉴). 찜 카드와 같이 할인 옆에 작게 붙인다
+// 메뉴 할인인데 메뉴 이름이 없으면(mock) 아무것도 붙이지 않는다
+export const formatDiscountTarget = ({
+  discountTargetType,
+  targetMenu,
+}: StoreActiveCampaign) =>
+  discountTargetType === 'ALL' ? '전 메뉴' : (targetMenu?.name ?? null);
