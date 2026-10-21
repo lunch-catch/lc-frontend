@@ -203,7 +203,8 @@ const WishCard = ({
         )}
         <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
           <div className="flex max-w-full min-w-0 items-center gap-1.5">
-            <h3 className="min-w-0 truncate text-body-mobile font-bold text-text-primary">
+            {/* 찜 목록은 할인을 비교하는 화면이라, 이름은 보통 굵기로 두어 주황 할인이 먼저 눈에 들어오게 한다 */}
+            <h3 className="min-w-0 truncate text-body-mobile font-medium text-text-primary">
               {storeName}
             </h3>
           </div>
