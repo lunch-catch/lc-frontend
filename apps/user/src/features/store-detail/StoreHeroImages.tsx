@@ -15,10 +15,14 @@ const StoreHeroImages = ({
 }: StoreHeroImagesProps) => {
   // 지금 보고 있는 사진 순서(0부터)
   const [index, setIndex] = useState(0);
+  // 불러오지 못한 사진 주소. 깨진 사진 대신 빼고 보여주고, 모두 실패하면 가게 아이콘을 둔다
+  const [failedUrls, setFailedUrls] = useState<string[]>([]);
   const imageUrls = [
     ...(mainImageUrl ? [mainImageUrl] : []),
     ...interiorImageUrls,
-  ];
+  ].filter((url) => !failedUrls.includes(url));
+  // 보던 사진이 빠져 장 수가 줄어도 번호가 장 수를 넘지 않게 한다
+  const currentIndex = Math.min(index, Math.max(0, imageUrls.length - 1));
 
   if (imageUrls.length === 0) {
     return (
@@ -53,6 +57,11 @@ const StoreHeroImages = ({
             key={url}
             // 첫 장만 바로 받고 나머지는 넘길 때 받는다
             loading={position === 0 ? 'eager' : 'lazy'}
+            onError={() =>
+              setFailedUrls((current) =>
+                current.includes(url) ? current : [...current, url],
+              )
+            }
             src={url}
             width={390}
           />
@@ -63,7 +72,7 @@ const StoreHeroImages = ({
           aria-hidden="true"
           className="absolute right-3 bottom-3 rounded-full bg-black/50 px-2 py-0.5 text-caption-mobile font-medium text-white tabular-nums"
         >
-          {index + 1}/{imageUrls.length}
+          {currentIndex + 1}/{imageUrls.length}
         </span>
       )}
     </>
