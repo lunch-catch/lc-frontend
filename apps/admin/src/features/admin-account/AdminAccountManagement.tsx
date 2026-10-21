@@ -80,6 +80,7 @@ export const AdminAccountManagement = () => {
         </div>
         {canIssueAccount && (
           <Button
+            variant="primary"
             leadingIcon={<Plus aria-hidden="true" className="size-4" />}
             onClick={issue.openIssueModal}
           >

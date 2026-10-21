@@ -1,6 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Button, DateRangePicker, SearchField, SelectField } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
+import { SlidersHorizontal } from 'lucide-react';
 
 import type { PointLedgerItem } from '@admin/api/pointLedger';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
@@ -145,7 +146,10 @@ export const PointLedgerTab = ({
         />
         <Button
           className="ml-auto"
-          variant="secondary"
+          variant="primary"
+          leadingIcon={
+            <SlidersHorizontal aria-hidden="true" className="size-4" />
+          }
           onClick={() => setAdjusting(true)}
         >
           포인트 수동 조정

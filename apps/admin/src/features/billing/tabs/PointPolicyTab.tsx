@@ -145,6 +145,7 @@ export const PointPolicyTab = ({
             </p>
           </div>
           <Button
+            variant="primary"
             leadingIcon={
               hasScheduledPolicy ? (
                 <Settings2 aria-hidden className="size-4" />
