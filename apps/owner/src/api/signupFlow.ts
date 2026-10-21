@@ -48,8 +48,29 @@ const toSaveFailure = (error: unknown) => ({
   code: error instanceof ApiError ? (error.code ?? undefined) : undefined,
 });
 
+// 그 단계를 이미 마쳤으면 지금 입점 진행 버전을, 아니면(불러오지 못한 경우 포함) null을 돌려준다
+const getCompletedStepVersion = async (step: string) => {
+  try {
+    const { onboarding } =
+      await request<Pick<SignupStoreResponse, 'onboarding'>>('/v1/owner/store');
+
+    return onboarding.steps.some(
+      (current) => current.step === step && current.completed,
+    )
+      ? onboarding.version
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+// 이미 약관에 동의함 (409). 동의는 한 번만 받는다
+const TERMS_ALREADY_AGREED_CODE = 'TERMS-001';
+
 // 약관 동의 저장. 약관은 모두 필수라 화면에서 모두 동의해야 부를 수 있고,
-// 서버가 동의 시점과 약관 버전을 남기므로 본문은 비워 보낸다. 성공하면 입점 진행 버전을 돌려준다
+// 서버가 동의 시점과 약관 버전을 남기므로 본문은 비워 보낸다. 성공하면 입점 진행 버전을 돌려준다.
+// 다시 보내면 덮어쓰는 다른 단계와 달리 한 번만 받아, 약관 단계로 돌아와 "다음"을 누르면 409 TERMS-001로 거절한다.
+// 이미 동의했으면 지금 버전으로 그대로 넘어간다
 export const saveTermsStep = async (): Promise<ApiResult<number>> => {
   try {
     const data = await request<OnboardingSaveResponse>(
@@ -59,6 +80,14 @@ export const saveTermsStep = async (): Promise<ApiResult<number>> => {
 
     return { ok: true, data: data.version };
   } catch (error) {
+    if (error instanceof ApiError && error.code === TERMS_ALREADY_AGREED_CODE) {
+      const completedVersion = await getCompletedStepVersion('TERMS');
+
+      if (completedVersion !== null) {
+        return { ok: true, data: completedVersion };
+      }
+    }
+
     return toSaveFailure(error);
   }
 };
@@ -324,8 +353,10 @@ export const MAX_MENUS = 3;
 export const MENU_NAME_MAX_LENGTH = 20;
 export const MENU_PRICE_MIN = 100;
 export const MENU_PRICE_MAX = 1_000_000;
+// 서버가 받는 메뉴 설명 길이
+export const MENU_DESCRIPTION_MAX_LENGTH = 500;
 
-// 입력 검사를 통과해 목록에 들어간 대표 메뉴. 사진, 메뉴명, 가격 모두 필수.
+// 입력 검사를 통과해 목록에 들어간 대표 메뉴. 사진, 메뉴명, 가격은 필수이고 설명은 선택.
 // 서버에서 불러온 메뉴는 등록한 메뉴 ID가 있고, 사진을 올리기 전이면 사진이 없을 수 있다
 export interface MenuItemValues {
   id?: string | null;
@@ -333,6 +364,8 @@ export interface MenuItemValues {
   name: string;
   // 쉼표 없는 숫자
   price: string;
+  // 없으면 빈 문자열
+  description: string;
 }
 
 // 바텀시트에서 입력 중인 대표 메뉴. 저장 전이라 비어 있을 수 있다
@@ -340,16 +373,18 @@ export interface MenuDraft {
   image: ImageValue | null;
   name: string;
   price: string;
+  description: string;
 }
 
-export type MenuField = keyof MenuDraft;
+// 검사하는 칸. 설명은 선택이고 길이는 입력칸에서 막는다
+export type MenuField = 'image' | 'name' | 'price';
 
 // 사진은 있는지만 본다. 가게 관리에서는 이미 올라간 사진도 넘긴다
 export const getMenuErrors = ({
   image,
   name,
   price,
-}: MenuDraft): Record<MenuField, string | undefined> => {
+}: Pick<MenuDraft, MenuField>): Record<MenuField, string | undefined> => {
   const priceValue = Number(price);
 
   return {
@@ -371,6 +406,7 @@ export const getMenuErrors = ({
 export const menuInputRules = {
   nameMaxLength: MENU_NAME_MAX_LENGTH,
   priceMax: MENU_PRICE_MAX,
+  descriptionMaxLength: MENU_DESCRIPTION_MAX_LENGTH,
   getErrors: getMenuErrors,
 };
 
@@ -385,22 +421,6 @@ export interface ImagesStepValues {
 
 // 서버의 현재 진행 단계와 완료를 요청한 단계가 다름 (409)
 const STEP_MISMATCH_CODE = 'STORE-002';
-
-// 그 단계를 이미 마쳤으면 지금 입점 진행 버전을, 아니면(불러오지 못한 경우 포함) null을 돌려준다
-const getCompletedStepVersion = async (step: string) => {
-  try {
-    const { onboarding } =
-      await request<Pick<SignupStoreResponse, 'onboarding'>>('/v1/owner/store');
-
-    return onboarding.steps.some(
-      (current) => current.step === step && current.completed,
-    )
-      ? onboarding.version
-      : null;
-  } catch {
-    return null;
-  }
-};
 
 // 사진·메뉴 단계 완료. 다시 보내면 덮어쓰는 다른 단계와 달리, 서버의 현재 단계가 그 단계일 때만 받는다.
 // 이미 마친 단계로 돌아와 "다음"을 누르면 409 STORE-002로 거절하므로, 마친 단계면 지금 버전으로 그대로 넘어간다
@@ -489,6 +509,7 @@ interface SignupStoreResponse {
     menuId: number;
     name: string;
     price: number;
+    description: string | null;
     sortOrder: number;
     image: StoreImageResponse | null;
   }[];
@@ -582,6 +603,7 @@ export const getSignupProgress = async (): Promise<
               id: String(menu.menuId),
               name: menu.name,
               price: String(menu.price),
+              description: menu.description ?? '',
               image: menu.image ? toSavedImage(menu.image.url) : null,
             })),
           },
