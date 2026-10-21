@@ -76,6 +76,52 @@ const issued = { loginId: 'test-admin', name: '테스트', role: 'ADMIN' };
 const signal = new AbortController().signal;
 const isApiError = (client) => (error) => error instanceof client.ApiError;
 
+test('관리자 목록은 검색어만 인코딩하고 서버 순서·쿠키·취소 signal을 유지한다', async () => {
+  const accounts = [
+    issued,
+    { loginId: 'root', name: '최고', role: 'SUPER_ADMIN' },
+  ];
+  const { adminAccounts, calls } = setup(accounts);
+  const result = await adminAccounts.getAdminAccounts('  A%_! &홍  ', signal);
+  assert.equal(JSON.stringify(result), JSON.stringify(accounts));
+  const url = new URL(calls[0].url);
+  assert.equal(url.pathname, '/v1/admin/admins');
+  assert.equal(url.searchParams.get('keyword'), 'A%_! &홍');
+  assert.deepEqual([...url.searchParams.keys()], ['keyword']);
+  assert.equal(calls[0].options.method, 'GET');
+  assert.equal(calls[0].options.body, undefined);
+  assert.equal(calls[0].options.credentials, 'include');
+  assert.equal(calls[0].options.signal, signal);
+});
+
+test('관리자 전체 조회는 빈 검색어를 생략하고 빈 배열도 허용한다', async () => {
+  for (const keyword of ['', '   ']) {
+    const { adminAccounts, calls } = setup([]);
+    assert.equal(
+      (await adminAccounts.getAdminAccounts(keyword, signal)).length,
+      0,
+    );
+    assert.equal(calls[0].url, 'http://test/v1/admin/admins');
+  }
+});
+
+test('관리자 목록은 페이지 객체와 잘못된 필드·권한을 거부한다', async () => {
+  for (const data of [
+    { items: [issued] },
+    {},
+    [null],
+    [{ ...issued, name: null }],
+    [{ ...issued, loginId: 1 }],
+    [{ ...issued, role: 'MEMBER' }],
+  ]) {
+    const { adminAccounts, client } = setup(data);
+    await assert.rejects(
+      adminAccounts.getAdminAccounts('', signal),
+      isApiError(client),
+    );
+  }
+});
+
 test('회원 목록은 nullable 필드와 인증 쿠키·취소 signal을 유지한다', async () => {
   const { members, calls } = setup(page);
   const result = await members.getMembers('page=0&size=20', signal);
