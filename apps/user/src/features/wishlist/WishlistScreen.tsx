@@ -15,6 +15,7 @@ import {
   type WishItem,
 } from '@user/api/wishlist';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import {
   formatCountdown,
   useOpenCountdown,
@@ -117,6 +118,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 const WishlistScreen = () => {
   const [wishes, setWishes] = useState<WishItem[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
+  const showSkeleton = useDelayedLoading(loadState === 'loading');
   // 다시 시도할 때마다 올려서 처음부터 다시 받는다
   const [attempt, setAttempt] = useState(0);
   // 찜 목록을 받았는데 발급 상태만 받지 못했으면 null이다. 이때는 받기 버튼 없이 찜만 보여준다
@@ -330,10 +332,11 @@ const WishlistScreen = () => {
 
   const renderContent = () => {
     // 요청 두 번이 차례로 끝나야 그릴 수 있어, 그동안 빈 화면 대신 회색 틀을 보여준다
+    // 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다
     if (loadState === 'loading') {
       return (
         <div className="flex flex-col gap-4 px-page pt-4 pb-6">
-          <WishlistSkeleton />
+          {showSkeleton && <WishlistSkeleton />}
           <p className="sr-only" role="status">
             찜 목록을 불러오는 중이에요
           </p>

@@ -6,6 +6,7 @@ import { QrCode } from 'lucide-react';
 import { ApiError } from '@user/api/client';
 import { type Coupon, deleteCoupon, fetchCoupons } from '@user/api/coupon';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
@@ -35,6 +36,7 @@ const AvailableCoupons = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // 시트를 닫을 때마다 올린다. 삭제 중에 시트를 닫고 다른 쿠폰을 열면, 앞 삭제의 응답이 새 시트를 건드리지 않게 한다
   const sheetSession = useRef(0);
+  const showSkeleton = useDelayedLoading(coupons === undefined);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -126,7 +128,8 @@ const AvailableCoupons = () => {
       {coupons === null && <CouponLoadError onRetry={retry} />}
       {coupons === undefined && (
         <>
-          <CouponListSkeleton />
+          {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
+          {showSkeleton && <CouponListSkeleton />}
           <p className="sr-only" role="status">
             쿠폰을 불러오는 중이에요
           </p>
