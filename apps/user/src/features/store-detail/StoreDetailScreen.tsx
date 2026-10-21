@@ -217,7 +217,8 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     return (
       <div className="mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page">
         <EmptyState
-          description="문을 닫았거나 주소가 바뀐 가게예요"
+          // 서버는 없는 가게와 등록이 덜 끝난 가게를 같은 404로 보내 이유를 단정하지 않는다
+          description="지금은 볼 수 없는 가게예요"
           image={mascotEmpty}
           title="가게를 찾을 수 없어요"
         >
@@ -495,8 +496,21 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
                   className="flex items-center justify-between gap-3 py-3 text-body-mobile"
                   key={menu.menuId}
                 >
-                  <span className="min-w-0 truncate text-text-primary">
-                    {menu.name}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="min-w-0 truncate text-text-primary">
+                      {menu.name}
+                    </span>
+                    {/* 오늘 쿠폰의 할인 대상 메뉴에 할인을 붙인다 */}
+                    {/* 할인가는 반올림 규칙이 서버와 달라질 수 있어 계산하지 않고 할인율이나 금액만 보여준다 */}
+                    {campaign?.discountTargetType === 'MENU' &&
+                      campaign.targetMenu?.menuId === menu.menuId && (
+                        <span className="shrink-0 rounded-sm bg-surface-brand px-1.5 py-0.5 text-caption-mobile font-bold text-text-brand">
+                          쿠폰{' '}
+                          {campaign.discountType === 'PERCENT'
+                            ? `${campaign.discountValue}%`
+                            : formatPrice(campaign.discountValue)}
+                        </span>
+                      )}
                   </span>
                   <span className="shrink-0 font-bold text-text-primary">
                     {formatPrice(menu.price)}
