@@ -26,8 +26,10 @@ const WishlistSummary = ({
 }: WishlistSummaryProps) => {
   const getDescription = () => {
     if (isClosed) return '찜해 둔 쿠폰은 내일 11:00부터 받을 수 있어요';
-    if (showNotice)
-      return '찜은 발급을 보장하지 않고, 쿠폰 오픈 후 선착순이에요';
+    // 제목(쿠폰 오픈까지)에 이어 읽히게, 오픈하면 어디서 어떻게 받는지를 한 줄로 알린다
+    // "선착순"으로 찜이 발급을 보장하지 않는다는 뜻을 부정적인 말 없이 전한다
+    // 두 줄로 나누면 줄마다 짧아 마스코트와의 사이가 비어 보여서, 좁은 화면(320px)에서도 한 줄에 들어가게 둔다
+    if (showNotice) return '오픈하면 여기서 선착순으로 받아요';
     if (dailyRemaining === 0) return '내일 11:00에 또 만나요';
     return `오늘 ${dailyRemaining}개 더 받을 수 있어요 · 하루 최대 ${dailyLimit}개`;
   };
@@ -39,7 +41,8 @@ const WishlistSummary = ({
         <h2 className="flex items-center gap-1.5 text-h3-mobile font-bold text-text-primary">
           {title}
         </h2>
-        <p className="text-caption-mobile text-text-secondary">
+        {/* 화면이 아주 좁아 넘치면 단어 중간이 아니라 띄어쓰기에서 끊는다 */}
+        <p className="text-caption-mobile break-keep text-text-secondary">
           {getDescription()}
         </p>
       </div>
