@@ -12,7 +12,14 @@ const setup = (data, status = 200) => {
       calls.push({ url, options });
       return status === 204
         ? new Response(null, { status })
-        : Response.json({ code: 'SUCCESS', data }, { status });
+        : Response.json(
+            {
+              code: 'SUCCESS',
+              data:
+                typeof data === 'function' ? await data(url, options) : data,
+            },
+            { status },
+          );
     },
     Response,
     URLSearchParams,
@@ -26,6 +33,7 @@ const setup = (data, status = 200) => {
     'owners',
     'auth',
     'campaigns',
+    'campaignReports',
     'templates',
   ]) {
     const source = readFileSync(
@@ -442,4 +450,112 @@ test('템플릿 삭제의 예상하지 못한 성공 상태와 서버 실패를 
     const { templates, client } = setup({}, status);
     await assert.rejects(templates.deleteTemplate('1'), isApiError(client));
   }
+});
+
+const campaignReport = {
+  campaignId: 501,
+  spentAmount: 1200,
+  validImpressionCount: 240,
+  todayStatus: 'IN_PROGRESS',
+};
+
+test('캠페인 실적은 전체 기간의 0과 집계 상태 및 인증·취소 신호를 유지한다', async () => {
+  const { campaignReports, calls } = setup({
+    items: [{ ...campaignReport, spentAmount: 0, validImpressionCount: 0 }],
+  });
+  const result = await campaignReports.getCampaignReports([501], signal);
+  assert.equal(result[0].spentAmount, 0);
+  assert.equal(result[0].validImpressionCount, 0);
+  assert.equal(result[0].todayStatus, 'IN_PROGRESS');
+  assert.equal(
+    calls[0].url,
+    'http://test/v1/admin/campaign-reports?campaignIds=501',
+  );
+  assert.equal(calls[0].options.signal, signal);
+  assert.equal(calls[0].options.credentials, 'include');
+});
+
+test('캠페인 실적은 중복 ID를 제거하고 100개 제한에 맞게 나눠 조회한다', async () => {
+  const { campaignReports, calls } = setup((url) => ({
+    items: new URL(url).searchParams
+      .get('campaignIds')
+      .split(',')
+      .map((id) => ({
+        ...campaignReport,
+        campaignId: Number(id),
+      })),
+  }));
+  const ids = Array.from({ length: 101 }, (_, index) => index + 1);
+  const result = await campaignReports.getCampaignReports([...ids, 1], signal);
+  assert.equal(result.length, 101);
+  assert.equal(calls.length, 2);
+  assert.equal(
+    new URL(calls[0].url).searchParams.get('campaignIds').split(',').length,
+    100,
+  );
+  assert.equal(new URL(calls[1].url).searchParams.get('campaignIds'), '101');
+  assert.ok(calls.every((call) => call.options.signal === signal));
+});
+
+test('빈 캠페인 실적 요청은 전송하지 않고 잘못된 ID는 거부한다', async () => {
+  const { campaignReports, calls, client } = setup({ items: [] });
+  assert.equal(
+    (await campaignReports.getCampaignReports([], signal)).length,
+    0,
+  );
+  for (const ids of [
+    [0],
+    [-1],
+    [1.5],
+    ['501'],
+    [Number.MAX_SAFE_INTEGER + 1],
+  ]) {
+    await assert.rejects(
+      campaignReports.getCampaignReports(ids, signal),
+      isApiError(client),
+    );
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('캠페인 실적은 ID 기준으로 검증하고 누락·중복·잘못된 수치를 거부한다', async () => {
+  const { campaignReports } = setup({
+    items: [{ ...campaignReport, campaignId: 502 }, campaignReport],
+  });
+  assert.equal(
+    (await campaignReports.getCampaignReports([501, 502], signal)).length,
+    2,
+  );
+  for (const data of [
+    null,
+    {},
+    { items: null },
+    { items: [] },
+    { items: [campaignReport, campaignReport] },
+    { items: [{ ...campaignReport, campaignId: 502 }] },
+    { items: [{ ...campaignReport, spentAmount: -1 }] },
+    { items: [{ ...campaignReport, spentAmount: '1200' }] },
+    { items: [{ ...campaignReport, validImpressionCount: 1.5 }] },
+    { items: [{ ...campaignReport, todayStatus: 'FINAL' }] },
+    { items: [{ ...campaignReport, todayStatus: ['IN_PROGRESS'] }] },
+  ]) {
+    const { campaignReports, client } = setup(data);
+    await assert.rejects(
+      campaignReports.getCampaignReports([501], signal),
+      isApiError(client),
+    );
+  }
+  const duplicate = setup({ items: [campaignReport, campaignReport] });
+  await assert.rejects(
+    duplicate.campaignReports.getCampaignReports([501, 502], signal),
+    isApiError(duplicate.client),
+  );
+});
+
+test('캠페인 실적 조회 실패는 0으로 대체하지 않고 오류를 전달한다', async () => {
+  const { campaignReports, client } = setup({}, 503);
+  await assert.rejects(
+    campaignReports.getCampaignReports([501], signal),
+    (error) => error instanceof client.ApiError && error.status === 503,
+  );
 });
