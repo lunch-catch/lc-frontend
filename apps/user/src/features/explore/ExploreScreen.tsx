@@ -353,11 +353,18 @@ const ExploreScreen = () => {
       );
     }
 
+    // 글자만 두면 막다른 화면이 되어, 다른 빈 화면처럼 다음에 할 일(전체 보기)을 버튼으로 둔다
     if (stores.length === 0 && category !== 'ALL') {
       return (
-        <p className="py-10 text-center text-body-sm-mobile text-text-secondary">
-          주변에 {BUSINESS_CATEGORY_LABELS[category]} 가게가 없어요
-        </p>
+        <EmptyState
+          description="다른 업종이나 전체 가게를 둘러보세요"
+          image={mascotEmpty}
+          title={`주변에 ${BUSINESS_CATEGORY_LABELS[category]} 가게가 없어요`}
+        >
+          <ActionButton onClick={() => changeCategory('ALL')}>
+            전체 가게 보기
+          </ActionButton>
+        </EmptyState>
       );
     }
 
