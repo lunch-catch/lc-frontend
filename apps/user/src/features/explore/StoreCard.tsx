@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { Store } from 'lucide-react';
 
@@ -23,6 +24,7 @@ const StoreCard = ({ store }: StoreCardProps) => {
     .join(' · ');
   const target =
     store.activeCampaign && formatDiscountTarget(store.activeCampaign);
+  const [hasImageError, setHasImageError] = useState(false);
 
   return (
     <li>
@@ -30,17 +32,18 @@ const StoreCard = ({ store }: StoreCardProps) => {
         className={`flex items-center gap-3 p-3 active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary ${cardClassName}`}
         to={`/stores/${store.storeId}`}
       >
-        {store.thumbnailUrl ? (
+        {store.thumbnailUrl && !hasImageError ? (
           <img
             alt=""
             className="size-14 shrink-0 rounded-lg bg-surface-subtle object-cover"
             height={72}
             loading="lazy"
+            onError={() => setHasImageError(true)}
             src={store.thumbnailUrl}
             width={72}
           />
         ) : (
-          // 사진이 없는 가게는 회색 바탕에 가게 아이콘을 둔다
+          // 사진이 없거나 열리지 않는 가게는 회색 바탕에 가게 아이콘을 둔다 (깨진 그림 표시 대신)
           <div
             aria-hidden="true"
             className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"

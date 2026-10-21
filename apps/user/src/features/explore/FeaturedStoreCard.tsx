@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { Store } from 'lucide-react';
 
@@ -24,6 +25,7 @@ const FeaturedStoreCard = ({ store }: FeaturedStoreCardProps) => {
     .join(' · ');
   const target =
     store.activeCampaign && formatDiscountTarget(store.activeCampaign);
+  const [hasImageError, setHasImageError] = useState(false);
 
   return (
     <li>
@@ -32,11 +34,13 @@ const FeaturedStoreCard = ({ store }: FeaturedStoreCardProps) => {
         to={`/stores/${store.storeId}`}
       >
         <div className="relative h-36 bg-surface-subtle">
-          {store.thumbnailUrl ? (
+          {/* 주소가 있어도 열리지 않으면 깨진 그림 대신 가게 아이콘을 둔다 */}
+          {store.thumbnailUrl && !hasImageError ? (
             <img
               alt=""
               className="size-full object-cover"
               height={176}
+              onError={() => setHasImageError(true)}
               src={store.thumbnailUrl}
               width={350}
             />

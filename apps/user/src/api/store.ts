@@ -69,7 +69,7 @@ export interface StoreListItem {
   distanceMeters: number | null;
   hasActiveCampaign: boolean;
   activeCampaign: StoreActiveCampaign | null;
-  // 가게 대표 이미지. 서버 목록 응답에는 없어 실제 API에서는 항상 null이다
+  // 가게 대표 이미지(점주가 올린 LOGO) 주소. 없거나 업로드 확인 전이면 null
   thumbnailUrl: string | null;
 }
 
@@ -109,11 +109,16 @@ interface StoreListItemResponse {
   distanceMeters: number;
   hasActiveCampaign: boolean;
   activeCampaign: StoreActiveCampaign | null;
+  // 대표 이미지 CDN 주소. 없으면 null (#672 전 서버에는 필드가 없어 undefined)
+  storeImageUrl?: string | null;
 }
 
-const toStoreListItem = (item: StoreListItemResponse): StoreListItem => ({
+const toStoreListItem = ({
+  storeImageUrl,
+  ...item
+}: StoreListItemResponse): StoreListItem => ({
   ...item,
-  thumbnailUrl: null,
+  thumbnailUrl: storeImageUrl ?? null,
 });
 
 const MOCK_DELAY_MS = 600;
