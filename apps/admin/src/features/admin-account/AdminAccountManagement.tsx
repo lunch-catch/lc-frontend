@@ -1,18 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Button, SearchField, SelectField } from '@repo/ui';
+import { useState } from 'react';
+import { Button, SearchField } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
-import {
-  type AdminAccountRole,
-  type IssuedAdminAccount,
-} from '@admin/api/adminAccounts';
+import type { AdminAccountRole } from '@admin/api/adminAccounts';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
-import {
-  queryChoice,
-  queryPage,
-  queryPageSize,
-  queryText,
-} from '@admin/hooks/urlQuery';
+import { queryText } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import {
@@ -21,15 +13,16 @@ import {
   TableCell,
   type TableDensity,
   TableEmpty,
+  TableError,
   TableHeaderCell,
+  TableLoading,
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { AdminAccountIssueModal } from './AdminAccountIssueModal';
-import { adminAccountRoleOptions } from './adminAccountOptions';
+import { useAdminAccounts } from './useAdminAccounts';
 import { useIssueAdminAccount } from './useIssueAdminAccount';
 
 const accountColumns: DataTableColumn[] = [
@@ -38,22 +31,13 @@ const accountColumns: DataTableColumn[] = [
   { key: 'role', label: '권한', minWidth: 130, width: '30%' },
 ];
 
-const roleOptions = [
-  { label: '전체 권한', value: 'ALL' },
-  ...adminAccountRoleOptions,
-];
-
 const roleMeta: Record<AdminAccountRole, string> = {
   ADMIN: '관리자',
   SUPER_ADMIN: '최고 관리자',
 };
 
-const accountQuery = {
-  keyword: queryText(),
-  role: queryChoice(['ALL', 'ADMIN', 'SUPER_ADMIN'] as const, 'ALL'),
-  page: queryPage,
-  size: queryPageSize(10),
-};
+const accountQuery = { keyword: queryText() };
+
 export const AdminAccountManagement = () => {
   const columnSettings = useTableColumnSettings(
     'admin-accounts',
@@ -61,53 +45,27 @@ export const AdminAccountManagement = () => {
   );
   const { role: currentRole } = useAdminAuth();
   const canIssueAccount = currentRole === 'SUPER_ADMIN';
-  // 목록 조회 계약은 없으므로 이번 화면에서 발급한 응답만 보관한다.
-  const [accounts, setAccounts] = useState<IssuedAdminAccount[]>([]);
   const { filters, updateFilters } = useUrlFilters('accounts.', accountQuery);
-  const { page: currentPage, size: pageSize, role } = filters;
-  const issue = useIssueAdminAccount(canIssueAccount, (issued) => {
-    setAccounts((current) => [issued, ...current]);
-    updateFilters({ page: 1 }, true);
-  });
-  const { notice } = issue;
   const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
     filters.keyword,
-    (keyword) => updateFilters({ keyword, page: 1 }),
+    (keyword) => updateFilters({ keyword }),
   );
   const [density, setDensity] = useState<TableDensity>('normal');
 
-  const filteredAccounts = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return accounts.filter((account) => {
-      const matchesKeyword =
-        !normalizedKeyword ||
-        [account.loginId, account.name].some((value) =>
-          value.toLowerCase().includes(normalizedKeyword),
-        );
-      const matchesRole = role === 'ALL' || account.role === role;
-
-      return matchesKeyword && matchesRole;
-    });
-  }, [accounts, keyword, role]);
-
-  const totalPages = Math.ceil(filteredAccounts.length / pageSize);
-  const visibleAccounts = filteredAccounts.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+  const list = useAdminAccounts(keyword, canIssueAccount);
+  // 발급한 계정도 현재 검색 조건에 맞을 때만 서버 목록에 표시한다.
+  const issue = useIssueAdminAccount(
+    canIssueAccount && !list.forbidden,
+    list.refresh,
   );
+  const { notice } = issue;
 
-  const pagination = {
-    currentPage,
-    onPageChange: (page: number) => updateFilters({ page }),
-    onPageSizeChange: (value: number) => {
-      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
-      updateFilters({ page: 1, size: value });
-    },
-    pageSize,
-    totalCount: filteredAccounts.length,
-    totalPages,
-  };
+  if (list.forbidden)
+    return (
+      <p role="alert" className="text-body-sm-web text-status-danger-fg">
+        관리자 계정 목록에 접근할 권한이 없습니다.
+      </p>
+    );
 
   return (
     <section className="flex flex-col">
@@ -117,7 +75,7 @@ export const AdminAccountManagement = () => {
             계정 관리
           </h2>
           <p className="mt-2 text-body-sm-web text-text-secondary">
-            관리자 계정을 발급합니다. 계정 발급은 최고 관리자만 가능합니다.
+            활성 관리자 계정을 최근 발급순으로 조회하고 새 계정을 발급합니다.
           </p>
         </div>
         {canIssueAccount && (
@@ -130,9 +88,6 @@ export const AdminAccountManagement = () => {
         )}
       </header>
 
-      <p className="mb-4 text-caption-web text-text-secondary">
-        이 화면에서 발급한 계정만 표시합니다.
-      </p>
       {notice && (
         <p
           role="status"
@@ -146,24 +101,18 @@ export const AdminAccountManagement = () => {
         columnSettings={columnSettings}
         className="mb-4 shrink-0"
         density={{ value: density, onValueChange: setDensity }}
-        pagination={pagination}
       >
         <SearchField
           onChange={(event) => setDraftKeyword(event.target.value)}
           placeholder="관리자 ID 또는 이름 검색"
           value={draftKeyword}
         />
-        <SelectField
-          fitContent
-          onValueChange={(value) => {
-            updateFilters({ page: 1, role: value as typeof role });
-          }}
-          options={roleOptions}
-          value={role}
-        />
       </FilterBar>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div
+        aria-busy={list.loading}
+        className="flex min-h-0 flex-1 flex-col gap-4"
+      >
         <DataTable
           columnSettings={columnSettings}
           columns={accountColumns}
@@ -177,12 +126,24 @@ export const AdminAccountManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {visibleAccounts.length === 0 ? (
+            {list.loading ? (
               <tr>
-                <TableEmpty colSpan={3}>검색 결과가 없습니다</TableEmpty>
+                <TableLoading colSpan={3} />
+              </tr>
+            ) : list.error ? (
+              <tr>
+                <TableError colSpan={3} description={list.error} />
+              </tr>
+            ) : list.accounts.length === 0 ? (
+              <tr>
+                <TableEmpty colSpan={3}>
+                  {keyword.trim()
+                    ? '검색 결과가 없습니다.'
+                    : '조회된 관리자 계정이 없습니다.'}
+                </TableEmpty>
               </tr>
             ) : (
-              visibleAccounts.map((account) => (
+              list.accounts.map((account) => (
                 <TableRow key={account.loginId}>
                   <TableCell className="font-medium text-text-primary">
                     {account.loginId}
@@ -194,7 +155,22 @@ export const AdminAccountManagement = () => {
             )}
           </tbody>
         </DataTable>
-        <PaginationSummary {...pagination} />
+        {list.error && (
+          <div className="mt-3 flex justify-end">
+            <Button
+              variant="neutral"
+              disabled={list.isWaiting}
+              onClick={list.refresh}
+            >
+              다시 시도
+            </Button>
+          </div>
+        )}
+        {!list.loading && !list.error && (
+          <p className="text-caption-web text-text-secondary">
+            총 {list.accounts.length}개
+          </p>
+        )}
       </div>
 
       <AdminAccountIssueModal canIssueAccount={canIssueAccount} issue={issue} />

@@ -16,6 +16,31 @@ export interface IssuedAdminAccount {
   role: AdminAccountRole;
 }
 
+const isAdminAccount = (value: unknown): value is IssuedAdminAccount =>
+  isRecord(value) &&
+  typeof value.loginId === 'string' &&
+  typeof value.name === 'string' &&
+  (value.role === 'ADMIN' || value.role === 'SUPER_ADMIN');
+
+export const getAdminAccounts = async (
+  keyword: string,
+  signal: AbortSignal,
+): Promise<IssuedAdminAccount[]> => {
+  const params = new URLSearchParams();
+  const normalizedKeyword = keyword.trim();
+  if (normalizedKeyword) params.set('keyword', normalizedKeyword);
+  const query = params.toString();
+  const data = await requestData<unknown>(
+    `/v1/admin/admins${query ? `?${query}` : ''}`,
+    { method: 'GET', signal },
+    200,
+  );
+  // 목록은 페이지 객체가 아닌 배열이며, 서버의 최근 발급순을 그대로 유지한다.
+  if (!Array.isArray(data) || !data.every(isAdminAccount))
+    throw new ApiError('관리자 목록 응답 형식을 확인할 수 없습니다.', 200);
+  return data;
+};
+
 export const issueAdminAccount = async (
   values: IssueAdminAccountRequest,
 ): Promise<IssuedAdminAccount> => {
@@ -28,12 +53,7 @@ export const issueAdminAccount = async (
     },
     201,
   );
-  if (
-    !isRecord(account) ||
-    typeof account.loginId !== 'string' ||
-    typeof account.name !== 'string' ||
-    (account.role !== 'ADMIN' && account.role !== 'SUPER_ADMIN')
-  )
+  if (!isAdminAccount(account))
     throw new ApiError('발급된 관리자 정보를 확인할 수 없습니다.', 201);
   return { loginId: account.loginId, name: account.name, role: account.role };
 };
