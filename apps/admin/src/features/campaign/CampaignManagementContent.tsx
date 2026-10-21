@@ -160,7 +160,11 @@ export const CampaignManagementContent = () => {
             </tr>
           ) : error && !resource.data ? (
             <tr>
-              <TableError colSpan={columns.length} description={error} />
+              <TableError
+                colSpan={columns.length}
+                description={error}
+                onRetry={!validationError ? resource.refresh : undefined}
+              />
             </tr>
           ) : items.length === 0 ? (
             <tr>
@@ -233,6 +237,15 @@ export const CampaignManagementContent = () => {
               );
             })
           )}
+          {resource.data && resource.error && (
+            <tr>
+              <TableError
+                colSpan={columns.length}
+                description={resource.error}
+                onRetry={resource.loadMore}
+              />
+            </tr>
+          )}
         </tbody>
       </DataTable>
       {performance.error && (
@@ -245,15 +258,9 @@ export const CampaignManagementContent = () => {
           </Button>
         </div>
       )}
-      {resource.error && resource.data && (
-        <p role="alert" className="mt-3 text-body-sm-web text-status-danger-fg">
-          {resource.error}
-        </p>
-      )}
       <LoadMoreButton
-        hasMore={Boolean(resource.data?.nextPageToken)}
+        hasMore={Boolean(resource.data?.nextPageToken && !resource.error)}
         loading={resource.loading}
-        retry={Boolean(resource.error)}
         onClick={resource.loadMore}
         controls={
           <>
@@ -262,11 +269,6 @@ export const CampaignManagementContent = () => {
               <span className="text-caption-web text-text-secondary">
                 불러온 캠페인 {items.length}건
               </span>
-            )}
-            {resource.error && !resource.data && (
-              <Button variant="neutral" onClick={resource.refresh}>
-                다시 조회
-              </Button>
             )}
             <SelectField
               aria-label="한 번에 불러올 항목 수"

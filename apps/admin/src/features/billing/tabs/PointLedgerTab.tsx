@@ -255,6 +255,7 @@ export const PointLedgerTab = ({
                 <TableError
                   colSpan={columns.length}
                   description={ledger.error}
+                  onRetry={ledger.retry}
                 />
               </tr>
             ) : !ledger.data?.items.length ? (
@@ -295,17 +296,20 @@ export const PointLedgerTab = ({
                 </TableRow>
               ))
             )}
+            {ledger.data && ledger.error && (
+              <tr>
+                <TableError
+                  colSpan={columns.length}
+                  description={ledger.error}
+                  onRetry={ledger.retry}
+                />
+              </tr>
+            )}
           </tbody>
         </DataTable>
-        {ledger.data && ledger.error && (
-          <p role="alert" className="text-caption-web text-status-danger-fg">
-            {ledger.error}
-          </p>
-        )}
         <LoadMoreButton
-          hasMore={Boolean(ledger.data && ledger.hasNext)}
+          hasMore={Boolean(ledger.data && ledger.hasNext && !ledger.error)}
           loading={ledger.loading}
-          retry={Boolean(ledger.error)}
           onClick={ledger.loadMore}
           controls={
             <>

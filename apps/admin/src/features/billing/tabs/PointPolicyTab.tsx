@@ -9,6 +9,7 @@ import {
   type PointPolicy,
 } from '@admin/api/pointPolicy';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { ErrorState } from '@admin/ui/ErrorState/ErrorState';
 
 import { policyHistoryQuery } from '../billingQuery';
 import type { BillingTablePreferences } from '../billingView';
@@ -167,14 +168,7 @@ export const PointPolicyTab = ({
             충전 정책을 불러오는 중입니다.
           </p>
         ) : policies.error ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p role="alert" className="text-caption-web text-status-danger-fg">
-              {policies.error}
-            </p>
-            <Button variant="neutral" onClick={policies.refresh}>
-              다시 조회
-            </Button>
-          </div>
+          <ErrorState description={policies.error} onRetry={policies.refresh} />
         ) : (
           policies.data && (
             <div className="grid gap-3 pb-2 @3xl:grid-cols-2">
@@ -215,6 +209,7 @@ export const PointPolicyTab = ({
           rowId={(item) => item.effectiveDate}
           loading={history.loading}
           error={history.error}
+          onRetry={history.refresh}
           emptyMessage="등록된 정책 이력이 없습니다."
           preferences={preferences}
           page={filters.page}

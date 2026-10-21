@@ -213,7 +213,11 @@ export const UserMemberListContent = ({
             </tr>
           ) : error ? (
             <tr>
-              <TableError colSpan={5} description={error} />
+              <TableError
+                colSpan={5}
+                description={error}
+                onRetry={!validationError ? resource.refresh : undefined}
+              />
             </tr>
           ) : !data?.items.length ? (
             <tr>

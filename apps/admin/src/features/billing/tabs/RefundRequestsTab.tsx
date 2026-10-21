@@ -139,6 +139,7 @@ export const RefundRequestsTab = ({
         rowId={(item) => item.refundRequestId}
         loading={resource.loading || pending}
         error={validation || resource.error}
+        onRetry={!validation ? resource.refresh : undefined}
         emptyMessage="조회된 환불 요청이 없습니다."
         preferences={preferences}
         page={filters.page}

@@ -30,6 +30,7 @@ interface BillingServerTableProps<T> {
   rowId: (item: T) => string | number;
   loading: boolean;
   error?: string;
+  onRetry?: () => void;
   emptyMessage: string;
   preferences: BillingTablePreferences;
   page: number;
@@ -51,6 +52,7 @@ export const BillingServerTable = <T,>({
   rowId,
   loading,
   error,
+  onRetry,
   emptyMessage,
   preferences,
   page,
@@ -135,7 +137,11 @@ export const BillingServerTable = <T,>({
               </tr>
             ) : error ? (
               <tr>
-                <TableError colSpan={columns.length} description={error} />
+                <TableError
+                  colSpan={columns.length}
+                  description={error}
+                  onRetry={onRetry}
+                />
               </tr>
             ) : !items.length ? (
               <tr>

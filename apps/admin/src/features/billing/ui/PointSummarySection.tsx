@@ -191,6 +191,7 @@ export const PointSummarySection = ({
               <TableError
                 colSpan={columns.length}
                 description={summary.error}
+                onRetry={summary.retry}
               />
             </tr>
           ) : !summary.data?.items.length ? (
