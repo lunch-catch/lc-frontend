@@ -6,12 +6,15 @@ interface WishlistSummaryProps {
   dailyLimit: number;
   // 찜이 발급을 보장하지 않는다는 안내. 받기 전인 오픈 전에만 보여준다
   showNotice: boolean;
+  // 14:00 발급 마감이 지났는지. 지났으면 오늘 남은 횟수 대신 다음 오픈을 알려준다
+  isClosed?: boolean;
 }
 
 // 찜 목록 맨 위의 발급 상황 요약과 하루 남은 발급 횟수
 const WishlistSummary = ({
   dailyLimit,
   dailyRemaining,
+  isClosed = false,
   showNotice,
   title,
 }: WishlistSummaryProps) => {
@@ -21,10 +24,13 @@ const WishlistSummary = ({
         {title}
       </h2>
       <p className="text-caption-mobile text-text-secondary">
-        {dailyRemaining > 0
-          ? `오늘 ${dailyRemaining}개 더 받을 수 있어요`
-          : '오늘 남은 발급 0개'}
-        {` · 하루 최대 ${dailyLimit}개`}
+        {isClosed
+          ? '찜해 둔 쿠폰은 내일 11:00부터 받을 수 있어요'
+          : `${
+              dailyRemaining > 0
+                ? `오늘 ${dailyRemaining}개 더 받을 수 있어요`
+                : '오늘 남은 발급 0개'
+            } · 하루 최대 ${dailyLimit}개`}
       </p>
       {showNotice && (
         <p className="text-caption-mobile text-text-secondary">

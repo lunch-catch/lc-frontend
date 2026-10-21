@@ -78,12 +78,18 @@ const CARD_STATE_ORDER: Record<WishCardState, number> = {
 const getIssueTargets = (wishes: WishItem[]) =>
   wishes.filter((wish) => !wish.isEnded);
 
+// 11:00 오픈과 14:00 마감이 지났는지
+interface IssueTiming {
+  isOpen: boolean;
+  isClosed: boolean;
+}
+
 // 찜마다 발급 상태를 붙이고 카드 상태를 정한다
 // 끝나지 않았는데 발급 상태가 없는 찜(오늘 쿠폰 이벤트가 없음)은 받을 수 없어 보여주지 않는다
 const toEntries = (
   wishes: WishItem[],
   { campaigns, dailyRemaining }: IssueStatusResponse,
-  isOpen: boolean,
+  { isClosed, isOpen }: IssueTiming,
 ): WishEntry[] =>
   wishes.flatMap((wish): WishEntry[] => {
     if (wish.isEnded) return [{ state: 'ended', status: null, wish }];
@@ -95,6 +101,7 @@ const toEntries = (
 
     const state = getWishState({
       dailyRemaining,
+      isClosed,
       isIssued: status.isIssued,
       isOpen,
       remainingCount: status.remainingCount,
@@ -106,9 +113,9 @@ const toEntries = (
 const getSortedIds = (
   wishes: WishItem[],
   issueStatus: IssueStatusResponse,
-  isOpen: boolean,
+  timing: IssueTiming,
 ) =>
-  toEntries(wishes, issueStatus, isOpen)
+  toEntries(wishes, issueStatus, timing)
     .sort((a, b) => CARD_STATE_ORDER[a.state] - CARD_STATE_ORDER[b.state])
     .map(({ wish }) => wish.campaignId);
 
@@ -133,17 +140,20 @@ const WishlistScreen = () => {
   const [hasIssued, setHasIssued] = useState(false);
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 카드가 받기로 바뀐다
-  const { isOpen, remainingMs } = useOpenCountdown();
+  const { isIssueClosed, isOpen, remainingMs } = useOpenCountdown();
+  const timing: IssueTiming = { isClosed: isIssueClosed, isOpen };
+  // 카드 순서를 다시 정할 때를 알려 준다. 11:00 오픈과 14:00 마감 순간에 바뀐다
+  const timingKey = `${isOpen}-${isIssueClosed}`;
   // 카드 순서. 화면을 열 때와 11:00 오픈 순간에만 정하고, 보는 동안은 바꾸지 않는다
   // 받기를 누른 카드가 바로 아래로 내려가면 손가락 아래로 다음 카드가 올라와
   // 받았는지 알 수 없고, 다시 누르면 원하지 않은 쿠폰을 받게 된다
   const [order, setOrder] = useState<{
-    isOpen: boolean;
+    timingKey: string;
     ids: string[];
   } | null>(null);
 
-  if (issueStatus && order?.isOpen !== isOpen) {
-    setOrder({ isOpen, ids: getSortedIds(wishes, issueStatus, isOpen) });
+  if (issueStatus && order?.timingKey !== timingKey) {
+    setOrder({ timingKey, ids: getSortedIds(wishes, issueStatus, timing) });
   }
 
   useEffect(() => {
@@ -294,6 +304,7 @@ const WishlistScreen = () => {
         </>
       );
     }
+    if (isIssueClosed) return '오늘 발급이 끝났어요';
     if (!isOpen) {
       return (
         // 숫자 폭을 같게 해 1초마다 글자가 좌우로 흔들리지 않게 한다
@@ -325,7 +336,7 @@ const WishlistScreen = () => {
       const index = order?.ids.indexOf(campaignId) ?? -1;
       return index === -1 ? Number.MAX_SAFE_INTEGER : index;
     };
-    return toEntries(wishes, issueStatus, isOpen).sort(
+    return toEntries(wishes, issueStatus, timing).sort(
       (a, b) => rank(a.wish.campaignId) - rank(b.wish.campaignId),
     );
   };
@@ -364,6 +375,7 @@ const WishlistScreen = () => {
           <WishlistSummary
             dailyLimit={issueStatus.dailyLimit}
             dailyRemaining={issueStatus.dailyRemaining}
+            isClosed={isIssueClosed}
             showNotice={!isOpen}
             title={getSummaryTitle(issueStatus.dailyRemaining)}
           />

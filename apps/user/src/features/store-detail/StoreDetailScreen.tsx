@@ -115,7 +115,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const [isPending, setIsPending] = useState(false);
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 버튼이 받기로 바뀐다
-  const { isOpen, remainingMs } = useOpenCountdown();
+  const { isIssueClosed, isOpen, remainingMs } = useOpenCountdown();
   // 도보 시간은 저장 위치와 가게 좌표의 직선거리로 계산한다. 걷는 길 API는 만들지 않기로 했다
   const myLocation = useMyLocation();
 
@@ -237,6 +237,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     couponInfo &&
     getCouponState({
       dailyRemaining: couponInfo.dailyRemaining,
+      isClosed: isIssueClosed,
       isIssued: couponInfo.status.isIssued,
       isOpen,
       isWished: couponInfo.isWished,
