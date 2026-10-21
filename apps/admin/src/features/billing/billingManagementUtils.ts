@@ -7,6 +7,8 @@ import type {
   MismatchResolutionType,
 } from '@admin/api/settlementMismatches';
 
+import { getKoreaDate } from './billingUtils';
+
 export const refundStatusLabels: Record<RefundStatus, string> = {
   REQUESTED: '처리 대기',
   APPROVED: '승인됨',
@@ -59,6 +61,7 @@ export const isBillingInputId = (value: string) =>
 interface PointAdjustmentInput {
   ownerId: string;
   campaignId: string;
+  targetBusinessDate: string;
   amount: string;
   reason: string;
   correctingMismatch: boolean;
@@ -67,6 +70,7 @@ interface PointAdjustmentInput {
 export const getPointAdjustmentError = ({
   ownerId,
   campaignId,
+  targetBusinessDate,
   amount,
   reason,
   correctingMismatch,
@@ -76,6 +80,19 @@ export const getPointAdjustmentError = ({
     (campaignId && !isBillingInputId(campaignId))
   )
     return '점주 ID와 캠페인 ID를 양의 정수로 입력해 주세요.';
+  if (campaignId) {
+    const date = Date.parse(targetBusinessDate);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(targetBusinessDate) ||
+      !Number.isFinite(date) ||
+      new Date(date).toISOString().slice(0, 10) !== targetBusinessDate
+    )
+      return '캠페인 조정의 대상 영업일을 올바르게 선택해 주세요.';
+    if (targetBusinessDate > getKoreaDate())
+      return '대상 영업일은 오늘(한국 시간) 이후로 선택할 수 없습니다.';
+  } else if (targetBusinessDate) {
+    return '대상 영업일은 캠페인 ID와 함께 입력해 주세요.';
+  }
   const points = Number(amount);
   if (!/^-?\d+$/.test(amount) || !Number.isSafeInteger(points) || points === 0)
     return '조정 포인트를 0이 아닌 정수로 입력해 주세요.';

@@ -3,6 +3,7 @@ import {
   isBillingId,
   isBillingInteger,
   isBillingRecord,
+  isBillingText,
   isOptionalBillingId,
 } from './billingResponse';
 import { ApiError, requestData } from './client';
@@ -13,6 +14,7 @@ export interface PointAdjustmentValues {
   amount: number;
   reason: string;
   campaignId?: number;
+  targetBusinessDate?: string;
   mismatchId?: number;
 }
 export interface PointAdjustment {
@@ -20,6 +22,7 @@ export interface PointAdjustment {
   ownerId: number;
   amount: number;
   campaignId: number | null;
+  targetBusinessDate: string | null;
   reason: string;
   createdAt: string;
 }
@@ -40,6 +43,8 @@ export const adjustPoints = async (
     data.amount !== values.amount ||
     !isOptionalBillingId(data.campaignId) ||
     data.campaignId !== (values.campaignId ?? null) ||
+    !isBillingText(data.targetBusinessDate) ||
+    data.targetBusinessDate !== (values.targetBusinessDate ?? null) ||
     typeof data.reason !== 'string' ||
     typeof data.createdAt !== 'string'
   )

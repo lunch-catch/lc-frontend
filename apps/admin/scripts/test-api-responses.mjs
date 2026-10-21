@@ -28,6 +28,8 @@ const setup = (data, status = 200) => {
   for (const name of [
     'client',
     'listResponse',
+    'billingResponse',
+    'pointAdjustments',
     'members',
     'adminAccounts',
     'owners',
@@ -562,4 +564,74 @@ test('캠페인 실적 조회 실패는 0으로 대체하지 않고 오류를 �
     campaignReports.getCampaignReports([501], signal),
     (error) => error instanceof client.ApiError && error.status === 503,
   );
+});
+
+const adjustmentRequest = {
+  requestId: 'adjust-test-1',
+  ownerId: 7,
+  amount: 1000,
+  reason: '중복 과금 정정',
+  campaignId: 12,
+  targetBusinessDate: '2026-10-13',
+  mismatchId: 55,
+};
+const adjustmentResponse = {
+  ledgerId: 100,
+  ownerId: 7,
+  amount: 1000,
+  campaignId: 12,
+  targetBusinessDate: '2026-10-13',
+  reason: '중복 과금 정정',
+  createdAt: '2026-10-21T12:00:00+09:00',
+};
+
+test('캠페인 포인트 조정은 대상 영업일과 멱등 키를 전송하고 200·201 응답을 허용한다', async () => {
+  for (const status of [200, 201]) {
+    const { pointAdjustments, calls } = setup(adjustmentResponse, status);
+    const result = await pointAdjustments.adjustPoints(adjustmentRequest);
+    assert.equal(
+      result.targetBusinessDate,
+      adjustmentRequest.targetBusinessDate,
+    );
+    const body = JSON.parse(calls[0].options.body);
+    assert.equal(body.targetBusinessDate, adjustmentRequest.targetBusinessDate);
+    assert.equal(body.campaignId, 12);
+    assert.equal(body.mismatchId, 55);
+    assert.equal(body.requestId, adjustmentRequest.requestId);
+    assert.equal(calls[0].options.credentials, 'include');
+  }
+});
+
+test('캠페인 없는 조정은 영업일을 보내지 않고 null 응답을 허용한다', async () => {
+  const values = {
+    requestId: adjustmentRequest.requestId,
+    ownerId: 7,
+    amount: 1000,
+    reason: adjustmentRequest.reason,
+  };
+  const { pointAdjustments, calls } = setup(
+    { ...adjustmentResponse, campaignId: null, targetBusinessDate: null },
+    201,
+  );
+  const result = await pointAdjustments.adjustPoints(values);
+  assert.equal(result.targetBusinessDate, null);
+  const body = JSON.parse(calls[0].options.body);
+  assert.equal(Object.hasOwn(body, 'campaignId'), false);
+  assert.equal(Object.hasOwn(body, 'targetBusinessDate'), false);
+});
+
+test('조정 응답의 대상 영업일 누락·불일치와 캠페인 불일치를 거부한다', async () => {
+  for (const data of [
+    { ...adjustmentResponse, targetBusinessDate: undefined },
+    { ...adjustmentResponse, targetBusinessDate: null },
+    { ...adjustmentResponse, targetBusinessDate: '2026-10-14' },
+    { ...adjustmentResponse, targetBusinessDate: [] },
+    { ...adjustmentResponse, campaignId: 13 },
+  ]) {
+    const { pointAdjustments, client } = setup(data, 201);
+    await assert.rejects(
+      pointAdjustments.adjustPoints(adjustmentRequest),
+      isApiError(client),
+    );
+  }
 });
