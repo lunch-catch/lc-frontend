@@ -10,6 +10,7 @@ import {
 import { type CampaignAgeGroup, getCampaign } from '@admin/api/campaigns';
 import { useApiResource } from '@admin/hooks/useApiResource';
 
+import { CampaignPerformance } from './CampaignPerformance';
 import {
   campaignStatusMeta,
   getCampaignDiscount,
@@ -104,6 +105,7 @@ export const CampaignDetails = ({ campaignId }: { campaignId: string }) => {
           )}
         </dl>
       </section>
+      <CampaignPerformance campaignId={campaign.campaignId} />
       <section className="border-t border-border-subtle pt-5">
         <h3 className="mb-3 text-heading-sm-web font-semibold">쿠폰 조건</h3>
         <dl>

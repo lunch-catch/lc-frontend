@@ -18,6 +18,7 @@ import {
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
 
 import { getLedgerQuery } from '../billingQuery';
 import { ledgerTypeLabels } from '../billingUtils';
@@ -301,40 +302,37 @@ export const PointLedgerTab = ({
             {ledger.error}
           </p>
         )}
-        {ledger.data && ledger.hasNext && (
-          <div className="flex justify-center">
-            <Button
-              variant="neutral"
-              disabled={ledger.loading}
-              onClick={ledger.loadMore}
-            >
-              {ledger.loading ? '불러오는 중…' : '더보기'}
-            </Button>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {/* 커서 응답에는 전체 건수가 없으므로 현재 받은 항목 수만 안내한다. */}
-          {ledger.data && (
-            <span className="text-caption-web text-text-secondary">
-              불러온 내역 {ledger.data.items.length}건
-            </span>
-          )}
-          <SelectField
-            aria-label="한 번에 불러올 항목 수"
-            fitContent
-            menuPlacement="top"
-            size="compact"
-            value={String(pageSize)}
-            options={[5, 10, 20, 50].map((value) => ({
-              label: `${value}개씩 불러오기`,
-              value: String(value),
-            }))}
-            onValueChange={(value) => {
-              setSelected(null);
-              updateFilters({ size: Number(value) });
-            }}
-          />
-        </div>
+        <LoadMoreButton
+          hasMore={Boolean(ledger.data && ledger.hasNext)}
+          loading={ledger.loading}
+          retry={Boolean(ledger.error)}
+          onClick={ledger.loadMore}
+          controls={
+            <>
+              {/* 커서 응답에는 전체 건수가 없으므로 현재 받은 항목 수만 안내한다. */}
+              {ledger.data && (
+                <span className="text-caption-web text-text-secondary">
+                  불러온 내역 {ledger.data.items.length}건
+                </span>
+              )}
+              <SelectField
+                aria-label="한 번에 불러올 항목 수"
+                fitContent
+                menuPlacement="top"
+                size="compact"
+                value={String(pageSize)}
+                options={[5, 10, 20, 50].map((value) => ({
+                  label: `${value}개씩 불러오기`,
+                  value: String(value),
+                }))}
+                onValueChange={(value) => {
+                  setSelected(null);
+                  updateFilters({ size: Number(value) });
+                }}
+              />
+            </>
+          }
+        />
       </section>
       <AdminDrawer
         open={selected !== null}
