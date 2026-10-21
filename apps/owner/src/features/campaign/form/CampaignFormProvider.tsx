@@ -16,6 +16,7 @@ import {
 import type { ApiResult } from '@owner/api/types';
 import { TopBar } from '@owner/ui/TopBar/TopBar';
 
+import { takeCampaignDraft } from './campaignDraftStorage';
 import {
   CampaignFormContext,
   type CampaignFormContextValue,
@@ -82,7 +83,10 @@ export const CampaignFormProvider = ({
         }
 
         const { budget, coupon, poster, status, target } = campaignResult.data;
-        setValues({ budget, coupon, poster, target });
+        // 충전하러 결제 화면에 다녀왔으면 떠나기 전에 작성 중이던 값으로 이어 쓴다 (campaignDraftStorage)
+        setValues(
+          takeCampaignDraft(campaignId) ?? { budget, coupon, poster, target },
+        );
         setLoadState({
           status: 'loaded',
           campaignStatus: status,
@@ -102,6 +106,8 @@ export const CampaignFormProvider = ({
     setRequestId((value) => value + 1);
   };
 
+  const reload = () => setRequestId((value) => value + 1);
+
   if (loadState.status === 'loaded' && values) {
     // 작성 중인 캠페인만 수정할 수 있으므로 다른 상태면 상세 화면으로 보낸다
     if (loadState.campaignStatus !== 'DRAFT') {
@@ -118,7 +124,15 @@ export const CampaignFormProvider = ({
     };
 
     const setPoster: CampaignFormContextValue['setPoster'] = (poster) => {
-      setValues((prev) => (prev ? { ...prev, poster } : prev));
+      setValues((prev) =>
+        prev
+          ? {
+              ...prev,
+              poster:
+                typeof poster === 'function' ? poster(prev.poster) : poster,
+            }
+          : prev,
+      );
     };
 
     return (
@@ -126,6 +140,7 @@ export const CampaignFormProvider = ({
         value={{
           campaignId,
           platformSettings: loadState.platformSettings,
+          reload,
           setPoster,
           updateStepValues,
           values,

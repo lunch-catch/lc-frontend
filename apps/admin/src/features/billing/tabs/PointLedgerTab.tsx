@@ -1,6 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Button, DateRangePicker, SearchField, SelectField } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
+import { SlidersHorizontal } from 'lucide-react';
 
 import type { PointLedgerItem } from '@admin/api/pointLedger';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
@@ -30,14 +31,24 @@ import { PointSummarySection } from '../ui/PointSummarySection';
 import { usePointLedger } from '../usePointLedger';
 
 const columns: DataTableColumn[] = [
-  { key: 'createdAt', label: '일시', width: '20%' },
-  { key: 'ledgerId', label: '원장 ID', width: '9%' },
-  { key: 'ownerId', label: '점주 ID', width: '9%' },
-  { key: 'campaignId', label: '캠페인 ID', width: '11%' },
-  { key: 'entryType', label: '변동 유형', width: '11%' },
-  { key: 'balanceBefore', label: '사용 가능 잔액 (전)', width: '14%' },
-  { key: 'amount', label: '거래 금액', width: '12%' },
-  { key: 'balanceAfter', label: '사용 가능 잔액 (후)', width: '14%' },
+  { key: 'createdAt', label: '일시', width: '20%', minWidth: 165 },
+  { key: 'ledgerId', label: '원장 ID', width: '9%', minWidth: 90 },
+  { key: 'ownerId', label: '점주 ID', width: '9%', minWidth: 90 },
+  { key: 'campaignId', label: '캠페인 ID', width: '11%', minWidth: 105 },
+  { key: 'entryType', label: '변동 유형', width: '11%', minWidth: 110 },
+  {
+    key: 'balanceBefore',
+    label: '사용 가능 잔액 (전)',
+    width: '14%',
+    minWidth: 160,
+  },
+  { key: 'amount', label: '거래 금액', width: '12%', minWidth: 120 },
+  {
+    key: 'balanceAfter',
+    label: '사용 가능 잔액 (후)',
+    width: '14%',
+    minWidth: 160,
+  },
 ];
 
 const getValidationError = (
@@ -135,7 +146,10 @@ export const PointLedgerTab = ({
         />
         <Button
           className="ml-auto"
-          variant="secondary"
+          variant="primary"
+          leadingIcon={
+            <SlidersHorizontal aria-hidden="true" className="size-4" />
+          }
           onClick={() => setAdjusting(true)}
         >
           포인트 수동 조정
@@ -255,6 +269,7 @@ export const PointLedgerTab = ({
                 <TableError
                   colSpan={columns.length}
                   description={ledger.error}
+                  onRetry={ledger.retry}
                 />
               </tr>
             ) : !ledger.data?.items.length ? (
@@ -295,17 +310,20 @@ export const PointLedgerTab = ({
                 </TableRow>
               ))
             )}
+            {ledger.data && ledger.error && (
+              <tr>
+                <TableError
+                  colSpan={columns.length}
+                  description={ledger.error}
+                  onRetry={ledger.retry}
+                />
+              </tr>
+            )}
           </tbody>
         </DataTable>
-        {ledger.data && ledger.error && (
-          <p role="alert" className="text-caption-web text-status-danger-fg">
-            {ledger.error}
-          </p>
-        )}
         <LoadMoreButton
-          hasMore={Boolean(ledger.data && ledger.hasNext)}
+          hasMore={Boolean(ledger.data && ledger.hasNext && !ledger.error)}
           loading={ledger.loading}
-          retry={Boolean(ledger.error)}
           onClick={ledger.loadMore}
           controls={
             <>

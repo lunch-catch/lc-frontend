@@ -24,16 +24,18 @@ export const usePointSummary = (
   filters: PointSummaryFilters | null,
   sortDir: 'asc' | 'desc' = 'desc',
 ) => {
+  const [revision, setRevision] = useState(0);
   const [result, setResult] = useState<PointSummaryResult | null>(null);
   const enabled = filters !== null;
-  const key = filters
+  const query = filters
     ? new URLSearchParams({ ...filters, sortDir }).toString()
     : '';
+  const key = JSON.stringify([query, revision]);
 
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    void getPointSummary(key, controller.signal).then(
+    void getPointSummary(query, controller.signal).then(
       (data) => {
         if (!controller.signal.aborted) setResult({ key, data });
       },
@@ -49,7 +51,7 @@ export const usePointSummary = (
       },
     );
     return () => controller.abort();
-  }, [enabled, key]);
+  }, [enabled, key, query]);
 
   // 점주나 조회 조건이 바뀌면 이전 합계를 숨겨 다른 점주의 금액이 섞이지 않게 한다.
   const current = result?.key === key && enabled ? result : null;
@@ -59,5 +61,6 @@ export const usePointSummary = (
     loading: enabled && !current,
     enabled,
     sortDir,
+    retry: () => setRevision((value) => value + 1),
   };
 };

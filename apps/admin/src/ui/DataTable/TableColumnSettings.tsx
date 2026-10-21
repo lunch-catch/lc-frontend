@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Button } from '@repo/ui';
 import { Eye, EyeOff, GripVertical, SlidersHorizontal } from 'lucide-react';
 
@@ -270,25 +269,23 @@ const SettingsEditor = ({
           );
         })}
       </div>
-      {/* 스크롤 영역 밖에서도 드래그 중인 필드가 잘리지 않도록 미리보기만 포털로 표시한다. */}
-      {drag &&
-        createPortal(
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed z-[60] flex items-center gap-2 rounded-md border border-action-primary bg-bg-surface p-1 shadow-lg"
-            style={{
-              top: drag.preview.top,
-              left: drag.preview.left,
-              width: drag.preview.width,
-            }}
-          >
-            <GripVertical className="m-1 size-4 shrink-0 text-text-secondary" />
-            <span className="min-w-0 truncate text-caption-web text-text-primary">
-              {labels.get(drag.key) ?? drag.key}
-            </span>
-          </div>,
-          document.body,
-        )}
+      {/* body 포털은 native dialog 뒤에 가려지므로 모달 내부의 스크롤 영역 밖에 표시한다. */}
+      {drag && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed z-[60] flex items-center gap-2 rounded-md border border-action-primary bg-bg-surface p-1 shadow-lg"
+          style={{
+            top: drag.preview.top,
+            left: drag.preview.left,
+            width: drag.preview.width,
+          }}
+        >
+          <GripVertical className="m-1 size-4 shrink-0 text-text-secondary" />
+          <span className="min-w-0 truncate text-caption-web text-text-primary">
+            {labels.get(drag.key) ?? drag.key}
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-end gap-2">
         <p
           role="alert"

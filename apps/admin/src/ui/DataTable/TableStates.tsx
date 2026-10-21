@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
+import { ErrorState } from '@admin/ui/ErrorState/ErrorState';
+
 import type { TableErrorProps, TableStateProps } from './dataTableTypes';
 
 const stateCellStyle: CSSProperties = {
@@ -13,6 +15,10 @@ const stateContentStyle: CSSProperties = {
   height: '100%',
   justifyContent: 'center',
   textAlign: 'center',
+  // 가로로 긴 테이블도 상태 안내와 재시도 버튼은 현재 보이는 너비 안에 둔다.
+  width: 'min(100%, calc(var(--table-viewport-width, 100%) - var(--space-8)))',
+  position: 'sticky',
+  left: 0,
 };
 
 export const TableEmpty = ({
@@ -65,6 +71,8 @@ export const TableError = ({
   colSpan,
   description = '잠시 후 다시 시도해 주세요.',
   title = '데이터를 불러오지 못했습니다',
+  onRetry,
+  retryDisabled = false,
   ...props
 }: TableErrorProps) => {
   return (
@@ -74,18 +82,14 @@ export const TableError = ({
       style={stateCellStyle}
       {...props}
     >
-      <div
-        className="bg-bg-surface"
-        role="alert"
-        style={{ ...stateContentStyle, flexDirection: 'column' }}
-      >
-        <strong className="text-body-web font-medium text-status-danger-fg">
-          {title}
-        </strong>
-        <span className="mt-1 text-caption-web text-text-secondary">
-          {description}
-        </span>
-      </div>
+      <ErrorState
+        className="h-full bg-bg-surface"
+        style={stateContentStyle}
+        title={title}
+        description={description}
+        onRetry={onRetry}
+        retryDisabled={retryDisabled}
+      />
     </td>
   );
 };

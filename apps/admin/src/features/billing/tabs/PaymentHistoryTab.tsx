@@ -242,9 +242,11 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
             </tr>
           ) : validationError || payments.error ? (
             <tr>
-              <TableError colSpan={columns.length}>
-                {validationError || payments.error}
-              </TableError>
+              <TableError
+                colSpan={columns.length}
+                description={validationError || payments.error}
+                onRetry={!validationError ? payments.refresh : undefined}
+              />
             </tr>
           ) : !items.length ? (
             <tr>

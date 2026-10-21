@@ -1,4 +1,5 @@
 import { MemoryRouter } from 'react-router';
+import { Button, type ButtonVariant } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import type { Campaign, CampaignTodayPerformance } from '@owner/api/campaign';
@@ -22,7 +23,6 @@ const activeCampaign: Campaign = {
   status: 'ACTIVE',
   pausedReason: null,
   createdAt: '2026-10-01T09:00:00+09:00',
-  reviewFailReasons: [],
   coupon: {
     discountTarget: 'ALL',
     menuId: null,
@@ -94,23 +94,64 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// 캠페인 탭이 카드 아래에 붙이는 버튼 영역과 같은 모양. 버튼이 여러 개면 나란히 같은 폭으로 둔다
+const actionFooter = (buttons: { label: string; variant: ButtonVariant }[]) => (
+  <div className="flex gap-2 border-t border-border-subtle p-3">
+    {buttons.map(({ label, variant }) => (
+      <Button className="h-11 flex-1" key={label} variant={variant}>
+        {label}
+      </Button>
+    ))}
+  </div>
+);
+
 export const Active: Story = {};
 
-// 점주가 직접 중단한 캠페인
-export const PausedByOwner: Story = {
+// 캠페인 탭에서는 진행 중 캠페인 카드 아래에 중단 버튼을 붙인다
+export const ActiveWithFooter: Story = {
   args: {
-    campaign: { ...activeCampaign, status: 'PAUSED', pausedReason: 'OWNER' },
+    footer: actionFooter([{ label: '캠페인 중단', variant: 'neutral' }]),
   },
+};
+
+const pausedByOwnerCampaign: Campaign = {
+  ...activeCampaign,
+  status: 'PAUSED',
+  pausedReason: 'OWNER',
+};
+
+// 점주가 직접 일시중지한 캠페인
+export const PausedByOwner: Story = {
+  args: { campaign: pausedByOwnerCampaign },
+};
+
+// 직접 일시중지했으면 다시 시작하거나 종료할 수 있다
+export const PausedByOwnerWithFooter: Story = {
+  args: {
+    campaign: pausedByOwnerCampaign,
+    footer: actionFooter([
+      { label: '캠페인 종료', variant: 'neutral' },
+      { label: '다시 시작', variant: 'secondary' },
+    ]),
+  },
+};
+
+const pausedNoPointsCampaign: Campaign = {
+  ...activeCampaign,
+  status: 'PAUSED',
+  pausedReason: 'NO_POINTS',
 };
 
 // 잔액이 모자라 시스템이 중단한 캠페인
 export const PausedNoPoints: Story = {
+  args: { campaign: pausedNoPointsCampaign },
+};
+
+// 잔액 부족은 충전하면 자동으로 다시 시작되므로 종료만 둔다
+export const PausedNoPointsWithFooter: Story = {
   args: {
-    campaign: {
-      ...activeCampaign,
-      status: 'PAUSED',
-      pausedReason: 'NO_POINTS',
-    },
+    campaign: pausedNoPointsCampaign,
+    footer: actionFooter([{ label: '캠페인 종료', variant: 'neutral' }]),
   },
 };
 
@@ -142,5 +183,41 @@ export const OverIssued: Story = {
       reservedPoints: 10000,
       spentPoints: 9800,
     }),
+  },
+};
+
+// 집행 전이라 실적 없이 시작일을 보여준다
+const scheduledCampaign: Campaign = {
+  ...activeCampaign,
+  status: 'SCHEDULED',
+  budget: {
+    ...activeCampaign.budget,
+    startDate: daysFromToday(3),
+    endDate: daysFromToday(9),
+  },
+  performance: null,
+};
+
+export const Scheduled: Story = {
+  args: { campaign: scheduledCampaign },
+};
+
+// 캠페인 탭에서는 카드 아래에 대기 중 취소 버튼을 붙인다
+export const ScheduledWithFooter: Story = {
+  args: {
+    campaign: scheduledCampaign,
+    footer: actionFooter([{ label: '대기 중 취소', variant: 'neutral' }]),
+  },
+};
+
+// 작성 중이면 만든 날을 보여주고, 아직 정하지 않은 기간은 "기간 미정"으로 보인다
+export const Draft: Story = {
+  args: {
+    campaign: {
+      ...activeCampaign,
+      status: 'DRAFT',
+      budget: { dailyBudget: null, startDate: '', endDate: '' },
+      performance: null,
+    },
   },
 };

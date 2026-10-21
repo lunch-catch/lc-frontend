@@ -1,14 +1,15 @@
 import { ApiError, request } from './client';
-import { mockCampaigns } from './mocks/campaigns';
-import { mockDelay } from './mocks/delay';
-import { mockPlatformSettings } from './mocks/platform';
 import type { PlatformSettings } from './platform';
-import { type CampaignPoster, isPosterComplete } from './poster';
+import {
+  type CampaignPoster,
+  getCampaignPoster,
+  isPosterComplete,
+} from './poster';
 import { getMyStore } from './store';
 import type { ApiResult } from './types';
 
 // 점주 캠페인 등록과 조회 (docs/requirements-owner.md "캠페인 관리", docs/requirements-common.md "캠페인 상태")
-// 목록·상세 조회와 쿠폰 조건·노출 대상·하루 예산과 집행 기간 저장은 서버 API를 쓰고, 나머지는 API 연동 전까지 mock 데이터로 동작한다. 연동할 때는 이 파일의 함수 내부만 교체한다
+// 목록·상세 조회, 쿠폰 조건·포스터·노출 대상·하루 예산과 집행 기간 저장, 상태 변경(취소·중단·재개·종료)은 서버 API를 쓰고, 나머지는 API 연동 전까지 mock 데이터로 동작한다. 연동할 때는 이 파일의 함수 내부만 교체한다
 
 export type CampaignStatus =
   'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'ENDED';
@@ -136,31 +137,17 @@ export interface Campaign extends CampaignValues {
   pausedReason: PausedReason | null;
   // ISO 8601
   createdAt: string;
-  // 마지막 자동 검수가 FAIL이면 그 사유. 통과했거나 검수 전이면 빈 배열
-  reviewFailReasons: string[];
   // 한 번도 집행되지 않은 DRAFT, SCHEDULED는 null
   performance: CampaignPerformance | null;
 }
 
-// 준비 중(작성 중 + 시작 대기) 캠페인은 가게당 1건만 둔다.
-// 새 캠페인이 진행 중이 되면 기존 진행 중 캠페인은 종료되고(docs/requirements-common.md "캠페인 상태 정의"),
-// 집행 기간은 활성화 뒤에 바꿀 수 없어 준비 중인 캠페인끼리 날짜가 겹치면 앞 캠페인이 예고 없이 일찍 끝난다.
-// 그래서 "지금 1개 + 다음 1개"로 둔다. 명세에 없는 정책이라 서버 검증과 함께 확인이 필요하다
-export const MAX_UPCOMING_CAMPAIGNS = 1;
-
-export const isUpcomingCampaign = ({ status }: Pick<Campaign, 'status'>) =>
-  status === 'DRAFT' || status === 'SCHEDULED';
-
-// 지금 집행 중인 캠페인(진행 중 또는 중단). 가게당 1건이고, 다음 캠페인이 시작되는 날 종료된다
+// 지금 집행 중인 캠페인(진행 중 또는 일시중지). 실적이 쌓이는 캠페인이다
 export const isCurrentCampaign = ({ status }: Pick<Campaign, 'status'>) =>
   status === 'ACTIVE' || status === 'PAUSED';
 
-// 새 캠페인의 시작일이 진행 중 캠페인의 종료일과 같거나 그보다 앞이면, 진행 중 캠페인은 그 시작일에 일찍 종료된다.
-// 날짜는 YYYY-MM-DD라 문자열로 비교한다. 시작일을 고르기 전이면 겹치지 않는 것으로 본다
-export const endsCurrentCampaignEarly = (
-  startDate: string,
-  currentCampaign: Pick<Campaign, 'budget'>,
-) => Boolean(startDate) && startDate <= currentCampaign.budget.endDate;
+// 끝나지 않은 캠페인(작성 중, 대기 중, 진행 중, 일시중지). 가게당 1건만 있을 수 있다
+export const isUnfinishedCampaign = ({ status }: Pick<Campaign, 'status'>) =>
+  status !== 'ENDED';
 
 const toMinutes = (time: string) => {
   const [hours, minutes] = time.split(':').map(Number);
@@ -292,10 +279,11 @@ const INVALID_COUPON_MESSAGE = '쿠폰 조건을 다시 확인해 주세요.';
 const INVALID_TARGET_MESSAGE = '노출 대상을 다시 확인해 주세요.';
 const INVALID_BUDGET_MESSAGE = '하루 예산과 집행 기간을 다시 확인해 주세요.';
 const INVALID_POSTER_MESSAGE = '포스터 내용을 다시 확인해 주세요.';
-const NOT_DELETABLE_MESSAGE = '작성 중인 캠페인만 삭제할 수 있습니다.';
-const NOT_CANCELABLE_MESSAGE = '시작 대기 중인 캠페인만 취소할 수 있습니다.';
 const NOT_ACTIVE_OWNER_MESSAGE =
   '입점을 마친 점주만 캠페인을 만들 수 있습니다.';
+const POSTER_REQUIRED_MESSAGE = '포스터를 먼저 만들어 주세요.';
+const NOT_ACTIVE_OWNER_ACTION_MESSAGE =
+  '입점을 마친 점주만 캠페인을 관리할 수 있습니다.';
 const CAMPAIGN_LIMIT_MESSAGE =
   '캠페인은 한 번에 하나만 운영할 수 있습니다. 지금 캠페인이 끝난 뒤에 새로 만들어 주세요.';
 
@@ -316,27 +304,6 @@ export const createInitialCampaignValues = (): CampaignValues => ({
   target: { radius: 1000, gender: 'ALL', ageGroups: [] },
   budget: { dailyBudget: null, startDate: '', endDate: '' },
 });
-
-const findCampaign = (id: string) =>
-  mockCampaigns.find((campaign) => campaign.id === id);
-
-type ServerCampaignExtras = Pick<Campaign, 'poster' | 'reviewFailReasons'>;
-
-// 포스터 생성과 활성화 요청은 API가 없어, 서버 캠페인의 포스터와 마지막 자동 검수 실패 사유를 캠페인 ID별로 메모리에 둔다.
-// 새로고침하면 사라진다. 포스터·활성화 API를 연동하면 지운다
-const mockServerCampaignExtras = new Map<string, ServerCampaignExtras>();
-
-const updateServerCampaignExtras = (
-  id: string,
-  patch: Partial<ServerCampaignExtras>,
-) => {
-  mockServerCampaignExtras.set(id, {
-    poster: null,
-    reviewFailReasons: [],
-    ...mockServerCampaignExtras.get(id),
-    ...patch,
-  });
-};
 
 // 점주 본인 가게의 캠페인만 내려온다. 등록 시각 최신순
 interface CampaignListItemResponse {
@@ -360,23 +327,35 @@ interface CampaignListResponse {
 // 서버 목록 한 번에 받는 최대 개수
 const CAMPAIGN_LIST_PAGE_SIZE = 100;
 
-const fetchCampaignDetail = async (id: string): Promise<Campaign> => ({
-  ...toCampaign(
+// 작성 중이면 이어서 작성할 수 있게 저장된 포스터도 불러온다.
+// 다른 상태는 포스터를 고칠 수 없어, 캠페인 상세가 완성 HTML을 따로 불러온다
+const fetchCampaignDetail = async (id: string): Promise<Campaign> => {
+  const campaign = toCampaign(
     await request<CampaignDetailResponse>(
       `/v1/owner/campaigns/${encodeURIComponent(id)}`,
     ),
-  ),
-  ...structuredClone(mockServerCampaignExtras.get(id)),
-});
+  );
+
+  if (campaign.status !== 'DRAFT') {
+    return campaign;
+  }
+
+  const posterResult = await getCampaignPoster(id);
+
+  if (!posterResult.ok) {
+    throw new Error('포스터를 불러오지 못했습니다');
+  }
+
+  return { ...campaign, poster: posterResult.data?.poster ?? null };
+};
 
 // 목록 항목에는 중단 사유, 할인 메뉴, 발급 수량, 사용 가능 시간, 노출 대상이 없다.
-// 이 값을 보여주는 진행 중·다음 캠페인은 상세로 다시 채우고, 지난 캠페인은 제목·기간·상태만 쓰므로 비워 둔다
+// 이 값을 보여주는 현재 캠페인은 상세로 다시 채우고, 지난 캠페인은 제목·기간·상태만 쓰므로 비워 둔다
 const toListedCampaign = (item: CampaignListItemResponse): Campaign => ({
   id: String(item.campaignId),
   status: item.status,
   pausedReason: null,
   createdAt: item.createdAt,
-  reviewFailReasons: [],
   performance: null,
   poster: null,
   coupon: {
@@ -398,7 +377,7 @@ const toListedCampaign = (item: CampaignListItemResponse): Campaign => ({
   },
 });
 
-// 최근 생성 순. 가게당 진행 중·다음 캠페인은 가장 최근에 만든 캠페인이라 첫 페이지에 들어 있다
+// 최근 생성 순. 가게당 하나인 현재 캠페인은 가장 최근에 만든 캠페인이라 첫 페이지에 들어 있다
 export const getCampaigns = async (): Promise<ApiResult<Campaign[]>> => {
   try {
     const { items } = await request<CampaignListResponse>(
@@ -521,14 +500,12 @@ const toServerAgeGroups = (ageGroups: AgeGroup[]) =>
     .filter(([, group]) => ageGroups.length === 0 || ageGroups.includes(group))
     .map(([serverGroup]) => serverGroup);
 
-// 상세 응답에는 포스터, 성과, 자동 검수 실패 사유가 없어 비워 둔다.
-// 포스터와 자동 검수 실패 사유는 mock으로 등록한 값이 있으면 fetchCampaignDetail에서 채운다
+// 상세 응답에는 포스터와 성과가 없어 비워 둔다. 작성 중이면 포스터는 fetchCampaignDetail에서 채운다
 const toCampaign = (data: CampaignDetailResponse): Campaign => ({
   id: String(data.campaignId),
   status: data.status,
   pausedReason: data.pausedReason,
   createdAt: data.createdAt,
-  reviewFailReasons: [],
   performance: null,
   poster: null,
   coupon: {
@@ -619,7 +596,7 @@ export const saveCouponStep = async (
       return { ok: false, message: NOT_ACTIVE_OWNER_MESSAGE };
     }
 
-    // 끝나지 않은 캠페인(시작 대기, 진행 중, 중단)이 있으면 새 캠페인을 만들 수 없다. Swagger에는 아직 없는 코드다
+    // 끝나지 않은 캠페인(대기 중, 진행 중, 일시중지)이 있으면 새 캠페인을 만들 수 없다. Swagger에는 아직 없는 코드다
     if (error.code === 'CAMPAIGN-010') {
       return { ok: false, message: CAMPAIGN_LIMIT_MESSAGE };
     }
@@ -730,132 +707,151 @@ export const saveBudgetStep = async (
   }
 };
 
-// 등록 2단계 포스터 저장. 포스터 생성 API를 연동하기 전까지 캠페인 ID별로 메모리에 둔다.
+// 포스터 생성 응답. 슬롯이 모두 채워진 완성 HTML이다
+interface PosterCreateResponse {
+  posterId: number;
+  campaignId: number;
+  templateId: number;
+  // "{가게명} - {템플릿 이름}"
+  title: string;
+  html: string;
+}
+
+// 포스터 생성 요청 본문. 서버가 아직 글을 받지 않아 템플릿과 이미지만 보낸다.
+// 서버가 점주가 고친 글을 받게 되면 여기에 slots의 글만 더한다
+const toPosterCreateRequest = ({
+  imageObjectKey,
+  templateId,
+}: CampaignPoster) => ({
+  templateId: Number(templateId),
+  objectKey: imageObjectKey,
+});
+
+// 등록 2단계 포스터 저장. 캠페인당 포스터는 1건이라, 이미 있으면 서버가 덮어쓴다.
 // 등록 화면이 DRAFT인지 확인한 뒤에 부른다
 export const savePosterStep = async (
   id: string,
   poster: CampaignPoster | null,
 ): Promise<ApiResult<null>> => {
-  await mockDelay();
-
-  // 템플릿과 할인 내용, 기간, 가게명이 없으면 포스터를 만들지 않는다
-  if (!isPosterComplete(poster)) {
+  // 템플릿, 이미지, 할인 내용, 기간이 없으면 포스터를 만들지 않는다
+  if (!poster || !isPosterComplete(poster)) {
     return { ok: false, message: INVALID_POSTER_MESSAGE };
   }
 
-  // 캠페인당 포스터는 1건이라, 이미 있으면 같은 포스터를 수정한 것으로 본다
-  updateServerCampaignExtras(id, {
-    poster: {
-      ...structuredClone(poster as CampaignPoster),
-      posterId:
-        mockServerCampaignExtras.get(id)?.poster?.posterId ?? `poster-${id}`,
-    },
-  });
-
-  return { ok: true, data: null };
-};
-
-// 활성화 요청 결과. 자동 검수를 통과하면 SCHEDULED가 되고, 통과하지 못하면 DRAFT로 남고 사유를 돌려준다
-export type ActivationResult =
-  | { result: 'PASS'; campaign: Campaign }
-  | { result: 'FAIL'; reasons: string[] };
-
-// 관리자 "검수 기준 관리"의 금지 표현 사전을 흉내 낸 값. 연동하면 서버가 판정한다
-const MOCK_FORBIDDEN_WORDS = ['최고', '1위', '최저가', '무료'];
-
-const NOT_READY_MESSAGE =
-  '아직 채우지 않은 단계가 있어 활성화를 요청할 수 없습니다.';
-
-// 활성화 요청 시 (1) 포스터와 필수 입력값을 확인하고 (2) 포스터를 자동 검수한다.
-// 잔액은 검사하지 않는다. 잔액이 모자라면 첫 서빙일 00:00 예약에서 PAUSED(NO_POINTS)가 된다.
-// 활성화 API가 없어 서버 캠페인은 검수 결과만 돌려주고 상태는 DRAFT로 남는다
-export const requestCampaignActivation = async (
-  id: string,
-): Promise<ApiResult<ActivationResult>> => {
-  await mockDelay();
-
-  let campaign: Campaign;
-
   try {
-    campaign = await fetchCampaignDetail(id);
+    await request<PosterCreateResponse>(
+      `/v1/owner/campaigns/${encodeURIComponent(id)}/poster`,
+      { method: 'POST', body: toPosterCreateRequest(poster) },
+    );
+
+    return { ok: true, data: null };
   } catch (error) {
-    return toCampaignFailure(error);
+    if (!(error instanceof ApiError)) {
+      return { ok: false };
+    }
+
+    switch (error.code) {
+      case 'CAMPAIGN-001':
+        return { ok: false, message: NOT_ACTIVE_OWNER_MESSAGE };
+      case 'CAMPAIGN-005':
+        return { ok: false, message: NOT_FOUND_MESSAGE };
+      case 'CAMPAIGN-006':
+        return { ok: false, message: NOT_EDITABLE_MESSAGE };
+    }
+
+    // 템플릿이 그사이 내려갔거나 이미지를 찾을 수 없는 등은 오류 코드가 정해지지 않아 서버 문구를 보여준다
+    return error.code && error.status >= 400 && error.status < 500
+      ? { ok: false, message: error.message }
+      : { ok: false };
   }
-
-  if (campaign.status !== 'DRAFT') {
-    return { ok: false, message: NOT_EDITABLE_MESSAGE };
-  }
-
-  if (
-    !isCouponStepComplete(campaign.coupon) ||
-    !isPosterComplete(campaign.poster) ||
-    !isValidTarget(campaign.target) ||
-    !isBudgetStepComplete(campaign.budget, mockPlatformSettings)
-  ) {
-    return { ok: false, message: NOT_READY_MESSAGE };
-  }
-
-  const { discountText, eventName, storeName } = (
-    campaign.poster as CampaignPoster
-  ).slots;
-  const posterText = [discountText, eventName, storeName].join(' ');
-  const reasons = MOCK_FORBIDDEN_WORDS.filter((word) =>
-    posterText.includes(word),
-  ).map((word) => `포스터 문구에 금지 표현 "${word}"가 들어 있어요.`);
-
-  updateServerCampaignExtras(id, { reviewFailReasons: reasons });
-
-  if (reasons.length > 0) {
-    return { ok: true, data: { result: 'FAIL', reasons } };
-  }
-
-  return {
-    ok: true,
-    data: { result: 'PASS', campaign: structuredClone(campaign) },
-  };
 };
 
-// 작성 중(DRAFT) 캠페인 삭제. 다음 캠페인 자리를 비워 새 캠페인을 만들 수 있게 한다.
-// 명세에 없는 기능이라 API 추가 요청이 필요하다
-export const deleteCampaignDraft = async (
+// 상태를 바꾸는 점주 처리. 요청 본문 없이 보내고, 이미 바뀐 상태면 서버가 다시 성공으로 돌려준다
+type CampaignAction = 'activate' | 'cancel' | 'pause' | 'resume' | 'end';
+
+// 처리 응답. 처리 뒤의 상태다
+interface CampaignStatusResponse {
+  campaignId: number;
+  status: CampaignStatus;
+}
+
+// 409 CAMPAIGN-006. 그사이 상태가 바뀌어 지금 상태에서는 할 수 없다
+const STATUS_CHANGED_MESSAGES: Record<CampaignAction, string> = {
+  activate:
+    '캠페인 상태가 바뀌어 활성화할 수 없습니다. 작성 중인 캠페인만 활성화할 수 있습니다.',
+  cancel:
+    '캠페인 상태가 바뀌어 취소할 수 없습니다. 집행이 시작됐거나 끝났습니다.',
+  pause:
+    '캠페인 상태가 바뀌어 중단할 수 없습니다. 진행 중인 캠페인만 중단할 수 있습니다.',
+  resume:
+    '캠페인 상태가 바뀌어 다시 시작할 수 없습니다. 직접 중단한 캠페인만 다시 시작할 수 있습니다.',
+  end: '캠페인 상태가 바뀌어 종료할 수 없습니다. 일시중지한 캠페인만 종료할 수 있습니다.',
+};
+
+const requestCampaignAction = async (
   id: string,
-): Promise<ApiResult<null>> => {
-  await mockDelay();
+  action: CampaignAction,
+): Promise<ApiResult<CampaignStatus>> => {
+  try {
+    const { status } = await request<CampaignStatusResponse>(
+      `/v1/owner/campaigns/${encodeURIComponent(id)}:${action}`,
+      { method: 'POST' },
+    );
 
-  const index = mockCampaigns.findIndex((campaign) => campaign.id === id);
+    return { ok: true, data: status };
+  } catch (error) {
+    if (!(error instanceof ApiError)) {
+      return { ok: false };
+    }
 
-  if (index === -1) {
-    return { ok: false, message: NOT_FOUND_MESSAGE };
+    switch (error.code) {
+      // 상태가 바뀌었거나(006) 캠페인을 찾을 수 없다(005). 화면이 code를 보고 목록을 다시 불러온다
+      case 'CAMPAIGN-006':
+        return {
+          ok: false,
+          code: error.code,
+          message: STATUS_CHANGED_MESSAGES[action],
+        };
+      case 'CAMPAIGN-005':
+        return { ok: false, code: error.code, message: NOT_FOUND_MESSAGE };
+      case 'CAMPAIGN-001':
+        return { ok: false, message: NOT_ACTIVE_OWNER_ACTION_MESSAGE };
+      // 활성화할 때 저장된 포스터가 없다. 화면이 code를 보고 포스터 단계로 보낸다
+      case 'POSTER-021':
+        return {
+          ok: false,
+          code: error.code,
+          message: POSTER_REQUIRED_MESSAGE,
+        };
+    }
+
+    // 재개 거절(집행 기간이 끝남, 오늘 남은 예산이 노출 단가보다 적음)은 오류 코드가 정해지지 않아 서버 문구를 보여준다
+    if (error.code && error.status >= 400 && error.status < 500) {
+      return { ok: false, message: error.message };
+    }
+
+    return { ok: false };
   }
-
-  if (mockCampaigns[index].status !== 'DRAFT') {
-    return { ok: false, message: NOT_DELETABLE_MESSAGE };
-  }
-
-  mockCampaigns.splice(index, 1);
-
-  return { ok: true, data: null };
 };
 
-// 시작 대기(SCHEDULED) 취소. 작성 중으로 되돌리고 입력값은 그대로 둔다
-// (docs/requirements-common.md "캠페인 상태 정의"의 SCHEDULED 점주 액션 "취소(DRAFT로)").
+// 작성 중(DRAFT) 캠페인 활성화 요청. 자동 검수를 통과하면 대기 중(SCHEDULED)이 된다.
+// 자동 검수는 실제로 실패하지 않는다(기능 축소). 잔액은 검사하지 않고, 모자라면 첫 서빙일 00:00 예약에서 PAUSED(NO_POINTS)가 된다
+export const requestCampaignActivation = (id: string) =>
+  requestCampaignAction(id, 'activate');
+
+// 대기 중(SCHEDULED) 취소. 지우지 않고 작성 중으로 되돌려 입력값은 그대로 둔다.
 // 다시 노출하려면 활성화를 다시 요청해야 하고, 시작일 전날 23:59까지 SCHEDULED여야 시작일부터 노출된다
-export const cancelScheduledCampaign = async (
-  id: string,
-): Promise<ApiResult<Campaign>> => {
-  await mockDelay();
+export const cancelScheduledCampaign = (id: string) =>
+  requestCampaignAction(id, 'cancel');
 
-  const campaign = findCampaign(id);
+// 진행 중(ACTIVE) 캠페인 중단. PAUSED(사유 OWNER)가 되고 다음 피드 요청부터 노출되지 않는다.
+// 오늘 이미 쓴 포인트는 돌려주지 않는다
+export const pauseCampaign = (id: string) => requestCampaignAction(id, 'pause');
 
-  if (!campaign) {
-    return { ok: false, message: NOT_FOUND_MESSAGE };
-  }
+// 점주가 직접 중단한(PAUSED, 사유 OWNER) 캠페인 재개. ACTIVE가 되고 바로 다시 노출된다
+export const resumeCampaign = (id: string) =>
+  requestCampaignAction(id, 'resume');
 
-  if (campaign.status !== 'SCHEDULED') {
-    return { ok: false, message: NOT_CANCELABLE_MESSAGE };
-  }
-
-  campaign.status = 'DRAFT';
-
-  return { ok: true, data: structuredClone(campaign) };
-};
+// 일시중지(PAUSED) 캠페인 종료. ENDED가 되고 되돌릴 수 없다. 진행 중이면 먼저 중단해야 한다.
+// 종료하면 새 캠페인을 등록할 수 있다
+export const endCampaign = (id: string) => requestCampaignAction(id, 'end');

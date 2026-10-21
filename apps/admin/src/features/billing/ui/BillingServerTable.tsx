@@ -13,7 +13,6 @@ import {
 } from '@admin/ui/DataTable';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
-import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
 import type { BillingTablePreferences } from '../billingView';
 
@@ -30,6 +29,7 @@ interface BillingServerTableProps<T> {
   rowId: (item: T) => string | number;
   loading: boolean;
   error?: string;
+  onRetry?: () => void;
   emptyMessage: string;
   preferences: BillingTablePreferences;
   page: number;
@@ -51,6 +51,7 @@ export const BillingServerTable = <T,>({
   rowId,
   loading,
   error,
+  onRetry,
   emptyMessage,
   preferences,
   page,
@@ -64,15 +65,6 @@ export const BillingServerTable = <T,>({
   filters,
 }: BillingServerTableProps<T>) => {
   const settings = useTableColumnSettings(tableId, columns);
-  const visibleKeys = new Set(
-    settings.preferences
-      .filter((field) => field.visible)
-      .map((field) => field.key),
-  );
-  // 좁은 화면에서는 금액과 열 제목을 억지로 줄이지 않고 표시 중인 열만 가로로 스크롤한다.
-  const minWidth = columns
-    .filter((column) => visibleKeys.has(column.key))
-    .reduce((sum, column) => sum + (column.minWidth ?? 100), 0);
   const pagination = {
     currentPage: page,
     pageSize: size,
@@ -94,89 +86,83 @@ export const BillingServerTable = <T,>({
       >
         {filters}
       </FilterBar>
-      <ScrollArea
-        orientation="horizontal"
-        className="w-full !flex-none"
-        aria-label="목록 가로 스크롤"
-        tabIndex={0}
+      <DataTable
+        className="table-fixed"
+        columns={columns}
+        columnSettings={settings}
+        density={preferences.density}
+        resizableColumns
       >
-        <DataTable
-          className="table-fixed"
-          style={{ minWidth }}
-          columns={columns}
-          columnSettings={settings}
-          density={preferences.density}
-          resizableColumns
-        >
-          <thead>
+        <thead>
+          <tr>
+            {columns.map((column, index) => (
+              <TableHeaderCell
+                key={column.key}
+                columnIndex={index}
+                onSortChange={
+                  column.sortable && onSort
+                    ? () => onSort(column.key)
+                    : undefined
+                }
+                sortDirection={
+                  sort?.key === column.key ? sort.direction : undefined
+                }
+              >
+                {column.label}
+              </TableHeaderCell>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
             <tr>
-              {columns.map((column, index) => (
-                <TableHeaderCell
-                  key={column.key}
-                  columnIndex={index}
-                  onSortChange={
-                    column.sortable && onSort
-                      ? () => onSort(column.key)
-                      : undefined
-                  }
-                  sortDirection={
-                    sort?.key === column.key ? sort.direction : undefined
-                  }
-                >
-                  {column.label}
-                </TableHeaderCell>
-              ))}
+              <TableLoading colSpan={columns.length} />
             </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <TableLoading colSpan={columns.length} />
-              </tr>
-            ) : error ? (
-              <tr>
-                <TableError colSpan={columns.length} description={error} />
-              </tr>
-            ) : !items.length ? (
-              <tr>
-                <TableEmpty colSpan={columns.length}>{emptyMessage}</TableEmpty>
-              </tr>
-            ) : (
-              items.map((item) => (
-                <TableRow
-                  key={rowId(item)}
-                  showDetailArrow={Boolean(onOpen)}
-                  tabIndex={onOpen ? 0 : undefined}
-                  role={onOpen ? 'button' : undefined}
-                  aria-label={onOpen ? `${rowId(item)} 상세 보기` : undefined}
-                  className={
-                    onOpen
-                      ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary'
-                      : undefined
-                  }
-                  onClick={onOpen ? () => onOpen(item) : undefined}
-                  onKeyDown={
-                    onOpen
-                      ? (event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            onOpen(item);
-                          }
+          ) : error ? (
+            <tr>
+              <TableError
+                colSpan={columns.length}
+                description={error}
+                onRetry={onRetry}
+              />
+            </tr>
+          ) : !items.length ? (
+            <tr>
+              <TableEmpty colSpan={columns.length}>{emptyMessage}</TableEmpty>
+            </tr>
+          ) : (
+            items.map((item) => (
+              <TableRow
+                key={rowId(item)}
+                showDetailArrow={Boolean(onOpen)}
+                tabIndex={onOpen ? 0 : undefined}
+                role={onOpen ? 'button' : undefined}
+                aria-label={onOpen ? `${rowId(item)} 상세 보기` : undefined}
+                className={
+                  onOpen
+                    ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary'
+                    : undefined
+                }
+                onClick={onOpen ? () => onOpen(item) : undefined}
+                onKeyDown={
+                  onOpen
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onOpen(item);
                         }
-                      : undefined
-                  }
-                >
-                  {columns.map((column) => (
-                    <TableCell key={column.key}>
-                      {column.render(item)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            )}
-          </tbody>
-        </DataTable>
-      </ScrollArea>
+                      }
+                    : undefined
+                }
+              >
+                {columns.map((column) => (
+                  <TableCell key={column.key}>{column.render(item)}</TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </tbody>
+      </DataTable>
       <PaginationSummary {...pagination} />
     </>
   );

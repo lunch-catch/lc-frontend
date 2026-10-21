@@ -44,6 +44,7 @@ interface Sort {
 interface BillingTableProps {
   loading?: boolean;
   error?: string;
+  onRetry?: () => void;
   queryPrefix: string;
   preferences: BillingTablePreferences;
   columns: BillingColumn[];
@@ -73,6 +74,7 @@ export const BillingTable = ({
   preferences,
   loading = false,
   error,
+  onRetry,
 }: BillingTableProps) => {
   const tableColumns = columns.map((item) => ({
     align: item.align,
@@ -258,7 +260,11 @@ export const BillingTable = ({
             </tr>
           ) : error ? (
             <tr>
-              <TableError colSpan={columns.length} description={error} />
+              <TableError
+                colSpan={columns.length}
+                description={error}
+                onRetry={onRetry}
+              />
             </tr>
           ) : (
             !filteredRows.length && (
