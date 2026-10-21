@@ -78,7 +78,8 @@ const CouponHistory = () => {
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const history = useCouponHistory(serverFilters[filter]);
   // 사용한 횟수는 나눠 받은 목록으로 셀 수 없어 쿠폰 요약의 누적 값을 쓴다. 못 받으면 문구를 숨긴다
-  const [usedCount, setUsedCount] = useState<number | null>(null);
+  // undefined면 불러오는 중, null이면 받지 못함
+  const [usedCount, setUsedCount] = useState<number | null | undefined>();
   // 목록 끝에 두어, 화면에 가까워지면 다음 페이지를 받는다
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +90,9 @@ const CouponHistory = () => {
       .then((summary) => {
         if (!ignore) setUsedCount(summary.usedCouponCount);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!ignore) setUsedCount(null);
+      });
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
     return () => {
@@ -98,7 +101,12 @@ const CouponHistory = () => {
   }, []);
 
   const { hasMore, hasMoreError, isLoadingMore, items, loadMore } = history;
-  const showSkeleton = useDelayedLoading(items === undefined);
+  // 처음 화면을 그릴 만큼 받았는지. 목록과 사용 횟수를 둘 다 받은 뒤(실패 포함)에 한 번만 켠다
+  const [hasFirstLoaded, setHasFirstLoaded] = useState(false);
+  const isFirstLoading =
+    !hasFirstLoaded && (items === undefined || usedCount === undefined);
+  if (!hasFirstLoaded && !isFirstLoading) setHasFirstLoaded(true);
+  const showSkeleton = useDelayedLoading(items === undefined || isFirstLoading);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -127,13 +135,29 @@ const CouponHistory = () => {
   // 마지막 페이지까지 받았는데 아무것도 없을 때만 비었다고 본다
   const isEmpty = items && !hasMore && historyCoupons.length === 0;
 
-  if (isEmpty && filter === 'all') {
+  if (isEmpty && filter === 'all' && !isFirstLoading) {
     return (
       <EmptyState
         description="쿠폰을 사용하면 여기에 기록돼요"
         image={mascotHistoryEmpty}
         title="아직 사용 내역이 없어요"
       />
+    );
+  }
+
+  // 처음 불러오는 동안에는 필터 칩과 사용 횟수를 그리지 않는다
+  // 먼저 칩을 그리면 내역이 없을 때 칩이 나왔다가 빈 화면으로 바뀌며 번쩍이고,
+  // 사용 횟수가 따로 늦게 붙으면 아래 목록이 한 번 밀린다. 목록과 횟수를 다 받으면 한 번에 보여준다
+  // 한 번 보여준 뒤 칩을 바꿔 다시 받을 때는 칩을 그대로 두고 목록 자리만 바꾼다
+  if (isFirstLoading) {
+    return (
+      <div className="flex flex-col px-page pt-3 pb-6">
+        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
+        {showSkeleton && <CouponListSkeleton />}
+        <p className="sr-only" role="status">
+          사용 내역을 불러오는 중이에요
+        </p>
+      </div>
     );
   }
 
@@ -153,7 +177,7 @@ const CouponHistory = () => {
           </ChoiceChip>
         ))}
       </fieldset>
-      {usedCount !== null && (
+      {typeof usedCount === 'number' && (
         <p className="text-caption-mobile text-text-secondary">
           지금까지 쿠폰을{' '}
           <strong className="font-bold text-text-primary">{usedCount}번</strong>{' '}
