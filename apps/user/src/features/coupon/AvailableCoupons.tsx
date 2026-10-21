@@ -5,7 +5,7 @@ import { QrCode } from 'lucide-react';
 
 import { ApiError } from '@user/api/client';
 import { type Coupon, deleteCoupon, fetchCoupons } from '@user/api/coupon';
-import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
+import mascotCouponEmpty from '@user/assets/illustrations/mascot-coupon-empty.webp';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
@@ -108,7 +108,7 @@ const AvailableCoupons = () => {
     return (
       <EmptyState
         description="찜한 포스터는 11:00부터 찜 목록에서 받을 수 있어요"
-        image={mascotEmpty}
+        image={mascotCouponEmpty}
         title="사용 가능한 쿠폰이 없어요"
       >
         <ActionButton onClick={() => navigate('/swipe')}>

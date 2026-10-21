@@ -59,7 +59,9 @@ const LoginStep = () => {
     }
   };
 
-  if (status === 'idle') {
+  // 버튼을 누른 뒤 카카오로 넘어가기까지는 화면을 바꾸지 않고 버튼만 로딩으로 바꾼다
+  // 화면 전체를 로그인 중 화면으로 바꾸면 1초도 안 되는 사이 화면이 깜빡여 보인다
+  if (status !== 'error') {
     return (
       <main className={loginScreenClassName}>
         <Wordmark />
@@ -90,7 +92,10 @@ const LoginStep = () => {
               <FeedbackToast message="탈퇴했어요 · 그동안 이용해 주셔서 고마워요" />
             </div>
           )}
-          <KakaoLoginButton onClick={handleLogin}>
+          <KakaoLoginButton
+            loading={status === 'loading'}
+            onClick={handleLogin}
+          >
             카카오로 10초 만에 시작하기
           </KakaoLoginButton>
           <p className="text-caption-mobile text-text-tertiary">
@@ -101,7 +106,7 @@ const LoginStep = () => {
     );
   }
 
-  return <LoginStatusScreen onRetry={handleLogin} status={status} />;
+  return <LoginStatusScreen onRetry={handleLogin} status="error" />;
 };
 
 export default LoginStep;

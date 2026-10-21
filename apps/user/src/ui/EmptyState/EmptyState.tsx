@@ -21,7 +21,8 @@ const EmptyState = ({
   return (
     // 정확한 가운데는 눈에 조금 아래로 보여서, 아래 여백을 더 주어 묶음을 살짝 위로 올린다
     <section className="flex flex-1 flex-col items-center justify-center px-page pt-6 pb-20 text-center">
-      <img alt="" className="size-28" height={112} src={image} width={112} />
+      {/* 마스코트 그림은 여백 없이 잘라 두어서 상자 크기가 곧 마스코트 크기다 */}
+      <img alt="" className="size-20" height={80} src={image} width={80} />
       <h2 className="mt-4 text-h3-mobile font-bold text-text-primary">
         {title}
       </h2>

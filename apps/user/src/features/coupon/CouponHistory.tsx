@@ -6,7 +6,7 @@ import {
   type CouponFilter,
   fetchCouponSummary,
 } from '@user/api/coupon';
-import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
+import mascotHistoryEmpty from '@user/assets/illustrations/mascot-history-empty.webp';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 
@@ -131,7 +131,7 @@ const CouponHistory = () => {
     return (
       <EmptyState
         description="쿠폰을 사용하면 여기에 기록돼요"
-        image={mascotEmpty}
+        image={mascotHistoryEmpty}
         title="아직 사용 내역이 없어요"
       />
     );
