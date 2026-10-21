@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
@@ -238,6 +239,47 @@ export const Error: Story = {
       <tbody>
         <tr>
           <DataTable.Error colSpan={5} />
+        </tr>
+      </tbody>
+    </DataTable>
+  ),
+};
+
+export const ErrorWithRetry: Story = {
+  render: function ErrorWithRetryExample() {
+    const [attempts, setAttempts] = useState(0);
+    return (
+      <>
+        <DataTable>
+          {tableHeader}
+          <tbody>
+            <tr>
+              <DataTable.Error
+                colSpan={5}
+                description="서버에 연결하지 못했습니다."
+                onRetry={() => setAttempts((value) => value + 1)}
+              />
+            </tr>
+          </tbody>
+        </DataTable>
+        <p role="status">재시도 요청 {attempts}회</p>
+      </>
+    );
+  },
+};
+
+export const ErrorWaitingToRetry: Story = {
+  render: () => (
+    <DataTable>
+      {tableHeader}
+      <tbody>
+        <tr>
+          <DataTable.Error
+            colSpan={5}
+            description="잠시 후 다시 시도해 주세요."
+            onRetry={() => {}}
+            retryDisabled
+          />
         </tr>
       </tbody>
     </DataTable>

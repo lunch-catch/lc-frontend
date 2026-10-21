@@ -59,6 +59,9 @@ export interface TableStateProps extends TdHTMLAttributes<HTMLTableCellElement> 
 }
 
 export interface TableErrorProps extends TableStateProps {
+  /** 서버 조회 실패에만 전달하고 입력 조건 오류에는 생략한다. */
+  onRetry?: () => void;
+  retryDisabled?: boolean;
   description?: string;
   title?: string;
 }
