@@ -30,7 +30,11 @@ export const TableScrollViewport = ({
     handleKeyDown,
     finishDrag,
   } = useTableScrollbar(children, maxHeight);
-  const internalScroll = maxHeight !== undefined;
+  // 가로 스크롤 컨테이너 안에서는 페이지 기준 sticky가 동작하지 않아 긴 표도 내부에서 스크롤한다.
+  const internalScroll = maxHeight !== undefined || horizontalOverflow;
+  const viewportMaxHeight =
+    maxHeight ??
+    (horizontalOverflow ? 'calc(100dvh - var(--space-12))' : undefined);
 
   return (
     <div className="relative min-w-0 max-w-full">
@@ -45,15 +49,12 @@ export const TableScrollViewport = ({
         className={[
           'min-w-0 w-full !flex-none [scrollbar-gutter:auto] focus-visible:outline-2 focus-visible:outline-action-primary',
           // 가로 넘침이 없는 화면에서는 overflow를 열어 페이지 기준 헤더 고정을 유지한다.
-          internalScroll
-            ? '!overflow-auto'
-            : horizontalOverflow
-              ? ''
-              : '!overflow-visible',
+          internalScroll ? '!overflow-auto' : '!overflow-visible',
         ].join(' ')}
         style={
           {
-            maxHeight,
+            maxHeight: viewportMaxHeight,
+            '--table-scroll-header-offset': internalScroll ? '0px' : undefined,
             '--table-viewport-width':
               viewportWidth > 0 ? viewportWidth + 'px' : undefined,
           } as CSSProperties

@@ -148,7 +148,10 @@ const DataTableView = ({
   );
   const internalScroll = scrollMaxHeight !== undefined;
   const headerOffset =
-    stickyHeaderOffset ?? (internalScroll ? 0 : 'calc(var(--space-6) * -1)');
+    stickyHeaderOffset ??
+    (internalScroll
+      ? 0
+      : 'var(--table-scroll-header-offset, calc(var(--space-6) * -1))');
 
   return (
     <TableDensityContext.Provider value={density}>

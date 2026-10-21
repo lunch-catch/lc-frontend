@@ -295,8 +295,10 @@ const responsiveColumns: DataTableColumn[] = [
 ];
 const ResponsiveExample = ({
   internalScroll = false,
+  rowCount,
 }: {
   internalScroll?: boolean;
+  rowCount?: number;
 }) => {
   const settings = useTableColumnSettings(
     'storybook.responsive',
@@ -313,17 +315,20 @@ const ResponsiveExample = ({
       >
         {tableHeader}
         <tbody>
-          {Array.from({ length: internalScroll ? 20 : 3 }, (_, index) => (
-            <DataTable.Row key={index}>
-              <DataTable.Cell>LC-20261021-{index + 1}</DataTable.Cell>
-              <DataTable.Cell>김런치</DataTable.Cell>
-              <DataTable.Cell>
-                긴 상품명도 페이지 너비를 늘리지 않고 말줄임 처리합니다.
-              </DataTable.Cell>
-              <DataTable.Cell>2026. 10. 21. 12:30</DataTable.Cell>
-              <DataTable.Cell>사용 가능</DataTable.Cell>
-            </DataTable.Row>
-          ))}
+          {Array.from(
+            { length: rowCount ?? (internalScroll ? 20 : 3) },
+            (_, index) => (
+              <DataTable.Row key={index}>
+                <DataTable.Cell>LC-20261021-{index + 1}</DataTable.Cell>
+                <DataTable.Cell>김런치</DataTable.Cell>
+                <DataTable.Cell>
+                  긴 상품명도 페이지 너비를 늘리지 않고 말줄임 처리합니다.
+                </DataTable.Cell>
+                <DataTable.Cell>2026. 10. 21. 12:30</DataTable.Cell>
+                <DataTable.Cell>사용 가능</DataTable.Cell>
+              </DataTable.Row>
+            ),
+          )}
         </tbody>
       </DataTable>
     </div>
@@ -333,4 +338,8 @@ const ResponsiveExample = ({
 export const Responsive: Story = { render: () => <ResponsiveExample /> };
 export const ResponsiveInternalScroll: Story = {
   render: () => <ResponsiveExample internalScroll />,
+};
+
+export const ResponsiveLongTable: Story = {
+  render: () => <ResponsiveExample rowCount={30} />,
 };
