@@ -15,18 +15,21 @@ import {
   type WishItem,
 } from '@user/api/wishlist';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
+import {
+  formatCountdown,
+  useOpenCountdown,
+} from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
 } from '@user/ui/FeedbackToast/FeedbackToast';
+import { getWishState, WISH_STATE_ORDER } from '@user/ui/wishState';
 
-import { formatCountdown, useOpenCountdown } from './useOpenCountdown';
 import WishCard, { type WishCardState } from './WishCard';
 import WishlistEmpty from './WishlistEmpty';
 import WishlistSkeleton from './WishlistSkeleton';
 import WishlistSummary from './WishlistSummary';
-import { getWishState, WISH_STATE_ORDER } from './wishState';
 
 const TOAST_DURATION_MS = 2500;
 // 되돌리기 버튼을 누를 시간을 조금 더 준다
@@ -229,12 +232,13 @@ const WishlistScreen = () => {
   };
 
   // 지운 카드를 원래 자리에 다시 넣는다
+  // 되돌린 뒤 삭제 실패가 늦게 오면 두 번 불릴 수 있어, 이미 있으면 넣지 않는다
   const putBack = (wish: WishItem, index: number) => {
-    setWishes((current) => [
-      ...current.slice(0, index),
-      wish,
-      ...current.slice(index),
-    ]);
+    setWishes((current) =>
+      current.some((item) => item.campaignId === wish.campaignId)
+        ? current
+        : [...current.slice(0, index), wish, ...current.slice(index)],
+    );
   };
 
   const handleUndoRemove = (wish: WishItem, index: number) => {
