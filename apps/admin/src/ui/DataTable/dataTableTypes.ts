@@ -15,6 +15,7 @@ export interface DataTableColumn {
   align?: 'left' | 'center' | 'right';
   key?: string;
   label?: string;
+  /** 표시 열의 최소 너비 합을 넘지 못하는 화면에서는 테이블 내부를 가로 스크롤한다. */
   minWidth?: number;
   width?: CSSProperties['width'];
 }

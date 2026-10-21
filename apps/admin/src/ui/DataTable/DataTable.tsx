@@ -18,7 +18,10 @@ import {
 } from './tableColumnPreferences';
 import { TableColumnSettings } from './TableColumnSettings';
 import { TableScrollViewport } from './TableScrollViewport';
-import { useTableColumnResize } from './useTableColumnResize';
+import {
+  defaultColumnMinWidth,
+  useTableColumnResize,
+} from './useTableColumnResize';
 import { useTableColumnSettings } from './useTableColumnSettings';
 
 const TableDensityContext = createContext<TableDensity>('normal');
@@ -138,6 +141,11 @@ const DataTableView = ({
 }: DataTableProps) => {
   const { tableRef, tableColumns, resizedColumnWidths, handleResizeStart } =
     useTableColumnResize(columns);
+  // 열 숨김이 반영된 표시 열의 최소 너비를 모든 화면에서 같은 기준으로 계산한다.
+  const minimumWidth = columns?.reduce(
+    (sum, column) => sum + (column.minWidth ?? defaultColumnMinWidth),
+    0,
+  );
   const internalScroll = scrollMaxHeight !== undefined;
   const headerOffset =
     stickyHeaderOffset ?? (internalScroll ? 0 : 'calc(var(--space-6) * -1)');
@@ -152,7 +160,7 @@ const DataTableView = ({
         }}
       >
         <div
-          className={`${internalScroll ? 'overflow-hidden' : 'overflow-visible'} rounded-md border border-table-border bg-bg-surface`}
+          className={`${internalScroll ? 'overflow-hidden' : 'overflow-visible'} min-w-0 max-w-full rounded-md border border-table-border bg-bg-surface`}
         >
           <TableScrollViewport maxHeight={scrollMaxHeight}>
             <table
@@ -163,6 +171,7 @@ const DataTableView = ({
                 internalScroll
                   ? 'border-separate border-spacing-0 [&_th:first-child]:rounded-none [&_th:last-child]:rounded-none [&_tbody_td]:border-b [&_tbody_td]:border-table-divider [&_tbody_tr:last-child_td]:border-b-0'
                   : 'border-collapse',
+                columns?.length ? 'table-fixed' : '',
                 className,
               ]
                 .filter(Boolean)
@@ -170,6 +179,7 @@ const DataTableView = ({
               ref={tableRef}
               style={
                 {
+                  minWidth: minimumWidth,
                   ...style,
                   '--table-header-offset':
                     typeof headerOffset === 'number'

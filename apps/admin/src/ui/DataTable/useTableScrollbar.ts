@@ -10,6 +10,8 @@ import {
 } from 'react';
 
 interface ScrollMetrics {
+  width: number;
+  contentWidth: number;
   height: number;
   contentHeight: number;
   top: number;
@@ -30,6 +32,8 @@ export const useTableScrollbar = (
     null,
   );
   const [metrics, setMetrics] = useState<ScrollMetrics>({
+    width: 0,
+    contentWidth: 0,
     height: 0,
     contentHeight: 0,
     top: 0,
@@ -41,6 +45,8 @@ export const useTableScrollbar = (
     if (!viewport) return;
     const header = viewport.querySelector('thead');
     const next = {
+      width: viewport.clientWidth,
+      contentWidth: viewport.scrollWidth,
       height: viewport.clientHeight,
       contentHeight: viewport.scrollHeight,
       top: viewport.scrollTop,
@@ -49,6 +55,8 @@ export const useTableScrollbar = (
         : 0,
     };
     setMetrics((current) =>
+      current.width === next.width &&
+      current.contentWidth === next.contentWidth &&
       current.height === next.height &&
       current.contentHeight === next.contentHeight &&
       current.top === next.top &&
@@ -145,6 +153,8 @@ export const useTableScrollbar = (
   };
   return {
     viewportRef,
+    viewportWidth: metrics.width,
+    horizontalOverflow: metrics.contentWidth > metrics.width + 1,
     trackTop: metrics.headerHeight + trackPadding,
     scrollRange,
     scrollTop: Math.max(0, Math.min(scrollRange, metrics.top)),

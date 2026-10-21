@@ -15,6 +15,10 @@ const stateContentStyle: CSSProperties = {
   height: '100%',
   justifyContent: 'center',
   textAlign: 'center',
+  // 가로로 긴 테이블도 상태 안내와 재시도 버튼은 현재 보이는 너비 안에 둔다.
+  width: 'min(100%, calc(var(--table-viewport-width, 100%) - var(--space-8)))',
+  position: 'sticky',
+  left: 0,
 };
 
 export const TableEmpty = ({
@@ -80,6 +84,7 @@ export const TableError = ({
     >
       <ErrorState
         className="h-full bg-bg-surface"
+        style={stateContentStyle}
         title={title}
         description={description}
         onRetry={onRetry}
