@@ -66,6 +66,9 @@ export function AdminSidebar({
   onThemeToggle,
 }: AdminSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const visibleItems = items.filter(
+    (item) => item.id !== 'account' || admin?.role === 'SUPER_ADMIN',
+  );
   const sidebarRef = useRef<HTMLElement>(null);
   const isThemeTogglePending = useRef(false);
   const ThemeIcon = theme === 'dark' ? Sun : Moon;
@@ -125,7 +128,7 @@ export function AdminSidebar({
         className="min-h-0 flex-1 overflow-y-auto px-4"
       >
         <ul className="flex flex-col gap-2">
-          {items.map(({ icon: Icon, id, label }) => {
+          {visibleItems.map(({ icon: Icon, id, label }) => {
             const isSelected = id === activeItemId;
 
             return (
