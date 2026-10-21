@@ -1,6 +1,7 @@
 import { MapPin } from 'lucide-react';
 
 import type { StoreDetail } from '@user/api/store';
+import LocationPreviewMap from '@user/ui/KakaoMap/LocationPreviewMap';
 
 import { getKakaoMapUrl } from './kakaoMap';
 
@@ -9,7 +10,8 @@ interface LocationSectionProps {
   onCopyAddress: () => void;
 }
 
-// 가게 위치. 카카오 지도 키를 받기 전까지 가짜 지도 판에 핀만 두고, 누르면 카카오맵으로 연다
+// 가게 위치. 카카오 지도에 가게 핀을 보여주고, 누르면 카카오맵으로 연다
+// 지도를 불러오지 못하면 지도 컴포넌트가 사라지고 뒤에 깔아 둔 가짜 지도 판이 보인다
 const LocationSection = ({ onCopyAddress, store }: LocationSectionProps) => {
   return (
     <section className="flex flex-col gap-3">
@@ -48,7 +50,14 @@ const LocationSection = ({ onCopyAddress, store }: LocationSectionProps) => {
           aria-hidden="true"
           className="absolute top-1/2 left-1/2 size-9 -translate-x-1/2 -translate-y-full fill-action-primary text-bg-surface"
         />
-        <span className="absolute right-2 bottom-2 rounded-sm bg-bg-surface/90 px-2 py-1 text-caption-mobile font-medium text-text-primary">
+        {/* 진짜 지도를 가짜 판 위에 덮는다. 지도가 누르는 동작을 가져가지 않게 해서 눌러도 카카오맵이 열린다 */}
+        <div aria-hidden="true" className="pointer-events-none relative">
+          <LocationPreviewMap
+            latitude={store.latitude}
+            longitude={store.longitude}
+          />
+        </div>
+        <span className="absolute right-2 bottom-2 z-10 rounded-sm bg-bg-surface/90 px-2 py-1 text-caption-mobile font-medium text-text-primary">
           카카오맵에서 보기
         </span>
       </a>
