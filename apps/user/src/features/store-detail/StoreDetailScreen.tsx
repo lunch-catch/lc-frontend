@@ -49,6 +49,7 @@ import CouponSection from './CouponSection';
 import { getCouponState } from './couponState';
 import { getKakaoDirectionsUrl } from './kakaoMap';
 import LocationSection from './LocationSection';
+import MenuRow from './MenuRow';
 import StoreDetailSkeleton from './StoreDetailSkeleton';
 
 interface StoreDetailScreenProps {
@@ -492,30 +493,21 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
             </h2>
             <Card as="ul" className="divide-y divide-border-subtle px-4">
               {store.menus.map((menu) => (
-                <li
-                  className="flex items-center justify-between gap-3 py-3 text-body-mobile"
-                  key={menu.menuId}
-                >
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="min-w-0 truncate text-text-primary">
-                      {menu.name}
-                    </span>
-                    {/* 오늘 쿠폰의 할인 대상 메뉴에 할인을 붙인다 */}
-                    {/* 할인가는 반올림 규칙이 서버와 달라질 수 있어 계산하지 않고 할인율이나 금액만 보여준다 */}
-                    {campaign?.discountTargetType === 'MENU' &&
-                      campaign.targetMenu?.menuId === menu.menuId && (
-                        <span className="shrink-0 rounded-sm bg-surface-brand px-1.5 py-0.5 text-caption-mobile font-bold text-text-brand">
-                          쿠폰{' '}
-                          {campaign.discountType === 'PERCENT'
+                <MenuRow
+                  // 오늘 쿠폰의 할인 대상 메뉴에 할인을 붙인다
+                  couponLabel={
+                    campaign?.discountTargetType === 'MENU' &&
+                    campaign.targetMenu?.menuId === menu.menuId
+                      ? `쿠폰 ${
+                          campaign.discountType === 'PERCENT'
                             ? `${campaign.discountValue}%`
-                            : formatPrice(campaign.discountValue)}
-                        </span>
-                      )}
-                  </span>
-                  <span className="shrink-0 font-bold text-text-primary">
-                    {formatPrice(menu.price)}
-                  </span>
-                </li>
+                            : formatPrice(campaign.discountValue)
+                        }`
+                      : null
+                  }
+                  key={menu.menuId}
+                  menu={menu}
+                />
               ))}
             </Card>
           </section>

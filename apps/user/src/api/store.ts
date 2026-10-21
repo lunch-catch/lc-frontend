@@ -212,6 +212,10 @@ export interface StoreMenu {
   menuId: number;
   name: string;
   price: number;
+  // 메뉴 설명. 없으면 null
+  description: string | null;
+  // 메뉴 사진 주소. 없으면 null
+  imageUrl: string | null;
 }
 
 // 가게 상세의 활성 캠페인. 쿠폰 사용 가능 시간(HH:MM)이 함께 온다
@@ -257,8 +261,7 @@ interface StoreDetailResponse {
   businessHours: StoreBusinessHour[];
   logoImage: StoreImageResponse | null;
   interiorImages: StoreImageResponse[];
-  menus: (StoreMenu & {
-    description: string | null;
+  menus: (Omit<StoreMenu, 'imageUrl'> & {
     sortOrder: number;
     image: StoreImageResponse | null;
   })[];
@@ -287,8 +290,15 @@ const toStoreDetail = (data: StoreDetailResponse): StoreDetail => ({
     lastOrderTime: toClockTime(hour.lastOrderTime),
   })),
   imageUrl: data.logoImage?.url ?? null,
-  // 내부 이미지, 메뉴 설명과 사진은 화면 시안이 정해지면 붙인다
-  menus: data.menus.map(({ menuId, name, price }) => ({ menuId, name, price })),
+  // 내부 이미지는 아직 올린 가게가 없어 화면에 붙이지 않았다
+  // 메뉴는 받은 순서대로 보여준다 (명세)
+  menus: data.menus.map(({ description, image, menuId, name, price }) => ({
+    menuId,
+    name,
+    price,
+    description,
+    imageUrl: image?.url ?? null,
+  })),
   activeCampaign: data.activeCampaign && {
     ...data.activeCampaign,
     campaignId: String(data.activeCampaign.campaignId),
@@ -355,7 +365,12 @@ const fetchMockStoreDetail = async (
     longitude: store.longitude,
     businessHours: createMockBusinessHours(detail.closedDays),
     imageUrl: store.thumbnailUrl,
-    menus: detail.menus.map((menu, index) => ({ ...menu, menuId: index + 1 })),
+    menus: detail.menus.map((menu, index) => ({
+      description: null,
+      imageUrl: null,
+      ...menu,
+      menuId: index + 1,
+    })),
     activeCampaign:
       store.activeCampaign && campaignCard
         ? {
