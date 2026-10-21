@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@repo/ui';
 import { formatDate, formatWon } from '@repo/utils';
-import { ChevronDown, Settings2 } from 'lucide-react';
+import { Clock3, Plus, Settings2 } from 'lucide-react';
 
 import {
   getPointPolicies,
@@ -66,22 +66,42 @@ const PolicySummary = ({
   policy: PointPolicy;
   title: string;
 }) => (
-  <section className="min-w-0 space-y-3">
-    <h4 className="text-body-sm-web font-medium">{title}</h4>
-    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-caption-web">
-      <dt className="text-text-secondary">적용일</dt>
-      <dd>{formatDate(policy.effectiveDate)}</dd>
-      <dt className="text-text-secondary">최소 충전 금액</dt>
-      <dd>{formatWon(policy.minChargeAmount)}</dd>
-      <dt className="text-text-secondary">충전 상품</dt>
-      <dd className="break-words leading-5">
-        {policy.chargeProducts.map((amount) => formatWon(amount)).join(' · ')}
-      </dd>
-      <dt className="text-text-secondary">변경자 ID</dt>
-      <dd>{policy.createdBy ?? '—'}</dd>
-      <dt className="text-text-secondary">변경 사유</dt>
-      <dd className="break-words leading-5">{policy.changeReason || '—'}</dd>
+  <section className="min-w-0 rounded-lg border border-border-subtle bg-bg-surface p-4">
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <h4 className="text-body-sm-web font-semibold">{title}</h4>
+      <span className="text-caption-web text-text-secondary">
+        {formatDate(policy.effectiveDate)}부터
+      </span>
+    </div>
+    <dl className="mt-4 space-y-4">
+      <div>
+        <dt className="text-caption-web text-text-secondary">최소 충전 금액</dt>
+        <dd className="mt-1 text-h2-web font-semibold tabular-nums">
+          {formatWon(policy.minChargeAmount)}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-caption-web text-text-secondary">
+          충전 상품 · {policy.chargeProducts.length}개
+        </dt>
+        <dd className="mt-2 flex flex-wrap gap-2">
+          {policy.chargeProducts.map((amount, index) => (
+            <span
+              key={index}
+              className="rounded-md bg-surface-subtle px-2.5 py-1 text-caption-web font-medium tabular-nums"
+            >
+              {formatWon(amount)}
+            </span>
+          ))}
+        </dd>
+      </div>
     </dl>
+    <div className="mt-4 border-t border-border-subtle pt-3 text-caption-web text-text-secondary">
+      <p>변경자 ID · {policy.createdBy ?? '—'}</p>
+      <p className="mt-1 break-words leading-5">
+        변경 사유 · {policy.changeReason || '없음'}
+      </p>
+    </div>
   </section>
 );
 
@@ -104,6 +124,7 @@ export const PointPolicyTab = ({
   );
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState('');
+  const hasScheduledPolicy = Boolean(policies.data?.next);
   // 내일 적용분이 있으면 이어서 편집하고, 없으면 현재 정책을 초기값으로 사용한다.
   const editablePolicy = policies.data?.next ?? policies.data?.current;
   return (
@@ -113,7 +134,74 @@ export const PointPolicyTab = ({
           {notice}
         </p>
       )}
-      <section className="flex flex-col gap-4">
+      <section aria-label="충전 정책" className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-heading-sm-web font-semibold">충전 정책</h3>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-caption-web text-text-secondary">
+              <Clock3 aria-hidden className="size-3.5 shrink-0" />
+              변경 사항은 내일 00:00(한국 시간)부터 적용됩니다.
+            </p>
+          </div>
+          <Button
+            leadingIcon={
+              hasScheduledPolicy ? (
+                <Settings2 aria-hidden className="size-4" />
+              ) : (
+                <Plus aria-hidden className="size-4" />
+              )
+            }
+            disabled={
+              !editablePolicy || policies.loading || Boolean(policies.error)
+            }
+            onClick={() => {
+              setNotice('');
+              setEditing(true);
+            }}
+          >
+            {hasScheduledPolicy ? '예약 정책 수정' : '정책 변경 예약'}
+          </Button>
+        </div>
+        {policies.loading ? (
+          <p role="status" className="text-caption-web text-text-secondary">
+            충전 정책을 불러오는 중입니다.
+          </p>
+        ) : policies.error ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p role="alert" className="text-caption-web text-status-danger-fg">
+              {policies.error}
+            </p>
+            <Button variant="neutral" onClick={policies.refresh}>
+              다시 조회
+            </Button>
+          </div>
+        ) : (
+          policies.data && (
+            <div className="grid gap-3 pb-2 @3xl:grid-cols-2">
+              <PolicySummary
+                policy={policies.data.current}
+                title="현재 적용 중"
+              />
+              {policies.data.next ? (
+                <PolicySummary
+                  policy={policies.data.next}
+                  title="내일 적용 예정"
+                />
+              ) : (
+                <section className="flex flex-col justify-center rounded-lg border border-dashed border-border-subtle p-4">
+                  <h4 className="text-body-sm-web font-medium">
+                    내일 적용 예정
+                  </h4>
+                  <p className="mt-2 text-caption-web leading-5 text-text-secondary">
+                    예약된 변경이 없습니다. 현재 정책이 계속 적용됩니다.
+                  </p>
+                </section>
+              )}
+            </div>
+          )
+        )}
+      </section>
+      <section className="flex flex-col gap-4 border-t border-border-subtle pt-6">
         <div>
           <h3 className="text-heading-sm-web font-semibold">정책 변경 이력</h3>
           <p className="mt-1 text-caption-web text-text-secondary">
@@ -136,80 +224,16 @@ export const PointPolicyTab = ({
           onSizeChange={(size) => updateFilters({ size, page: 1 })}
         />
       </section>
-      <details className="group border-t border-border-subtle pt-4">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md py-2 focus-visible:outline-2 focus-visible:outline-action-primary [&::-webkit-details-marker]:hidden">
-          <span className="text-body-sm-web font-medium">충전 정책 설정</span>
-          <span className="flex items-center gap-2 text-caption-web text-text-secondary">
-            {policies.error
-              ? '정책 조회 실패'
-              : policies.data?.next
-                ? '내일 적용할 변경 있음'
-                : '현재 정책 및 변경 예약'}
-            <ChevronDown
-              aria-hidden
-              className="size-4 shrink-0 transition-transform group-open:rotate-180"
-            />
-          </span>
-        </summary>
-        <div className="flex flex-col gap-4 pt-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-caption-web text-text-secondary">
-              변경한 정책은 내일부터 적용됩니다.
-            </p>
-            <Button
-              variant="neutral"
-              leadingIcon={<Settings2 aria-hidden className="size-4" />}
-              disabled={!editablePolicy || policies.loading}
-              onClick={() => {
-                setNotice('');
-                setEditing(true);
-              }}
-            >
-              내일 적용할 정책 설정
-            </Button>
-          </div>
-          {policies.loading ? (
-            <p role="status" className="text-caption-web text-text-secondary">
-              충전 정책을 불러오는 중입니다.
-            </p>
-          ) : policies.error ? (
-            <p role="alert" className="text-caption-web text-status-danger-fg">
-              {policies.error}
-            </p>
-          ) : (
-            policies.data && (
-              <div className="grid gap-6 pb-2 @3xl:grid-cols-2">
-                <PolicySummary
-                  policy={policies.data.current}
-                  title="현재 적용 중"
-                />
-                {policies.data.next ? (
-                  <PolicySummary
-                    policy={policies.data.next}
-                    title="내일 적용 예정"
-                  />
-                ) : (
-                  <section className="space-y-3">
-                    <h4 className="text-body-sm-web font-medium">
-                      내일 적용 예정
-                    </h4>
-                    <p className="text-caption-web leading-5 text-text-secondary">
-                      예약된 변경이 없습니다. 현재 정책이 계속 적용됩니다.
-                    </p>
-                  </section>
-                )}
-              </div>
-            )
-          )}
-        </div>
-      </details>
-      {editing && editablePolicy && (
+      {editing && editablePolicy && policies.data && (
         <PointPolicyEditor
           policy={editablePolicy}
+          currentPolicy={policies.data.current}
+          hasScheduledPolicy={hasScheduledPolicy}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
             setNotice('내일 적용할 충전 정책을 저장했습니다.');
+            // 예약 정책도 이력 첫 행에 포함되므로 저장 후 첫 페이지와 두 조회를 함께 갱신한다.
             updateFilters({ page: 1 }, true);
             policies.refresh();
             history.refresh();
