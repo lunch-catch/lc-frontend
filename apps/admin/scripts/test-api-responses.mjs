@@ -28,6 +28,8 @@ const setup = (data, status = 200) => {
   for (const name of [
     'client',
     'listResponse',
+    'billingResponse',
+    'pointAdjustments',
     'members',
     'adminAccounts',
     'owners',
@@ -362,12 +364,14 @@ test('캠페인 상세 404 오류를 성공 응답으로 처리하지 않는다'
   );
 });
 
+const templateHtml =
+  '<div><h1 data-slot="eventName">이벤트명</h1><p data-slot="discount">할인 내용</p><p data-slot="period">기간</p><img data-slot="image" alt="메뉴 이미지"></div>';
 const generatedTemplate = {
   templateId: 1,
   name: '테스트',
   versionNumber: 1,
   status: 'DRAFT',
-  html: '<div>template</div>',
+  html: templateHtml,
   message: '요청하신 색상으로 만들었어요.',
   removedElements: [],
   suggestedPrompts: ['배경을 더 밝게 해줘'],
@@ -382,6 +386,7 @@ test('템플릿 생성·수정은 data.message와 서버 추천 문구를 유지
   for (const id of [undefined, '1']) {
     const { templates, calls } = setup(generatedTemplate, 201);
     const result = await templates.generateTemplate(templateRequest, id);
+    assert.equal(result.html, templateHtml);
     assert.equal(result.message, generatedTemplate.message);
     assert.equal(
       result.suggestedPrompts[0],
@@ -413,7 +418,7 @@ test('템플릿 버전 이력의 요청과 설명을 복원할 수 있다', asyn
   const version = {
     versionNumber: 1,
     requestPrompt: '요청',
-    html: '<div></div>',
+    html: templateHtml,
     message: '만들었어요.',
     createdAt: '2026-10-20T10:00:00',
   };
@@ -423,6 +428,7 @@ test('템플릿 버전 이력의 요청과 설명을 복원할 수 있다', asyn
       nextPageToken: null,
     });
     const result = await templates.getTemplateVersions('1');
+    assert.equal(result.items[0].html, templateHtml);
     assert.equal(result.items[0].message, message);
     assert.equal(result.items[0].requestPrompt, '요청');
   }
@@ -558,4 +564,74 @@ test('캠페인 실적 조회 실패는 0으로 대체하지 않고 오류를 �
     campaignReports.getCampaignReports([501], signal),
     (error) => error instanceof client.ApiError && error.status === 503,
   );
+});
+
+const adjustmentRequest = {
+  requestId: 'adjust-test-1',
+  ownerId: 7,
+  amount: 1000,
+  reason: '중복 과금 정정',
+  campaignId: 12,
+  targetBusinessDate: '2026-10-13',
+  mismatchId: 55,
+};
+const adjustmentResponse = {
+  ledgerId: 100,
+  ownerId: 7,
+  amount: 1000,
+  campaignId: 12,
+  targetBusinessDate: '2026-10-13',
+  reason: '중복 과금 정정',
+  createdAt: '2026-10-21T12:00:00+09:00',
+};
+
+test('캠페인 포인트 조정은 대상 영업일과 멱등 키를 전송하고 200·201 응답을 허용한다', async () => {
+  for (const status of [200, 201]) {
+    const { pointAdjustments, calls } = setup(adjustmentResponse, status);
+    const result = await pointAdjustments.adjustPoints(adjustmentRequest);
+    assert.equal(
+      result.targetBusinessDate,
+      adjustmentRequest.targetBusinessDate,
+    );
+    const body = JSON.parse(calls[0].options.body);
+    assert.equal(body.targetBusinessDate, adjustmentRequest.targetBusinessDate);
+    assert.equal(body.campaignId, 12);
+    assert.equal(body.mismatchId, 55);
+    assert.equal(body.requestId, adjustmentRequest.requestId);
+    assert.equal(calls[0].options.credentials, 'include');
+  }
+});
+
+test('캠페인 없는 조정은 영업일을 보내지 않고 null 응답을 허용한다', async () => {
+  const values = {
+    requestId: adjustmentRequest.requestId,
+    ownerId: 7,
+    amount: 1000,
+    reason: adjustmentRequest.reason,
+  };
+  const { pointAdjustments, calls } = setup(
+    { ...adjustmentResponse, campaignId: null, targetBusinessDate: null },
+    201,
+  );
+  const result = await pointAdjustments.adjustPoints(values);
+  assert.equal(result.targetBusinessDate, null);
+  const body = JSON.parse(calls[0].options.body);
+  assert.equal(Object.hasOwn(body, 'campaignId'), false);
+  assert.equal(Object.hasOwn(body, 'targetBusinessDate'), false);
+});
+
+test('조정 응답의 대상 영업일 누락·불일치와 캠페인 불일치를 거부한다', async () => {
+  for (const data of [
+    { ...adjustmentResponse, targetBusinessDate: undefined },
+    { ...adjustmentResponse, targetBusinessDate: null },
+    { ...adjustmentResponse, targetBusinessDate: '2026-10-14' },
+    { ...adjustmentResponse, targetBusinessDate: [] },
+    { ...adjustmentResponse, campaignId: 13 },
+  ]) {
+    const { pointAdjustments, client } = setup(data, 201);
+    await assert.rejects(
+      pointAdjustments.adjustPoints(adjustmentRequest),
+      isApiError(client),
+    );
+  }
 });
