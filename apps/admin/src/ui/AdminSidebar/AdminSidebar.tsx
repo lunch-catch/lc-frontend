@@ -12,7 +12,6 @@ import {
   UserCog,
   UserRound,
   Users,
-  UtensilsCrossed,
 } from 'lucide-react';
 
 type NavigationIcon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -99,17 +98,27 @@ export function AdminSidebar({
         if (!isThemeTogglePending.current) setIsExpanded(false);
       }}
     >
-      <div className="flex h-10 select-none items-center gap-3 overflow-hidden px-5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-action-primary text-text-inverse">
-          <UtensilsCrossed aria-hidden="true" className="size-[18px]" />
-        </span>
-        <span
-          className={`overflow-hidden whitespace-nowrap text-body-sm-web font-bold tracking-tight text-text-primary transition-[max-width,opacity] duration-200 ${
+      <div
+        className="flex h-10 shrink-0 select-none items-center gap-3 overflow-hidden px-5"
+        title="런치캐치 Admin"
+      >
+        <img
+          src="/favicon-32.png"
+          alt=""
+          width={32}
+          height={32}
+          className="size-8 shrink-0"
+        />
+        <div
+          className={`flex min-w-0 items-baseline gap-1.5 overflow-hidden whitespace-nowrap text-action-primary transition-[max-width,opacity] duration-200 ${
             isExpanded ? 'max-w-36 opacity-100' : 'max-w-0 opacity-0'
           }`}
         >
-          LUNCH CATCH
-        </span>
+          <span className="text-h2-web font-extrabold tracking-tight">
+            런치캐치
+          </span>
+          <span className="text-caption-web font-bold">Admin</span>
+        </div>
       </div>
       <nav
         aria-label="관리자 메뉴"
