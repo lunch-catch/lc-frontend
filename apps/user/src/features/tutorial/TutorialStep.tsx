@@ -8,16 +8,17 @@ import { useAuth } from '@user/auth/useAuth';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 
 // 서비스의 흐름(넘기기 → 찜 → 11시에 받기)을 한 장씩 보여준다 (Figma 2. 튜토리얼)
+// 화면에서는 넘기고 찜하는 것을 "포스터", 11시에 받아 쓰는 것을 "쿠폰"이라 부른다. "캠페인"은 사용자에게 낯선 내부 용어라 쓰지 않는다
 // 말 걸듯 읽는 소개 문장이라 시각은 "11시"로 쓴다. 찜 카드·배너처럼 상태를 보여주는 곳은 "11:00"으로 쓴다
 const pages = [
   {
     image: tutorialBrowse,
     title: ['왼쪽은 패스,', '오른쪽은 찜'],
-    description: ['주변 가게의 캠페인을 보고', '관심 없는 카드는 패스해요'],
+    description: ['주변 가게의 포스터를 보고', '관심 없는 카드는 패스해요'],
   },
   {
     image: tutorialLike,
-    title: ['마음에 드는', '캠페인은 찜하기'],
+    title: ['마음에 드는', '포스터는 찜하기'],
     description: ['찜은 11시 선착순 발급에', '참여하기 위한 단계예요'],
   },
   {

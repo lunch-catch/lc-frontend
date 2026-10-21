@@ -12,7 +12,7 @@ const WishlistEmpty = () => {
     <EmptyState
       description="스와이프에서 마음에 드는 포스터를 찜해 보세요"
       image={mascotWishEmpty}
-      title="아직 찜한 캠페인이 없어요"
+      title="아직 찜한 포스터가 없어요"
     >
       <ActionButton onClick={() => navigate('/swipe')}>
         점심 포스터 보기

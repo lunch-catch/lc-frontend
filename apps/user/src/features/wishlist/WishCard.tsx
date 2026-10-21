@@ -55,7 +55,8 @@ const WishCard = ({
   // 받기 요청과 삭제 요청이 겹치지 않도록 받는 중에만 막는다
   const canRemove = onRemove && !isIssuing;
   // 끝난 캠페인과 오늘 노출 후보가 아닌 캠페인은 서버가 가게 이름을 비워 준다
-  const storeName = wish.storeName ?? (isEnded ? '끝난 캠페인' : '가게');
+  // 화면에는 내부 용어인 "캠페인" 대신 사용자가 아는 말(할인)을 쓴다
+  const storeName = wish.storeName ?? (isEnded ? '할인이 끝난 가게' : '가게');
   // 잔여 수량은 아직 받을 수 있는 동안에만 의미가 있다
   const showsRemaining =
     issueStatus && (state === 'beforeOpen' || state === 'available');
@@ -223,7 +224,7 @@ const WishCard = ({
           ) : (
             isEnded && (
               <p className="max-w-full truncate text-caption-mobile text-text-secondary">
-                캠페인이 끝나 받을 수 없어요
+                할인이 끝나 받을 수 없어요
               </p>
             )
           )}
