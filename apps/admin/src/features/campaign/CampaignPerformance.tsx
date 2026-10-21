@@ -1,4 +1,4 @@
-import { Button, StatusBadge } from '@repo/ui';
+import { Button } from '@repo/ui';
 import { formatNumber, formatPoints } from '@repo/utils';
 
 import { useCampaignReports } from './useCampaignReports';
@@ -9,12 +9,7 @@ export const CampaignPerformance = ({ campaignId }: { campaignId: number }) => {
 
   return (
     <section className="border-t border-border-subtle pt-5">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-heading-sm-web font-semibold">캠페인 실적</h3>
-        {report?.todayStatus === 'IN_PROGRESS' && (
-          <StatusBadge variant="neutral">오늘 실적 집계 중</StatusBadge>
-        )}
-      </div>
+      <h3 className="mb-3 text-heading-sm-web font-semibold">캠페인 실적</h3>
       <p className="mb-3 text-caption-web text-text-secondary">
         전일까지 집계된 전체 기간 기준입니다.
       </p>
