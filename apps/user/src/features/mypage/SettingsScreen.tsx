@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react';
 import { logout } from '@user/api/auth';
 import { fetchMyProfile } from '@user/api/member';
 import { useAuth } from '@user/auth/useAuth';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import Card, { cardClassName } from '@user/ui/Card/Card';
 import TopBar from '@user/ui/TopBar/TopBar';
 
@@ -17,6 +18,7 @@ const SettingsScreen = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const profile = useLoad(fetchMyProfile);
+  const showSkeleton = useDelayedLoading(profile.data === undefined);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [hasLogoutError, setHasLogoutError] = useState(false);
 
@@ -41,7 +43,8 @@ const SettingsScreen = () => {
     <div className="flex flex-col">
       <TopBar onBack={() => navigate(-1)} title="설정" />
       <div className="flex flex-col gap-6 px-page pt-4 pb-6">
-        {profile.data === undefined && (
+        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
+        {showSkeleton && (
           <div
             aria-hidden="true"
             className="h-36 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"

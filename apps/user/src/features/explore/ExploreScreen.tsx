@@ -9,6 +9,7 @@ import {
   type StoreListItem,
 } from '@user/api/store';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import {
   getHeaderLocationName,
   useMyLocation,
@@ -35,6 +36,7 @@ const ExploreScreen = () => {
   const [category, setCategory] = useState<CategoryFilter>('ALL');
   // undefined면 불러오는 중, null이면 첫 페이지를 받지 못함
   const [stores, setStores] = useState<StoreListItem[] | null | undefined>();
+  const showSkeleton = useDelayedLoading(stores === undefined);
   // 다음 페이지 커서. 마지막 페이지면 null
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -238,7 +240,8 @@ const ExploreScreen = () => {
     if (!stores) {
       return (
         <>
-          <StoreListSkeleton />
+          {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
+          {showSkeleton && <StoreListSkeleton />}
           <p className="sr-only" role="status">
             가게를 불러오는 중이에요
           </p>

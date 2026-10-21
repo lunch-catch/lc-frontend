@@ -22,6 +22,7 @@ import {
 } from '@user/api/wishlist';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import { useMyLocation } from '@user/hooks/useMyLocation';
 import {
   getIssuePhase,
@@ -102,6 +103,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const navigate = useNavigate();
   // undefined: 불러오는 중, null: 없는 가게
   const [store, setStore] = useState<StoreDetail | null | undefined>();
+  const showSkeleton = useDelayedLoading(store === undefined);
   // 가게 정보를 받지 못했는지. 없는 가게(null)와 달리 다시 시도할 수 있다
   const [hasLoadError, setHasLoadError] = useState(false);
   // 다시 시도할 때마다 올려서 처음부터 다시 받는다
@@ -204,7 +206,8 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   if (store === undefined) {
     return (
       <>
-        <StoreDetailSkeleton onBack={goBack} />
+        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 뒤로 가기만 두고 회색 틀은 조금 기다린 뒤에 보여준다 */}
+        <StoreDetailSkeleton onBack={goBack} showBlocks={showSkeleton} />
         <p className="sr-only" role="status">
           가게 정보를 불러오는 중이에요
         </p>
