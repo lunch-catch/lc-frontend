@@ -1,3 +1,4 @@
+import { isImageAttached, isImageUploading } from '@owner/api/imageUpload';
 import {
   getStoreRequiredChecks,
   hasAgreedRequiredTerms,
@@ -63,6 +64,26 @@ const getHoursProgressHint = ({ hours }: SignupFlowValues) => {
     : '종료 시간을 시작 시간보다 늦게 설정해주세요';
 };
 
+// 사진은 고르자마자 올리므로, 올리는 중이거나 올리지 못한 사진이 있으면 먼저 알린다
+const getImagesProgressHint = ({ images }: SignupFlowValues) => {
+  const { interiorImages, logoImage } = images;
+  const allImages = logoImage ? [logoImage, ...interiorImages] : interiorImages;
+
+  if (allImages.some(isImageUploading)) {
+    return '사진을 올리고 있어요';
+  }
+
+  if (logoImage?.status === 'failed') {
+    return '대표 이미지를 다시 올려주세요';
+  }
+
+  if (interiorImages.some(({ status }) => status === 'failed')) {
+    return '올리지 못한 매장 사진을 다시 올리거나 빼주세요';
+  }
+
+  return logoImage ? '대표 이미지를 등록했어요' : '대표 이미지를 등록해주세요';
+};
+
 // 배열 순서대로 진행한다. 단계를 추가할 때는 이 배열, SignupFlowValues, 라우터의 단계 화면에 함께 추가한다
 export const signupSteps: SignupStep[] = [
   {
@@ -103,11 +124,12 @@ export const signupSteps: SignupStep[] = [
     id: 'images',
     path: 'images',
     title: '매장 사진 등록',
-    canProceed: ({ images }) => images.logoImage !== null,
-    progressHint: ({ images }) =>
-      images.logoImage
-        ? '대표 이미지를 등록했어요'
-        : '대표 이미지를 등록해주세요',
+    // 대표 이미지는 필수, 매장 사진은 선택이지만 고른 사진은 모두 가게에 붙어야 넘어간다
+    canProceed: ({ images }) =>
+      images.logoImage !== null &&
+      isImageAttached(images.logoImage) &&
+      images.interiorImages.every(isImageAttached),
+    progressHint: getImagesProgressHint,
   },
   {
     id: 'menu',
