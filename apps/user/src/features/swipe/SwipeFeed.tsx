@@ -8,6 +8,7 @@ import {
   sendSwipeAction,
   type SwipeAction,
 } from '@user/api/feed';
+import { type FeedFilter, saveFeedFilter } from '@user/api/feedFilter';
 import {
   getHeaderLocationName,
   useMyLocation,
@@ -39,6 +40,7 @@ import SwipeUnavailable, {
   type SwipeUnavailableReason,
 } from './SwipeUnavailable';
 import SwipeWaiting from './SwipeWaiting';
+import { useFeedFilter } from './useFeedFilter';
 import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
@@ -131,6 +133,16 @@ const SwipeFeed = () => {
   // 시간이 지나 다시 들어오면 그때의 받는 때(11:00부터, 지금 바로, 내일)를 다시 알려주려는 것이다
   const hasShownWishToast = useRef(false);
   const [setCardArea, cardMaxWidth] = usePosterFitWidth();
+  const feedFilter = useFeedFilter();
+  // 빈 화면에서 업종 필터를 푸는 중인지
+  const [isClearingCategories, setIsClearingCategories] = useState(false);
+  // 업종을 골라 둔 채 카드가 없으면 필터 때문일 수 있어, 필터를 풀어 보라고 따로 안내한다
+  const hasCategoryFilter = (feedFilter.filter?.categories.length ?? 0) > 0;
+  // 피드 응답을 받는 쪽(effect)에서 읽는다. 업종을 골라 둔 채 비면 "오늘 다 봤어요" 대신 필터 안내를 보여준다
+  const hasCategoryFilterRef = useRef(hasCategoryFilter);
+  useEffect(() => {
+    hasCategoryFilterRef.current = hasCategoryFilter;
+  }, [hasCategoryFilter]);
 
   useEffect(() => {
     // 저장해 둔 묶음으로 이어 볼 때는 받지 않는다
@@ -154,8 +166,11 @@ const SwipeFeed = () => {
           return;
         }
         // 카드를 넘긴 뒤 다음 피드가 비었으면 주변 카드를 오늘 모두 본 것이다
+        // 업종을 골라 둔 채 비었으면 다른 업종은 남았을 수 있어 필터 안내(empty)로 둔다
         setStatus(
-          response.status === 'empty' && hasServedCards.current
+          response.status === 'empty' &&
+            hasServedCards.current &&
+            !hasCategoryFilterRef.current
             ? 'done'
             : response.status,
         );
@@ -201,6 +216,65 @@ const SwipeFeed = () => {
   const retry = () => {
     hasRetriedRateLimit.current = false;
     loadNextFeed();
+  };
+
+  // 받아 둔 카드를 다 넘겼을 때. 다음 피드를 받고, 아직 이르면 받을 수 있는 시각까지 기다린다
+  const moveToNextFeed = () => {
+    if (nextFeedAt === null) {
+      setStatus('done');
+    } else if (Date.now() >= nextFeedAt) {
+      loadNextFeed();
+    } else {
+      setWaitUntil(nextFeedAt);
+      setStatus('waiting');
+    }
+  };
+
+  const handleFilterSaved = (saved: FeedFilter) => {
+    const isSortChanged = feedFilter.filter?.sort !== saved.sort;
+    feedFilter.setFilter(saved);
+    if (topCard) {
+      // 업종은 받아 둔 카드 중 아직 안 본 카드에 바로 적용해, 고른 업종이 아닌 카드는 숨긴다
+      // 새로 받으면 다음 피드 시각 전이라 거절되거나 받아 둔 카드를 못 보게 될 수 있어, 서버에 다시 묻지 않는다
+      // 정렬은 받은 순서를 바꾸지 말라는 규칙이 있어 다음 피드부터 적용된다
+      const remaining = cards
+        .slice(currentIndex)
+        .filter(
+          (card) =>
+            saved.categories.length === 0 ||
+            saved.categories.includes(card.category),
+        );
+      setCards([...cards.slice(0, currentIndex), ...remaining]);
+      setToastMessage(
+        isSortChanged
+          ? '필터를 저장했어요 · 정렬은 새로 받는 카드부터 적용돼요'
+          : '필터를 적용했어요',
+      );
+      if (remaining.length === 0) moveToNextFeed();
+      return;
+    }
+    // 보여줄 카드가 없으면 기다리지 않고 바뀐 필터로 바로 다시 받는다
+    // 요청 제한에 걸려 기다리는 중이면 그 시각에 바뀐 필터로 받는다
+    setToastMessage('필터를 저장했어요');
+    if (status !== 'loading' && status !== 'waiting') retry();
+  };
+
+  // 빈 화면의 "전체 업종 보기". 정렬은 그대로 두고 업종만 전체로 바꿔 저장한 뒤 바로 다시 받는다
+  const showAllCategories = async () => {
+    if (!feedFilter.filter || isClearingCategories) return;
+    setIsClearingCategories(true);
+    try {
+      const saved = await saveFeedFilter({
+        ...feedFilter.filter,
+        categories: [],
+      });
+      feedFilter.setFilter(saved);
+      retry();
+    } catch {
+      setToastMessage('필터를 바꾸지 못했어요 · 잠시 후 다시 시도해 주세요');
+    } finally {
+      setIsClearingCategories(false);
+    }
   };
 
   // 기다리는 시각이 되면 한 번 다시 받는다. 앱이 화면에 보일 때만 받는다 (명세의 요청 제한 규칙)
@@ -265,17 +339,8 @@ const SwipeFeed = () => {
     });
     setCurrentIndex((index) => index + 1);
 
-    // 마지막 카드를 넘기면 다음 피드를 받는다. 아직 이르면 받을 수 있는 시각까지 기다린다
-    if (currentIndex + 1 >= cards.length) {
-      if (nextFeedAt === null) {
-        setStatus('done');
-      } else if (Date.now() >= nextFeedAt) {
-        loadNextFeed();
-      } else {
-        setWaitUntil(nextFeedAt);
-        setStatus('waiting');
-      }
-    }
+    // 마지막 카드를 넘기면 다음 피드를 받는다
+    if (currentIndex + 1 >= cards.length) moveToNextFeed();
 
     if (action === 'wish') {
       increaseWishCount();
@@ -311,20 +376,11 @@ const SwipeFeed = () => {
         {status !== 'needsLocation' && (
           <div className="flex items-center justify-between gap-3 px-page pt-1">
             <FeedFilterButton
+              filter={feedFilter.filter}
+              hasLoadError={feedFilter.hasLoadError}
               onLoadError={() => setToastMessage('필터를 불러오지 못했어요')}
-              onSaved={() => {
-                // 보던 카드가 있으면 이미 받은 카드에는 적용되지 않고, 다 본 뒤 새로 받는 피드부터 적용된다
-                if (topCard) {
-                  setToastMessage(
-                    '필터를 저장했어요 · 새로 받는 카드부터 적용돼요',
-                  );
-                  return;
-                }
-                // 보여줄 카드가 없으면 기다리지 않고 바뀐 필터로 바로 다시 받는다
-                // 요청 제한에 걸려 기다리는 중이면 그 시각에 바뀐 필터로 받는다
-                setToastMessage('필터를 저장했어요');
-                if (status !== 'loading' && status !== 'waiting') retry();
-              }}
+              onReload={feedFilter.reload}
+              onSaved={handleFilterSaved}
             />
             <OpenCountdown />
           </div>
@@ -332,7 +388,14 @@ const SwipeFeed = () => {
         {(status === 'empty' ||
           status === 'needsLocation' ||
           status === 'error') && (
-          <SwipeUnavailable onRetry={retry} reason={status} />
+          <SwipeUnavailable
+            isClearingFilter={isClearingCategories}
+            onRetry={retry}
+            onShowAllCategories={
+              hasCategoryFilter ? showAllCategories : undefined
+            }
+            reason={status}
+          />
         )}
         {status === 'done' && <SwipeDone />}
         {status === 'waiting' && <SwipeWaiting until={waitUntil} />}
