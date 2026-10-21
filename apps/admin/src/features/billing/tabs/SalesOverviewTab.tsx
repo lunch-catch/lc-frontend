@@ -1,9 +1,4 @@
-import {
-  Button,
-  DateRangePicker,
-  SegmentedControl,
-  StatusBadge,
-} from '@repo/ui';
+import { DateRangePicker, SegmentedControl, StatusBadge } from '@repo/ui';
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { getSales } from '@admin/api/analytics';
@@ -134,17 +129,6 @@ export const SalesOverviewTab = ({
           {validation}
         </p>
       )}
-      {resource.error && (
-        <div
-          role="alert"
-          className="flex items-center gap-3 text-body-sm-web text-status-danger-fg"
-        >
-          {resource.error}
-          <Button variant="neutral" onClick={resource.retry}>
-            다시 시도
-          </Button>
-        </div>
-      )}
       <section aria-label="조회 기간별 매출 합계" className="space-y-3">
         <h3 className="text-body-sm-web font-semibold">기간별 합계</h3>
         <DataTable
@@ -193,6 +177,7 @@ export const SalesOverviewTab = ({
           showDateRange={false}
           loading={resource.loading}
           error={validation || resource.error}
+          onRetry={!validation ? resource.retry : undefined}
         />
       </section>
     </>

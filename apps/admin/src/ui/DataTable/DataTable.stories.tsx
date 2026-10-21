@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
@@ -242,4 +243,103 @@ export const Error: Story = {
       </tbody>
     </DataTable>
   ),
+};
+
+export const ErrorWithRetry: Story = {
+  render: function ErrorWithRetryExample() {
+    const [attempts, setAttempts] = useState(0);
+    return (
+      <>
+        <DataTable>
+          {tableHeader}
+          <tbody>
+            <tr>
+              <DataTable.Error
+                colSpan={5}
+                description="서버에 연결하지 못했습니다."
+                onRetry={() => setAttempts((value) => value + 1)}
+              />
+            </tr>
+          </tbody>
+        </DataTable>
+        <p role="status">재시도 요청 {attempts}회</p>
+      </>
+    );
+  },
+};
+
+export const ErrorWaitingToRetry: Story = {
+  render: () => (
+    <DataTable>
+      {tableHeader}
+      <tbody>
+        <tr>
+          <DataTable.Error
+            colSpan={5}
+            description="잠시 후 다시 시도해 주세요."
+            onRetry={() => {}}
+            retryDisabled
+          />
+        </tr>
+      </tbody>
+    </DataTable>
+  ),
+};
+
+const responsiveColumns: DataTableColumn[] = [
+  { key: 'id', label: '주문 번호', minWidth: 160 },
+  { key: 'name', label: '사용자', minWidth: 120 },
+  { key: 'product', label: '상품명', minWidth: 240 },
+  { key: 'date', label: '주문 일시', minWidth: 180 },
+  { key: 'status', label: '상태', minWidth: 120 },
+];
+const ResponsiveExample = ({
+  internalScroll = false,
+  rowCount,
+}: {
+  internalScroll?: boolean;
+  rowCount?: number;
+}) => {
+  const settings = useTableColumnSettings(
+    'storybook.responsive',
+    responsiveColumns,
+  );
+  return (
+    <div className="w-full max-w-sm">
+      <FilterBar columnSettings={settings} />
+      <DataTable
+        columns={responsiveColumns}
+        columnSettings={settings}
+        scrollMaxHeight={internalScroll ? '15rem' : undefined}
+        resizableColumns
+      >
+        {tableHeader}
+        <tbody>
+          {Array.from(
+            { length: rowCount ?? (internalScroll ? 20 : 3) },
+            (_, index) => (
+              <DataTable.Row key={index}>
+                <DataTable.Cell>LC-20261021-{index + 1}</DataTable.Cell>
+                <DataTable.Cell>김런치</DataTable.Cell>
+                <DataTable.Cell>
+                  긴 상품명도 페이지 너비를 늘리지 않고 말줄임 처리합니다.
+                </DataTable.Cell>
+                <DataTable.Cell>2026. 10. 21. 12:30</DataTable.Cell>
+                <DataTable.Cell>사용 가능</DataTable.Cell>
+              </DataTable.Row>
+            ),
+          )}
+        </tbody>
+      </DataTable>
+    </div>
+  );
+};
+
+export const Responsive: Story = { render: () => <ResponsiveExample /> };
+export const ResponsiveInternalScroll: Story = {
+  render: () => <ResponsiveExample internalScroll />,
+};
+
+export const ResponsiveLongTable: Story = {
+  render: () => <ResponsiveExample rowCount={30} />,
 };

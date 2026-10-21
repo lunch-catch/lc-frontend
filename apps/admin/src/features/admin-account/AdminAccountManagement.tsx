@@ -80,6 +80,7 @@ export const AdminAccountManagement = () => {
         </div>
         {canIssueAccount && (
           <Button
+            variant="primary"
             leadingIcon={<Plus aria-hidden="true" className="size-4" />}
             onClick={issue.openIssueModal}
           >
@@ -132,7 +133,12 @@ export const AdminAccountManagement = () => {
               </tr>
             ) : list.error ? (
               <tr>
-                <TableError colSpan={3} description={list.error} />
+                <TableError
+                  colSpan={3}
+                  description={list.error}
+                  onRetry={list.refresh}
+                  retryDisabled={list.isWaiting}
+                />
               </tr>
             ) : list.accounts.length === 0 ? (
               <tr>
@@ -155,17 +161,6 @@ export const AdminAccountManagement = () => {
             )}
           </tbody>
         </DataTable>
-        {list.error && (
-          <div className="mt-3 flex justify-end">
-            <Button
-              variant="neutral"
-              disabled={list.isWaiting}
-              onClick={list.refresh}
-            >
-              다시 시도
-            </Button>
-          </div>
-        )}
         {!list.loading && !list.error && (
           <p className="text-caption-web text-text-secondary">
             총 {list.accounts.length}개

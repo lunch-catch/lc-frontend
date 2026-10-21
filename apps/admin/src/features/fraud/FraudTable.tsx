@@ -26,6 +26,7 @@ interface FraudTableProps<T> {
   rowKey: (row: T) => string | number;
   loading: boolean;
   error?: string;
+  onRetry?: () => void;
   emptyMessage?: string;
   density: TableDensity;
   settings: TableColumnSettingsState;
@@ -40,6 +41,7 @@ export const FraudTable = <T,>({
   rowKey,
   loading,
   error,
+  onRetry,
   emptyMessage,
   density,
   settings,
@@ -79,7 +81,11 @@ export const FraudTable = <T,>({
         </tr>
       ) : error ? (
         <tr>
-          <TableError colSpan={columns.length} description={error} />
+          <TableError
+            colSpan={columns.length}
+            description={error}
+            onRetry={onRetry}
+          />
         </tr>
       ) : !rows.length ? (
         <tr>

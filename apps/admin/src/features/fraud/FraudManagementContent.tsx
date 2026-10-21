@@ -1,5 +1,4 @@
 import {
-  Button,
   DateRangePicker,
   SearchField,
   SelectField,
@@ -58,7 +57,6 @@ export const FraudManagementContent = () => {
     updateFilters,
     invalid,
     warnings,
-    resource,
     validation,
     density,
     setDensity,
@@ -305,6 +303,7 @@ export const FraudManagementContent = () => {
           }
           loading={invalid.loading}
           error={invalid.error}
+          onRetry={invalid.refresh}
           emptyMessage={validation || '조회된 무효 노출이 없습니다.'}
           density={density}
           settings={settings}
@@ -320,6 +319,7 @@ export const FraudManagementContent = () => {
           rowKey={(item) => item.campaignId}
           loading={warnings.loading}
           error={warnings.error}
+          onRetry={warnings.refresh}
           emptyMessage={validation || '조회된 캠페인 경고가 없습니다.'}
           density={density}
           settings={settings}
@@ -327,13 +327,6 @@ export const FraudManagementContent = () => {
           sortDir={filters.sortDir}
           onSort={onSort}
         />
-      )}
-      {resource.error && (
-        <div className="mt-3 flex justify-end">
-          <Button variant="neutral" onClick={resource.refresh}>
-            다시 시도
-          </Button>
-        </div>
       )}
       <PaginationSummary {...pagination} />
     </section>

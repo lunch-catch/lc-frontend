@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 
 import type { DataTableColumn } from './dataTableTypes';
 
-const defaultColumnMinWidth = 80;
+export const defaultColumnMinWidth = 80;
 
 export const useTableColumnResize = (columns?: DataTableColumn[]) => {
   const tableRef = useRef<HTMLTableElement>(null);

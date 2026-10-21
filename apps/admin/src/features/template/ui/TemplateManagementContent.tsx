@@ -128,6 +128,7 @@ export const TemplateManagementContent = ({
           }}
         >
           <Button
+            variant="primary"
             disabled={!canCreate}
             // 비활성 버튼이 포인터 이벤트를 삼키지 않도록 안내용 래퍼에서 처리한다.
             style={atTemplateLimit ? { pointerEvents: 'none' } : undefined}

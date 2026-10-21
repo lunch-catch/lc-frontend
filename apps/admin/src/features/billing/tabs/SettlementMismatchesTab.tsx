@@ -152,6 +152,7 @@ export const SettlementMismatchesTab = ({
         rowId={(item) => item.mismatchId}
         loading={resource.loading}
         error={validation || resource.error}
+        onRetry={!validation ? resource.refresh : undefined}
         emptyMessage="조회된 정산 불일치 내역이 없습니다."
         preferences={preferences}
         page={filters.page}

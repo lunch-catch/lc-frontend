@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Button,
   DateRangePicker,
   SearchField,
   SelectField,
@@ -152,6 +151,7 @@ export const OwnerMemberListContent = () => {
               <TableError
                 colSpan={columns.length}
                 description={error || resource.error}
+                onRetry={!error ? resource.refresh : undefined}
               />
             </tr>
           ) : !resource.data?.items.length ? (
@@ -185,13 +185,6 @@ export const OwnerMemberListContent = () => {
           )}
         </tbody>
       </DataTable>
-      {resource.error && (
-        <div className="mt-3 flex justify-end">
-          <Button variant="neutral" onClick={resource.refresh}>
-            다시 시도
-          </Button>
-        </div>
-      )}
       <PaginationSummary
         totalCount={resource.data?.totalElements ?? 0}
         pageSize={20}

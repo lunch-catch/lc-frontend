@@ -113,6 +113,10 @@ export const usePointLedger = (
     enabled,
     sortDir,
     loadMore,
+    // 실패한 요청의 커서를 유지해 첫 조회와 추가 조회를 같은 동작으로 재시도한다.
+    retry: () => {
+      if (enabled && !loading) setRevision((value) => value + 1);
+    },
     hasNext: Boolean(currentResult?.data?.nextPageToken),
   };
 };
