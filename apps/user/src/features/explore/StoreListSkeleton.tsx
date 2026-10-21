@@ -14,7 +14,7 @@ const StoreListSkeleton = () => {
           className={`flex items-center gap-3 p-3 ${cardClassName}`}
           key={index}
         >
-          <div className="size-18 shrink-0 rounded-lg bg-surface-subtle" />
+          <div className="size-14 shrink-0 rounded-lg bg-surface-subtle" />
           <div className="flex flex-1 flex-col gap-2">
             <div className="h-5 w-28 rounded-sm bg-surface-subtle" />
             <div className="h-4 w-20 rounded-sm bg-surface-subtle/60" />

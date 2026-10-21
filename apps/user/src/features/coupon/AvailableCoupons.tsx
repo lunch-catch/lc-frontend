@@ -149,6 +149,7 @@ const AvailableCoupons = () => {
                   aria-label={`${coupon.storeName} 쿠폰 QR 보기`}
                   className="gap-1.5"
                   onClick={() => setSelectedCoupon(coupon)}
+                  size="small"
                   variant="outline"
                 >
                   <QrCode aria-hidden="true" className="size-4" />

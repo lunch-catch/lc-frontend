@@ -25,7 +25,7 @@ const FeaturedStoreCard = ({ store }: FeaturedStoreCardProps) => {
         className={`block overflow-hidden focus-visible:outline-2 focus-visible:outline-action-primary ${cardClassName}`}
         to={`/stores/${store.storeId}`}
       >
-        <div className="relative h-44 bg-surface-subtle">
+        <div className="relative h-36 bg-surface-subtle">
           {store.thumbnailUrl ? (
             <img
               alt=""

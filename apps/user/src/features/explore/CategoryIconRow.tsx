@@ -32,7 +32,7 @@ const CategoryIconRow = ({ onChange, value }: CategoryIconRowProps) => {
               value={option.value}
             />
             <span
-              className={`flex size-14 items-center justify-center rounded-full border bg-bg-surface transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-action-primary ${
+              className={`flex size-12 items-center justify-center rounded-full border bg-bg-surface transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-action-primary ${
                 isSelected
                   ? 'border-2 border-action-primary'
                   : 'border-border-subtle'
@@ -40,10 +40,10 @@ const CategoryIconRow = ({ onChange, value }: CategoryIconRowProps) => {
             >
               <img
                 alt=""
-                className="size-10 object-contain"
-                height={40}
+                className="size-8 object-contain"
+                height={32}
                 src={categoryIcons[option.value]}
-                width={40}
+                width={32}
               />
             </span>
             <span

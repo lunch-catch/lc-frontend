@@ -357,7 +357,7 @@ const ExploreScreen = () => {
         }`}
       >
         <form
-          className="flex h-12 items-center gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 focus-within:border-action-primary"
+          className="flex h-11 items-center gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 focus-within:border-action-primary"
           onSubmit={handleSearch}
           role="search"
         >

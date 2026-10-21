@@ -27,7 +27,7 @@ const StoreCard = ({ store }: StoreCardProps) => {
         {store.thumbnailUrl ? (
           <img
             alt=""
-            className="size-18 shrink-0 rounded-lg bg-surface-subtle object-cover"
+            className="size-14 shrink-0 rounded-lg bg-surface-subtle object-cover"
             height={72}
             loading="lazy"
             src={store.thumbnailUrl}
@@ -37,7 +37,7 @@ const StoreCard = ({ store }: StoreCardProps) => {
           // 사진이 없는 가게는 회색 바탕에 가게 아이콘을 둔다
           <div
             aria-hidden="true"
-            className="flex size-18 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"
+            className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"
           >
             <Store className="size-6" />
           </div>

@@ -45,11 +45,11 @@ const ProfileCard = ({
   onEdit: () => void;
   profile: MyProfile;
 }) => (
-  <section className={`flex items-center gap-4 p-4 ${cardClassName}`}>
+  <section className={`flex items-center gap-3 p-4 ${cardClassName}`}>
     {profile.profileImageUrl ? (
       <img
         alt=""
-        className="size-14 shrink-0 rounded-full bg-surface-subtle object-cover"
+        className="size-12 shrink-0 rounded-full bg-surface-subtle object-cover"
         height={56}
         src={profile.profileImageUrl}
         width={56}
@@ -57,7 +57,7 @@ const ProfileCard = ({
     ) : (
       <div
         aria-hidden="true"
-        className="flex size-14 shrink-0 items-center justify-center rounded-full bg-surface-subtle text-text-tertiary"
+        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-subtle text-text-tertiary"
       >
         <User className="size-6" />
       </div>
@@ -94,7 +94,7 @@ const CouponStats = ({ coupons }: { coupons: CouponSummary }) => {
 
   return (
     <dl
-      className={`grid grid-cols-3 divide-x divide-border-subtle py-4 ${cardClassName}`}
+      className={`grid grid-cols-3 divide-x divide-border-subtle py-3 ${cardClassName}`}
     >
       {stats.map(({ label, value }) => (
         <div className="flex flex-col-reverse items-center gap-1" key={label}>
