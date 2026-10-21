@@ -115,11 +115,6 @@ export const CampaignManagementContent = () => {
           전체 캠페인을 최신 등록순으로 조회합니다. 실적은 전일까지 집계된 전체
           기간 기준입니다.
         </p>
-        {performance.reports.size > 0 && (
-          <StatusBadge variant="neutral" className="mt-2">
-            오늘 실적 집계 중
-          </StatusBadge>
-        )}
       </header>
       <FilterBar
         columnSettings={columnSettings}
