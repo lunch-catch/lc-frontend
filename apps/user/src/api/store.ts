@@ -236,8 +236,10 @@ export interface StoreDetail {
   latitude: number;
   longitude: number;
   businessHours: StoreBusinessHour[];
-  // 가게 대표 이미지(로고) 주소
+  // 가게 대표 이미지 주소 (서버 logoImage). 점주가 "손님이 가게를 찾을 때 보여지는 사진"으로 올린다
   imageUrl: string | null;
+  // 가게 내부 사진 주소 0~3개. 받은 순서가 보여줄 순서다 (명세)
+  interiorImageUrls: string[];
   menus: StoreMenu[];
   // 서울 날짜 기준 오늘의 ACTIVE 캠페인. 없으면 null이다
   // null이어도 가게 조회 실패나 종료된 이벤트로 단정하지 않는다 (명세)
@@ -290,7 +292,7 @@ const toStoreDetail = (data: StoreDetailResponse): StoreDetail => ({
     lastOrderTime: toClockTime(hour.lastOrderTime),
   })),
   imageUrl: data.logoImage?.url ?? null,
-  // 내부 이미지는 아직 올린 가게가 없어 화면에 붙이지 않았다
+  interiorImageUrls: data.interiorImages.map((image) => image.url),
   // 메뉴는 받은 순서대로 보여준다 (명세)
   menus: data.menus.map(({ description, image, menuId, name, price }) => ({
     menuId,
@@ -365,6 +367,7 @@ const fetchMockStoreDetail = async (
     longitude: store.longitude,
     businessHours: createMockBusinessHours(detail.closedDays),
     imageUrl: store.thumbnailUrl,
+    interiorImageUrls: [],
     menus: detail.menus.map((menu, index) => ({
       description: null,
       imageUrl: null,

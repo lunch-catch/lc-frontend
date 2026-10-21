@@ -1,13 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  ChevronLeft,
-  Heart,
-  Navigation,
-  Phone,
-  Share2,
-  Store,
-} from 'lucide-react';
+import { ChevronLeft, Heart, Navigation, Phone, Share2 } from 'lucide-react';
 
 import {
   type CampaignIssueStatus,
@@ -51,6 +44,7 @@ import { getKakaoDirectionsUrl } from './kakaoMap';
 import LocationSection from './LocationSection';
 import MenuRow from './MenuRow';
 import StoreDetailSkeleton from './StoreDetailSkeleton';
+import StoreHeroImages from './StoreHeroImages';
 
 interface StoreDetailScreenProps {
   storeId: number;
@@ -364,23 +358,12 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
         </div>
       )}
       <div className="relative h-60 bg-surface-subtle">
-        {store.imageUrl ? (
-          <img
-            alt=""
-            className="size-full object-cover"
-            height={240}
-            src={store.imageUrl}
-            width={390}
-          />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="flex size-full items-center justify-center text-text-tertiary"
-          >
-            <Store className="size-12" />
-          </div>
-        )}
-        <div className="absolute inset-x-0 top-0 flex justify-between px-3 pt-[max(12px,env(safe-area-inset-top))]">
+        <StoreHeroImages
+          interiorImageUrls={store.interiorImageUrls}
+          mainImageUrl={store.imageUrl}
+        />
+        {/* 사진을 넘기는 손가락이 버튼 사이 빈 곳에 닿아도 사진이 넘어가도록, 버튼 줄은 버튼만 누를 수 있게 한다 */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-3 pt-[max(12px,env(safe-area-inset-top))] [&>button]:pointer-events-auto">
           <HeroButton label="뒤로 가기" onClick={goBack}>
             <ChevronLeft aria-hidden="true" className="size-6" />
           </HeroButton>
