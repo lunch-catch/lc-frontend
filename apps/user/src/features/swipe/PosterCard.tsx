@@ -38,12 +38,9 @@ const usePosterHtml = (posterUrl: string) => {
 };
 
 // 포스터를 받지 못했을 때 대신 보여주는 간단한 포스터. 가게 이름과 할인만 크게 둔다
-// 모든 카드에 광고 표시가 있어야 해서(피드 명세) 대체 포스터에도 광고 라벨을 붙인다
+// 사용자가 찜해서 보는 광고라 광고 표시를 붙이지 않는다 (멘토링 피드백, 2026-10)
 const FallbackPoster = ({ card }: PosterCardProps) => (
-  <div className="absolute inset-0 flex flex-col justify-between bg-surface-brand p-5">
-    <span className="self-end rounded-sm bg-bg-surface/80 px-1.5 py-0.5 text-caption-mobile font-medium text-text-secondary">
-      광고
-    </span>
+  <div className="absolute inset-0 flex flex-col justify-end bg-surface-brand p-5">
     <div className="flex flex-col gap-2">
       <p className="text-caption-mobile font-medium text-text-secondary">
         {BUSINESS_CATEGORY_LABELS[card.category]}
