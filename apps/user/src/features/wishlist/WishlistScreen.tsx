@@ -271,11 +271,18 @@ const WishlistScreen = () => {
       (item) => item.campaignId === wish.campaignId,
     );
 
+    // 받은 카드를 지우면 받은 쿠폰까지 지워진다고 오해하지 않도록 쿠폰함에 그대로 있다고 알려준다
+    const isIssued = issueStatus?.campaigns.find(
+      (campaign) => campaign.campaignId === wish.campaignId,
+    )?.isIssued;
+
     setWishes((current) =>
       current.filter((item) => item.campaignId !== wish.campaignId),
     );
     setToast({
-      message: '찜 목록에서 삭제했어요',
+      message: isIssued
+        ? '찜 목록에서 뺐어요\n받은 쿠폰은 쿠폰함에 그대로 있어요'
+        : '찜 목록에서 삭제했어요',
       // 끝난 캠페인은 다시 찜할 수 없어 되돌리기를 두지 않는다
       action: wish.isEnded
         ? undefined

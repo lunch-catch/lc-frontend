@@ -51,8 +51,9 @@ const WishCard = ({
 }: WishCardProps) => {
   const navigate = useNavigate();
   const isEnded = state === 'ended';
-  // 받은 쿠폰은 쿠폰함에서 관리하므로, 받았거나 받는 중인 카드는 찜에서 지울 수 없다
-  const canRemove = onRemove && state !== 'issued' && !isIssuing;
+  // 찜을 지워도 받은 쿠폰은 쿠폰함에 그대로 남아, 받은 카드도 지울 수 있다 (내일 다시 받고 싶지 않을 때)
+  // 받기 요청과 삭제 요청이 겹치지 않도록 받는 중에만 막는다
+  const canRemove = onRemove && !isIssuing;
   // 끝난 캠페인과 오늘 노출 후보가 아닌 캠페인은 서버가 가게 이름을 비워 준다
   const storeName = wish.storeName ?? (isEnded ? '끝난 캠페인' : '가게');
   // 잔여 수량은 아직 받을 수 있는 동안에만 의미가 있다
