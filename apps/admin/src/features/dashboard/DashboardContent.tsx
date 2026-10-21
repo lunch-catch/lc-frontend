@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button, DateRangePicker, SegmentedControl, Tabs } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
@@ -9,32 +8,19 @@ import {
   getPreviousRange,
 } from '@admin/api/analyticsDateUtils';
 import { analyticsPeriods, sumAnalytics } from '@admin/api/analyticsUtils';
-import { getMockDashboardUsage } from '@admin/api/mocks/dashboardUsage';
 
 import { DashboardActionQueue } from './DashboardActionQueue';
-import { DashboardBreakdown } from './DashboardBreakdown';
 import { DashboardFunnel } from './DashboardFunnel';
 import { DashboardMetricCard } from './DashboardMetricCard';
 import { DashboardMetricTrend } from './DashboardMetricTrend';
 import { DashboardOverview, DashboardSnapshots } from './DashboardOverview';
-import type { DashboardDataset } from './dashboardTypes';
 import { getDashboardMetricHint } from './dashboardUtils';
 import { useDashboardMetrics } from './useDashboardMetrics';
 import { useDashboardReport } from './useDashboardReport';
 
-const DashboardReport = ({ data }: { data: DashboardDataset }) => {
-  const report = useDashboardReport(data);
-  const {
-    view,
-    range,
-    interval,
-    validRange,
-    rangeError,
-    hasUsagePeriod,
-    days,
-    canCompare,
-    previousDays,
-  } = report;
+const DashboardReport = () => {
+  const report = useDashboardReport();
+  const { view, range, interval, validRange, rangeError } = report;
   const query = validRange
     ? {
         period: analyticsPeriods[interval],
@@ -178,13 +164,6 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
                   unit="명"
                 />
               </div>
-              {hasUsagePeriod && (
-                <DashboardBreakdown
-                  days={days}
-                  previousDays={previousDays}
-                  canCompare={canCompare}
-                />
-              )}
             </>
           ) : (
             <>
@@ -255,11 +234,10 @@ const DashboardReport = ({ data }: { data: DashboardDataset }) => {
 };
 
 export const DashboardContent = () => {
-  const [usageData] = useState(getMockDashboardUsage);
   return (
     <section aria-label="대시보드">
       <h2 className="sr-only">대시보드</h2>
-      <DashboardReport data={usageData} />
+      <DashboardReport />
     </section>
   );
 };
