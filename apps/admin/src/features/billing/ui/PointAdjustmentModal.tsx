@@ -38,14 +38,16 @@ export const PointAdjustmentModal = ({
     null,
   );
   const mutation = useBillingMutation();
-  const values = {
+  const commonValues = {
     ownerId: Number(owner),
     amount: Number(amount),
     reason: reason.trim(),
-    // 캠페인 정정은 원래 과금이 발생한 영업일에 연결해야 집계에 반영된다.
-    ...(campaign ? { campaignId: Number(campaign), targetBusinessDate } : {}),
     ...(mismatch ? { mismatchId: mismatch.mismatchId } : {}),
   };
+  // 조건부 객체 전개 대신 요청을 분기해 ID·영업일의 타입 관계를 유지한다.
+  const values = campaign
+    ? { ...commonValues, campaignId: Number(campaign), targetBusinessDate }
+    : commonValues;
   const submit = () => {
     const error = getPointAdjustmentError({
       ownerId: owner,

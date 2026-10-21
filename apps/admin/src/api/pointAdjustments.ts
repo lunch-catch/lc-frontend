@@ -8,15 +8,20 @@ import {
 } from './billingResponse';
 import { ApiError, requestData } from './client';
 
-export interface PointAdjustmentValues {
+interface PointAdjustmentBaseValues {
   requestId: string;
   ownerId: number;
   amount: number;
   reason: string;
-  campaignId?: number;
-  targetBusinessDate?: string;
   mismatchId?: number;
 }
+
+// 캠페인 조정은 ID·영업일을 함께 보내고, 일반 조정은 두 필드를 모두 생략한다.
+export type PointAdjustmentValues = PointAdjustmentBaseValues &
+  (
+    | { campaignId: number; targetBusinessDate: string }
+    | { campaignId?: never; targetBusinessDate?: never }
+  );
 export interface PointAdjustment {
   ledgerId: number;
   ownerId: number;
