@@ -107,24 +107,4 @@ export const mockUserTerms: TermsItem[] = [
       },
     ],
   },
-  {
-    key: 'marketing',
-    title: '광고성 알림 수신',
-    version: '1.0',
-    sections: [
-      {
-        heading: '받는 알림',
-        items: [
-          '찜한 쿠폰의 선착순 발급 10분 전(10:50) 오픈 알림',
-          '관심 가게의 새 쿠폰 알림',
-        ],
-      },
-      {
-        heading: '동의하지 않을 때',
-        items: [
-          '알림만 받지 않으며 다른 서비스는 그대로 이용할 수 있습니다. 마이페이지에서 언제든 바꿀 수 있습니다.',
-        ],
-      },
-    ],
-  },
 ];

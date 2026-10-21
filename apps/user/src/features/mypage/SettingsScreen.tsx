@@ -12,7 +12,7 @@ import ConsentSettings from './ConsentSettings';
 import ThemeSettings from './ThemeSettings';
 import { useLoad } from './useLoad';
 
-// 설정. 가끔 바꾸는 알림·위치 동의, 화면 모드, 계정 관리를 마이 탭에서 한 단계 안쪽에 모은다
+// 설정. 가끔 바꾸는 위치 동의, 화면 모드, 계정 관리를 마이 탭에서 한 단계 안쪽에 모은다
 const SettingsScreen = () => {
   const navigate = useNavigate();
   const auth = useAuth();
@@ -52,7 +52,7 @@ const SettingsScreen = () => {
             className={`flex items-center justify-between gap-3 px-4 py-4 ${cardClassName}`}
           >
             <p className="text-body-sm-mobile text-text-secondary">
-              알림·위치 설정을 불러오지 못했어요
+              위치 설정을 불러오지 못했어요
             </p>
             <button
               className="h-9 shrink-0 rounded-lg border border-border-subtle px-3 text-body-sm-mobile font-bold text-text-primary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"

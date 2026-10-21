@@ -23,7 +23,11 @@ import {
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
 import { useMyLocation } from '@user/hooks/useMyLocation';
-import { useOpenCountdown } from '@user/hooks/useOpenCountdown';
+import {
+  getIssuePhase,
+  useOpenCountdown,
+  WISH_ISSUE_TIMING,
+} from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import Card, { cardClassName } from '@user/ui/Card/Card';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
@@ -246,7 +250,8 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     try {
       await addWish(campaign.campaignId);
       setWished(true);
-      setToast({ message: '찜했어요 · 10:50에 쿠폰 오픈 알림을 보내드릴게요' });
+      // 사진 위 하트로 아무 때나 찜할 수 있어, 지금 찜하면 언제 받는지는 스와이프 찜 토스트와 같은 기준으로 알려준다
+      setToast({ message: `찜했어요 · ${WISH_ISSUE_TIMING[getIssuePhase()]}` });
     } catch {
       setToast({ message: '찜하지 못했어요', tone: 'error' });
     } finally {

@@ -37,7 +37,8 @@ const CouponCta = ({
 
   const renderNotice = () => {
     if (state === 'beforeOpenNotWished') {
-      return '찜해두면 10:50에 쿠폰 오픈 알림을 보내드려요';
+      // 알림 기능을 빼서 알림 대신 받는 때와 곳을 알려준다
+      return '찜해두면 11:00부터 찜 목록에서 쿠폰을 받을 수 있어요';
     }
     if (state === 'beforeOpenWished') {
       return (

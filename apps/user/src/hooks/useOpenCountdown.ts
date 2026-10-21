@@ -15,6 +15,14 @@ export const getIssuePhase = (now = getNow()): IssuePhase => {
   return now < getTodayAt(CLOSE_TIME, now) ? 'issuing' : 'closed';
 };
 
+// 지금 찜하면 쿠폰을 언제 받는지. 찜한 뒤 토스트에서 쓴다 (스와이프, 가게 상세)
+// 카드 아래 안내(SwipeHint)와 같은 때를 말한다
+export const WISH_ISSUE_TIMING: Record<IssuePhase, string> = {
+  beforeOpen: '11:00부터 쿠폰을 받을 수 있어요',
+  issuing: '지금 바로 쿠폰을 받을 수 있어요',
+  closed: '내일 11:00부터 쿠폰을 받을 수 있어요',
+};
+
 // 다음 날 00:00. 마감 뒤에는 이때 날이 바뀌어 다시 오픈 전이 된다
 const getNextMidnight = (now: number) => {
   const date = new Date(now);

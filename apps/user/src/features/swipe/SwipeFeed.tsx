@@ -8,12 +8,11 @@ import {
   sendSwipeAction,
   type SwipeAction,
 } from '@user/api/feed';
-import { useHasUnreadNotifications } from '@user/hooks/useHasUnreadNotifications';
 import {
   getHeaderLocationName,
   useMyLocation,
 } from '@user/hooks/useMyLocation';
-import { getIssuePhase, type IssuePhase } from '@user/hooks/useOpenCountdown';
+import { getIssuePhase, WISH_ISSUE_TIMING } from '@user/hooks/useOpenCountdown';
 import { useWishCount } from '@user/hooks/useWishCount';
 import AppHeader from '@user/ui/AppHeader/AppHeader';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
@@ -44,13 +43,6 @@ import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
 const TOAST_DURATION_MS = 2500;
-
-// 첫 찜 토스트에서 쿠폰을 언제 받는지. 카드 아래 안내(SwipeHint)와 같은 때를 말한다
-const WISH_TOAST_TIMING: Record<IssuePhase, string> = {
-  beforeOpen: '11:00부터 쿠폰을 받을 수 있어요',
-  issuing: '지금 바로 쿠폰을 받을 수 있어요',
-  closed: '내일 11:00부터 쿠폰을 받을 수 있어요',
-};
 
 // waiting: 다음 피드를 받을 수 있을 때까지 기다리는 중, done: 오늘 받을 수 있는 카드를 모두 넘김
 type FeedStatus =
@@ -122,7 +114,6 @@ const SwipeFeed = () => {
   // 피드는 저장 위치 기준이라, 노출을 기록할 때 같은 좌표를 보낸다
   const myLocation = useMyLocation();
   const locationName = getHeaderLocationName(myLocation);
-  const hasUnreadNotifications = useHasUnreadNotifications();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // 다시 시도할 때마다 올려서 피드를 새로 받는다
   const [attempt, setAttempt] = useState(initial.attempt);
@@ -294,7 +285,7 @@ const SwipeFeed = () => {
       if (!hasShownWishToast.current) {
         hasShownWishToast.current = true;
         setToastMessage(
-          `찜 목록에 담았어요\n${WISH_TOAST_TIMING[getIssuePhase()]}`,
+          `찜 목록에 담았어요\n${WISH_ISSUE_TIMING[getIssuePhase()]}`,
         );
       }
     }
@@ -306,11 +297,7 @@ const SwipeFeed = () => {
 
   return (
     <>
-      <AppHeader
-        hasUnreadNotifications={hasUnreadNotifications}
-        locationName={locationName}
-        wishCount={wishCount}
-      />
+      <AppHeader locationName={locationName} wishCount={wishCount} />
       {/* 토스트를 헤더 바로 아래에 띄우기 위한 기준 영역 */}
       <div className="relative flex flex-1 flex-col">
         {toastMessage && (

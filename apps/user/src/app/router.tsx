@@ -12,7 +12,6 @@ import KakaoCallbackPage from '@user/pages/KakaoCallbackPage';
 import LocationSettingsPage from '@user/pages/LocationSettingsPage';
 import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
-import NotificationPage from '@user/pages/NotificationPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
 import OnboardingLocationPage from '@user/pages/OnboardingLocationPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
@@ -78,7 +77,6 @@ export const router = createBrowserRouter([
           { path: '/my/settings', element: <SettingsPage /> },
           { path: '/my/withdraw', element: <WithdrawPage /> },
           // 스와이프·탐색 헤더의 알림 아이콘으로 들어온다
-          { path: '/notifications', element: <NotificationPage /> },
         ],
       },
       {
