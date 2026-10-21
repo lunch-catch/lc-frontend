@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
-import { formatDateTime, formatPoints } from '@repo/utils';
+import { formatDateTime, formatNumber, formatPoints } from '@repo/utils';
 
 import { campaignStatuses } from '@admin/api/campaigns';
 import { queryChoice, querySize, queryText } from '@admin/hooks/urlQuery';
@@ -27,24 +27,38 @@ import {
   getCampaignDiscount,
   getCampaignPeriod,
 } from './campaignUtils';
+import { useCampaignReports } from './useCampaignReports';
 import { useCampaigns } from './useCampaigns';
 
 const columns: DataTableColumn[] = [
+  { key: 'storeId', label: '가게 ID', width: '7%', minWidth: 90 },
+  { key: 'storeName', label: '가게명', width: '16%', minWidth: 140 },
   { key: 'campaignId', label: '캠페인 ID', width: '8%', minWidth: 100 },
-  { key: 'ownerId', label: '점주 ID', width: '8%', minWidth: 90 },
-  { key: 'storeId', label: '가게 ID', width: '8%', minWidth: 90 },
-  { key: 'storeName', label: '가게', width: '16%', minWidth: 140 },
-  { key: 'status', label: '상태', width: '10%', minWidth: 110 },
-  { key: 'createdAt', label: '등록 시각', width: '16%', minWidth: 165 },
+  { key: 'status', label: '상태', width: '8%', minWidth: 110 },
+  { key: 'createdAt', label: '등록 시각', width: '13%', minWidth: 165 },
   { key: 'discount', label: '할인', width: '12%', minWidth: 150 },
   {
     key: 'dailyBudget',
     label: '하루 예산',
-    width: '10%',
+    width: '8%',
     minWidth: 110,
     align: 'right',
   },
   { key: 'period', label: '집행 기간', width: '12%', minWidth: 175 },
+  {
+    key: 'spentAmount',
+    label: '소진 포인트',
+    width: '8%',
+    minWidth: 120,
+    align: 'right',
+  },
+  {
+    key: 'validImpressionCount',
+    label: '유효 노출',
+    width: '8%',
+    minWidth: 110,
+    align: 'right',
+  },
 ];
 const campaignQuery = {
   storeId: queryText(),
@@ -61,7 +75,11 @@ const statusOptions = [
 ];
 
 export const CampaignManagementContent = () => {
-  const columnSettings = useTableColumnSettings('campaigns', columns);
+  // 이전에 저장된 캠페인 우선 열 순서가 새 가게 우선 구성을 덮어쓰지 않도록 저장 영역을 분리한다.
+  const columnSettings = useTableColumnSettings(
+    'campaigns-store-first',
+    columns,
+  );
   const { filters, updateFilters } = useUrlFilters('campaigns.', campaignQuery);
   const [density, setDensity] = useState<TableDensity>('normal');
   const search = useUrlSearch(filters.storeId, (storeId) =>
@@ -79,6 +97,10 @@ export const CampaignManagementContent = () => {
   if (filters.status !== 'ALL') params.set('status', filters.status);
   const resource = useCampaigns(validationError ? null : params.toString());
   const items = resource.data?.items ?? [];
+  const performance = useCampaignReports(
+    items.map((item) => item.campaignId),
+    params.toString(),
+  );
   const error = validationError || resource.error;
   const openDetail = (id: number) => updateFilters({ detail: String(id) });
 
@@ -89,8 +111,14 @@ export const CampaignManagementContent = () => {
           캠페인 관리
         </h2>
         <p className="mt-2 text-body-sm-web text-text-secondary">
-          전체 캠페인을 최신 등록순으로 조회합니다.
+          전체 캠페인을 최신 등록순으로 조회합니다. 실적은 전일까지 집계된 전체
+          기간 기준입니다.
         </p>
+        {performance.reports.size > 0 && (
+          <StatusBadge variant="neutral" className="mt-2">
+            오늘 실적 집계 중
+          </StatusBadge>
+        )}
       </header>
       <FilterBar
         columnSettings={columnSettings}
@@ -145,61 +173,82 @@ export const CampaignManagementContent = () => {
               </TableEmpty>
             </tr>
           ) : (
-            items.map((campaign) => (
-              <TableRow
-                key={campaign.campaignId}
-                tabIndex={0}
-                showDetailArrow
-                className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
-                onClick={() => openDetail(campaign.campaignId)}
-                onKeyDown={(event) => {
-                  if (
-                    event.target === event.currentTarget &&
-                    (event.key === 'Enter' || event.key === ' ')
-                  ) {
-                    event.preventDefault();
-                    openDetail(campaign.campaignId);
-                  }
-                }}
-              >
-                <TableCell>
-                  <button
-                    type="button"
-                    className="text-action-primary hover:underline focus-visible:outline-2 focus-visible:outline-action-primary"
-                    aria-label={`캠페인 ${campaign.campaignId} 상세 보기`}
-                    onClick={(event) => {
-                      event.stopPropagation();
+            items.map((campaign) => {
+              const report = performance.reports.get(campaign.campaignId);
+              const unavailable = performance.error ? '조회 실패' : '조회 중';
+              return (
+                <TableRow
+                  key={campaign.campaignId}
+                  tabIndex={0}
+                  showDetailArrow
+                  className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
+                  onClick={() => openDetail(campaign.campaignId)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.target === event.currentTarget &&
+                      (event.key === 'Enter' || event.key === ' ')
+                    ) {
+                      event.preventDefault();
                       openDetail(campaign.campaignId);
-                    }}
-                  >
-                    {campaign.campaignId}
-                  </button>
-                </TableCell>
-                <TableCell>{campaign.ownerId}</TableCell>
-                <TableCell>{campaign.storeId}</TableCell>
-                <TableCell title={campaign.storeName ?? undefined}>
-                  {campaign.storeName ?? '미등록 가게'}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge
-                    variant={campaignStatusMeta[campaign.status].variant}
-                  >
-                    {campaignStatusMeta[campaign.status].label}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell>{formatDateTime(campaign.createdAt)}</TableCell>
-                <TableCell>{getCampaignDiscount(campaign)}</TableCell>
-                <TableCell>
-                  {campaign.dailyBudget === null
-                    ? '미설정'
-                    : formatPoints(campaign.dailyBudget)}
-                </TableCell>
-                <TableCell>{getCampaignPeriod(campaign)}</TableCell>
-              </TableRow>
-            ))
+                    }
+                  }}
+                >
+                  <TableCell>{campaign.storeId}</TableCell>
+                  <TableCell title={campaign.storeName ?? undefined}>
+                    {campaign.storeName ?? '미등록 가게'}
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      type="button"
+                      className="text-text-primary hover:underline focus-visible:outline-2 focus-visible:outline-action-primary"
+                      aria-label={`캠페인 ${campaign.campaignId} 상세 보기`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openDetail(campaign.campaignId);
+                      }}
+                    >
+                      {campaign.campaignId}
+                    </button>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      variant={campaignStatusMeta[campaign.status].variant}
+                    >
+                      {campaignStatusMeta[campaign.status].label}
+                    </StatusBadge>
+                  </TableCell>
+                  <TableCell>{formatDateTime(campaign.createdAt)}</TableCell>
+                  <TableCell>{getCampaignDiscount(campaign)}</TableCell>
+                  <TableCell>
+                    {campaign.dailyBudget === null
+                      ? '미설정'
+                      : formatPoints(campaign.dailyBudget)}
+                  </TableCell>
+                  <TableCell>{getCampaignPeriod(campaign)}</TableCell>
+                  <TableCell>
+                    {report ? formatPoints(report.spentAmount) : unavailable}
+                  </TableCell>
+                  <TableCell>
+                    {report
+                      ? `${formatNumber(report.validImpressionCount)}회`
+                      : unavailable}
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </tbody>
       </DataTable>
+      {performance.error && (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p role="alert" className="text-body-sm-web text-status-danger-fg">
+            실적 조회 실패: {performance.error}
+          </p>
+          <Button variant="neutral" onClick={performance.refresh}>
+            실적 다시 조회
+          </Button>
+        </div>
+      )}
       {resource.error && resource.data && (
         <p role="alert" className="mt-3 text-body-sm-web text-status-danger-fg">
           {resource.error}
