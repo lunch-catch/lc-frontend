@@ -20,6 +20,7 @@ import {
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
 
 import { CampaignDetails } from './CampaignDetails';
 import {
@@ -254,25 +255,19 @@ export const CampaignManagementContent = () => {
           {resource.error}
         </p>
       )}
+      {resource.data?.nextPageToken && (
+        <LoadMoreButton
+          loading={resource.loading}
+          retry={Boolean(resource.error)}
+          onClick={resource.loadMore}
+        />
+      )}
       <div className="relative mt-3 flex flex-wrap items-center justify-end gap-3 [&:has([aria-expanded=true])]:z-30">
         {/* 커서 응답에는 전체 건수가 없으므로 현재까지 불러온 개수만 표시한다. */}
         {resource.data && (
           <span className="text-caption-web text-text-secondary">
             불러온 캠페인 {items.length}건
           </span>
-        )}
-        {resource.data?.nextPageToken && (
-          <Button
-            variant="neutral"
-            disabled={resource.loading}
-            onClick={resource.loadMore}
-          >
-            {resource.loading
-              ? '불러오는 중'
-              : resource.error
-                ? '다시 불러오기'
-                : '더 불러오기'}
-          </Button>
         )}
         {resource.error && !resource.data && (
           <Button variant="neutral" onClick={resource.refresh}>
