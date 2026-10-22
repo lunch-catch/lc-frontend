@@ -32,9 +32,9 @@ import { useCampaignReports } from './useCampaignReports';
 import { useCampaigns } from './useCampaigns';
 
 const columns: DataTableColumn[] = [
+  { key: 'campaignId', label: '캠페인 ID', width: '8%', minWidth: 100 },
   { key: 'storeId', label: '가게 ID', width: '7%', minWidth: 90 },
   { key: 'storeName', label: '가게명', width: '16%', minWidth: 140 },
-  { key: 'campaignId', label: '캠페인 ID', width: '8%', minWidth: 100 },
   { key: 'status', label: '상태', width: '8%', minWidth: 110 },
   { key: 'createdAt', label: '등록 시각', width: '13%', minWidth: 165 },
   { key: 'discount', label: '할인', width: '12%', minWidth: 150 },
@@ -76,11 +76,8 @@ const statusOptions = [
 ];
 
 export const CampaignManagementContent = () => {
-  // 이전에 저장된 캠페인 우선 열 순서가 새 가게 우선 구성을 덮어쓰지 않도록 저장 영역을 분리한다.
-  const columnSettings = useTableColumnSettings(
-    'campaigns-store-first',
-    columns,
-  );
+  // 기존 가게 우선 열 설정이 새 캠페인 ID 우선 구성을 덮어쓰지 않도록 구분한다.
+  const columnSettings = useTableColumnSettings('campaigns-id-first', columns);
   const { filters, updateFilters } = useUrlFilters('campaigns.', campaignQuery);
   const [density, setDensity] = useState<TableDensity>('normal');
   const search = useUrlSearch(filters.storeId, (storeId) =>
@@ -123,7 +120,7 @@ export const CampaignManagementContent = () => {
       >
         <SearchField
           aria-label="가게 ID 검색"
-          placeholder="가게 ID"
+          placeholder="가게 ID 검색"
           value={search.draftKeyword}
           onChange={(event) => search.setDraftKeyword(event.target.value)}
         />
@@ -147,7 +144,16 @@ export const CampaignManagementContent = () => {
         <thead>
           <tr>
             {columns.map((column, index) => (
-              <TableHeaderCell key={column.key} columnIndex={index}>
+              <TableHeaderCell
+                key={column.key}
+                columnIndex={index}
+                sortDirection={column.key === 'campaignId' ? 'desc' : undefined}
+                title={
+                  column.key === 'campaignId'
+                    ? '캠페인 ID 내림차순 고정'
+                    : undefined
+                }
+              >
                 {column.label}
               </TableHeaderCell>
             ))}
@@ -193,10 +199,6 @@ export const CampaignManagementContent = () => {
                     }
                   }}
                 >
-                  <TableCell>{campaign.storeId}</TableCell>
-                  <TableCell title={campaign.storeName ?? undefined}>
-                    {campaign.storeName ?? '미등록 가게'}
-                  </TableCell>
                   <TableCell>
                     <button
                       type="button"
@@ -209,6 +211,10 @@ export const CampaignManagementContent = () => {
                     >
                       {campaign.campaignId}
                     </button>
+                  </TableCell>
+                  <TableCell>{campaign.storeId}</TableCell>
+                  <TableCell title={campaign.storeName ?? undefined}>
+                    {campaign.storeName ?? '미등록 가게'}
                   </TableCell>
                   <TableCell>
                     <StatusBadge
