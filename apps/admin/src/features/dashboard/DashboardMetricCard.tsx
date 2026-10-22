@@ -39,14 +39,19 @@ export const DashboardMetricCard = ({
   layout = 'stacked',
 }: DashboardMetricCardProps) => {
   const Container = onSelect ? 'button' : 'div';
-  const canCompare = value !== null && previous != null;
+  // 이전 값이 0이면 증감률을 정의할 수 없으므로 방향 아이콘도 함께 숨긴다.
+  const canCompare =
+    !loading && value !== null && previous != null && previous !== 0;
+  const hasAside = trend !== undefined || previous !== undefined;
   const direction = canCompare ? Math.sign(value - previous) : 0;
   const ChangeIcon =
     direction > 0 ? ArrowUpRight : direction < 0 ? ArrowDownRight : Minus;
   // 배경을 채우면 강조로만 읽혀서, 테두리와 체크로 선택 상태를 드러낸다.
   const surfaceClassName = selected
     ? 'border-action-primary bg-bg-surface ring-1 ring-inset ring-action-primary'
-    : 'border-border-subtle bg-bg-surface';
+    : emphasis
+      ? 'border-action-primary/25 bg-bg-surface'
+      : 'border-border-subtle bg-bg-surface';
   const interactionClassName = onSelect
     ? 'cursor-pointer hover:border-action-primary focus-visible:outline-2 focus-visible:outline-action-primary'
     : '';
@@ -59,7 +64,7 @@ export const DashboardMetricCard = ({
 
   const valueNode = (
     <p
-      className={`flex min-w-0 flex-wrap items-baseline gap-1 font-semibold tracking-tight tabular-nums ${layout === 'inline' ? 'text-h2-web leading-tight' : 'text-h1 leading-tight'} ${emphasis && value !== null ? 'text-text-brand' : 'text-text-primary'}`}
+      className={`flex min-h-9 min-w-0 flex-wrap content-center items-baseline gap-1 font-semibold tracking-tight tabular-nums ${layout === 'inline' ? 'text-h2-web leading-tight' : 'text-h1 leading-tight'} ${emphasis && value !== null ? 'text-text-brand' : 'text-text-primary'}`}
     >
       {loading ? (
         <>
@@ -97,10 +102,10 @@ export const DashboardMetricCard = ({
             'aria-pressed': selected,
           }
         : {})}
-      className={`relative min-w-0 overflow-hidden rounded-xl border text-left transition-colors ${size === 'compact' || layout === 'inline' ? 'px-4 py-3' : 'p-4'} ${surfaceClassName} ${interactionClassName}`}
+      className={`relative flex min-h-24 min-w-0 items-center overflow-hidden rounded-xl border text-left transition-colors ${size === 'compact' || layout === 'inline' ? 'px-4 py-3' : 'p-4'} ${surfaceClassName} ${interactionClassName}`}
     >
-      {/* 수치는 왼쪽에, 이전 기간 대비 증감은 오른쪽 추이선과 함께 표시한다. */}
-      <div className="flex flex-wrap items-center gap-4">
+      {/* 최소 높이가 남더라도 수치와 추이 영역을 함께 가운데 정렬한다. */}
+      <div className="flex w-full items-center gap-4">
         <div className="min-w-0 flex-1">
           {layout === 'inline' ? (
             <p className="flex items-center gap-1.5 text-h3-web leading-tight font-semibold whitespace-nowrap text-text-primary">
@@ -125,20 +130,29 @@ export const DashboardMetricCard = ({
             </p>
           )}
         </div>
-        {!loading && (trend || canCompare) && (
+        {hasAside && (
           <div className="ml-auto flex w-2/5 min-w-16 max-w-44 flex-col items-end gap-1">
-            {trend && (
-              <DashboardSparkline values={trend} className="h-12 w-full" />
+            {trend !== undefined && (
+              // 미집계·빈 추이에도 그래프 자리를 유지해 카드 높이가 바뀌지 않게 한다.
+              <div className="h-12 w-full">
+                {!loading && (
+                  <DashboardSparkline values={trend} className="h-12 w-full" />
+                )}
+              </div>
             )}
-            {canCompare && (
-              <p
-                className={`inline-flex items-center gap-1 text-caption-web ${changeTextClassName}`}
-                title="이전 기간 대비"
-              >
-                <ChangeIcon className="size-3 shrink-0" aria-hidden />
-                {getChangeLabel(value, previous)}
-                <span className="sr-only">이전 기간 대비</span>
-              </p>
+            {previous !== undefined && (
+              <div className="min-h-4">
+                {canCompare && (
+                  <p
+                    className={`inline-flex items-center gap-1 text-caption-web ${changeTextClassName}`}
+                    title="이전 기간 대비"
+                  >
+                    <ChangeIcon className="size-3 shrink-0" aria-hidden />
+                    {getChangeLabel(value, previous)}
+                    <span className="sr-only">이전 기간 대비</span>
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
