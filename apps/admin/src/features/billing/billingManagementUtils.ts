@@ -6,8 +6,7 @@ import type {
   MismatchCheckType,
   MismatchResolutionType,
 } from '@admin/api/settlementMismatches';
-
-import { getKoreaDate } from './billingUtils';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
 
 export const refundStatusLabels: Record<RefundStatus, string> = {
   REQUESTED: '처리 대기',
@@ -88,7 +87,7 @@ export const getPointAdjustmentError = ({
       new Date(date).toISOString().slice(0, 10) !== targetBusinessDate
     )
       return '캠페인 조정의 대상 영업일을 올바르게 선택해 주세요.';
-    if (targetBusinessDate > getKoreaDate())
+    if (targetBusinessDate > getKstToday())
       return '대상 영업일은 오늘(한국 시간) 이후로 선택할 수 없습니다.';
   } else if (targetBusinessDate) {
     return '대상 영업일은 캠페인 ID와 함께 입력해 주세요.';
