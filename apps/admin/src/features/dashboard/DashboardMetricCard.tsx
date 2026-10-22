@@ -56,13 +56,13 @@ export const DashboardMetricCard = ({
   const ChangeIcon =
     direction > 0 ? ArrowUpRight : direction < 0 ? ArrowDownRight : Minus;
   const surfaceClassName = selected
-    ? 'border-text-tertiary bg-bg-surface ring-1 ring-inset ring-border-subtle shadow-sm'
+    ? 'border-text-brand bg-bg-surface shadow-sm'
     : 'border-border-subtle bg-bg-surface';
   const interactionClassName = onSelect
-    ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary'
+    ? `cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary ${footer ? '' : 'hover:border-text-brand'}`
     : '';
   const paddingClassName = onSelect
-    ? 'py-2 pl-4 pr-10'
+    ? 'py-2 pl-4 pr-8'
     : size === 'compact' || layout === 'inline'
       ? 'px-4 py-2'
       : 'p-4';
@@ -109,13 +109,13 @@ export const DashboardMetricCard = ({
             'aria-pressed': selected,
           }
         : {})}
-      className={`group relative flex min-h-20 min-w-0 items-center overflow-hidden text-left transition-colors ${footer ? '' : `rounded-xl border ${surfaceClassName}`} ${paddingClassName} ${interactionClassName}`}
+      className={`group/metric relative flex min-h-20 min-w-0 items-center overflow-hidden text-left transition-colors ${footer ? '' : `rounded-xl border ${surfaceClassName}`} ${paddingClassName} ${interactionClassName}`}
     >
       {onSelect && (
         <ChevronRight
           aria-hidden
-          strokeWidth={3}
-          className={`pointer-events-none absolute right-2.5 top-1/2 size-5 -translate-y-1/2 text-text-secondary transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${selected ? 'opacity-100' : 'opacity-0'}`}
+          strokeWidth={2}
+          className={`pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-text-brand transition-opacity group-hover/metric:opacity-100 group-focus-visible/metric:opacity-100 motion-reduce:transition-none ${selected ? 'opacity-100' : 'opacity-0'}`}
         />
       )}
       {/* 최소 높이가 남더라도 수치와 추이 영역을 함께 가운데 정렬한다. */}
@@ -182,7 +182,7 @@ export const DashboardMetricCard = ({
   // 선택 버튼과 하단 링크를 형제 요소로 두어 인터랙티브 요소가 중첩되지 않게 한다.
   return footer ? (
     <div
-      className={`flex min-w-0 flex-col overflow-hidden rounded-xl border ${surfaceClassName}`}
+      className={`group/metric flex min-w-0 flex-col overflow-hidden rounded-xl border transition-colors ${surfaceClassName} ${onSelect ? 'hover:border-text-brand focus-within:border-text-brand' : ''}`}
     >
       {card}
       <div className="flex min-h-8 items-center border-t border-border-subtle px-4 py-1.5 text-caption-web text-text-secondary">
