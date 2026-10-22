@@ -8,6 +8,7 @@ import { getNow } from '@user/api/clock';
 import { type Coupon, deleteCoupon, fetchCoupons } from '@user/api/coupon';
 import mascotCouponEmpty from '@user/assets/illustrations/mascot-coupon-empty.webp';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
+import { getIssuePhase, type IssuePhase } from '@user/hooks/useOpenCountdown';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
@@ -25,6 +26,13 @@ import UsableTimeInfo from './UsableTimeInfo';
 
 const TOAST_DURATION_MS = 2500;
 const NOW_TICK_MS = 30_000;
+
+// 쓸 쿠폰이 하나도 없을 때의 안내. 11:00 전후, 14:00 마감 뒤에 받을 수 있는 때가 달라서 지금 시각에 맞춘다
+const EMPTY_DESCRIPTIONS: Record<IssuePhase, string> = {
+  beforeOpen: '찜한 쿠폰은 11:00부터 찜 목록에서 받을 수 있어요',
+  issuing: '찜 목록에서 쿠폰을 받을 수 있어요',
+  closed: '찜해 둔 쿠폰은 내일 11:00부터 받을 수 있어요',
+};
 
 // 지금 쓸 수 있는 쿠폰을 위로, 그중 곧 끝나는 것부터 둔다. 사용 시간 전 쿠폰은 아래에 먼저 열리는 것부터 둔다
 // 계산대 앞에서 화면을 열면 맨 위 쿠폰의 QR 보기를 바로 누르면 되게 한다
@@ -132,7 +140,7 @@ const AvailableCoupons = () => {
   if (coupons?.length === 0) {
     return (
       <EmptyState
-        description="찜한 포스터는 11:00부터 찜 목록에서 받을 수 있어요"
+        description={EMPTY_DESCRIPTIONS[getIssuePhase(now)]}
         image={mascotCouponEmpty}
         title="사용 가능한 쿠폰이 없어요"
       >

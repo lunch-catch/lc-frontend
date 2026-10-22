@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { type Coupon, fetchCoupon } from '@user/api/coupon';
 
 // 아직 쓰지 않은 쿠폰은 이 간격으로 다시 확인해, 점주가 스캔해 사용 처리하면 바로 반영한다
-const REFRESH_MS = 5000;
+// 계산대에서 스캔한 뒤 화면이 바뀔 때까지 오래 걸리지 않게 2초로 둔다. QR 시트가 열려 있는 동안만 확인한다
+const REFRESH_MS = 2000;
 
 // 쿠폰함 목록에서 받은 쿠폰으로 먼저 보여주고, 단건 조회로 최신 상태를 받아 바꾼다
 // 사용 완료나 만료가 되면 더 확인하지 않는다. 확인에 실패하면 마지막 상태를 그대로 둔다
