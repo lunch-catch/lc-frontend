@@ -44,9 +44,9 @@ const defaultNavigationItems: AdminNavigationItem[] = [
   { icon: Megaphone, id: 'campaign', label: '캠페인 관리' },
   { icon: FileText, id: 'template', label: '템플릿 관리' },
   { icon: CircleDollarSign, id: 'settlement', label: '포인트/정산 관리' },
-  { icon: Users, id: 'member', label: '회원 관리' },
   { icon: ShieldAlert, id: 'fraud', label: '부정 관리' },
-  { icon: UserCog, id: 'account', label: '계정 관리' },
+  { icon: Users, id: 'member', label: '회원 관리' },
+  { icon: UserCog, id: 'account', label: '관리자 계정 관리' },
 ];
 
 /**
