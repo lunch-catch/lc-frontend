@@ -60,7 +60,7 @@ export const DashboardFunnel = ({
     <DashboardSection
       title="사용자 이용 현황"
       featured
-      description="행동별 건수를 비교하고 항목을 선택해 일별 추이를 확인하세요. 전환율이 아닌 각각의 발생 건수이며, 찜은 피드 카드 기준입니다."
+      description="발급·사용·찜·유효 노출 건수와 일별 변화를 확인할 수 있습니다."
       action={
         <Toggle
           label="이전 기간 비교"
@@ -71,7 +71,7 @@ export const DashboardFunnel = ({
       }
     >
       {/* 행동별 합계를 비교하며, 서로 다른 행동 사이의 전환율로 해석하지 않는다. */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]">
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
           {funnelMetrics.map((item) => (
             <DashboardMetricCard
@@ -85,6 +85,30 @@ export const DashboardFunnel = ({
               onSelect={() => onMetricChange(item.value)}
               trend={rows.map((row) => row[fields[item.value]])}
               layout="inline"
+              footer={
+                item.value === 'impressions' ? (
+                  <Link
+                    to={'/fraud' + (fraudQuery ? '?' + fraudQuery : '')}
+                    aria-label="무효 노출 상세 보기"
+                    className="group/impression-detail inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded hover:text-text-brand focus-visible:text-text-brand focus-visible:outline-2 focus-visible:outline-action-primary"
+                  >
+                    <span className="whitespace-nowrap">
+                      유효 비율{' '}
+                      <strong className="font-semibold text-text-primary group-hover/impression-detail:text-text-brand group-focus-visible/impression-detail:text-text-brand">
+                        {ratio === null ? '—' : (ratio * 100).toFixed(1) + '%'}
+                      </strong>
+                    </span>
+                    <span aria-hidden>·</span>
+                    <span className="whitespace-nowrap">
+                      무효{' '}
+                      <strong className="font-semibold text-text-primary group-hover/impression-detail:text-text-brand group-focus-visible/impression-detail:text-text-brand">
+                        {invalid === null ? '—' : formatNumber(invalid)}건
+                      </strong>
+                    </span>
+                    <ExternalLink aria-hidden className="size-3.5 shrink-0" />
+                  </Link>
+                ) : undefined
+              }
             />
           ))}
         </div>
@@ -134,22 +158,6 @@ export const DashboardFunnel = ({
             />
           )}
         </div>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-3 text-caption-web text-text-secondary">
-        <Link
-          to={'/fraud' + (fraudQuery ? '?' + fraudQuery : '')}
-          aria-label="무효 노출 상세 보기"
-          className="inline-flex items-center gap-1 rounded-md hover:text-text-brand focus-visible:outline-2 focus-visible:outline-action-primary"
-        >
-          유효 노출 비율{' '}
-          <strong className="font-semibold text-text-primary">
-            {ratio === null ? '—' : (ratio * 100).toFixed(1) + '%'}
-          </strong>
-          <ExternalLink aria-hidden className="size-3.5" />
-        </Link>
-        <span>
-          무효 노출 {invalid === null ? '—' : formatNumber(invalid)}건
-        </span>
       </div>
     </DashboardSection>
   );
