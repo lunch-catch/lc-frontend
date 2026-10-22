@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { getNow } from '@user/api/clock';
 import mascotLoading from '@user/assets/illustrations/mascot-loading.webp';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 
@@ -9,7 +10,7 @@ interface SwipeWaitingProps {
 }
 
 const getRemainingSeconds = (until: number) =>
-  Math.max(0, Math.ceil((until - Date.now()) / 1000));
+  Math.max(0, Math.ceil((until - getNow()) / 1000));
 
 // 카드를 다 넘겼거나 요청이 몰려 잠시 기다릴 때 보여주는 화면. 시간이 되면 피드 화면이 알아서 새 카드를 받는다
 const SwipeWaiting = ({ until }: SwipeWaitingProps) => {

@@ -8,6 +8,14 @@ import {
 
 // 탭을 옮길 때마다 헤더 위치가 비었다 채워지지 않도록 마지막으로 받은 위치를 기억한다
 let lastLocation: MemberLocation | undefined;
+let refreshSequence = 0;
+const refreshListeners = new Set<(sequence: number) => void>();
+
+// 위치 조회 실패 화면에서 서버의 저장 위치를 다시 받게 한다
+export const refreshMyLocation = () => {
+  refreshSequence += 1;
+  refreshListeners.forEach((listener) => listener(refreshSequence));
+};
 
 // 위치 설정 화면에서 저장하거나 지운 위치를 바로 기억해, 돌아왔을 때 이전 위치가 잠깐 보이지 않게 한다
 export const rememberMyLocation = (location: MemberLocation) => {
@@ -24,6 +32,14 @@ export const useMyLocation = () => {
   const [location, setLocation] = useState<MemberLocation | null | undefined>(
     lastLocation,
   );
+  const [attempt, setAttempt] = useState(refreshSequence);
+
+  useEffect(() => {
+    refreshListeners.add(setAttempt);
+    return () => {
+      refreshListeners.delete(setAttempt);
+    };
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -42,7 +58,7 @@ export const useMyLocation = () => {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [attempt]);
 
   return location;
 };

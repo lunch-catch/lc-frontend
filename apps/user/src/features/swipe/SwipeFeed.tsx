@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '@user/api/client';
+import { getNow } from '@user/api/clock';
 import {
   type FeedCard,
   fetchFeed,
@@ -11,6 +12,7 @@ import {
 import { type FeedFilter, saveFeedFilter } from '@user/api/feedFilter';
 import {
   getHeaderLocationName,
+  refreshMyLocation,
   useMyLocation,
 } from '@user/hooks/useMyLocation';
 import { getIssuePhase, WISH_ISSUE_TIMING } from '@user/hooks/useOpenCountdown';
@@ -72,7 +74,7 @@ const getInitialFeed = () => {
     session !== null &&
     !hasCardsLeft &&
     session.nextFeedAt !== null &&
-    Date.now() < session.nextFeedAt;
+    getNow() < session.nextFeedAt;
 
   // 요청 제한(429)으로 기다리던 중에 새로고침했으면 남은 시간만큼 이어서 기다린다
   const rateLimitedUntil =
@@ -160,7 +162,7 @@ const SwipeFeed = () => {
           hasServedCards.current = true;
           setCards(response.cards);
           setCurrentIndex(0);
-          setReceivedAt(Date.now());
+          setReceivedAt(getNow());
           setNextFeedAt(response.nextFeedAt);
           setStatus('serving');
           return;
@@ -181,7 +183,7 @@ const SwipeFeed = () => {
         const retryAfterSeconds = getRateLimitSeconds(error);
         if (retryAfterSeconds !== null && !hasRetriedRateLimit.current) {
           hasRetriedRateLimit.current = true;
-          const until = Date.now() + retryAfterSeconds * 1000;
+          const until = getNow() + retryAfterSeconds * 1000;
           saveRateLimitedUntil(until);
           setWaitUntil(until);
           setStatus('waiting');
@@ -214,6 +216,7 @@ const SwipeFeed = () => {
   };
 
   const retry = () => {
+    refreshMyLocation();
     hasRetriedRateLimit.current = false;
     loadNextFeed();
   };
@@ -222,7 +225,7 @@ const SwipeFeed = () => {
   const moveToNextFeed = () => {
     if (nextFeedAt === null) {
       setStatus('done');
-    } else if (Date.now() >= nextFeedAt) {
+    } else if (getNow() >= nextFeedAt) {
       loadNextFeed();
     } else {
       setWaitUntil(nextFeedAt);
@@ -289,11 +292,11 @@ const SwipeFeed = () => {
     };
     const timer = setTimeout(
       loadWhenVisible,
-      Math.max(0, waitUntil - Date.now()),
+      Math.max(0, waitUntil - getNow()),
     );
     // 기다리는 사이 앱이 뒤로 갔다 돌아오면 그때 받는다
     const handleVisible = () => {
-      if (Date.now() >= waitUntil) loadWhenVisible();
+      if (getNow() >= waitUntil) loadWhenVisible();
     };
     document.addEventListener('visibilitychange', handleVisible);
 
