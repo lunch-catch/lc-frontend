@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 
+import { getNow } from '@user/api/clock';
 import {
   type CampaignIssueStatus,
+  type Coupon,
+  fetchCouponPage,
   fetchIssueStatus,
   issueCoupon,
   type IssueResult,
@@ -73,7 +76,44 @@ interface WishEntry {
 const CARD_STATE_ORDER: Record<WishCardState, number> = {
   ...WISH_STATE_ORDER,
   unknown: 0,
-  ended: 3,
+  // 받은 뒤 쓰거나 만료돼 오늘 할 일이 없는 카드는, 내일 다시 받을 수 있는 카드(소진, 마감 등) 아래에 둔다
+  used: 3,
+  expired: 3,
+  removed: 3,
+  ended: 4,
+};
+
+// 오늘 받은 쿠폰을 찾을 만큼만 받는다. 하루에 3개까지라 최근 10개면 충분하다
+const TODAY_COUPON_PAGE_SIZE = 10;
+
+const fetchRecentCoupons = () =>
+  fetchCouponPage({ pageSize: TODAY_COUPON_PAGE_SIZE }).then(
+    (page) => page.items,
+  );
+
+const isSameDay = (isoString: string) =>
+  new Date(isoString).toDateString() === new Date(getNow()).toDateString();
+
+// 받은 카드가 그 뒤 어떻게 됐는지 쿠폰함과 맞춘다
+// 찜 목록은 "오늘 받았다"까지만 알아서, 쓰거나 만료되면 쿠폰함에서 사라진 것처럼 보이기 때문이다
+// 어제 받은 쿠폰은 보지 않는다. 다음 날에는 찜이 다시 받을 수 있는 상태로 돌아가야 한다
+// 쿠폰 목록을 받지 못했으면 알 수 없어 그대로 받았어요로 둔다
+// 쿠폰 목록에 없으면 사용자가 쿠폰함에서 지운 것이다 (서버는 지운 쿠폰을 목록에 주지 않는다)
+const refineIssuedState = (
+  state: WishCardState,
+  wish: WishItem,
+  coupons: Coupon[] | null,
+): WishCardState => {
+  if (state !== 'issued' || !coupons) return state;
+
+  const coupon = coupons.find(
+    (item) =>
+      String(item.storeId) === wish.storeId && isSameDay(item.issueTime),
+  );
+  if (!coupon) return 'removed';
+  if (coupon.state === 'USED') return 'used';
+  if (coupon.state === 'EXPIRED') return 'expired';
+  return 'issued';
 };
 
 // 발급 상태를 물을 찜. 끝난 캠페인은 오늘 쿠폰 이벤트가 없어 묻지 않는다
@@ -92,6 +132,7 @@ const toEntries = (
   wishes: WishItem[],
   { campaigns, dailyRemaining }: IssueStatusResponse,
   { isClosed, isOpen }: IssueTiming,
+  coupons: Coupon[] | null,
 ): WishEntry[] =>
   wishes.flatMap((wish): WishEntry[] => {
     if (wish.isEnded) return [{ state: 'ended', status: null, wish }];
@@ -108,7 +149,7 @@ const toEntries = (
       isOpen,
       eventStatus: status.eventStatus,
     });
-    return [{ state, status, wish }];
+    return [{ state: refineIssuedState(state, wish, coupons), status, wish }];
   });
 
 // 받을 수 있는 카드가 위로 오는 순서 (캠페인 ID 목록)
@@ -116,8 +157,9 @@ const getSortedIds = (
   wishes: WishItem[],
   issueStatus: IssueStatusResponse,
   timing: IssueTiming,
+  coupons: Coupon[] | null,
 ) =>
-  toEntries(wishes, issueStatus, timing)
+  toEntries(wishes, issueStatus, timing, coupons)
     .sort((a, b) => CARD_STATE_ORDER[a.state] - CARD_STATE_ORDER[b.state])
     .map(({ wish }) => wish.campaignId);
 
@@ -135,6 +177,8 @@ const WishlistScreen = () => {
   const [issueStatus, setIssueStatus] = useState<IssueStatusResponse | null>(
     null,
   );
+  // 최근에 받은 쿠폰. 받은 카드가 쓰였는지, 만료됐는지 보여주는 데 쓴다. 받지 못했으면 null이다
+  const [coupons, setCoupons] = useState<Coupon[] | null>(null);
   // 쿠폰을 받는 중인 캠페인. 한 번에 하나씩만 받는다
   const [issuingCampaignId, setIssuingCampaignId] = useState<string | null>(
     null,
@@ -156,7 +200,10 @@ const WishlistScreen = () => {
   } | null>(null);
 
   if (issueStatus && order?.timingKey !== timingKey) {
-    setOrder({ timingKey, ids: getSortedIds(wishes, issueStatus, timing) });
+    setOrder({
+      timingKey,
+      ids: getSortedIds(wishes, issueStatus, timing, coupons),
+    });
   }
 
   useEffect(() => {
@@ -173,13 +220,16 @@ const WishlistScreen = () => {
         return;
       }
 
-      const status = await fetchIssueStatus(getIssueTargets(items)).catch(
-        () => null,
-      );
+      // 받은 쿠폰은 카드 상태를 정할 때만 쓰므로, 받지 못해도 찜 목록은 그대로 보여준다
+      const [status, recentCoupons] = await Promise.all([
+        fetchIssueStatus(getIssueTargets(items)).catch(() => null),
+        fetchRecentCoupons().catch(() => null),
+      ]);
       if (ignore) return;
 
       setWishes(items);
       setIssueStatus(status);
+      setCoupons(recentCoupons);
       setLoadState('ready');
     };
     load();
@@ -193,6 +243,7 @@ const WishlistScreen = () => {
   const retry = () => {
     setLoadState('loading');
     setIssueStatus(null);
+    setCoupons(null);
     setOrder(null);
     setAttempt((value) => value + 1);
   };
@@ -230,11 +281,18 @@ const WishlistScreen = () => {
 
     // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
     // 다시 받지 못해도 발급 결과는 그대로 알린다. 받았으면 그 카드만 받음으로 바꾼다
+    // 쿠폰 목록도 함께 다시 받는다. 따로 받으면 방금 받은 쿠폰이 목록에 없어 잠깐 지운 쿠폰으로 보인다
     try {
-      setIssueStatus(await fetchIssueStatus(getIssueTargets(wishes)));
+      const [nextStatus, nextCoupons] = await Promise.all([
+        fetchIssueStatus(getIssueTargets(wishes)),
+        fetchRecentCoupons().catch(() => null),
+      ]);
+      setIssueStatus(nextStatus);
+      setCoupons(nextCoupons);
     } catch {
       if (result === 'issued') {
         setIssueStatus((status) => status && markIssued(status, campaignId));
+        setCoupons(null);
       }
     }
 
@@ -346,7 +404,7 @@ const WishlistScreen = () => {
       const index = order?.ids.indexOf(campaignId) ?? -1;
       return index === -1 ? Number.MAX_SAFE_INTEGER : index;
     };
-    return toEntries(wishes, issueStatus, timing).sort(
+    return toEntries(wishes, issueStatus, timing, coupons).sort(
       (a, b) => rank(a.wish.campaignId) - rank(b.wish.campaignId),
     );
   };

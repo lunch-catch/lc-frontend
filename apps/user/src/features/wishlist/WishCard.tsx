@@ -24,7 +24,9 @@ import { formatWishAmount, formatWishTarget } from './wishFormat';
 
 // 카드가 보여줄 상태. unknown은 발급 상태를 불러오지 못해 받을 수 있는지 모르는 상태라 받기 버튼을 두지 않는다
 // ended는 캠페인이 끝나 받을 수 없는 상태라 지우기만 할 수 있다
-export type WishCardState = WishState | 'unknown' | 'ended';
+// used, expired, removed는 오늘 받은 쿠폰을 쓴 뒤, 사용 시간이 끝난 뒤, 쿠폰함에서 지운 뒤의 모습이다
+export type WishCardState =
+  WishState | 'unknown' | 'ended' | 'used' | 'expired' | 'removed';
 
 interface WishCardProps {
   wish: WishItem;
@@ -121,6 +123,23 @@ const WishCard = ({
             <ChevronRight aria-hidden="true" className="-mr-1 size-3.5" />
           </button>
         );
+      // 받은 쿠폰이 쿠폰함에서 어디 있는지 알려 준다. 쓰거나 만료된 쿠폰은 사용 내역 탭에 있다
+      case 'used':
+      case 'expired':
+        return (
+          <button
+            aria-label={`${storeName} ${state === 'used' ? '사용 완료' : '만료'}된 쿠폰, 사용 내역에서 보기`}
+            className={`${pillClassName} ${pressableClassName} bg-surface-subtle text-text-tertiary active:opacity-80`}
+            onClick={() => navigate('/coupons/history')}
+            type="button"
+          >
+            {state === 'used' ? '사용 완료' : '만료'}
+            <ChevronRight aria-hidden="true" className="-mr-1 size-3.5" />
+          </button>
+        );
+      // 사용자가 쿠폰함에서 지운 쿠폰이라 이동할 곳이 없다
+      case 'removed':
+        return muted(null, '삭제함');
       // 11:00에 같은 자리가 쿠폰 받기로 바뀐다
       case 'beforeOpen':
         return muted(clock, '11:00 오픈');

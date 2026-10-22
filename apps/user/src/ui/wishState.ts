@@ -12,7 +12,8 @@ export type WishState =
   | 'issued';
 
 // 찜 목록에서 보여줄 순서. 11:00 선착순에 받을 수 있는 카드를 바로 찾도록 맨 위에 두고,
-// 받은 카드, 더 받을 수 없는 카드 순으로 내린다. 같은 순위끼리는 찜한 순서를 유지한다
+// 받은 카드, 오늘은 더 받을 수 없지만 내일 다시 받을 카드 순으로 내린다. 같은 순위끼리는 찜한 순서를 유지한다
+// 받은 뒤 쓰거나 만료된 카드는 그 아래다 (WishlistScreen의 CARD_STATE_ORDER)
 export const WISH_STATE_ORDER: Record<WishState, number> = {
   available: 0,
   beforeOpen: 0,
