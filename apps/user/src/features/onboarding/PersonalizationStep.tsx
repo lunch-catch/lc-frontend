@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ChoiceChip } from '@repo/ui';
 
-import { completeOnboarding, type OnboardingInput } from '@user/api/member';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
-import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
 import TopBar from '@user/ui/TopBar/TopBar';
 
@@ -25,56 +22,16 @@ const ageGroupOptions: { value: AgeGroup; label: string }[] = [
   { value: '50s+', label: '50대 이상' },
 ];
 
-const genderValues: Record<Gender, OnboardingInput['gender']> = {
-  male: 'MALE',
-  female: 'FEMALE',
-  other: 'OTHER',
-};
-
-const ageGroupValues: Record<AgeGroup, OnboardingInput['ageGroup']> = {
-  '20s': 'AGE_20S',
-  '30s': 'AGE_30S',
-  '40s': 'AGE_40S',
-  '50s+': 'AGE_50_PLUS',
-};
-
-const TOAST_DURATION_MS = 2500;
-
 const PersonalizationStep = () => {
   const navigate = useNavigate();
-  const { ageGroup, consents, gender, setAgeGroup, setGender } =
-    useOnboarding();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const { ageGroup, gender, setAgeGroup, setGender } = useOnboarding();
 
   const isComplete = gender !== null && ageGroup !== null;
 
-  useEffect(() => {
-    if (!hasError) return;
-
-    const timer = setTimeout(() => setHasError(false), TOAST_DURATION_MS);
-    return () => clearTimeout(timer);
-  }, [hasError]);
-
-  // 서버에 온보딩 완료를 저장해야 피드를 쓸 수 있다. 저장한 뒤 위치 설정으로 넘어간다
-  // 위치는 서버에 회원 정보가 저장된 뒤에야 저장할 수 있어서 이 단계 다음에 둔다
-  const handleSubmit = async () => {
-    if (!gender || !ageGroup || isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      await completeOnboarding({
-        gender: genderValues[gender],
-        ageGroup: ageGroupValues[ageGroup],
-        locationOptIn: consents.location,
-        // 알림 기능을 뺐지만 서버가 이 값을 필수로 받아서(빠지면 400) 항상 동의하지 않음으로 보낸다
-        notificationOptIn: false,
-      });
-      navigate('/onboarding/location', { replace: true });
-    } catch {
-      setHasError(true);
-      setIsSubmitting(false);
-    }
+  // 서버 완료 처리는 튜토리얼 마지막으로 미루고, 여기서는 새로고침할 수 있도록 선택값만 저장한다
+  const handleSubmit = () => {
+    if (!gender || !ageGroup) return;
+    navigate('/onboarding/location', { replace: true });
   };
 
   return (
@@ -134,14 +91,8 @@ const PersonalizationStep = () => {
         </p>
       </section>
       <FixedBottom>
-        {hasError && (
-          <div className="mb-3">
-            <FeedbackToast message="저장하지 못했어요" tone="error" />
-          </div>
-        )}
         <ActionButton
           disabled={!isComplete}
-          loading={isSubmitting}
           onClick={handleSubmit}
           size="large"
         >

@@ -1,11 +1,17 @@
 import { type PointerEvent, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import {
+  completeOnboarding as saveCompletedOnboarding,
+  type OnboardingInput,
+} from '@user/api/member';
 import tutorialBrowse from '@user/assets/illustrations/tutorial-browse.webp';
 import tutorialCoupon from '@user/assets/illustrations/tutorial-coupon.webp';
 import tutorialLike from '@user/assets/illustrations/tutorial-like.webp';
 import { useAuth } from '@user/auth/useAuth';
+import { useOnboarding } from '@user/features/onboarding/useOnboarding';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
+import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 
 // 서비스의 흐름(넘기기 → 찜 → 11시에 받기)을 한 장씩 보여준다 (Figma 2. 튜토리얼)
 // 화면에서는 넘기고 찜하는 것을 "포스터", 11시에 받아 쓰는 것을 "쿠폰"이라 부른다. "캠페인"은 사용자에게 낯선 내부 용어라 쓰지 않는다
@@ -31,6 +37,19 @@ const pages = [
 // 이만큼 넘게 가로로 밀어야 장을 넘긴다. 살짝 건드린 것은 무시한다
 const SWIPE_THRESHOLD_PX = 50;
 
+const genderValues = {
+  male: 'MALE',
+  female: 'FEMALE',
+  other: 'OTHER',
+} satisfies Record<string, OnboardingInput['gender']>;
+
+const ageGroupValues = {
+  '20s': 'AGE_20S',
+  '30s': 'AGE_30S',
+  '40s': 'AGE_40S',
+  '50s+': 'AGE_50_PLUS',
+} satisfies Record<string, OnboardingInput['ageGroup']>;
+
 type SlideDirection = 'next' | 'previous';
 
 // 다음 장은 오른쪽에서, 이전 장은 왼쪽에서 밀려 들어온다
@@ -44,18 +63,45 @@ const TutorialStep = () => {
   const navigate = useNavigate();
   const [pageIndex, setPageIndex] = useState(0);
   const [direction, setDirection] = useState<SlideDirection>('next');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasError, setHasError] = useState(false);
   // 밀기 시작한 손가락 위치
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const page = pages[pageIndex] ?? pages[0];
   const isLastPage = pageIndex === pages.length - 1;
 
-  const { completeOnboarding } = useAuth();
+  const { completeOnboarding: completeAuthOnboarding } = useAuth();
+  const onboarding = useOnboarding();
 
   // 안내를 끝내거나 건너뛰면 온보딩을 완료 처리한다
   // 튜토리얼은 다시 돌아올 화면이 아니라서 기록을 바꿔서 이동한다
-  const finish = () => {
-    completeOnboarding();
-    navigate('/swipe', { replace: true });
+  const finish = async () => {
+    if (
+      isSubmitting ||
+      !onboarding.gender ||
+      !onboarding.ageGroup ||
+      !onboarding.consents.terms ||
+      !onboarding.consents.privacy
+    ) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setHasError(false);
+    try {
+      await saveCompletedOnboarding({
+        gender: genderValues[onboarding.gender],
+        ageGroup: ageGroupValues[onboarding.ageGroup],
+        locationOptIn: onboarding.consents.location,
+        notificationOptIn: false,
+      });
+      onboarding.clearOnboarding();
+      completeAuthOnboarding();
+      navigate('/swipe', { replace: true });
+    } catch {
+      setHasError(true);
+      setIsSubmitting(false);
+    }
   };
 
   const goToPage = (nextIndex: number) => {
@@ -101,6 +147,7 @@ const TutorialStep = () => {
         <button
           className="rounded-md px-1 py-2 text-body-sm-mobile font-medium text-text-secondary"
           onClick={finish}
+          disabled={isSubmitting}
           type="button"
         >
           건너뛰기
@@ -169,7 +216,15 @@ const TutorialStep = () => {
           </div>
         </div>
       </div>
-      <ActionButton onClick={handleNext} size="large">
+      {hasError && (
+        <div className="mb-3">
+          <FeedbackToast
+            message="시작하지 못했어요 · 다시 시도해 주세요"
+            tone="error"
+          />
+        </div>
+      )}
+      <ActionButton loading={isSubmitting} onClick={handleNext} size="large">
         {isLastPage ? '런치캐치 시작하기' : '다음'}
       </ActionButton>
     </main>
