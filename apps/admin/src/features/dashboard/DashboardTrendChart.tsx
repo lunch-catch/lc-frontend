@@ -1,6 +1,6 @@
 import type { PointerEvent } from 'react';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { formatNumber } from '@repo/utils';
+import { formatDate, formatNumber } from '@repo/utils';
 
 import {
   getChartAxisMaximum,
@@ -22,9 +22,13 @@ interface DashboardTrendChartProps {
   labels: string[];
   primary: TrendSeries;
   secondary?: TrendSeries;
+  /** 선이나 축에 포함하지 않고 같은 날짜의 툴팁에만 표시할 보조 지표. */
+  tooltipDetails?: TrendSeries[];
   unit?: string;
   height?: number;
   variant?: 'line' | 'bar';
+  /** 일별 신규 건수처럼 날짜 사이의 합계를 구할 수 있는 지표에만 사용한다. */
+  rangeSelection?: boolean;
 }
 
 export const DashboardTrendChart = ({
@@ -32,9 +36,11 @@ export const DashboardTrendChart = ({
   labels,
   primary,
   secondary,
+  tooltipDetails = [],
   unit = '건',
   height = 208,
   variant = 'line',
+  rangeSelection = false,
 }: DashboardTrendChartProps) => {
   // 단일 지표는 범례와 넓은 여백을 덜어내고 축 라벨에 필요한 공간만 남긴다.
   const chartLayout = secondary ? comparisonLayout : singleSeriesLayout;
@@ -45,6 +51,10 @@ export const DashboardTrendChart = ({
   const [width, setWidth] = useState(640);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [pointerY, setPointerY] = useState<number | null>(null);
+  const [selection, setSelection] = useState<{
+    start: number;
+    end: number | null;
+  } | null>(null);
   const hasLabels = labels.length > 0;
   useLayoutEffect(() => {
     const container = chartRef.current;
@@ -59,7 +69,42 @@ export const DashboardTrendChart = ({
     observer.observe(container);
     return () => observer.disconnect();
   }, [hasLabels]);
-  const active = Math.min(activeIndex ?? labels.length - 1, labels.length - 1);
+  const selectedRange =
+    selection?.end != null
+      ? {
+          start: Math.min(selection.start, selection.end),
+          end: Math.max(selection.start, selection.end),
+        }
+      : null;
+  const active = Math.min(
+    selection?.end ?? activeIndex ?? labels.length - 1,
+    labels.length - 1,
+  );
+  // 선택한 양끝 날짜를 포함하며 미확정 날짜를 0으로 간주하지 않는다.
+  const selectedValues = selectedRange
+    ? primary.values.slice(selectedRange.start, selectedRange.end + 1)
+    : [];
+  const selectedTotal =
+    selectedRange && selectedValues.every((value) => value !== null)
+      ? selectedValues.reduce<number>((total, value) => total + (value ?? 0), 0)
+      : null;
+  const selectedDates = selectedRange
+    ? `${formatDate(labels[selectedRange.start])} ~ ${formatDate(labels[selectedRange.end])}`
+    : '';
+  const selectIndex = (index: number) => {
+    setSelection((current) =>
+      current && current.end === null
+        ? { ...current, end: index }
+        : { start: index, end: null },
+    );
+    setActiveIndex(index);
+    setPointerY(null);
+  };
+  const clearSelection = () => {
+    setSelection(null);
+    setActiveIndex(null);
+    setPointerY(null);
+  };
   const tickInterval = getChartLabelInterval(labels.length, width);
   const values = [...primary.values, ...(secondary?.values ?? [])].filter(
     (value): value is number => value !== null,
@@ -125,7 +170,7 @@ export const DashboardTrendChart = ({
     setActiveIndex(null);
     setPointerY(null);
   };
-  const tooltipVisible = activeIndex !== null;
+  const tooltipVisible = activeIndex !== null || selectedRange !== null;
   // 툴팁은 활성 구간 옆에 붙이되 차트 오른쪽 절반에서는 왼쪽으로 뒤집어 잘리지 않게 한다.
   const tooltipFlipped = x(active) > width / 2;
   const tooltipTop = Math.min(
@@ -140,16 +185,68 @@ export const DashboardTrendChart = ({
     );
   return (
     <div className="space-y-2">
+      {rangeSelection && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-caption-web text-text-secondary">
+          <p role="status" aria-live="polite">
+            {selectedRange
+              ? `${selectedDates} 기간 ${primary.name} ${selectedTotal === null ? '집계 미완료' : formatNumber(selectedTotal) + unit}`
+              : selection
+                ? `${formatDate(labels[selection.start])} 선택됨 · 종료일을 선택하세요.`
+                : '그래프에서 시작일과 종료일을 차례로 선택하세요.'}
+          </p>
+          {selection && (
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="shrink-0 cursor-pointer rounded text-text-brand underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-action-primary"
+            >
+              선택 해제
+            </button>
+          )}
+        </div>
+      )}
       <div ref={chartRef} className="relative rounded-lg bg-bg-surface">
         <svg
           aria-label={title}
-          className="w-full text-caption-web"
+          className={`w-full text-caption-web ${rangeSelection ? 'cursor-pointer' : ''}`}
           style={{
             height,
           }}
           viewBox={`0 0 ${width} ${height}`}
           onPointerMove={handlePointerMove}
           onPointerLeave={hidePointer}
+          onClick={
+            rangeSelection
+              ? (event) => {
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  const position =
+                    ((event.clientX - bounds.left) / bounds.width) * width;
+                  const vertical =
+                    ((event.clientY - bounds.top) / bounds.height) * height;
+                  if (
+                    position >= chartLayout.left &&
+                    position <= width - chartLayout.right &&
+                    vertical >= chartLayout.top &&
+                    vertical <= bottom
+                  )
+                    selectIndex(
+                      getNearestChartIndex(
+                        position,
+                        firstX,
+                        pointWidth,
+                        labels.length,
+                      ),
+                    );
+                }
+              : undefined
+          }
+          onKeyDown={
+            rangeSelection
+              ? (event) => {
+                  if (event.key === 'Escape') clearSelection();
+                }
+              : undefined
+          }
         >
           <defs>
             <clipPath id={`${id}-plot`}>
@@ -204,6 +301,19 @@ export const DashboardTrendChart = ({
           ))}
           {/* 데이터 도형만 자르고 축 라벨·포커스 영역은 그대로 유지한다. */}
           <g clipPath={`url(#${id}-plot)`}>
+            {selectedRange && (
+              <rect
+                x={x(selectedRange.start) - slotWidth / 2}
+                y={chartLayout.top}
+                width={
+                  x(selectedRange.end) - x(selectedRange.start) + slotWidth
+                }
+                height={bottom - chartLayout.top}
+                fill="var(--semantic-action-primary)"
+                fillOpacity="0.08"
+                pointerEvents="none"
+              />
+            )}
             {variant === 'bar' &&
               primary.values.map((value, index) =>
                 value === null ? null : (
@@ -266,8 +376,13 @@ export const DashboardTrendChart = ({
           {labels.map((label, index) => (
             <g key={label}>
               <circle
-                role="img"
-                aria-label={`${label}, ${primary.name} ${valueLabel(primary.values[index])}${secondary ? `, ${secondary.name} ${valueLabel(secondary.values[index])}` : ''}`}
+                role={rangeSelection ? 'button' : 'img'}
+                aria-pressed={
+                  rangeSelection
+                    ? selection?.start === index || selection?.end === index
+                    : undefined
+                }
+                aria-label={`${label}, ${primary.name} ${valueLabel(primary.values[index])}${secondary ? `, ${secondary.name} ${valueLabel(secondary.values[index])}` : ''}${tooltipDetails.map((detail) => `, ${detail.name} ${valueLabel(detail.values[index])}`).join('')}`}
                 tabIndex={0}
                 cx={x(index)}
                 cy={y(primary.values[index] ?? 0)}
@@ -279,6 +394,16 @@ export const DashboardTrendChart = ({
                   setActiveIndex(index);
                 }}
                 onBlur={hidePointer}
+                onKeyDown={
+                  rangeSelection
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          selectIndex(index);
+                        }
+                      }
+                    : undefined
+                }
                 onMouseEnter={() => setActiveIndex(index)}
               />
               {showLabel(index) && (
@@ -326,38 +451,65 @@ export const DashboardTrendChart = ({
         {tooltipVisible && (
           <div
             aria-hidden
-            className="pointer-events-none absolute z-10 w-max rounded-lg whitespace-nowrap border border-border-subtle bg-bg-surface px-3 py-2 shadow-md"
+            className={`pointer-events-none absolute z-10 w-max max-w-full rounded-lg border border-border-subtle bg-bg-surface px-3 py-2 shadow-md ${selectedRange ? 'whitespace-normal' : 'whitespace-nowrap'}`}
             style={{
-              left: x(active),
-              top: tooltipTop,
-              transform: `translate(${tooltipFlipped ? 'calc(-100% - 12px)' : '12px'}, -50%)`,
+              left: selectedRange ? width / 2 : x(active),
+              top: selectedRange ? height / 2 : tooltipTop,
+              transform: selectedRange
+                ? 'translate(-50%, -50%)'
+                : `translate(${tooltipFlipped ? 'calc(-100% - 12px)' : '12px'}, -50%)`,
             }}
           >
             <p className="text-caption-web font-medium tabular-nums text-text-secondary">
-              {labels[active]}
+              {selectedRange ? selectedDates : labels[active]}
             </p>
             <div className="mt-1 space-y-1">
-              {[primary, ...(secondary ? [secondary] : [])].map(
-                (series, index) => (
-                  <p
-                    key={series.name}
-                    className="flex items-center justify-between gap-3 text-caption-web text-text-secondary"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span
-                        className={
-                          index === 0
-                            ? 'h-1 w-4 rounded-full bg-action-primary'
-                            : 'w-4 border-t-2 border-dashed border-action-secondary'
-                        }
-                      />
-                      {series.name}
-                    </span>
-                    <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
-                      {valueLabel(series.values[active])}
-                    </span>
-                  </p>
-                ),
+              {selectedRange ? (
+                <p className="flex flex-wrap items-center justify-between gap-3 text-caption-web text-text-secondary">
+                  <span>기간 {primary.name}</span>
+                  <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                    {selectedTotal === null
+                      ? '집계 미완료'
+                      : formatNumber(selectedTotal) + unit}
+                  </span>
+                </p>
+              ) : (
+                <>
+                  {[primary, ...(secondary ? [secondary] : [])].map(
+                    (series, index) => (
+                      <p
+                        key={series.name}
+                        className="flex items-center justify-between gap-3 text-caption-web text-text-secondary"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={
+                              index === 0
+                                ? 'h-1 w-4 rounded-full bg-action-primary'
+                                : 'w-4 border-t-2 border-dashed border-action-secondary'
+                            }
+                          />
+                          {series.name}
+                        </span>
+                        <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                          {valueLabel(series.values[active])}
+                        </span>
+                      </p>
+                    ),
+                  )}
+                  {/* 보조 수치는 받은 일별 데이터로 표시하며 그래프 선과 축 계산에는 포함하지 않는다. */}
+                  {tooltipDetails.map((detail, index) => (
+                    <p
+                      key={detail.name}
+                      className={`flex items-center justify-between gap-3 text-caption-web text-text-secondary ${index === 0 ? 'mt-2 border-t border-border-subtle pt-2' : ''}`}
+                    >
+                      <span>{detail.name}</span>
+                      <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                        {valueLabel(detail.values[active])}
+                      </span>
+                    </p>
+                  ))}
+                </>
               )}
             </div>
           </div>

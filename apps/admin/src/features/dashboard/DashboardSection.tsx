@@ -18,13 +18,15 @@ export const DashboardSection = ({
 }: DashboardSectionProps) => (
   <section
     aria-label={title}
-    className={`relative min-w-0 rounded-2xl border bg-bg-surface p-4 ${featured ? 'border-action-primary/25 sm:p-6' : 'border-border-subtle'}`}
+    className={`relative min-w-0 rounded-2xl border border-border-subtle bg-bg-surface p-4 ${featured ? 'sm:p-6' : ''}`}
   >
-    <header className="mb-3 flex flex-col items-start justify-between gap-3 sm:flex-row">
+    <header className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row">
       <div className="min-w-0 flex-1 space-y-1">
         <h3 className="text-h2-web font-semibold text-text-primary">{title}</h3>
         {description && (
-          <p className="text-caption-web text-text-secondary">{description}</p>
+          <p className="text-caption-web leading-5 text-text-secondary">
+            {description}
+          </p>
         )}
       </div>
       {action}
