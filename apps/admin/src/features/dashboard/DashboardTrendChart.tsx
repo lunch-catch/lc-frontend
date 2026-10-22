@@ -8,7 +8,8 @@ import {
   getNearestChartIndex,
 } from './dashboardChartUtils';
 
-const chartLayout = { left: 64, right: 32, top: 20 };
+const comparisonLayout = { left: 64, right: 32, top: 20 };
+const singleSeriesLayout = { left: 40, right: 12, top: 12 };
 const axisFormatter = new Intl.NumberFormat('ko-KR', { notation: 'compact' });
 
 interface TrendSeries {
@@ -23,6 +24,7 @@ interface DashboardTrendChartProps {
   secondary?: TrendSeries;
   unit?: string;
   height?: number;
+  variant?: 'line' | 'bar';
 }
 
 export const DashboardTrendChart = ({
@@ -32,10 +34,12 @@ export const DashboardTrendChart = ({
   secondary,
   unit = '건',
   height = 208,
+  variant = 'line',
 }: DashboardTrendChartProps) => {
-  // 아래쪽 48px은 x축 라벨 영역으로 남긴다.
-  const bottom = height - 48;
-  const labelY = height - 16;
+  // 단일 지표는 범례와 넓은 여백을 덜어내고 축 라벨에 필요한 공간만 남긴다.
+  const chartLayout = secondary ? comparisonLayout : singleSeriesLayout;
+  const bottom = height - 28;
+  const labelY = height - 8;
   const id = useId();
   const chartRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
@@ -67,12 +71,20 @@ export const DashboardTrendChart = ({
       ? -getChartAxisMaximum(values.map((value) => -value))
       : 0;
   const plotWidth = width - chartLayout.left - chartLayout.right;
+  // 막대는 날짜별 칸의 중앙에 놓아 첫·마지막 막대도 축 경계 안에 들어오게 한다.
+  const slotWidth = plotWidth / Math.max(1, labels.length);
+  const firstX = chartLayout.left + (variant === 'bar' ? slotWidth / 2 : 0);
+  const pointWidth = plotWidth - (variant === 'bar' ? slotWidth : 0);
   const x = (index: number) =>
     labels.length === 1
       ? chartLayout.left + plotWidth / 2
-      : chartLayout.left + (index * plotWidth) / (labels.length - 1);
+      : firstX + (index * pointWidth) / (labels.length - 1);
   const y = (value: number) =>
     bottom - ((value - min) / (max - min)) * (bottom - chartLayout.top);
+  const barWidth = Math.max(
+    1,
+    Math.min(32, (plotWidth / labels.length) * 0.55),
+  );
   // 미확정 값을 0으로 그리거나 양옆의 확정 구간과 연결하지 않는다.
   const paths = (values: (number | null)[]) => {
     const segments: { points: string; start: number; end: number }[] = [];
@@ -95,12 +107,7 @@ export const DashboardTrendChart = ({
     const position = ((event.clientX - bounds.left) / bounds.width) * width;
     setPointerY(event.clientY - bounds.top);
     setActiveIndex(
-      getNearestChartIndex(
-        position,
-        chartLayout.left,
-        plotWidth,
-        labels.length,
-      ),
+      getNearestChartIndex(position, firstX, pointWidth, labels.length),
     );
   };
   const showLabel = (index: number) =>
@@ -145,6 +152,22 @@ export const DashboardTrendChart = ({
           onPointerLeave={hidePointer}
         >
           <defs>
+            <clipPath id={`${id}-plot`}>
+              <rect
+                x={chartLayout.left}
+                y={chartLayout.top}
+                width={plotWidth}
+                height={bottom - chartLayout.top}
+              />
+            </clipPath>
+            <linearGradient id={`${id}-bar`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--semantic-action-primary)" />
+              <stop
+                offset="100%"
+                stopColor="var(--semantic-action-primary)"
+                stopOpacity="0.35"
+              />
+            </linearGradient>
             <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
               <stop
                 offset="0%"
@@ -179,31 +202,55 @@ export const DashboardTrendChart = ({
               </text>
             </g>
           ))}
-          {paths(primary.values).map((segment) => (
-            <polygon
-              key={segment.start}
-              points={`${x(segment.start)},${y(0)} ${segment.points} ${x(segment.end)},${y(0)}`}
-              fill={`url(#${id}-fill)`}
-            />
-          ))}
-          {[primary, ...(secondary ? [secondary] : [])].map((series, index) =>
-            paths(series.values).map((segment) => (
-              <polyline
-                key={series.name + segment.start}
-                points={segment.points}
-                fill="none"
-                stroke={
-                  index === 0
-                    ? 'var(--semantic-action-primary)'
-                    : 'var(--semantic-action-secondary)'
-                }
-                strokeWidth={index === 0 ? 2.5 : 2}
-                strokeDasharray={index === 0 ? undefined : '5 5'}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            )),
-          )}
+          {/* 데이터 도형만 자르고 축 라벨·포커스 영역은 그대로 유지한다. */}
+          <g clipPath={`url(#${id}-plot)`}>
+            {variant === 'bar' &&
+              primary.values.map((value, index) =>
+                value === null ? null : (
+                  <rect
+                    key={labels[index]}
+                    x={x(index) - barWidth / 2}
+                    y={Math.min(y(value), y(0))}
+                    width={barWidth}
+                    height={Math.abs(y(value) - y(0))}
+                    rx={3}
+                    fill={`url(#${id}-bar)`}
+                    fillOpacity={
+                      activeIndex === null || activeIndex === index ? 1 : 0.45
+                    }
+                  />
+                ),
+              )}
+            {variant === 'line' &&
+              paths(primary.values).map((segment) => (
+                <polygon
+                  key={segment.start}
+                  points={`${x(segment.start)},${y(0)} ${segment.points} ${x(segment.end)},${y(0)}`}
+                  fill={`url(#${id}-fill)`}
+                />
+              ))}
+            {[primary, ...(secondary ? [secondary] : [])].map((series, index) =>
+              (variant === 'bar' && index === 0
+                ? []
+                : paths(series.values)
+              ).map((segment) => (
+                <polyline
+                  key={series.name + segment.start}
+                  points={segment.points}
+                  fill="none"
+                  stroke={
+                    index === 0
+                      ? 'var(--semantic-action-primary)'
+                      : 'var(--semantic-action-secondary)'
+                  }
+                  strokeWidth={index === 0 ? 2.5 : 2}
+                  strokeDasharray={index === 0 ? undefined : '5 5'}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              )),
+            )}
+          </g>
           <line
             opacity={tooltipVisible ? 1 : 0}
             x1={x(active)}
@@ -316,6 +363,28 @@ export const DashboardTrendChart = ({
           </div>
         )}
       </div>
+      {secondary && (
+        <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-caption-web text-text-secondary">
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className={
+                variant === 'bar'
+                  ? 'h-2.5 w-2.5 rounded-sm bg-action-primary'
+                  : 'h-0.5 w-4 bg-action-primary'
+              }
+            />
+            {primary.name}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="w-4 border-t-2 border-dashed border-action-secondary"
+            />
+            {secondary.name}
+          </span>
+        </div>
+      )}
       <div className="sr-only">
         <span>마우스 또는 키보드로 구간별 수치를 확인하세요.</span>
         <span>단위: {unit}</span>

@@ -16,6 +16,9 @@ interface DashboardMetricTrendProps<T extends AnalyticsBucket> {
   unit: string;
   note?: string;
   action?: ReactNode;
+  variant?: 'line' | 'bar';
+  height?: number;
+  featured?: boolean;
 }
 
 export const DashboardMetricTrend = <T extends AnalyticsBucket>({
@@ -26,6 +29,9 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
   unit,
   note,
   action,
+  variant = 'line',
+  height,
+  featured,
 }: DashboardMetricTrendProps<T>) => {
   const { data, loading, error } = resource;
   const rows = data?.items ?? [];
@@ -38,7 +44,12 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
     ),
   });
   return (
-    <DashboardSection title={title} description={note} action={action}>
+    <DashboardSection
+      title={title}
+      description={note}
+      action={action}
+      featured={featured}
+    >
       <div className="min-h-52">
         {loading ? (
           <div
@@ -76,6 +87,8 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
           </div>
         ) : (
           <DashboardTrendChart
+            variant={variant}
+            height={height}
             title={title}
             labels={rows.map((item) => item.label)}
             primary={series(primary)}
