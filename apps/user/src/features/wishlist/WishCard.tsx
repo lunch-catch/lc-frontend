@@ -129,6 +129,9 @@ const WishCard = ({
         return muted(clock, '내일 11:00 오픈');
       case 'soldOut':
         return muted(null, '수량 소진');
+      // 수량이 다 나간 게 아니라 오늘 열린 이벤트가 없는 것이라 소진과 구분한다
+      case 'noEvent':
+        return muted(null, '오늘 쿠폰 없음');
       case 'limitReached':
         return muted(null, `오늘 ${dailyLimit}개 완료`);
       case 'ended':

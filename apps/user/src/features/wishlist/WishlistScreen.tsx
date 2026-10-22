@@ -106,7 +106,7 @@ const toEntries = (
       isClosed,
       isIssued: status.isIssued,
       isOpen,
-      remainingCount: status.remainingCount,
+      eventStatus: status.eventStatus,
     });
     return [{ state, status, wish }];
   });

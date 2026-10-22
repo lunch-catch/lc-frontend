@@ -1,3 +1,4 @@
+import type { EventStatus } from '@user/api/coupon';
 import { getWishState, type WishState } from '@user/ui/wishState';
 
 // 가게 상세 하단 버튼이 보여줄 쿠폰 상태
@@ -14,7 +15,7 @@ interface CouponStateInput {
   isClosed: boolean;
   isWished: boolean;
   isIssued: boolean;
-  remainingCount: number;
+  eventStatus: EventStatus;
   dailyRemaining: number;
 }
 

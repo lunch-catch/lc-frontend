@@ -37,6 +37,7 @@ const CouponSection = ({
     beforeOpenWished: `찜 완료 · 잔여 ${remainingCount}장`,
     available: `발급 가능 · 잔여 ${remainingCount}장`,
     soldOut: '마감 · 수량 소진',
+    noEvent: '오늘 쿠폰 없음',
     limitReached: `발급 제한 · 오늘 ${dailyLimit}개 완료`,
     closedNotWished: '오늘 발급 마감',
     closedWished: '오늘 발급 마감 · 찜 완료',
@@ -45,6 +46,7 @@ const CouponSection = ({
 
   const isUnavailable =
     state === 'soldOut' ||
+    state === 'noEvent' ||
     state === 'limitReached' ||
     state === 'closedWished' ||
     state === 'closedNotWished';

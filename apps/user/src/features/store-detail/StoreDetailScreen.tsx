@@ -243,7 +243,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
       isIssued: couponInfo.status.isIssued,
       isOpen,
       isWished: couponInfo.isWished,
-      remainingCount: couponInfo.status.remainingCount,
+      eventStatus: couponInfo.status.eventStatus,
     });
 
   const setWished = (isWished: boolean) =>
