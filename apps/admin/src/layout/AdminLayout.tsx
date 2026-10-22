@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Button, getTheme, setTheme } from '@repo/ui';
@@ -112,7 +112,19 @@ export const AdminLayout = () => {
             pathname.startsWith('/templates/') ? '/templates/editor' : pathname
           }
         >
-          <Outlet />
+          {/* 페이지 코드 로딩만 처리한다. 사이드바는 유지하고 API 로딩은 각 페이지에 맡긴다. */}
+          <Suspense
+            fallback={
+              <p
+                role="status"
+                className="flex min-h-40 items-center justify-center text-body-sm-web text-text-secondary"
+              >
+                페이지를 불러오는 중입니다.
+              </p>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <AdminModal
