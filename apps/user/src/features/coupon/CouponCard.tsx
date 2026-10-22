@@ -21,7 +21,9 @@ interface CouponCardProps {
 
 // 쿠폰함의 받은 쿠폰 한 장
 // 찜 카드와 같은 쿠폰 모양(점선과 반원 홈, 알약)으로 두어 쿠폰함 탭끼리 같은 카드로 보이게 한다
-// 가게 이름은 작게, 할인은 크게 주황으로 두어 어떤 쿠폰인지 먼저 눈에 들어오게 한다
+// 가게 이름은 작게, 할인은 크게 두어 어떤 쿠폰인지 먼저 눈에 들어오게 한다
+// 할인은 주황 대신 검정으로 둔다. 받은 쿠폰이라 할인을 비교할 일이 없고, 카드마다 주황이 둘이면
+// 지금 할 일인 QR 보기 버튼과 곧 끝나는 남은 시간이 묻힌다 (찜 카드는 할인을 비교하는 화면이라 주황)
 const CouponCard = ({
   action,
   coupon,
@@ -69,7 +71,7 @@ const CouponCard = ({
         {/* 할인 대상은 같은 줄 옆에 작게 둔다. 좁으면 대상 쪽이 말줄임으로 줄어든다 */}
         <div className="flex max-w-full min-w-0 items-center gap-1.5">
           <strong
-            className={`shrink-0 text-h3-mobile font-bold ${dimmed ? 'text-text-secondary' : 'text-text-brand'}`}
+            className={`shrink-0 text-h3-mobile font-bold ${dimmed ? 'text-text-secondary' : 'text-text-primary'}`}
           >
             {formatDiscount(coupon)}
           </strong>

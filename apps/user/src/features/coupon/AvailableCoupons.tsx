@@ -194,6 +194,7 @@ const AvailableCoupons = () => {
           <CouponQr
             coupon={selectedCoupon}
             key={selectedCoupon.memberCouponId}
+            onClose={closeSheet}
           />
         )}
       </BottomSheet>
