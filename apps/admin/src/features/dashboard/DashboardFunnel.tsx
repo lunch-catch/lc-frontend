@@ -58,8 +58,9 @@ export const DashboardFunnel = ({
     : '';
   return (
     <DashboardSection
-      title="이용 추이"
-      description="찜은 피드 카드에서 발생한 건수입니다. 집계 미완료 구간이 포함되면 기간 합계를 확정 수치로 표시하지 않습니다."
+      title="사용자 이용 현황"
+      featured
+      description="행동별 건수를 비교하고 항목을 선택해 일별 추이를 확인하세요. 전환율이 아닌 각각의 발생 건수이며, 찜은 피드 카드 기준입니다."
       action={
         <Toggle
           label="이전 기간 비교"
@@ -69,7 +70,7 @@ export const DashboardFunnel = ({
         />
       }
     >
-      {/* 넓은 화면에서는 지표 카드를 차트 왼쪽 세로 목록으로 두어 탭처럼 고르게 한다. */}
+      {/* 행동별 합계를 비교하며, 서로 다른 행동 사이의 전환율로 해석하지 않는다. */}
       <div className="grid gap-4 xl:grid-cols-[minmax(240px,280px)_minmax(0,1fr)]">
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
           {funnelMetrics.map((item) => (
@@ -87,7 +88,10 @@ export const DashboardFunnel = ({
             />
           ))}
         </div>
-        <div className="min-h-52 min-w-0">
+        <div className="min-h-52 min-w-0 rounded-xl bg-bg-surface p-2 sm:p-4">
+          <h4 className="mb-2 text-body-sm-web font-medium text-text-primary">
+            {selected.label} 일별 추이
+          </h4>
           {resource.loading ? (
             <p
               role="status"
