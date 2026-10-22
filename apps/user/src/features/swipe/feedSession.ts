@@ -1,3 +1,4 @@
+import { getNow } from '@user/api/clock';
 import type { FeedCard } from '@user/api/feed';
 
 // 지금 보고 있는 피드 묶음. 탭을 오가거나 새로고침해도 피드를 다시 받지 않고 보던 카드부터 이어 보게 저장한다
@@ -28,7 +29,7 @@ export const loadFeedSession = (): FeedSession | null => {
     if (!saved) return null;
 
     const session = JSON.parse(saved) as FeedSession;
-    const now = Date.now();
+    const now = getNow();
     const isValid =
       Array.isArray(session.cards) &&
       session.cards.length > 0 &&
@@ -91,7 +92,7 @@ const RATE_LIMIT_STORAGE_KEY = 'launch-catch-feed-retry-at';
 export const loadRateLimitedUntil = (): number | null => {
   try {
     const until = Number(window.sessionStorage.getItem(RATE_LIMIT_STORAGE_KEY));
-    if (Number.isFinite(until) && until > Date.now()) return until;
+    if (Number.isFinite(until) && until > getNow()) return until;
     window.sessionStorage.removeItem(RATE_LIMIT_STORAGE_KEY);
   } catch {
     // 저장소를 쓸 수 없으면 기다리지 않고 바로 요청한다

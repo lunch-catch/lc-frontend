@@ -42,6 +42,8 @@ const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   alreadyIssued: '오늘 이미 받은 쿠폰이에요',
   notWished: '찜한 뒤에 받을 수 있어요',
   notOpen: '지금은 받을 수 없는 시간이에요',
+  accountUnavailable: '현재 계정으로는 쿠폰을 받을 수 없어요',
+  busy: '발급 요청이 몰리고 있어요 · 잠시 후 다시 시도해 주세요',
 };
 
 // 받기에 성공했는데 발급 상태를 다시 받지 못하면, 받은 카드와 남은 횟수만 직접 바꾼다

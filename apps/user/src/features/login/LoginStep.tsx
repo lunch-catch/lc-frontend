@@ -106,7 +106,9 @@ const LoginStep = () => {
     );
   }
 
-  return <LoginStatusScreen onRetry={handleLogin} status="error" />;
+  return (
+    <LoginStatusScreen failure="network" onRetry={handleLogin} status="error" />
+  );
 };
 
 export default LoginStep;
