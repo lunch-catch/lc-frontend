@@ -37,7 +37,7 @@ interface WishStateInput {
 
 // 앞에 있는 조건이 먼저다. 이미 받은 쿠폰은 한도나 소진, 마감과 상관없이 받음으로 보여주고,
 // 하루 한도에 닿으면 소진된 캠페인도 한도 안내로 통일한다 (Figma wishlist-daily-limit)
-// 이벤트는 11:00에 만들어져 오픈 전에는 없는 게 정상이라, 이벤트 없음은 오픈 뒤에만 본다
+// 이벤트 없음은 시각과 상관없이 먼저 본다. 서버가 11:00에 열릴 이벤트는 SCHEDULED, 열리지 않을 이벤트는 NO_EVENT로 구분해 준다
 export const getWishState = ({
   dailyRemaining,
   eventStatus,
@@ -46,10 +46,10 @@ export const getWishState = ({
   isOpen,
 }: WishStateInput): WishState => {
   if (isIssued) return 'issued';
+  if (eventStatus === 'noEvent') return 'noEvent';
   if (isClosed) return 'closed';
   if (!isOpen) return 'beforeOpen';
   if (dailyRemaining === 0) return 'limitReached';
-  if (eventStatus === 'noEvent') return 'noEvent';
   if (eventStatus === 'soldOut') return 'soldOut';
   return 'available';
 };

@@ -167,6 +167,8 @@ const WishCard = ({
       return <span className="truncate">3일 뒤 목록에서 사라져요</span>;
     }
     if (!issueStatus) return null;
+    // 오늘 이벤트가 없으면 사용 시간도 없다 (서버가 빈 값을 준다)
+    if (!issueStatus.usableFrom) return null;
     return (
       <>
         <Clock aria-hidden="true" className="size-3.5 shrink-0" />
