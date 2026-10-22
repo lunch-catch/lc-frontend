@@ -1,14 +1,9 @@
-import {
-  DateRangePicker,
-  SearchField,
-  SelectField,
-  StatusBadge,
-  Tabs,
-} from '@repo/ui';
+import { SearchField, SelectField, StatusBadge, Tabs } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
 import type { CampaignWarning, InvalidImpression } from '@admin/api/fraud';
 import { useTableColumnSettings } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
@@ -251,7 +246,7 @@ export const FraudManagementContent = () => {
             }}
           />
         )}
-        <DateRangePicker
+        <AdminDateRangePicker
           ariaLabel="부정 관리 조회 기간"
           value={{ startDate: filters.from, endDate: filters.to }}
           onValueChange={(value) =>
