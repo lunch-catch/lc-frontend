@@ -1,8 +1,8 @@
 import { DatePicker } from '@repo/ui';
-import { formatDate, formatNumber } from '@repo/utils';
 
 import { ErrorState } from '@admin/ui/ErrorState/ErrorState';
 
+import { DashboardMetricCard } from './DashboardMetricCard';
 import { getDashboardMetricHint } from './dashboardUtils';
 import { useDashboardSnapshots } from './useDashboardSnapshots';
 
@@ -44,13 +44,6 @@ export const DashboardSnapshots = ({
             value: stores.data?.items.at(-1)?.cumulativeStoreCount ?? null,
             unit: '개',
           },
-          // 활성 캠페인은 하루 시점 값이라 조회 기간이 아닌 기준일 현황에 둔다.
-          {
-            label: '활성 캠페인',
-            resource: stores,
-            value: stores.data?.items.at(-1)?.activeCampaignCount ?? null,
-            unit: '개',
-          },
           {
             label: '미소진 잔액',
             resource: sales,
@@ -75,7 +68,7 @@ export const DashboardSnapshots = ({
         </div>
         <div className="w-full sm:w-44">
           <DatePicker
-            ariaLabel="누적·잔액 기준일 선택"
+            ariaLabel="현황 기준일 선택"
             value={date}
             maxDate={maxDate}
             onValueChange={setDate}
@@ -89,28 +82,19 @@ export const DashboardSnapshots = ({
           onRetry={() => failures.forEach((resource) => resource.retry())}
         />
       )}
-      <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div
+        className={`grid gap-3 sm:grid-cols-2 ${view === 'members' ? 'xl:grid-cols-3' : ''}`}
+      >
         {cards.map(({ resource, ...card }) => (
-          <div
+          <DashboardMetricCard
             key={card.label}
-            className="flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3"
-          >
-            <dt className="text-caption-web text-text-secondary">
-              {card.label}
-              <span className="mt-1 block text-text-tertiary">
-                {formatDate(date)} 기준
-              </span>
-            </dt>
-            <dd className="shrink-0 text-body-sm-web font-semibold tabular-nums text-text-secondary">
-              {resource.loading
-                ? '불러오는 중'
-                : card.value === null
-                  ? getDashboardMetricHint(resource)
-                  : formatNumber(card.value) + card.unit}
-            </dd>
-          </div>
+            {...card}
+            size="compact"
+            loading={resource.loading}
+            emptyLabel={getDashboardMetricHint(resource)}
+          />
         ))}
-      </dl>
+      </div>
     </section>
   );
 };
