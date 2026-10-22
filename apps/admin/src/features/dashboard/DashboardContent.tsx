@@ -14,7 +14,6 @@ import { DashboardActionQueue } from './DashboardActionQueue';
 import { DashboardFunnel } from './DashboardFunnel';
 import { DashboardMetricTrend } from './DashboardMetricTrend';
 import { DashboardOverview } from './DashboardOverview';
-import { DashboardSnapshots } from './DashboardSnapshots';
 import { useDashboardMetrics } from './useDashboardMetrics';
 import { useDashboardReport } from './useDashboardReport';
 
@@ -80,22 +79,20 @@ const DashboardReport = () => {
             className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2"
             aria-label="조회 기간 설정"
           >
-            {report.preset === 'custom' && (
-              <AdminDateRangePicker
-                ariaLabel="대시보드 조회 기간"
-                selectionMode="day"
-                maxDate={report.maxDate}
-                value={range}
-                onValueChange={report.setRange}
-                placeholder="조회 기간 선택"
-              />
-            )}
+            <AdminDateRangePicker
+              ariaLabel="대시보드 조회 기간"
+              selectionMode="day"
+              maxDate={report.maxDate}
+              value={range}
+              onValueChange={report.setRange}
+              placeholder="조회 기간 선택"
+            />
             <SegmentedControl<'7' | '30' | 'custom'>
               ariaLabel="빠른 기간 선택"
               value={report.preset}
               items={[
-                { value: '7', label: '7일' },
-                { value: '30', label: '30일' },
+                { value: '7', label: '최근 일주일' },
+                { value: '30', label: '최근 한달' },
                 { value: 'custom', label: '직접 선택' },
               ]}
               onValueChange={report.setPreset}
@@ -137,46 +134,38 @@ const DashboardReport = () => {
                   compare={report.compare}
                   onCompareChange={report.setCompare}
                 />
-                <DashboardOverview
-                  metrics={metrics}
-                  view={view}
-                  range={range}
-                />
-                <details
-                  key="members"
-                  className="rounded-xl border border-border-subtle bg-bg-surface p-4"
-                >
-                  <summary className="cursor-pointer text-body-sm-web font-medium text-text-primary">
-                    회원 상세 추이 보기
-                  </summary>
-                  <div className="mt-4 grid items-stretch gap-4 xl:grid-cols-2">
-                    <DashboardMetricTrend
-                      title="활성 회원 추이"
-                      resource={members}
-                      primary={{
-                        name: '일평균 활성 회원',
-                        field: 'avgDailyActiveMembers',
-                      }}
-                      unit="명"
-                      note="각 구간의 일평균입니다. 주간·월간 순수 활성 회원 수와는 다릅니다."
-                    />
-                    <DashboardMetricTrend
-                      title="신규 회원 추이"
-                      variant="bar"
-                      resource={members}
-                      primary={{ name: '신규 회원', field: 'newMemberCount' }}
-                      unit="명"
-                    />
-                  </div>
-                </details>
+                <div className="grid items-stretch gap-4 xl:grid-cols-2">
+                  <DashboardMetricTrend
+                    title="활성 회원 추이"
+                    tooltipMetrics={[
+                      { name: '정지 회원', field: 'suspendedCount' },
+                    ]}
+                    resource={members}
+                    primary={{
+                      name: '일평균 활성 회원',
+                      field: 'avgDailyActiveMembers',
+                    }}
+                    unit="명"
+                    note="일별 활성 회원과 정지 회원 수를 확인할 수 있습니다."
+                  />
+                  <DashboardMetricTrend
+                    title="신규 회원 추이"
+                    note="일별 신규 회원 수와 선택한 기간의 합계를 확인할 수 있습니다."
+                    tooltipMetrics={[
+                      { name: '누적 회원', field: 'cumulativeMemberCount' },
+                      { name: '누적 탈퇴', field: 'withdrawnCount' },
+                    ]}
+                    rangeSelection
+                    variant="bar"
+                    resource={members}
+                    primary={{ name: '신규 회원', field: 'newMemberCount' }}
+                    unit="명"
+                  />
+                </div>
               </>
             ) : (
               <>
-                <DashboardOverview
-                  metrics={metrics}
-                  view={view}
-                  range={range}
-                />
+                <DashboardOverview metrics={metrics} />
                 <DashboardMetricTrend
                   title="매출·충전 추이"
                   featured
@@ -186,7 +175,13 @@ const DashboardReport = () => {
                   primary={{ name: '광고 매출', field: 'spentAmount' }}
                   secondary={{ name: '충전액', field: 'chargeAmount' }}
                   unit="원"
-                  note="1P = 1원 · 소진액에는 과오 차감 정정이 반영됩니다."
+                  note="일별 광고 매출과 충전액을 비교할 수 있습니다."
+                  snapshot={{
+                    label: '미소진 잔액',
+                    field: 'unspentBalance',
+                    unit: 'P',
+                    date: range.endDate,
+                  }}
                   action={
                     <Link
                       to="/settlements?tab=sales"
@@ -197,46 +192,38 @@ const DashboardReport = () => {
                     </Link>
                   }
                 />
-                <details
-                  key="owners"
-                  className="rounded-xl border border-border-subtle bg-bg-surface p-4"
-                >
-                  <summary className="cursor-pointer text-body-sm-web font-medium text-text-primary">
-                    입점·캠페인 상세 추이 보기
-                  </summary>
-                  <div className="mt-4 grid items-stretch gap-4 xl:grid-cols-2">
-                    <DashboardMetricTrend
-                      title="활성 캠페인 추이"
-                      resource={stores}
-                      primary={{
-                        name: '활성 캠페인',
-                        field: 'activeCampaignCount',
-                      }}
-                      unit="개"
-                      note="각 날짜 말 기준 집행 중인 캠페인 수입니다."
-                    />
-                    <DashboardMetricTrend
-                      title="신규 입점 추이"
-                      variant="bar"
-                      resource={stores}
-                      primary={{
-                        name: '신규 입점 가게',
-                        field: 'newStoreCount',
-                      }}
-                      unit="개"
-                      note="선택한 구간에 최종 등록한 가게 수입니다."
-                    />
-                  </div>
-                </details>
+                <div className="grid items-stretch gap-4 xl:grid-cols-2">
+                  <DashboardMetricTrend
+                    title="활성 캠페인 추이"
+                    resource={stores}
+                    primary={{
+                      name: '활성 캠페인',
+                      field: 'activeCampaignCount',
+                    }}
+                    unit="개"
+                    note="날짜별 집행 중인 캠페인 수를 확인할 수 있습니다."
+                  />
+                  <DashboardMetricTrend
+                    title="신규 입점 추이"
+                    rangeSelection
+                    tooltipMetrics={[
+                      { name: '누적 입점 업체', field: 'cumulativeStoreCount' },
+                    ]}
+                    variant="bar"
+                    resource={stores}
+                    primary={{
+                      name: '신규 입점 가게',
+                      field: 'newStoreCount',
+                    }}
+                    unit="개"
+                    note="일별 신규 입점 가게 수와 선택한 기간의 합계를 확인할 수 있습니다."
+                  />
+                </div>
               </>
             )}
           </>
         )}
       </section>
-      {/* 누적 현황은 보조 정보로 아래에 두고, 기간 지표와 별도 기준일을 유지한다. */}
-      <div className="border-t border-border-subtle pt-5">
-        <DashboardSnapshots view={view} />
-      </div>
     </div>
   );
 };
