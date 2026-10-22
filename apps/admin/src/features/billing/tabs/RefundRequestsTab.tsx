@@ -164,7 +164,7 @@ export const RefundRequestsTab = ({
           <>
             <SearchField
               aria-label="환불 점주 ID"
-              placeholder="점주 ID를 입력하세요"
+              placeholder="점주 ID 검색"
               inputMode="numeric"
               value={search.draftKeyword}
               onChange={(event) => search.setDraftKeyword(event.target.value)}

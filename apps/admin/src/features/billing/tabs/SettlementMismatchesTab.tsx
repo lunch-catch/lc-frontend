@@ -134,19 +134,14 @@ export const SettlementMismatchesTab = ({
   };
   return (
     <>
-      <div className="space-y-1">
-        <h3 className="text-heading-sm-web font-semibold">정산 불일치 내역</h3>
-        <p className="text-caption-web text-text-secondary">
-          차액은 실제 금액에서 기준 금액을 뺀 값입니다. 대상 ID는 검증 종류에
-          따라 결제 ID 또는 캠페인 ID입니다.
-        </p>
-      </div>
       {notice && (
         <p role="status" className="text-body-sm-web text-text-secondary">
           {notice}
         </p>
       )}
       <BillingServerTable
+        heading="정산 불일치 내역"
+        description="차액은 실제 금액에서 기준 금액을 뺀 값입니다. 대상 ID는 검증 종류에 따라 결제 ID 또는 캠페인 ID입니다."
         tableId="billing.settlementMismatches"
         columns={columns}
         items={resource.data?.items ?? []}

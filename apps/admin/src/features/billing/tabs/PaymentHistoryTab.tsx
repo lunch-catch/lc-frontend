@@ -165,7 +165,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
         />
         <SearchField
           aria-label="결제 검색어"
-          placeholder={`${paymentSearchOptions.find((option) => option.value === searchType)?.label}를 입력하세요`}
+          placeholder={`${paymentSearchOptions.find((option) => option.value === searchType)?.label ?? '결제 정보'} 검색`}
           value={search.draftKeyword}
           onChange={(event) => search.setDraftKeyword(event.target.value)}
         />

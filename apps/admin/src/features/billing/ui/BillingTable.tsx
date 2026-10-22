@@ -38,6 +38,8 @@ interface Sort {
 }
 
 interface BillingTableProps {
+  heading?: string;
+  description?: ReactNode;
   loading?: boolean;
   error?: string;
   onRetry?: () => void;
@@ -56,6 +58,8 @@ interface BillingTableProps {
 }
 
 export const BillingTable = ({
+  heading,
+  description,
   queryPrefix,
   columns,
   rows,
@@ -168,6 +172,8 @@ export const BillingTable = ({
   return (
     <>
       <FilterBar
+        heading={heading}
+        description={description}
         columnSettings={columnSettings}
         className="!px-0 !py-0"
         density={{ value: density, onValueChange: setDensity }}
@@ -176,6 +182,7 @@ export const BillingTable = ({
         {extraFilters ??
           (showSearch && (
             <SearchField
+              placeholder="목록 검색"
               value={draftKeyword}
               onChange={(event) => setDraftKeyword(event.target.value)}
             />

@@ -97,16 +97,9 @@ export const PointSummarySection = ({
       aria-label="기간별 포인트 합계"
       className="flex flex-col gap-4 border-b border-border-subtle pb-6"
     >
-      <div className="flex flex-col gap-1">
-        <h3 className="text-heading-sm-web font-semibold text-text-primary">
-          기간별 포인트 합계
-        </h3>
-        <p className="text-caption-web leading-5 text-text-secondary">
-          일별 최대 92일 · 주별 최대 53주 · 월별 최대 13개월 조회 가능하며
-          주별은 월요일 기준입니다.
-        </p>
-      </div>
       <FilterBar
+        heading="기간별 포인트 합계"
+        description="일별 최대 92일 · 주별 최대 53주 · 월별 최대 13개월 조회 가능하며 주별은 월요일 기준입니다."
         className="!px-0 !py-0"
         columnSettings={columnSettings}
         density={{ value: density, onValueChange: setDensity }}
