@@ -360,6 +360,24 @@ const SwipeFeed = () => {
     onSwipe: handleSwipe,
   });
 
+  // 카드 자리를 보여주는지. 불러오는 중에는 회색 틀을 보여준다
+  const hasCardArea = status === 'loading' || Boolean(topCard);
+  // 카드 바로 위 줄. 왼쪽은 피드에 거는 필터("필터"라고 적어 처음 보는 사람도 알 수 있게 한다)
+  // 오른쪽은 11:00 오픈까지 남은 시간. 오픈 뒤에는 비워 둔다
+  // 필터 때문에 카드가 없을 수도 있어, 카드가 없는 화면에도 둔다. 위치가 없을 때만 위치 설정이 먼저라 뺀다
+  const filterRow = (
+    <div className="flex items-center justify-between gap-3">
+      <FeedFilterButton
+        filter={feedFilter.filter}
+        hasLoadError={feedFilter.hasLoadError}
+        onLoadError={() => setToastMessage('필터를 불러오지 못했어요')}
+        onReload={feedFilter.reload}
+        onSaved={handleFilterSaved}
+      />
+      <OpenCountdown />
+    </div>
+  );
+
   return (
     <>
       <AppHeader locationName={locationName} wishCount={wishCount} />
@@ -370,20 +388,9 @@ const SwipeFeed = () => {
             <FeedbackToast message={toastMessage} />
           </div>
         )}
-        {/* 카드 바로 위 줄. 왼쪽은 피드에 거는 필터("필터"라고 적어 처음 보는 사람도 알 수 있게 한다) */}
-        {/* 오른쪽은 11:00 오픈까지 남은 시간. 오픈 뒤에는 비워 둔다 */}
-        {/* 필터 때문에 카드가 없을 수도 있어, 카드가 없는 화면에도 둔다. 위치가 없을 때만 위치 설정이 먼저라 뺀다 */}
-        {status !== 'needsLocation' && (
-          <div className="flex items-center justify-between gap-3 px-page pt-1">
-            <FeedFilterButton
-              filter={feedFilter.filter}
-              hasLoadError={feedFilter.hasLoadError}
-              onLoadError={() => setToastMessage('필터를 불러오지 못했어요')}
-              onReload={feedFilter.reload}
-              onSaved={handleFilterSaved}
-            />
-            <OpenCountdown />
-          </div>
+        {/* 카드가 없는 화면(빈 화면, 기다리는 중)에서는 필터 줄을 맨 위에 둔다. 카드가 있으면 카드 묶음 안에 둔다 */}
+        {status !== 'needsLocation' && !hasCardArea && (
+          <div className="px-page pt-1">{filterRow}</div>
         )}
         {(status === 'empty' ||
           status === 'needsLocation' ||
@@ -400,21 +407,22 @@ const SwipeFeed = () => {
         {status === 'done' && <SwipeDone />}
         {status === 'waiting' && <SwipeWaiting until={waitUntil} />}
         {/* 불러오는 중에는 카드 자리에 회색 틀을 보여준다 */}
-        {(status === 'loading' || topCard) && (
+        {hasCardArea && (
           // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
           <section
-            className="relative flex flex-1 flex-col overflow-x-clip px-page pt-2 pb-2"
+            className="relative flex flex-1 flex-col overflow-x-clip px-page pt-1 pb-2"
             ref={setCardArea}
           >
-            {/* 카드와 버튼을 한 묶음으로 남는 높이의 세로 가운데에 둔다 */}
-            {/* PC처럼 화면이 낮으면 포스터가 3:4를 지키도록 묶음 폭을 줄인다 */}
+            {/* 필터 줄, 카드, 버튼을 한 묶음으로 남는 높이의 세로 가운데에 둔다 */}
+            {/* 필터와 남은 시간이 이 카드에 걸린다는 게 보이도록 카드 바로 위에 붙이고, 남는 높이는 위아래로 나눈다 */}
+            {/* PC처럼 화면이 낮으면 포스터가 A4 비율을 지키도록 묶음 폭을 줄인다 */}
             <div
               className="@container relative mx-auto flex w-full flex-1 flex-col justify-center"
               style={{ maxWidth: cardMaxWidth }}
             >
-              {/* 카드는 남는 높이만큼 늘어나되, 포스터가 점주 화면과 같은 3:4(133.33cqw)보다 길어지지 않게 한다 */}
-              {/* 69px은 포스터 아래 가격과 시간 영역의 높이 */}
-              <div className="relative flex max-h-[calc(133.33cqw+69px)] flex-1 flex-col">
+              <div className="mb-2">{filterRow}</div>
+              {/* 카드는 남는 높이만큼 늘어나되, 포스터가 점주 화면과 같은 A4(210:297, 141.43cqw)보다 길어지지 않게 한다 */}
+              <div className="relative flex max-h-[141.43cqw] flex-1 flex-col">
                 {!topCard && (
                   <>
                     <PosterSkeleton />
@@ -455,13 +463,15 @@ const SwipeFeed = () => {
                   );
                 })}
               </div>
-              <GestureRail
-                direction={direction}
-                disabled={!topCard}
-                onPass={() => swipe('pass')}
-                onWish={() => swipe('wish')}
-                storeName={topCard?.storeName}
-              />
+              <div className="mt-2">
+                <GestureRail
+                  direction={direction}
+                  disabled={!topCard}
+                  onPass={() => swipe('pass')}
+                  onWish={() => swipe('wish')}
+                  storeName={topCard?.storeName}
+                />
+              </div>
               <SwipeHint />
             </div>
           </section>
