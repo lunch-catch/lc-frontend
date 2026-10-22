@@ -1,6 +1,8 @@
 import type { StoreDetailCampaign } from '@user/api/store';
+import Card from '@user/ui/Card/Card';
 import PosterFrame from '@user/ui/PosterFrame/PosterFrame';
 import { formatDiscount } from '@user/ui/storeFormat';
+import { TicketDivider } from '@user/ui/Ticket/Ticket';
 
 import type { CouponState } from './couponState';
 
@@ -41,36 +43,42 @@ const CouponSection = ({
     issued: '발급 완료 · 쿠폰함에서 확인',
   };
 
+  const isUnavailable =
+    state === 'soldOut' ||
+    state === 'limitReached' ||
+    state === 'closedWished' ||
+    state === 'closedNotWished';
+
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-h3-mobile font-bold text-text-primary">
         오늘의 쿠폰
       </h2>
-      <div className="rounded-xl border border-dashed border-action-primary/40 bg-surface-brand p-4">
-        <p className="text-caption-mobile font-medium text-text-brand">
-          매일 11:00 선착순 발급
-        </p>
-        <p className="mt-1 text-h2-mobile font-bold text-text-primary">
-          {getTargetLabel(campaign)} {formatDiscount(campaign)}
-        </p>
-        <div className="mt-3 flex items-center justify-between gap-3 border-t border-dashed border-action-primary/30 pt-3 text-caption-mobile">
+      {/* 쿠폰함·찜 목록과 같은 쿠폰 모양(점선과 반원 홈)으로 두어, 같은 쿠폰이 화면마다 다른 물건처럼 보이지 않게 한다 */}
+      {/* 받을 수 없는 상태(소진, 마감, 한도)는 위쪽을 흐리게 가라앉히고, 받을 수 있을 때만 아래 상태를 주황으로 둔다 */}
+      <Card className="relative overflow-hidden">
+        <div className={`px-4 py-3.5 ${isUnavailable ? 'opacity-60' : ''}`}>
+          <p className="text-caption-mobile font-medium text-text-secondary">
+            매일 11:00 선착순 발급
+          </p>
+          <p className="mt-1 text-h2-mobile font-bold text-text-primary">
+            {getTargetLabel(campaign)} {formatDiscount(campaign)}
+          </p>
+        </div>
+        <TicketDivider />
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-caption-mobile">
           <span className="text-text-secondary">
             오늘 {campaign.usableStartTime} – {campaign.usableEndTime} 사용
           </span>
           <span
             className={`shrink-0 font-bold ${
-              state === 'soldOut' ||
-              state === 'limitReached' ||
-              state === 'closedWished' ||
-              state === 'closedNotWished'
-                ? 'text-text-tertiary'
-                : 'text-text-brand'
+              isUnavailable ? 'text-text-tertiary' : 'text-text-brand'
             }`}
           >
             {statusTextByState[state]}
           </span>
         </div>
-      </div>
+      </Card>
       {posterHtml !== null && (
         // 포스터는 점주 화면과 같은 A4(210:297). 불러오는 동안에는 회색 배경이 보인다
         <div className="relative aspect-210/297 overflow-hidden rounded-xl bg-surface-subtle">
