@@ -2,11 +2,7 @@ import type { AnalyticsBucket } from '@admin/api/analytics';
 
 import type { FunnelMetric } from './dashboardTypes';
 
-/** 브라우저 시간대와 무관하게 API의 영업일 기준인 KST 날짜를 반환한다. */
-export const getKstToday = () =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(
-    new Date(),
-  );
+export { getKstToday } from '@admin/hooks/queryDateUtils';
 
 /** API 조회 대기와 서버의 집계 미완료를 구분한다. */
 export const getDashboardMetricHint = (resource: {

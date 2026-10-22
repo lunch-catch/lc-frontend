@@ -1,11 +1,5 @@
 import { useState } from 'react';
-import {
-  Button,
-  DateRangePicker,
-  SearchField,
-  SelectField,
-  StatusBadge,
-} from '@repo/ui';
+import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
 import { formatDate, formatDateTime } from '@repo/utils';
 
 import { ApiError } from '@admin/api/client';
@@ -25,6 +19,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
@@ -167,7 +162,7 @@ export const UserMemberListContent = ({
             updateFilters({ page: 1, status: value as typeof status });
           }}
         />
-        <DateRangePicker
+        <AdminDateRangePicker
           aria-label="가입일 범위"
           value={dates}
           onValueChange={(value) => {

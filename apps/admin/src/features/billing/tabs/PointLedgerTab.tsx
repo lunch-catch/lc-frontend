@@ -1,5 +1,5 @@
-﻿import { useState } from 'react';
-import { Button, DateRangePicker, SearchField, SelectField } from '@repo/ui';
+import { useState } from 'react';
+import { Button, SearchField, SelectField } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
 import { SlidersHorizontal } from 'lucide-react';
 
@@ -18,6 +18,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
 
@@ -204,7 +205,7 @@ export const PointLedgerTab = ({
               updateFilters({ type: value as typeof type });
             }}
           />
-          <DateRangePicker
+          <AdminDateRangePicker
             ariaLabel="조회 기간"
             placeholder="조회 기간 선택"
             value={range}

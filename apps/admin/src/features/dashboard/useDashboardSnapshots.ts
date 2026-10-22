@@ -6,7 +6,7 @@ import {
   getStoreMetrics,
 } from '@admin/api/analytics';
 import { shiftDate } from '@admin/api/analyticsDateUtils';
-import { queryDate } from '@admin/hooks/urlQuery';
+import { queryPastDate } from '@admin/hooks/urlQuery';
 import { useAnalyticsQuery } from '@admin/hooks/useAnalyticsQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
@@ -33,7 +33,7 @@ export const useDashboardSnapshots = (view: 'owners' | 'members') => {
   }, [today]);
   const maxDate = shiftDate(today, -1);
   const { filters, updateFilters } = useUrlFilters('snapshot.', {
-    date: queryDate(maxDate),
+    date: queryPastDate(maxDate),
   });
   // URL 직접 입력으로도 오늘·미래 날짜를 조회하지 못하도록 상한을 적용한다.
   const date = filters.date && filters.date <= maxDate ? filters.date : maxDate;

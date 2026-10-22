@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import {
-  DateRangePicker,
-  SearchField,
-  SelectField,
-  StatusBadge,
-} from '@repo/ui';
+import { SearchField, SelectField, StatusBadge } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
 
 import { getOwners, type OwnerStatus } from '@admin/api/owners';
 import {
   queryChoice,
-  queryDate,
   queryPage,
+  queryPastDate,
   queryText,
 } from '@admin/hooks/urlQuery';
 import { useApiResource } from '@admin/hooks/useApiResource';
@@ -28,6 +23,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
@@ -56,8 +52,8 @@ export const OwnerMemberListContent = () => {
       ['ALL', 'ONBOARDING', 'ACTIVE', 'SUSPENDED', 'WITHDRAWN'] as const,
       'ALL',
     ),
-    from: queryDate(),
-    to: queryDate(),
+    from: queryPastDate(),
+    to: queryPastDate(),
     page: queryPage,
   });
   const search = useUrlSearch(filters.keyword, (keyword) =>
@@ -113,7 +109,7 @@ export const OwnerMemberListContent = () => {
               });
           }}
         />
-        <DateRangePicker
+        <AdminDateRangePicker
           ariaLabel="점주 가입일 범위"
           value={{ startDate: filters.from, endDate: filters.to }}
           onValueChange={(value) =>

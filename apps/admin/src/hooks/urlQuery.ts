@@ -1,3 +1,5 @@
+import { getKstToday } from './queryDateUtils';
+
 export interface QueryField<T extends string | number> {
   defaultValue: T;
   parse: (value: string | null) => T;
@@ -61,6 +63,16 @@ export const queryDate = (defaultValue = ''): QueryField<string> => ({
       date.toISOString().slice(0, 10) === value
       ? value
       : defaultValue;
+  },
+});
+
+/** URL로 직접 입력한 미래 조회일도 오늘로 제한한다. 빈 값은 미선택 상태로 유지한다. */
+export const queryPastDate = (defaultValue = ''): QueryField<string> => ({
+  defaultValue,
+  parse: (value) => {
+    const parsed = queryDate(defaultValue).parse(value);
+    const today = getKstToday();
+    return parsed > today ? today : parsed;
   },
 });
 

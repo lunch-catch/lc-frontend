@@ -1,4 +1,4 @@
-import { DateRangePicker, SegmentedControl, StatusBadge } from '@repo/ui';
+import { SegmentedControl, StatusBadge } from '@repo/ui';
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import { getSales } from '@admin/api/analytics';
@@ -7,7 +7,7 @@ import {
   shiftDate,
 } from '@admin/api/analyticsDateUtils';
 import { analyticsPeriods, sumAnalytics } from '@admin/api/analyticsUtils';
-import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
+import { queryChoice, queryPastDate } from '@admin/hooks/urlQuery';
 import { useAnalyticsQuery } from '@admin/hooks/useAnalyticsQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import {
@@ -16,6 +16,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 
 import type {
   BillingColumn,
@@ -53,8 +54,8 @@ export const SalesOverviewTab = ({
   preferences: BillingTablePreferences;
 }) => {
   const { filters, updateFilters } = useUrlFilters('sales.', {
-    from: queryDate(shiftDate(today, -1).slice(0, 7) + '-01'),
-    to: queryDate(shiftDate(today, -1)),
+    from: queryPastDate(shiftDate(today, -1).slice(0, 7) + '-01'),
+    to: queryPastDate(shiftDate(today, -1)),
     period: queryChoice(['day', 'week', 'month'] as const, 'day'),
   });
   const range = { startDate: filters.from, endDate: filters.to };
@@ -110,7 +111,7 @@ export const SalesOverviewTab = ({
           ]}
           onValueChange={(period) => updateFilters({ period })}
         />
-        <DateRangePicker
+        <AdminDateRangePicker
           ariaLabel="매출 조회 기간"
           placeholder="조회 기간 선택"
           selectionMode={filters.period}

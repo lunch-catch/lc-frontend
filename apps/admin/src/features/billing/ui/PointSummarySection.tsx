@@ -1,5 +1,4 @@
 import {
-  DateRangePicker,
   type DateRangeSelectionMode,
   getDateRangeUnit,
   SelectField,
@@ -22,6 +21,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import { getSummaryQuery } from '../billingQuery';
@@ -119,7 +119,7 @@ export const PointSummarySection = ({
           onValueChange={(value) => {
             const nextPeriod = value as PointSummaryPeriod;
             const mode = selectionModes[nextPeriod];
-            // 조회 단위 변경과 날짜 보정을 함께 반영해 부분 주·월 범위로 요청하지 않는다.
+            // 구간 경계로 맞추고 미래 종료일은 공통 조회 날짜 검증에서 오늘로 제한한다.
             updateFilters({
               from: range.startDate
                 ? getDateRangeUnit(range.startDate, mode).startDate
@@ -131,7 +131,7 @@ export const PointSummarySection = ({
             });
           }}
         />
-        <DateRangePicker
+        <AdminDateRangePicker
           key={period}
           selectionMode={selectionModes[period]}
           ariaLabel="합계 조회 기간"

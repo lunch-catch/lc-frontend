@@ -1,16 +1,12 @@
 import { useState } from 'react';
-import {
-  DateRangePicker,
-  SearchField,
-  SelectField,
-  StatusBadge,
-} from '@repo/ui';
+import { SearchField, SelectField, StatusBadge } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
 
 import { type AdminRefund, getRefunds } from '@admin/api/refunds';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 
 import {
   getBillingRangeError,
@@ -188,7 +184,7 @@ export const RefundRequestsTab = ({
                 update({ status: value as typeof filters.status })
               }
             />
-            <DateRangePicker
+            <AdminDateRangePicker
               ariaLabel="환불 요청일 범위"
               placeholder="요청일 범위 선택"
               value={{ startDate: filters.from, endDate: filters.to }}

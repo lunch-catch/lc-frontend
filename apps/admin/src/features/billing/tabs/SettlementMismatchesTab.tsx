@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, DateRangePicker, SelectField, StatusBadge } from '@repo/ui';
+import { Button, SelectField, StatusBadge } from '@repo/ui';
 import { formatDate, formatDateTime, formatPoints } from '@repo/utils';
 
 import {
@@ -8,6 +8,7 @@ import {
 } from '@admin/api/settlementMismatches';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 
 import {
   getBillingRangeError,
@@ -207,7 +208,7 @@ export const SettlementMismatchesTab = ({
                 update({ resolved: value as typeof filters.resolved })
               }
             />
-            <DateRangePicker
+            <AdminDateRangePicker
               ariaLabel="검증 대상 영업일 범위"
               placeholder="대상 영업일 선택"
               value={{ startDate: filters.from, endDate: filters.to }}

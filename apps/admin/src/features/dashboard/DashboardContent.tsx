@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Button, DateRangePicker, SegmentedControl, Tabs } from '@repo/ui';
+import { Button, SegmentedControl, Tabs } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
 import { Clock3, ExternalLink } from 'lucide-react';
 
@@ -8,6 +8,7 @@ import {
   getPreviousRange,
 } from '@admin/api/analyticsDateUtils';
 import { analyticsPeriods, sumAnalytics } from '@admin/api/analyticsUtils';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 
 import { DashboardActionQueue } from './DashboardActionQueue';
 import { DashboardFunnel } from './DashboardFunnel';
@@ -92,7 +93,7 @@ const DashboardReport = () => {
           aria-label="조회 기간 설정"
         >
           {report.preset === 'custom' && (
-            <DateRangePicker
+            <AdminDateRangePicker
               ariaLabel="대시보드 조회 기간"
               selectionMode="day"
               value={range}

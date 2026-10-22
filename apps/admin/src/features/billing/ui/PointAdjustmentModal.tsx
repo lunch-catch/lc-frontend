@@ -4,6 +4,7 @@ import { formatPoints } from '@repo/utils';
 
 import { adjustPoints } from '@admin/api/pointAdjustments';
 import type { SettlementMismatch } from '@admin/api/settlementMismatches';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 
 import { getPointAdjustmentError } from '../billingManagementUtils';
@@ -179,6 +180,7 @@ export const PointAdjustmentModal = ({
                   </span>
                 </p>
                 <DatePicker
+                  maxDate={getKstToday()}
                   ariaLabel="대상 영업일"
                   value={targetBusinessDate}
                   disabled={campaignRequired}
