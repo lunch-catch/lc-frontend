@@ -13,6 +13,11 @@ import {
 import type { CampaignIssueStatus } from '@user/api/coupon';
 import type { WishItem } from '@user/api/wishlist';
 import Card from '@user/ui/Card/Card';
+import {
+  TicketDivider,
+  ticketPillClassName,
+  ticketPressableClassName,
+} from '@user/ui/Ticket/Ticket';
 import type { WishState } from '@user/ui/wishState';
 
 import { formatWishAmount, formatWishTarget } from './wishFormat';
@@ -62,10 +67,9 @@ const WishCard = ({
     issueStatus && (state === 'beforeOpen' || state === 'available');
 
   // 알약 버튼 공통 모양. 보이는 크기는 작게(32px) 두되, 11:00 선착순에도 잘 누르도록 위아래로 누르는 영역을 넓혀 44px로 맞춘다
-  const pillClassName =
-    "relative flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-caption-mobile font-bold whitespace-nowrap after:absolute after:-inset-x-1 after:-inset-y-1.5 after:content-['']";
-  const pressableClassName =
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary disabled:opacity-60';
+  // 쿠폰함 카드와 같은 알약 모양을 쓴다
+  const pillClassName = ticketPillClassName;
+  const pressableClassName = ticketPressableClassName;
 
   // 오른쪽 알약. 받을 수 있으면 연한 주황, 받았으면 연한 초록, 받을 수 없으면 회색이라 상태를 색으로 바로 구별한다
   // 할인 글자의 주황과 부딪히지 않도록 진한 주황 대신 연한 주황으로 둔다
@@ -234,12 +238,8 @@ const WishCard = ({
       {/* 발급 상태를 모르면 목록 맨 위 안내가 이유를 말해 주므로 아래쪽을 두지 않는다 */}
       {action && (
         <>
-          {/* 쿠폰을 뜯는 자리처럼 점선과 양옆 반원 홈을 둔다. 홈은 바탕색 원을 카드 가장자리에 반쯤 걸쳐 만든다 */}
-          <div aria-hidden="true" className="relative">
-            <div className="mx-3 border-t border-dashed border-border-subtle" />
-            <span className="absolute top-0 -left-2.5 size-5 -translate-y-1/2 rounded-full border border-border-subtle bg-bg-page" />
-            <span className="absolute top-0 -right-2.5 size-5 -translate-y-1/2 rounded-full border border-border-subtle bg-bg-page" />
-          </div>
+          {/* 쿠폰을 뜯는 자리처럼 점선과 양옆 반원 홈을 둔다 (쿠폰함 카드와 같은 모양) */}
+          <TicketDivider />
           {/* 정보 줄 오른쪽에 알약 버튼을 두어 버튼 줄 하나를 줄인다 */}
           <div className="flex items-center justify-between gap-2 px-3 py-2.5">
             <p className="flex min-w-0 items-center gap-1.5 text-caption-mobile text-text-secondary">

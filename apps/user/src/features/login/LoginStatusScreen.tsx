@@ -11,14 +11,36 @@ export const loginScreenClassName =
 
 interface LoginStatusScreenProps {
   status: 'loading' | 'error';
+  failure: LoginFailure;
   onRetry: () => void;
 }
+
+export type LoginFailure =
+  | 'authentication'
+  | 'suspended'
+  | 'pendingUnlink'
+  | 'service'
+  | 'rateLimited'
+  | 'network';
+
+const failureMessages: Record<LoginFailure, string> = {
+  authentication: '카카오 인증에 실패했어요 · 다시 로그인해 주세요',
+  suspended: '이용할 수 없는 계정이에요',
+  pendingUnlink: '이전 계정 처리가 끝나지 않았어요 · 나중에 다시 시도해 주세요',
+  service: '지금은 로그인할 수 없어요 · 잠시 후 다시 시도해 주세요',
+  rateLimited: '로그인 요청이 많아요 · 잠시 후 다시 시도해 주세요',
+  network: '네트워크 상태를 확인한 뒤 다시 시도해 주세요',
+};
 
 // 카카오 로그인 중과 실패 화면
 // 로그인 중은 카카오에서 돌아와 서버가 로그인을 마치는 동안만 보인다. 버튼을 누른 직후에는 로그인 화면의 버튼만 로딩으로 바뀐다
 // 로고는 로그인 화면과 같은 왼쪽 위에 두어 화면이 바뀔 때 들썩이지 않게 하고,
 // 마스코트와 글자 크기는 빈 화면(EmptyState)과 같게 맞춘다 (마스코트 80px, 제목 16px, 설명 13px)
-const LoginStatusScreen = ({ onRetry, status }: LoginStatusScreenProps) => {
+const LoginStatusScreen = ({
+  failure,
+  onRetry,
+  status,
+}: LoginStatusScreenProps) => {
   const isLoading = status === 'loading';
 
   return (
@@ -46,7 +68,7 @@ const LoginStatusScreen = ({ onRetry, status }: LoginStatusScreenProps) => {
             />
           ) : (
             <p className="mt-1.5 text-body-sm-mobile text-text-secondary">
-              네트워크 상태를 확인한 뒤 다시 시도해 주세요
+              {failureMessages[failure]}
             </p>
           )}
         </div>

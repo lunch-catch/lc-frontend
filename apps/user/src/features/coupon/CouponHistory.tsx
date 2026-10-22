@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChoiceChip } from '@repo/ui';
+import { Clock } from 'lucide-react';
 
 import {
   type Coupon,
@@ -9,11 +9,13 @@ import {
 import mascotHistoryEmpty from '@user/assets/illustrations/mascot-history-empty.webp';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
+import { ticketPillClassName } from '@user/ui/Ticket/Ticket';
 
 import CouponCard from './CouponCard';
 import { formatClock } from './couponFormat';
 import CouponListSkeleton from './CouponListSkeleton';
 import CouponLoadError from './CouponLoadError';
+import HistorySummary from './HistorySummary';
 import { useCouponHistory } from './useCouponHistory';
 
 type HistoryFilter = 'all' | 'used' | 'expired';
@@ -77,9 +79,11 @@ const groupByDate = (coupons: Coupon[]) => {
 const CouponHistory = () => {
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const history = useCouponHistory(serverFilters[filter]);
-  // 사용한 횟수는 나눠 받은 목록으로 셀 수 없어 쿠폰 요약의 누적 값을 쓴다. 못 받으면 문구를 숨긴다
+  // 사용한 횟수와 아낀 금액은 나눠 받은 목록으로 셀 수 없어 쿠폰 요약의 누적 값을 쓴다. 못 받으면 배너를 숨긴다
   // undefined면 불러오는 중, null이면 받지 못함
-  const [usedCount, setUsedCount] = useState<number | null | undefined>();
+  const [summary, setSummary] = useState<
+    { usedCount: number; savedAmount: number } | null | undefined
+  >();
   // 목록 끝에 두어, 화면에 가까워지면 다음 페이지를 받는다
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -87,11 +91,16 @@ const CouponHistory = () => {
     let ignore = false;
 
     fetchCouponSummary()
-      .then((summary) => {
-        if (!ignore) setUsedCount(summary.usedCouponCount);
+      .then((result) => {
+        if (!ignore) {
+          setSummary({
+            savedAmount: result.totalDiscountAmount,
+            usedCount: result.usedCouponCount,
+          });
+        }
       })
       .catch(() => {
-        if (!ignore) setUsedCount(null);
+        if (!ignore) setSummary(null);
       });
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
@@ -104,7 +113,7 @@ const CouponHistory = () => {
   // 처음 화면을 그릴 만큼 받았는지. 목록과 사용 횟수를 둘 다 받은 뒤(실패 포함)에 한 번만 켠다
   const [hasFirstLoaded, setHasFirstLoaded] = useState(false);
   const isFirstLoading =
-    !hasFirstLoaded && (items === undefined || usedCount === undefined);
+    !hasFirstLoaded && (items === undefined || summary === undefined);
   if (!hasFirstLoaded && !isFirstLoading) setHasFirstLoaded(true);
   const showSkeleton = useDelayedLoading(items === undefined || isFirstLoading);
 
@@ -163,27 +172,35 @@ const CouponHistory = () => {
 
   return (
     <div className="flex flex-col gap-4 px-page pt-3 pb-6">
-      <fieldset className="flex gap-2">
+      {/* 찜 목록 맨 위 배너와 같은 모양으로, 쿠폰을 써서 얼마나 아꼈는지 먼저 보여준다 */}
+      {summary && <HistorySummary {...summary} />}
+      {/* 쿠폰함 탭(찜 목록·사용 가능·사용 내역)과 겹쳐 보이지 않도록 칩 대신 작은 글자 탭으로 둔다 */}
+      {/* 고른 탭만 진한 글자와 짧은 주황 밑줄로 보여준다 */}
+      <fieldset className="flex gap-4">
         <legend className="sr-only">사용 내역 필터</legend>
         {filterOptions.map((option) => (
-          <ChoiceChip
-            checked={filter === option.value}
+          <label
+            className="relative flex min-h-11 cursor-pointer items-center"
             key={option.value}
-            name="coupon-history-filter"
-            onChange={() => changeFilter(option.value)}
-            value={option.value}
           >
-            {option.label}
-          </ChoiceChip>
+            <input
+              checked={filter === option.value}
+              className="peer sr-only"
+              name="coupon-history-filter"
+              onChange={() => changeFilter(option.value)}
+              type="radio"
+              value={option.value}
+            />
+            <span className="rounded-sm text-body-sm-mobile font-medium text-text-tertiary peer-checked:font-bold peer-checked:text-text-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-action-primary">
+              {option.label}
+            </span>
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-0 bottom-1.5 hidden h-0.5 rounded-full bg-action-primary peer-checked:block"
+            />
+          </label>
         ))}
       </fieldset>
-      {typeof usedCount === 'number' && (
-        <p className="text-caption-mobile text-text-secondary">
-          지금까지 쿠폰을{' '}
-          <strong className="font-bold text-text-primary">{usedCount}번</strong>{' '}
-          사용했어요
-        </p>
-      )}
       {items === null && <CouponLoadError onRetry={history.retry} />}
       {items === undefined && (
         <>
@@ -207,13 +224,25 @@ const CouponHistory = () => {
           <ul className="flex flex-col gap-3">
             {group.coupons.map((coupon) => (
               <CouponCard
-                coupon={coupon}
-                detail={
-                  coupon.state === 'USED'
-                    ? `사용 완료 · ${formatClock(getEventAt(coupon))}`
-                    : `만료 · ${formatClock(getEventAt(coupon))}`
+                // 사용 완료와 만료는 찜 카드의 끝난 상태처럼 회색 알약으로 구분하고, 언제였는지는 왼쪽에 적는다
+                action={
+                  <span
+                    className={`${ticketPillClassName} bg-surface-subtle text-text-tertiary`}
+                  >
+                    {coupon.state === 'USED' ? '사용 완료' : '만료'}
+                  </span>
                 }
+                coupon={coupon}
                 dimmed
+                info={
+                  <>
+                    <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+                    <span className="truncate">
+                      {formatClock(getEventAt(coupon))}{' '}
+                      {coupon.state === 'USED' ? '사용' : '만료'}
+                    </span>
+                  </>
+                }
                 key={coupon.memberCouponId}
               />
             ))}

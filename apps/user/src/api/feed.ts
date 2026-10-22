@@ -1,4 +1,5 @@
 import { request } from './client';
+import { getNow } from './clock';
 import { type MockFeedCard, mockFeedCards } from './mocks/feed';
 import { addMockWish, isMockWishRemoved } from './mocks/wishlist';
 import { BUSINESS_CATEGORY_LABELS, type BusinessCategory } from './store';
@@ -154,8 +155,7 @@ const loadFeed = async (): Promise<FeedResponse> => {
     status: 'serving',
     // 받은 순서를 바꾸지 않는다 (명세의 클라이언트 규칙)
     cards: data.cards.map(toFeedCard),
-    nextFeedAt:
-      Date.now() + (Number.isFinite(waitMs) ? Math.max(0, waitMs) : 0),
+    nextFeedAt: getNow() + (Number.isFinite(waitMs) ? Math.max(0, waitMs) : 0),
   };
 };
 

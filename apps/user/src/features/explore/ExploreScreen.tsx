@@ -19,6 +19,7 @@ import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import {
   getHeaderLocationName,
+  refreshMyLocation,
   useMyLocation,
 } from '@user/hooks/useMyLocation';
 import { useWishCount } from '@user/hooks/useWishCount';
@@ -252,6 +253,7 @@ const ExploreScreen = () => {
   });
 
   const retry = () => {
+    refreshMyLocation();
     resetStores();
     setAttempt((value) => value + 1);
   };

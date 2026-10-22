@@ -42,7 +42,9 @@ export type IssueResult =
   | 'limitReached'
   | 'alreadyIssued'
   | 'notWished'
-  | 'notOpen';
+  | 'notOpen'
+  | 'accountUnavailable'
+  | 'busy';
 
 // 받은 쿠폰의 상태 (GET /v1/coupons 명세)
 // ISSUED: 아직 안 씀(사용 시작 전 포함), USED: 사용 완료, EXPIRED: 사용 시간이 지남
@@ -398,12 +400,18 @@ export const fetchQrToken = async (
 
 // 서버가 발급을 거절한 이유를 받기 결과로 바꾼다. 여기 없는 오류는 그대로 올린다
 const issueFailuresByCode: Record<string, Exclude<IssueResult, 'issued'>> = {
+  // 이벤트가 없거나 더는 조회할 수 없음
+  'COUPON-001': 'notOpen',
+  // 정지·탈퇴 등 쿠폰을 이용할 수 없는 회원 상태
+  'COUPON-003': 'accountUnavailable',
   'COUPON-004': 'notWished',
   'COUPON-005': 'alreadyIssued',
   'COUPON-006': 'soldOut',
   'COUPON-007': 'limitReached',
   // 발급 시간이 아니거나 이벤트가 열려 있지 않음
   'COUPON-002': 'notOpen',
+  // 발급 대기열 포화 또는 일시적인 복구 중
+  'COUPON-008': 'busy',
 };
 
 // 선착순 쿠폰을 받는다 (POST /v1/coupons). 발급 상태에서 받은 오늘 이벤트 ID로 받는다
