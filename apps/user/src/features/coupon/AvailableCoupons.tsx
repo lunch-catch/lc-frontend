@@ -4,6 +4,7 @@ import { BottomSheet } from '@repo/ui';
 import { QrCode } from 'lucide-react';
 
 import { ApiError } from '@user/api/client';
+import { getNow } from '@user/api/clock';
 import { type Coupon, deleteCoupon, fetchCoupons } from '@user/api/coupon';
 import mascotCouponEmpty from '@user/assets/illustrations/mascot-coupon-empty.webp';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
@@ -23,6 +24,19 @@ import CouponQr from './CouponQr';
 import UsableTimeInfo from './UsableTimeInfo';
 
 const TOAST_DURATION_MS = 2500;
+const NOW_TICK_MS = 30_000;
+
+// 지금 쓸 수 있는 쿠폰을 위로, 그중 곧 끝나는 것부터 둔다. 사용 시간 전 쿠폰은 아래에 먼저 열리는 것부터 둔다
+// 계산대 앞에서 화면을 열면 맨 위 쿠폰의 QR 보기를 바로 누르면 되게 한다
+const sortByUsable = (coupons: Coupon[], now: number) =>
+  [...coupons].sort((a, b) => {
+    const aWaiting = now < Date.parse(a.usableStartTime);
+    const bWaiting = now < Date.parse(b.usableStartTime);
+    if (aWaiting !== bWaiting) return aWaiting ? 1 : -1;
+    return aWaiting
+      ? Date.parse(a.usableStartTime) - Date.parse(b.usableStartTime)
+      : Date.parse(a.usableEndTime) - Date.parse(b.usableEndTime);
+  });
 
 // 쿠폰함 사용 가능 탭. 받은 쿠폰 중 아직 쓰지 않은 쿠폰과 QR
 const AvailableCoupons = () => {
@@ -41,6 +55,13 @@ const AvailableCoupons = () => {
   // 시트를 닫을 때마다 올린다. 삭제 중에 시트를 닫고 다른 쿠폰을 열면, 앞 삭제의 응답이 새 시트를 건드리지 않게 한다
   const sheetSession = useRef(0);
   const showSkeleton = useDelayedLoading(coupons === undefined);
+  // 사용 시간이 되면 버튼 색과 순서를 바꾸려고 30초마다 시각을 다시 읽는다
+  const [now, setNow] = useState(getNow);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(getNow()), NOW_TICK_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -141,36 +162,44 @@ const AvailableCoupons = () => {
       )}
       {coupons && (
         <ul className="flex flex-col gap-3">
-          {coupons.map((coupon) => (
-            <CouponCard
-              coupon={coupon}
-              // 쿠폰은 받은 날 사용 시간 안에만 쓸 수 있다
-              info={
-                <UsableTimeInfo
-                  usableEndTime={coupon.usableEndTime}
-                  usableStartTime={coupon.usableStartTime}
-                />
-              }
-              action={
-                // 가게 계산대에서 바로 눌러야 하는 버튼이라 주황으로 채운다
-                // 찜 목록의 연한 주황 쿠폰 받기와 구별되어, 받은 내 쿠폰이라는 게 보인다. 하루 최대 3장이라 화면이 주황으로 덮이지 않는다
-                <button
-                  aria-label={`${coupon.storeName} 쿠폰 QR 보기`}
-                  className={`${ticketPillClassName} ${ticketPressableClassName} bg-action-primary text-text-inverse active:bg-action-primary-hover`}
-                  onClick={() => setSelectedCoupon(coupon)}
-                  type="button"
-                >
-                  <QrCode aria-hidden="true" className="size-3.5" />
-                  QR 보기
-                </button>
-              }
-              key={coupon.memberCouponId}
-              onRemove={() => {
-                setSelectedCoupon(coupon);
-                setIsConfirmingDelete(true);
-              }}
-            />
-          ))}
+          {sortByUsable(coupons, now).map((coupon) => {
+            const isBeforeUse = now < Date.parse(coupon.usableStartTime);
+            return (
+              <CouponCard
+                coupon={coupon}
+                // 쿠폰은 받은 날 사용 시간 안에만 쓸 수 있다
+                info={
+                  <UsableTimeInfo
+                    usableEndTime={coupon.usableEndTime}
+                    usableStartTime={coupon.usableStartTime}
+                  />
+                }
+                action={
+                  // 지금 쓸 수 있는 쿠폰은 가게 계산대에서 바로 눌러야 해서 주황으로 채운다
+                  // 사용 시간 전 쿠폰은 연한 주황으로 두어 아직 때가 아니라는 걸 보여준다. 누르면 언제부터 쓸 수 있는지 카운트다운이 열린다
+                  // 회색으로 막으면 고장 난 것처럼 보이고 남은 시간도 볼 수 없어 누를 수 있게 둔다
+                  <button
+                    aria-label={`${coupon.storeName} 쿠폰 QR 보기`}
+                    className={`${ticketPillClassName} ${ticketPressableClassName} ${
+                      isBeforeUse
+                        ? 'bg-surface-brand text-text-brand active:bg-brand-200'
+                        : 'bg-action-primary text-text-inverse active:bg-action-primary-hover'
+                    }`}
+                    onClick={() => setSelectedCoupon(coupon)}
+                    type="button"
+                  >
+                    <QrCode aria-hidden="true" className="size-3.5" />
+                    QR 보기
+                  </button>
+                }
+                key={coupon.memberCouponId}
+                onRemove={() => {
+                  setSelectedCoupon(coupon);
+                  setIsConfirmingDelete(true);
+                }}
+              />
+            );
+          })}
         </ul>
       )}
       {/* 시트를 닫으면 QR 화면이 사라지면서 QR 갱신 타이머도 멈춘다 */}
