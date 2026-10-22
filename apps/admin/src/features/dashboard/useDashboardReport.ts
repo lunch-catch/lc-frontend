@@ -8,11 +8,7 @@ import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 import type { DashboardRange, FunnelMetric } from './dashboardTypes';
-
-const getKstToday = () =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(
-    new Date(),
-  );
+import { getKstToday } from './dashboardUtils';
 
 export const useDashboardReport = () => {
   // API와 같은 KST 날짜를 기준으로 초기 조회 기간을 어제까지 7일로 잡는다.

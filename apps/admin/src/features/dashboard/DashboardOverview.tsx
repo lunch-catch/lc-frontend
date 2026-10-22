@@ -1,4 +1,4 @@
-import { formatDate, formatNumber } from '@repo/utils';
+import { formatDate } from '@repo/utils';
 
 import { getBucketEnd, sumAnalytics } from '@admin/api/analyticsUtils';
 
@@ -119,88 +119,6 @@ export const DashboardOverview = ({
           ))}
         </div>
       </div>
-    </section>
-  );
-};
-
-export const DashboardSnapshots = ({
-  metrics,
-  view,
-}: DashboardOverviewProps) => {
-  const { members, stores, sales } = metrics;
-  const member = members.data?.items.at(-1);
-  // 누적·잔액은 여러 날을 합산하지 않고 종료일 스냅샷을 그대로 표시한다.
-  const cards =
-    view === 'members'
-      ? [
-          {
-            label: '누적 회원',
-            resource: members,
-            value: member?.cumulativeMemberCount ?? null,
-            unit: '명',
-          },
-          {
-            label: '누적 탈퇴',
-            resource: members,
-            value: member?.withdrawnCount ?? null,
-            unit: '명',
-          },
-          {
-            label: '정지 회원',
-            resource: members,
-            value: member?.suspendedCount ?? null,
-            unit: '명',
-          },
-        ]
-      : [
-          {
-            label: '누적 입점 업체',
-            resource: stores,
-            value: stores.data?.items.at(-1)?.cumulativeStoreCount ?? null,
-            unit: '개',
-          },
-          {
-            label: '미소진 잔액',
-            resource: sales,
-            value: sales.data?.items.at(-1)?.unspentBalance ?? null,
-            unit: 'P',
-          },
-        ];
-  return (
-    <section
-      aria-label="누적·잔액 현황"
-      className="space-y-3 border-t border-border-subtle pt-5"
-    >
-      <h3 className="text-body-sm-web font-medium text-text-secondary">
-        누적·잔액 현황
-      </h3>
-      <p className="text-caption-web text-text-secondary">
-        선택한 종료일의 현황이며, 기간 합계가 아닙니다.
-      </p>
-      <dl
-        className={`grid rounded-lg border border-border-subtle sm:grid-cols-2 ${view === 'members' ? 'xl:grid-cols-3' : ''}`}
-      >
-        {cards.map(({ resource, ...card }) => (
-          <div
-            key={card.label}
-            className="flex items-center justify-between gap-4 px-4 py-3"
-          >
-            <dt className="text-caption-web text-text-secondary">
-              {card.label}
-              <span className="mt-1 block text-text-tertiary">
-                {getEndDateBasis(resource)}
-              </span>
-            </dt>
-            <dd className="shrink-0 text-body-sm-web font-semibold tabular-nums text-text-secondary">
-              {resource.loading
-                ? '불러오는 중'
-                : card.value === null
-                  ? getDashboardMetricHint(resource)
-                  : formatNumber(card.value) + card.unit}
-            </dd>
-          </div>
-        ))}
-      </dl>
     </section>
   );
 };

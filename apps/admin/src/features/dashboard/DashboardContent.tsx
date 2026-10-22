@@ -13,7 +13,8 @@ import { DashboardActionQueue } from './DashboardActionQueue';
 import { DashboardFunnel } from './DashboardFunnel';
 import { DashboardMetricCard } from './DashboardMetricCard';
 import { DashboardMetricTrend } from './DashboardMetricTrend';
-import { DashboardOverview, DashboardSnapshots } from './DashboardOverview';
+import { DashboardOverview } from './DashboardOverview';
+import { DashboardSnapshots } from './DashboardSnapshots';
 import { getDashboardMetricHint } from './dashboardUtils';
 import { useDashboardMetrics } from './useDashboardMetrics';
 import { useDashboardReport } from './useDashboardReport';
@@ -226,9 +227,9 @@ const DashboardReport = () => {
               </div>
             </>
           )}
-          <DashboardSnapshots metrics={metrics} view={view} />
         </>
       )}
+      <DashboardSnapshots view={view} />
     </div>
   );
 };
