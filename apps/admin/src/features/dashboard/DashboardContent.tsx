@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { Button, SegmentedControl, Tabs } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
-import { Clock3, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 import {
   getAnalyticsRangeError,
@@ -37,6 +37,14 @@ const DashboardReport = () => {
     view,
   );
   const { members, stores, sales } = metrics;
+  // 현재 탭이 조회한 지표 중 가장 최근의 집계 완료 시각을 표시한다.
+  const aggregatedAt = (
+    view === 'members'
+      ? [members.data?.aggregatedAt, metrics.funnel.data?.aggregatedAt]
+      : [stores.data?.aggregatedAt, sales.data?.aggregatedAt]
+  )
+    .filter((at): at is string => Boolean(at))
+    .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
   const failures = [
     members,
     stores,
@@ -50,49 +58,24 @@ const DashboardReport = () => {
   return (
     <div className="space-y-4">
       <DashboardActionQueue />
-      <div className="shrink-0">
-        <Tabs
-          items={[
-            { value: 'owners', label: '점주 현황' },
-            { value: 'members', label: '사용자 현황' },
-          ]}
-          value={view}
-          onValueChange={(value) => {
-            if (value === 'owners' || value === 'members')
-              report.setView(value);
-          }}
-        />
-      </div>
-      <section aria-label="기간 지표" className="space-y-4 pt-5">
-        <div className="relative z-30 flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <h3 className="text-h2-web font-semibold text-text-primary">
-              기간 지표
-            </h3>
-            <p className="text-caption-web text-text-secondary">
-              아래 지표는 모두 오른쪽에서 선택한 조회 기간 기준입니다.
-            </p>
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-caption-web text-text-secondary">
-              <span className="inline-flex items-center gap-1.5">
-                <Clock3 aria-hidden className="size-3.5" />
-                {(view === 'members'
-                  ? [
-                      ['회원', metrics.members.data?.aggregatedAt],
-                      ['이용', metrics.funnel.data?.aggregatedAt],
-                    ]
-                  : [
-                      ['입점', metrics.stores.data?.aggregatedAt],
-                      ['매출', metrics.sales.data?.aggregatedAt],
-                    ]
-                )
-                  .map(
-                    ([name, at]) =>
-                      name + ' 집계 ' + (at ? formatDateTime(at) : '—'),
-                  )
-                  .join(' · ')}
-              </span>
-            </div>
-          </div>
+      <div className="relative z-30 flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="shrink-0">
+          <Tabs
+            items={[
+              { value: 'owners', label: '점주 현황' },
+              { value: 'members', label: '사용자 현황' },
+            ]}
+            value={view}
+            onValueChange={(value) => {
+              if (value === 'owners' || value === 'members')
+                report.setView(value);
+            }}
+          />
+        </div>
+        <div className="ml-auto flex max-w-full flex-col items-end gap-1.5">
+          <p className="text-right text-caption-web text-text-tertiary">
+            마지막 집계 {aggregatedAt ? formatDateTime(aggregatedAt) : '—'}
+          </p>
           <div
             className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2"
             aria-label="조회 기간 설정"
@@ -119,6 +102,8 @@ const DashboardReport = () => {
             />
           </div>
         </div>
+      </div>
+      <section aria-label="기간 지표" className="space-y-4">
         {!validRange ? (
           <p
             role="alert"
@@ -152,31 +137,51 @@ const DashboardReport = () => {
                   compare={report.compare}
                   onCompareChange={report.setCompare}
                 />
-                <DashboardOverview metrics={metrics} view={view} />
-                <div className="grid items-stretch gap-4 xl:grid-cols-2">
-                  <DashboardMetricTrend
-                    title="활성 회원 추이"
-                    resource={members}
-                    primary={{
-                      name: '일평균 활성 회원',
-                      field: 'avgDailyActiveMembers',
-                    }}
-                    unit="명"
-                    note="각 구간의 일평균입니다. 주간·월간 순수 활성 회원 수와는 다릅니다."
-                  />
-                  <DashboardMetricTrend
-                    title="신규 회원 추이"
-                    resource={members}
-                    primary={{ name: '신규 회원', field: 'newMemberCount' }}
-                    unit="명"
-                  />
-                </div>
+                <DashboardOverview
+                  metrics={metrics}
+                  view={view}
+                  range={range}
+                />
+                <details
+                  key="members"
+                  className="rounded-xl border border-border-subtle bg-bg-surface p-4"
+                >
+                  <summary className="cursor-pointer text-body-sm-web font-medium text-text-primary">
+                    회원 상세 추이 보기
+                  </summary>
+                  <div className="mt-4 grid items-stretch gap-4 xl:grid-cols-2">
+                    <DashboardMetricTrend
+                      title="활성 회원 추이"
+                      resource={members}
+                      primary={{
+                        name: '일평균 활성 회원',
+                        field: 'avgDailyActiveMembers',
+                      }}
+                      unit="명"
+                      note="각 구간의 일평균입니다. 주간·월간 순수 활성 회원 수와는 다릅니다."
+                    />
+                    <DashboardMetricTrend
+                      title="신규 회원 추이"
+                      variant="bar"
+                      resource={members}
+                      primary={{ name: '신규 회원', field: 'newMemberCount' }}
+                      unit="명"
+                    />
+                  </div>
+                </details>
               </>
             ) : (
               <>
-                <DashboardOverview metrics={metrics} view={view} />
+                <DashboardOverview
+                  metrics={metrics}
+                  view={view}
+                  range={range}
+                />
                 <DashboardMetricTrend
                   title="매출·충전 추이"
+                  featured
+                  variant="bar"
+                  height={280}
                   resource={sales}
                   primary={{ name: '광고 매출', field: 'spentAmount' }}
                   secondary={{ name: '충전액', field: 'chargeAmount' }}
@@ -192,25 +197,37 @@ const DashboardReport = () => {
                     </Link>
                   }
                 />
-                <div className="grid items-stretch gap-4 xl:grid-cols-2">
-                  <DashboardMetricTrend
-                    title="활성 캠페인 추이"
-                    resource={stores}
-                    primary={{
-                      name: '활성 캠페인',
-                      field: 'activeCampaignCount',
-                    }}
-                    unit="개"
-                    note="각 날짜 말 기준 집행 중인 캠페인 수입니다."
-                  />
-                  <DashboardMetricTrend
-                    title="신규 입점 추이"
-                    resource={stores}
-                    primary={{ name: '신규 입점 가게', field: 'newStoreCount' }}
-                    unit="개"
-                    note="선택한 구간에 최종 등록한 가게 수입니다."
-                  />
-                </div>
+                <details
+                  key="owners"
+                  className="rounded-xl border border-border-subtle bg-bg-surface p-4"
+                >
+                  <summary className="cursor-pointer text-body-sm-web font-medium text-text-primary">
+                    입점·캠페인 상세 추이 보기
+                  </summary>
+                  <div className="mt-4 grid items-stretch gap-4 xl:grid-cols-2">
+                    <DashboardMetricTrend
+                      title="활성 캠페인 추이"
+                      resource={stores}
+                      primary={{
+                        name: '활성 캠페인',
+                        field: 'activeCampaignCount',
+                      }}
+                      unit="개"
+                      note="각 날짜 말 기준 집행 중인 캠페인 수입니다."
+                    />
+                    <DashboardMetricTrend
+                      title="신규 입점 추이"
+                      variant="bar"
+                      resource={stores}
+                      primary={{
+                        name: '신규 입점 가게',
+                        field: 'newStoreCount',
+                      }}
+                      unit="개"
+                      note="선택한 구간에 최종 등록한 가게 수입니다."
+                    />
+                  </div>
+                </details>
               </>
             )}
           </>
