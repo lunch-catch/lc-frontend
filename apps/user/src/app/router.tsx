@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 
 import RequireAuth from '@user/auth/RequireAuth';
 import { OnboardingProvider } from '@user/features/onboarding/OnboardingProvider';
+import OnboardingStepGuard from '@user/features/onboarding/OnboardingStepGuard';
 import CouponLayout from '@user/layout/CouponLayout';
 import StackLayout from '@user/layout/StackLayout';
 import TabLayout from '@user/layout/TabLayout';
@@ -37,30 +38,51 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth access="onboarding" />,
     children: [
-      // 온보딩의 마지막 단계인 서비스 안내. 상단 바와 하단 고정 버튼 틀(StackLayout) 없이 한 화면을 다 쓴다
-      // 여기서 온보딩을 완료 처리해야, 완료 순간 이 그룹의 가드가 스와이프로 먼저 보내 버리지 않는다
-      { path: '/onboarding/tutorial', element: <TutorialPage /> },
       {
-        element: <StackLayout />,
+        element: (
+          <OnboardingProvider>
+            <Outlet />
+          </OnboardingProvider>
+        ),
         children: [
+          // 온보딩의 마지막 단계인 서비스 안내. 상단 바와 하단 고정 버튼 틀(StackLayout) 없이 한 화면을 다 쓴다
           {
-            path: '/onboarding',
+            path: '/onboarding/tutorial',
             element: (
-              <OnboardingProvider>
-                <Outlet />
-              </OnboardingProvider>
+              <OnboardingStepGuard step="tutorial">
+                <TutorialPage />
+              </OnboardingStepGuard>
             ),
+          },
+          {
+            element: <StackLayout />,
             children: [
-              { index: true, element: <Navigate replace to="consent" /> },
-              { path: 'consent', element: <OnboardingConsentPage /> },
               {
-                path: 'personalization',
-                element: <OnboardingPersonalizationPage />,
+                path: '/onboarding',
+                element: <Navigate replace to="/onboarding/consent" />,
+              },
+              {
+                path: '/onboarding/consent',
+                element: <OnboardingConsentPage />,
+              },
+              {
+                path: '/onboarding/personalization',
+                element: (
+                  <OnboardingStepGuard step="personalization">
+                    <OnboardingPersonalizationPage />
+                  </OnboardingStepGuard>
+                ),
+              },
+              {
+                path: '/onboarding/location',
+                element: (
+                  <OnboardingStepGuard step="location">
+                    <OnboardingLocationPage />
+                  </OnboardingStepGuard>
+                ),
               },
             ],
           },
-          // 맞춤 정보에서 서버에 온보딩을 저장한 뒤 들어온다. 입력값을 이어 받을 게 없어 OnboardingProvider 밖에 둔다
-          { path: '/onboarding/location', element: <OnboardingLocationPage /> },
         ],
       },
     ],

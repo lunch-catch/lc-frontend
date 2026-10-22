@@ -15,6 +15,9 @@ export interface OnboardingContextValue {
   setGender: (gender: Gender) => void;
   ageGroup: AgeGroup | null;
   setAgeGroup: (ageGroup: AgeGroup) => void;
+  locationCompleted: boolean;
+  setLocationCompleted: (completed: boolean) => void;
+  clearOnboarding: () => void;
 }
 
 export const OnboardingContext = createContext<OnboardingContextValue | null>(
