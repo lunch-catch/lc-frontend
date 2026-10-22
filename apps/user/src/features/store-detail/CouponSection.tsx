@@ -1,4 +1,5 @@
 import type { StoreDetailCampaign } from '@user/api/store';
+import PosterFrame from '@user/ui/PosterFrame/PosterFrame';
 import { formatDiscount } from '@user/ui/storeFormat';
 
 import type { CouponState } from './couponState';
@@ -71,17 +72,10 @@ const CouponSection = ({
         </div>
       </div>
       {posterHtml !== null && (
-        // 포스터는 점주 화면과 같은 3:4. 불러오는 동안에는 회색 배경이 보인다
-        <div className="relative aspect-3/4 overflow-hidden rounded-xl bg-surface-subtle">
+        // 포스터는 점주 화면과 같은 A4(210:297). 불러오는 동안에는 회색 배경이 보인다
+        <div className="relative aspect-210/297 overflow-hidden rounded-xl bg-surface-subtle">
           {posterHtml && (
-            <iframe
-              className="pointer-events-none absolute inset-0 size-full border-0"
-              // 포스터 안의 스크립트, 폼, 링크 이동을 모두 막는다
-              sandbox=""
-              srcDoc={posterHtml}
-              tabIndex={-1}
-              title={`${storeName} 포스터`}
-            />
+            <PosterFrame html={posterHtml} title={`${storeName} 포스터`} />
           )}
         </div>
       )}

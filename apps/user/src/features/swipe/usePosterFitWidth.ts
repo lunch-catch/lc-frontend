@@ -2,11 +2,11 @@ import { useCallback, useState } from 'react';
 
 // 카드 묶음 최대 폭 (큰 폰에서 폭을 채우되 너무 넓어지지 않게)
 const MAX_WIDTH = 400;
-// 카드 묶음에서 포스터를 뺀 높이: 포스터 아래 가격과 시간(69px) + 버튼 줄(48px) + 한 줄 안내 문구(21px)
+// 카드 묶음에서 포스터를 뺀 높이: 버튼 줄(48px) + 한 줄 안내 문구(21px)
 // 버튼 줄(GestureRail)이나 안내 문구(SwipeHint) 높이를 바꾸면 여기도 맞춘다
-const NON_POSTER_HEIGHT = 138;
-// 포스터는 점주 화면과 같은 3:4 (폭 = 높이 × 3/4)
-const POSTER_WIDTH_PER_HEIGHT = 3 / 4;
+const NON_POSTER_HEIGHT = 69;
+// 포스터는 점주 화면과 같은 A4 (폭 = 높이 × 210/297). 템플릿을 A4 비율로 만든다
+const POSTER_WIDTH_PER_HEIGHT = 210 / 297;
 
 const getFitWidth = (areaHeight: number) =>
   Math.min(
@@ -33,7 +33,7 @@ const getContentSize = (element: HTMLElement) => {
   };
 };
 
-// PC처럼 화면이 낮으면 포스터가 3:4를 지키도록 카드 묶음 폭을 줄인다
+// PC처럼 화면이 낮으면 포스터가 A4 비율을 지키도록 카드 묶음 폭을 줄인다
 // 첫 값을 카드 묶음이 들어갈 영역의 ref에 걸면, 그 높이를 재서 묶음의 최대 폭(둘째 값)을 돌려준다
 // 셋째 값은 카드 묶음을 다 그리고 남는 높이. 큰 화면에서 남는 자리에 무엇을 더 보여줄지 정할 때 쓴다
 export const usePosterFitWidth = () => {

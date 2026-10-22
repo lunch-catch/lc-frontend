@@ -407,14 +407,13 @@ const SwipeFeed = () => {
             ref={setCardArea}
           >
             {/* 카드와 버튼을 한 묶음으로 남는 높이의 세로 가운데에 둔다 */}
-            {/* PC처럼 화면이 낮으면 포스터가 3:4를 지키도록 묶음 폭을 줄인다 */}
+            {/* PC처럼 화면이 낮으면 포스터가 A4 비율을 지키도록 묶음 폭을 줄인다 */}
             <div
               className="@container relative mx-auto flex w-full flex-1 flex-col justify-center"
               style={{ maxWidth: cardMaxWidth }}
             >
-              {/* 카드는 남는 높이만큼 늘어나되, 포스터가 점주 화면과 같은 3:4(133.33cqw)보다 길어지지 않게 한다 */}
-              {/* 69px은 포스터 아래 가격과 시간 영역의 높이 */}
-              <div className="relative flex max-h-[calc(133.33cqw+69px)] flex-1 flex-col">
+              {/* 카드는 남는 높이만큼 늘어나되, 포스터가 점주 화면과 같은 A4(210:297, 141.43cqw)보다 길어지지 않게 한다 */}
+              <div className="relative flex max-h-[141.43cqw] flex-1 flex-col">
                 {!topCard && (
                   <>
                     <PosterSkeleton />
