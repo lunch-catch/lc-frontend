@@ -159,11 +159,11 @@ export function AdminSidebar({
         </ul>
       </nav>
       <div className="mt-auto px-4">
-        <div className="mb-3 border-t border-border-subtle" />
+        <div className="mb-5 border-t border-border-subtle" />
         {admin && (
           <div
             className="mb-3 flex items-center gap-3 px-[13px] text-text-secondary"
-            title={`${admin.name} · ${admin.role === 'SUPER_ADMIN' ? '최고 관리자' : '관리자'}`}
+            title={admin.name}
           >
             <UserRound aria-hidden="true" className="size-4 shrink-0" />
             <div
@@ -173,9 +173,6 @@ export function AdminSidebar({
             >
               <p className="truncate text-body-sm-web font-medium text-text-primary">
                 {admin.name}
-              </p>
-              <p className="text-caption-web">
-                {admin.role === 'SUPER_ADMIN' ? '최고 관리자' : '관리자'}
               </p>
             </div>
           </div>
