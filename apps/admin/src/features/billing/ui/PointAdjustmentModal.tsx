@@ -94,8 +94,7 @@ export const PointAdjustmentModal = ({
       >
         {mismatch && (
           <p className="text-caption-web text-text-secondary">
-            정산 불일치 #{mismatch.mismatchId}: 양수 조정으로 해결합니다. 대상
-            점주 ID와 돌려줄 포인트를 확인해 주세요.
+            대상 점주와 돌려줄 포인트, 정정 사유를 확인해 주세요.
           </p>
         )}
         {confirming ? (
@@ -152,7 +151,7 @@ export const PointAdjustmentModal = ({
               trailing="P"
               helperText={
                 mismatch
-                  ? '정정할 포인트를 양수로 입력해 주세요.'
+                  ? '입력한 포인트만큼 점주의 잔액이 늘어납니다.'
                   : '양수는 과오 차감 정정(잔액 증가), 음수는 포인트 차감입니다.'
               }
               onChange={(event) => {

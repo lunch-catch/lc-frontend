@@ -1,6 +1,6 @@
 import type { PointerEvent } from 'react';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { formatNumber } from '@repo/utils';
+import { formatDate, formatNumber } from '@repo/utils';
 
 import {
   getChartAxisMaximum,
@@ -8,14 +8,8 @@ import {
   getNearestChartIndex,
 } from './dashboardChartUtils';
 
-const chartLayout = {
-  height: 208,
-  left: 64,
-  right: 32,
-  top: 20,
-  bottom: 160,
-  labelY: 192,
-};
+const comparisonLayout = { left: 64, right: 32, top: 20 };
+const singleSeriesLayout = { left: 40, right: 12, top: 12 };
 const axisFormatter = new Intl.NumberFormat('ko-KR', { notation: 'compact' });
 
 interface TrendSeries {
@@ -28,7 +22,13 @@ interface DashboardTrendChartProps {
   labels: string[];
   primary: TrendSeries;
   secondary?: TrendSeries;
+  /** 선이나 축에 포함하지 않고 같은 날짜의 툴팁에만 표시할 보조 지표. */
+  tooltipDetails?: TrendSeries[];
   unit?: string;
+  height?: number;
+  variant?: 'line' | 'bar';
+  /** 일별 신규 건수처럼 날짜 사이의 합계를 구할 수 있는 지표에만 사용한다. */
+  rangeSelection?: boolean;
 }
 
 export const DashboardTrendChart = ({
@@ -36,12 +36,25 @@ export const DashboardTrendChart = ({
   labels,
   primary,
   secondary,
+  tooltipDetails = [],
   unit = '건',
+  height = 208,
+  variant = 'line',
+  rangeSelection = false,
 }: DashboardTrendChartProps) => {
+  // 단일 지표는 범례와 넓은 여백을 덜어내고 축 라벨에 필요한 공간만 남긴다.
+  const chartLayout = secondary ? comparisonLayout : singleSeriesLayout;
+  const bottom = height - 28;
+  const labelY = height - 8;
   const id = useId();
   const chartRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [pointerY, setPointerY] = useState<number | null>(null);
+  const [selection, setSelection] = useState<{
+    start: number;
+    end: number | null;
+  } | null>(null);
   const hasLabels = labels.length > 0;
   useLayoutEffect(() => {
     const container = chartRef.current;
@@ -56,7 +69,42 @@ export const DashboardTrendChart = ({
     observer.observe(container);
     return () => observer.disconnect();
   }, [hasLabels]);
-  const active = Math.min(activeIndex ?? labels.length - 1, labels.length - 1);
+  const selectedRange =
+    selection?.end != null
+      ? {
+          start: Math.min(selection.start, selection.end),
+          end: Math.max(selection.start, selection.end),
+        }
+      : null;
+  const active = Math.min(
+    selection?.end ?? activeIndex ?? labels.length - 1,
+    labels.length - 1,
+  );
+  // 선택한 양끝 날짜를 포함하며 미확정 날짜를 0으로 간주하지 않는다.
+  const selectedValues = selectedRange
+    ? primary.values.slice(selectedRange.start, selectedRange.end + 1)
+    : [];
+  const selectedTotal =
+    selectedRange && selectedValues.every((value) => value !== null)
+      ? selectedValues.reduce<number>((total, value) => total + (value ?? 0), 0)
+      : null;
+  const selectedDates = selectedRange
+    ? `${formatDate(labels[selectedRange.start])} ~ ${formatDate(labels[selectedRange.end])}`
+    : '';
+  const selectIndex = (index: number) => {
+    setSelection((current) =>
+      current && current.end === null
+        ? { ...current, end: index }
+        : { start: index, end: null },
+    );
+    setActiveIndex(index);
+    setPointerY(null);
+  };
+  const clearSelection = () => {
+    setSelection(null);
+    setActiveIndex(null);
+    setPointerY(null);
+  };
   const tickInterval = getChartLabelInterval(labels.length, width);
   const values = [...primary.values, ...(secondary?.values ?? [])].filter(
     (value): value is number => value !== null,
@@ -68,13 +116,20 @@ export const DashboardTrendChart = ({
       ? -getChartAxisMaximum(values.map((value) => -value))
       : 0;
   const plotWidth = width - chartLayout.left - chartLayout.right;
+  // 막대는 날짜별 칸의 중앙에 놓아 첫·마지막 막대도 축 경계 안에 들어오게 한다.
+  const slotWidth = plotWidth / Math.max(1, labels.length);
+  const firstX = chartLayout.left + (variant === 'bar' ? slotWidth / 2 : 0);
+  const pointWidth = plotWidth - (variant === 'bar' ? slotWidth : 0);
   const x = (index: number) =>
     labels.length === 1
       ? chartLayout.left + plotWidth / 2
-      : chartLayout.left + (index * plotWidth) / (labels.length - 1);
+      : firstX + (index * pointWidth) / (labels.length - 1);
   const y = (value: number) =>
-    chartLayout.bottom -
-    ((value - min) / (max - min)) * (chartLayout.bottom - chartLayout.top);
+    bottom - ((value - min) / (max - min)) * (bottom - chartLayout.top);
+  const barWidth = Math.max(
+    1,
+    Math.min(32, (plotWidth / labels.length) * 0.55),
+  );
   // 미확정 값을 0으로 그리거나 양옆의 확정 구간과 연결하지 않는다.
   const paths = (values: (number | null)[]) => {
     const segments: { points: string; start: number; end: number }[] = [];
@@ -95,13 +150,9 @@ export const DashboardTrendChart = ({
     const bounds = event.currentTarget.getBoundingClientRect();
     // 화면 좌표를 SVG 좌표로 변환해 마우스에 가장 가까운 구간을 선택한다.
     const position = ((event.clientX - bounds.left) / bounds.width) * width;
+    setPointerY(event.clientY - bounds.top);
     setActiveIndex(
-      getNearestChartIndex(
-        position,
-        chartLayout.left,
-        plotWidth,
-        labels.length,
-      ),
+      getNearestChartIndex(position, firstX, pointWidth, labels.length),
     );
   };
   const showLabel = (index: number) =>
@@ -115,6 +166,17 @@ export const DashboardTrendChart = ({
     if (index === labels.length - 1) return 'end';
     return 'middle';
   };
+  const hidePointer = () => {
+    setActiveIndex(null);
+    setPointerY(null);
+  };
+  const tooltipVisible = activeIndex !== null || selectedRange !== null;
+  // 툴팁은 활성 구간 옆에 붙이되 차트 오른쪽 절반에서는 왼쪽으로 뒤집어 잘리지 않게 한다.
+  const tooltipFlipped = x(active) > width / 2;
+  const tooltipTop = Math.min(
+    bottom,
+    Math.max(chartLayout.top, pointerY ?? y(primary.values[active] ?? 0)),
+  );
   if (!labels.length)
     return (
       <p className="py-10 text-center text-body-sm-web text-text-secondary">
@@ -123,48 +185,86 @@ export const DashboardTrendChart = ({
     );
   return (
     <div className="space-y-2">
-      <div
-        id={id}
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-bg-page px-3 py-2"
-      >
-        <div className="space-y-1">
-          <p className="text-caption-web font-medium tabular-nums text-text-secondary">
-            <span className="sr-only">선택 구간 </span>
-            {labels[active]}
+      {rangeSelection && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-caption-web text-text-secondary">
+          <p role="status" aria-live="polite">
+            {selectedRange
+              ? `${selectedDates} 기간 ${primary.name} ${selectedTotal === null ? '집계 미완료' : formatNumber(selectedTotal) + unit}`
+              : selection
+                ? `${formatDate(labels[selection.start])} 선택됨 · 종료일을 선택하세요.`
+                : '그래프에서 시작일과 종료일을 차례로 선택하세요.'}
           </p>
+          {selection && (
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="shrink-0 cursor-pointer rounded text-text-brand underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-action-primary"
+            >
+              선택 해제
+            </button>
+          )}
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          {[primary, ...(secondary ? [secondary] : [])].map((series, index) => (
-            <div key={series.name} className="space-y-1">
-              <p className="flex items-center gap-2 text-caption-web text-text-secondary">
-                <span
-                  aria-hidden="true"
-                  className={
-                    index === 0
-                      ? 'h-1 w-4 rounded-full bg-action-primary'
-                      : 'w-4 border-t-2 border-dashed border-action-secondary'
-                  }
-                />
-                {series.name}
-              </p>
-              <p className="text-body-sm-web font-semibold tabular-nums text-text-primary">
-                {valueLabel(series.values[active])}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div ref={chartRef} className="rounded-lg bg-bg-surface">
+      )}
+      <div ref={chartRef} className="relative rounded-lg bg-bg-surface">
         <svg
           aria-label={title}
-          className="w-full text-caption-web"
+          className={`w-full text-caption-web ${rangeSelection ? 'cursor-pointer' : ''}`}
           style={{
-            height: chartLayout.height,
+            height,
           }}
-          viewBox={`0 0 ${width} ${chartLayout.height}`}
+          viewBox={`0 0 ${width} ${height}`}
           onPointerMove={handlePointerMove}
+          onPointerLeave={hidePointer}
+          onClick={
+            rangeSelection
+              ? (event) => {
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  const position =
+                    ((event.clientX - bounds.left) / bounds.width) * width;
+                  const vertical =
+                    ((event.clientY - bounds.top) / bounds.height) * height;
+                  if (
+                    position >= chartLayout.left &&
+                    position <= width - chartLayout.right &&
+                    vertical >= chartLayout.top &&
+                    vertical <= bottom
+                  )
+                    selectIndex(
+                      getNearestChartIndex(
+                        position,
+                        firstX,
+                        pointWidth,
+                        labels.length,
+                      ),
+                    );
+                }
+              : undefined
+          }
+          onKeyDown={
+            rangeSelection
+              ? (event) => {
+                  if (event.key === 'Escape') clearSelection();
+                }
+              : undefined
+          }
         >
           <defs>
+            <clipPath id={`${id}-plot`}>
+              <rect
+                x={chartLayout.left}
+                y={chartLayout.top}
+                width={plotWidth}
+                height={bottom - chartLayout.top}
+              />
+            </clipPath>
+            <linearGradient id={`${id}-bar`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--semantic-action-primary)" />
+              <stop
+                offset="100%"
+                stopColor="var(--semantic-action-primary)"
+                stopOpacity="0.35"
+              />
+            </linearGradient>
             <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
               <stop
                 offset="0%"
@@ -199,36 +299,74 @@ export const DashboardTrendChart = ({
               </text>
             </g>
           ))}
-          {paths(primary.values).map((segment) => (
-            <polygon
-              key={segment.start}
-              points={`${x(segment.start)},${y(0)} ${segment.points} ${x(segment.end)},${y(0)}`}
-              fill={`url(#${id}-fill)`}
-            />
-          ))}
-          {[primary, ...(secondary ? [secondary] : [])].map((series, index) =>
-            paths(series.values).map((segment) => (
-              <polyline
-                key={series.name + segment.start}
-                points={segment.points}
-                fill="none"
-                stroke={
-                  index === 0
-                    ? 'var(--semantic-action-primary)'
-                    : 'var(--semantic-action-secondary)'
+          {/* 데이터 도형만 자르고 축 라벨·포커스 영역은 그대로 유지한다. */}
+          <g clipPath={`url(#${id}-plot)`}>
+            {selectedRange && (
+              <rect
+                x={x(selectedRange.start) - slotWidth / 2}
+                y={chartLayout.top}
+                width={
+                  x(selectedRange.end) - x(selectedRange.start) + slotWidth
                 }
-                strokeWidth={index === 0 ? 2.5 : 2}
-                strokeDasharray={index === 0 ? undefined : '5 5'}
-                strokeLinejoin="round"
-                strokeLinecap="round"
+                height={bottom - chartLayout.top}
+                fill="var(--semantic-action-primary)"
+                fillOpacity="0.08"
+                pointerEvents="none"
               />
-            )),
-          )}
+            )}
+            {variant === 'bar' &&
+              primary.values.map((value, index) =>
+                value === null ? null : (
+                  <rect
+                    key={labels[index]}
+                    x={x(index) - barWidth / 2}
+                    y={Math.min(y(value), y(0))}
+                    width={barWidth}
+                    height={Math.abs(y(value) - y(0))}
+                    rx={3}
+                    fill={`url(#${id}-bar)`}
+                    fillOpacity={
+                      activeIndex === null || activeIndex === index ? 1 : 0.45
+                    }
+                  />
+                ),
+              )}
+            {variant === 'line' &&
+              paths(primary.values).map((segment) => (
+                <polygon
+                  key={segment.start}
+                  points={`${x(segment.start)},${y(0)} ${segment.points} ${x(segment.end)},${y(0)}`}
+                  fill={`url(#${id}-fill)`}
+                />
+              ))}
+            {[primary, ...(secondary ? [secondary] : [])].map((series, index) =>
+              (variant === 'bar' && index === 0
+                ? []
+                : paths(series.values)
+              ).map((segment) => (
+                <polyline
+                  key={series.name + segment.start}
+                  points={segment.points}
+                  fill="none"
+                  stroke={
+                    index === 0
+                      ? 'var(--semantic-action-primary)'
+                      : 'var(--semantic-action-secondary)'
+                  }
+                  strokeWidth={index === 0 ? 2.5 : 2}
+                  strokeDasharray={index === 0 ? undefined : '5 5'}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              )),
+            )}
+          </g>
           <line
+            opacity={tooltipVisible ? 1 : 0}
             x1={x(active)}
             x2={x(active)}
             y1={chartLayout.top}
-            y2={chartLayout.bottom}
+            y2={bottom}
             stroke="var(--semantic-text-tertiary)"
             strokeOpacity="0.5"
             strokeDasharray="4 4"
@@ -238,26 +376,40 @@ export const DashboardTrendChart = ({
           {labels.map((label, index) => (
             <g key={label}>
               <circle
-                role="img"
-                aria-label={`${label}, ${primary.name} ${valueLabel(primary.values[index])}${secondary ? `, ${secondary.name} ${valueLabel(secondary.values[index])}` : ''}`}
-                aria-describedby={id}
+                role={rangeSelection ? 'button' : 'img'}
+                aria-pressed={
+                  rangeSelection
+                    ? selection?.start === index || selection?.end === index
+                    : undefined
+                }
+                aria-label={`${label}, ${primary.name} ${valueLabel(primary.values[index])}${secondary ? `, ${secondary.name} ${valueLabel(secondary.values[index])}` : ''}${tooltipDetails.map((detail) => `, ${detail.name} ${valueLabel(detail.values[index])}`).join('')}`}
                 tabIndex={0}
                 cx={x(index)}
                 cy={y(primary.values[index] ?? 0)}
                 r="10"
                 fill="transparent"
                 className="focus:outline-action-primary"
-                onFocus={() => setActiveIndex(index)}
+                onFocus={() => {
+                  setPointerY(null);
+                  setActiveIndex(index);
+                }}
+                onBlur={hidePointer}
+                onKeyDown={
+                  rangeSelection
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          selectIndex(index);
+                        }
+                      }
+                    : undefined
+                }
                 onMouseEnter={() => setActiveIndex(index)}
-              >
-                <title>
-                  {label}: {valueLabel(primary.values[index])}
-                </title>
-              </circle>
+              />
               {showLabel(index) && (
                 <text
                   x={x(index)}
-                  y={chartLayout.labelY}
+                  y={labelY}
                   textAnchor={getLabelAnchor(index)}
                   fill="var(--semantic-text-secondary)"
                 >
@@ -266,7 +418,7 @@ export const DashboardTrendChart = ({
               )}
             </g>
           ))}
-          <g pointerEvents="none">
+          <g pointerEvents="none" opacity={tooltipVisible ? 1 : 0}>
             <g opacity={primary.values[active] == null ? 0 : 1}>
               <circle
                 cx={x(active)}
@@ -296,7 +448,95 @@ export const DashboardTrendChart = ({
             )}
           </g>
         </svg>
+        {tooltipVisible && (
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute z-10 w-max max-w-full rounded-lg border border-border-subtle bg-bg-surface px-3 py-2 shadow-md ${selectedRange ? 'whitespace-normal' : 'whitespace-nowrap'}`}
+            style={{
+              left: selectedRange ? width / 2 : x(active),
+              top: selectedRange ? height / 2 : tooltipTop,
+              transform: selectedRange
+                ? 'translate(-50%, -50%)'
+                : `translate(${tooltipFlipped ? 'calc(-100% - 12px)' : '12px'}, -50%)`,
+            }}
+          >
+            <p className="text-caption-web font-medium tabular-nums text-text-secondary">
+              {selectedRange ? selectedDates : labels[active]}
+            </p>
+            <div className="mt-1 space-y-1">
+              {selectedRange ? (
+                <p className="flex flex-wrap items-center justify-between gap-3 text-caption-web text-text-secondary">
+                  <span>기간 {primary.name}</span>
+                  <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                    {selectedTotal === null
+                      ? '집계 미완료'
+                      : formatNumber(selectedTotal) + unit}
+                  </span>
+                </p>
+              ) : (
+                <>
+                  {[primary, ...(secondary ? [secondary] : [])].map(
+                    (series, index) => (
+                      <p
+                        key={series.name}
+                        className="flex items-center justify-between gap-3 text-caption-web text-text-secondary"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={
+                              index === 0
+                                ? 'h-1 w-4 rounded-full bg-action-primary'
+                                : 'w-4 border-t-2 border-dashed border-action-secondary'
+                            }
+                          />
+                          {series.name}
+                        </span>
+                        <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                          {valueLabel(series.values[active])}
+                        </span>
+                      </p>
+                    ),
+                  )}
+                  {/* 보조 수치는 받은 일별 데이터로 표시하며 그래프 선과 축 계산에는 포함하지 않는다. */}
+                  {tooltipDetails.map((detail, index) => (
+                    <p
+                      key={detail.name}
+                      className={`flex items-center justify-between gap-3 text-caption-web text-text-secondary ${index === 0 ? 'mt-2 border-t border-border-subtle pt-2' : ''}`}
+                    >
+                      <span>{detail.name}</span>
+                      <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                        {valueLabel(detail.values[active])}
+                      </span>
+                    </p>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+      {secondary && (
+        <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-caption-web text-text-secondary">
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className={
+                variant === 'bar'
+                  ? 'h-2.5 w-2.5 rounded-sm bg-action-primary'
+                  : 'h-0.5 w-4 bg-action-primary'
+              }
+            />
+            {primary.name}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="w-4 border-t-2 border-dashed border-action-secondary"
+            />
+            {secondary.name}
+          </span>
+        </div>
+      )}
       <div className="sr-only">
         <span>마우스 또는 키보드로 구간별 수치를 확인하세요.</span>
         <span>단위: {unit}</span>
