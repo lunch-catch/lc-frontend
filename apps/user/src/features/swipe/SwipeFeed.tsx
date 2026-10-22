@@ -463,13 +463,15 @@ const SwipeFeed = () => {
                   );
                 })}
               </div>
-              <GestureRail
-                direction={direction}
-                disabled={!topCard}
-                onPass={() => swipe('pass')}
-                onWish={() => swipe('wish')}
-                storeName={topCard?.storeName}
-              />
+              <div className="mt-2">
+                <GestureRail
+                  direction={direction}
+                  disabled={!topCard}
+                  onPass={() => swipe('pass')}
+                  onWish={() => swipe('wish')}
+                  storeName={topCard?.storeName}
+                />
+              </div>
               <SwipeHint />
             </div>
           </section>
