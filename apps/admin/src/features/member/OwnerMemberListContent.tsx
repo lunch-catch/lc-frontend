@@ -127,7 +127,15 @@ export const OwnerMemberListContent = () => {
         <thead>
           <tr>
             {columns.map((column, index) => (
-              <TableHeaderCell key={column.key} columnIndex={index}>
+              <TableHeaderCell
+                key={column.key}
+                columnIndex={index}
+                // 점주 API는 가입일 최신순으로 고정되어 정렬 방향만 표시한다.
+                sortDirection={column.key === 'joinedAt' ? 'desc' : undefined}
+                title={
+                  column.key === 'joinedAt' ? '가입일 최신순 고정' : undefined
+                }
+              >
                 {column.label}
               </TableHeaderCell>
             ))}

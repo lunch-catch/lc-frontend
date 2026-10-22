@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
-import { formatDate, formatDateTime } from '@repo/utils';
+import { formatDateTime } from '@repo/utils';
 
 import { ApiError } from '@admin/api/client';
 import { getMembers, type MemberSortKey } from '@admin/api/members';
@@ -26,7 +26,7 @@ import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 import { memberQuery } from './memberQuery';
 
 const columns: DataTableColumn[] = [
-  { key: 'joinedAt', label: '가입일', minWidth: 120 },
+  { key: 'joinedAt', label: '가입일', minWidth: 170 },
   { key: 'memberId', label: '회원 ID', minWidth: 120 },
   { key: 'nickname', label: '닉네임', minWidth: 150 },
   { key: 'status', label: '상태', minWidth: 100 },
@@ -59,7 +59,7 @@ export const UserMemberListContent = ({
   const dates = { startDate: filters.from, endDate: filters.to };
   const sort = filters.sortBy
     ? { key: filters.sortBy, direction: filters.sortDir }
-    : null;
+    : { key: 'joinedAt' as const, direction: 'desc' as const };
   const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
     filters.keyword,
     (keyword) => {
@@ -222,7 +222,7 @@ export const UserMemberListContent = ({
             data.items.map((member) => (
               <TableRow key={member.memberId}>
                 <TableCell>
-                  {member.joinedAt ? formatDate(member.joinedAt) : '-'}
+                  {member.joinedAt ? formatDateTime(member.joinedAt) : '-'}
                 </TableCell>
                 <TableCell>{member.memberId}</TableCell>
                 <TableCell>
