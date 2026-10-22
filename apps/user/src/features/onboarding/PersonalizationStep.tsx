@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ChoiceChip } from '@repo/ui';
 
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import FixedBottom from '@user/components/FixedBottom/FixedBottom';
-import TopBar from '@user/components/TopBar/TopBar';
+import { completeOnboarding, type OnboardingInput } from '@user/api/member';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
+import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
+import TopBar from '@user/ui/TopBar/TopBar';
 
 import { type AgeGroup, type Gender } from './onboardingContext';
 import { useOnboarding } from './useOnboarding';
@@ -22,23 +25,69 @@ const ageGroupOptions: { value: AgeGroup; label: string }[] = [
   { value: '50s+', label: '50대 이상' },
 ];
 
+const genderValues: Record<Gender, OnboardingInput['gender']> = {
+  male: 'MALE',
+  female: 'FEMALE',
+  other: 'OTHER',
+};
+
+const ageGroupValues: Record<AgeGroup, OnboardingInput['ageGroup']> = {
+  '20s': 'AGE_20S',
+  '30s': 'AGE_30S',
+  '40s': 'AGE_40S',
+  '50s+': 'AGE_50_PLUS',
+};
+
+const TOAST_DURATION_MS = 2500;
+
 const PersonalizationStep = () => {
   const navigate = useNavigate();
-  const { ageGroup, gender, setAgeGroup, setGender } = useOnboarding();
+  const { ageGroup, consents, gender, setAgeGroup, setGender } =
+    useOnboarding();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const isComplete = gender !== null && ageGroup !== null;
+
+  useEffect(() => {
+    if (!hasError) return;
+
+    const timer = setTimeout(() => setHasError(false), TOAST_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [hasError]);
+
+  // 서버에 온보딩 완료를 저장해야 피드를 쓸 수 있다. 저장한 뒤 위치 설정으로 넘어간다
+  // 위치는 서버에 회원 정보가 저장된 뒤에야 저장할 수 있어서 이 단계 다음에 둔다
+  const handleSubmit = async () => {
+    if (!gender || !ageGroup || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await completeOnboarding({
+        gender: genderValues[gender],
+        ageGroup: ageGroupValues[ageGroup],
+        locationOptIn: consents.location,
+        // 알림 기능을 뺐지만 서버가 이 값을 필수로 받아서(빠지면 400) 항상 동의하지 않음으로 보낸다
+        notificationOptIn: false,
+      });
+      navigate('/onboarding/location', { replace: true });
+    } catch {
+      setHasError(true);
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <>
       <TopBar onBack={() => navigate(-1)} title="맞춤 쿠폰 설정" />
       <section className="flex flex-col gap-6 px-page py-5">
         <div className="flex flex-col gap-2">
-          <h2 className="text-h1 leading-9 font-bold text-text-primary">
+          <h2 className="text-h2-mobile leading-snug font-bold text-text-primary">
             내게 맞는 점심 혜택
           </h2>
           <p className="text-body-sm-mobile leading-normal text-text-secondary">
-            성별과 연령대는 맞춤 쿠폰 노출에 사용해요.
-            <br />두 항목을 선택하면 계속할 수 있어요.
+            성별과 연령대는 맞춤 쿠폰 노출에 사용해요
+            <br />두 항목을 선택하면 계속할 수 있어요
           </p>
         </div>
 
@@ -81,15 +130,19 @@ const PersonalizationStep = () => {
         </fieldset>
 
         <p className="text-caption-mobile text-text-secondary">
-          선택 정보는 카카오에서 가져오지 않아요.
+          선택 정보는 카카오에서 가져오지 않아요
         </p>
       </section>
       <FixedBottom>
+        {hasError && (
+          <div className="mb-3">
+            <FeedbackToast message="저장하지 못했어요" tone="error" />
+          </div>
+        )}
         <ActionButton
           disabled={!isComplete}
-          // 위치 설정 화면(#14)이 생기면 그쪽으로 이동한다
-          // 서비스 안내(튜토리얼)를 보여준 뒤 거기서 온보딩을 완료 처리하고 스와이프로 간다
-          onClick={() => navigate('/onboarding/tutorial', { replace: true })}
+          loading={isSubmitting}
+          onClick={handleSubmit}
           size="large"
         >
           {isComplete ? '계속하기' : '성별·연령대를 선택해 주세요'}

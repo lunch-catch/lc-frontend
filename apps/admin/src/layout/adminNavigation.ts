@@ -5,7 +5,6 @@ export const adminNavigationPaths: Record<string, string> = {
   settlement: '/settlements',
   member: '/members',
   fraud: '/fraud',
-  review: '/reviews',
   account: '/admin-accounts',
 };
 

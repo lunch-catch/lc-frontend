@@ -9,15 +9,19 @@ import CouponHistoryPage from '@user/pages/CouponHistoryPage';
 import CouponPage from '@user/pages/CouponPage';
 import ExplorePage from '@user/pages/ExplorePage';
 import KakaoCallbackPage from '@user/pages/KakaoCallbackPage';
+import LocationSettingsPage from '@user/pages/LocationSettingsPage';
 import LoginPage from '@user/pages/LoginPage';
 import MyPage from '@user/pages/MyPage';
 import OnboardingConsentPage from '@user/pages/OnboardingConsentPage';
+import OnboardingLocationPage from '@user/pages/OnboardingLocationPage';
 import OnboardingPersonalizationPage from '@user/pages/OnboardingPersonalizationPage';
+import SettingsPage from '@user/pages/SettingsPage';
 import SplashPage from '@user/pages/SplashPage';
 import StoreDetailPage from '@user/pages/StoreDetailPage';
 import SwipePage from '@user/pages/SwipePage';
 import TutorialPage from '@user/pages/TutorialPage';
 import WishlistPage from '@user/pages/WishlistPage';
+import WithdrawPage from '@user/pages/WithdrawPage';
 
 export const router = createBrowserRouter([
   {
@@ -25,10 +29,11 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <SplashPage /> },
       { path: '/login', element: <LoginPage /> },
-      // 카카오 로그인 뒤 돌아오는 주소. 서버 설정(KAKAO_REDIRECT_URI)과 같아야 한다
-      { path: '/oauth/callback', element: <KakaoCallbackPage /> },
     ],
   },
+  // 카카오에서 돌아오는 주소. 서버 설정(KAKAO_REDIRECT_URI)과 같아야 한다
+  // 로그인뿐 아니라 로그인한 회원의 탈퇴 재인증도 여기로 돌아와서 접근 제어 밖에 둔다
+  { path: '/oauth/callback', element: <KakaoCallbackPage /> },
   {
     element: <RequireAuth access="onboarding" />,
     children: [
@@ -54,6 +59,8 @@ export const router = createBrowserRouter([
               },
             ],
           },
+          // 맞춤 정보에서 서버에 온보딩을 저장한 뒤 들어온다. 입력값을 이어 받을 게 없어 OnboardingProvider 밖에 둔다
+          { path: '/onboarding/location', element: <OnboardingLocationPage /> },
         ],
       },
     ],
@@ -63,6 +70,15 @@ export const router = createBrowserRouter([
     children: [
       // 하단 탭바 없이 사진부터 한 화면을 다 쓰고, 아래에 쿠폰 버튼을 고정한다
       { path: '/stores/:storeId', element: <StoreDetailPage /> },
+      {
+        element: <StackLayout />,
+        children: [
+          { path: '/my/location', element: <LocationSettingsPage /> },
+          { path: '/my/settings', element: <SettingsPage /> },
+          { path: '/my/withdraw', element: <WithdrawPage /> },
+          // 스와이프·탐색 헤더의 알림 아이콘으로 들어온다
+        ],
+      },
       {
         element: <TabLayout />,
         children: [

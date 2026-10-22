@@ -1,13 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  ChevronLeft,
-  Heart,
-  Navigation,
-  Phone,
-  Share2,
-  Store,
-} from 'lucide-react';
+import { ChevronLeft, Heart, Navigation, Phone, Share2 } from 'lucide-react';
 
 import {
   type CampaignIssueStatus,
@@ -19,9 +12,7 @@ import {
   BUSINESS_CATEGORY_LABELS,
   fetchCampaignPoster,
   fetchStoreDetail,
-  fetchWalkingRoute,
   type StoreDetail,
-  type WalkingRoute,
 } from '@user/api/store';
 import {
   addWish,
@@ -30,12 +21,25 @@ import {
   restoreWish,
 } from '@user/api/wishlist';
 import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import mascotError from '@user/assets/illustrations/mascot-error.webp';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
+import { useMyLocation } from '@user/hooks/useMyLocation';
+import {
+  getIssuePhase,
+  useOpenCountdown,
+  WISH_ISSUE_TIMING,
+} from '@user/hooks/useOpenCountdown';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import Card, { cardClassName } from '@user/ui/Card/Card';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast, {
   type FeedbackToastProps,
-} from '@user/components/FeedbackToast/FeedbackToast';
-import { useOpenCountdown } from '@user/features/wishlist/useOpenCountdown';
+} from '@user/ui/FeedbackToast/FeedbackToast';
+import {
+  formatDiscount,
+  formatWalkDistance,
+  getDistanceMeters,
+} from '@user/ui/storeFormat';
 
 import BusinessHoursSection from './BusinessHoursSection';
 import CouponCta from './CouponCta';
@@ -43,7 +47,9 @@ import CouponSection from './CouponSection';
 import { getCouponState } from './couponState';
 import { getKakaoDirectionsUrl } from './kakaoMap';
 import LocationSection from './LocationSection';
+import MenuRow from './MenuRow';
 import StoreDetailSkeleton from './StoreDetailSkeleton';
+import StoreHeroImages from './StoreHeroImages';
 
 interface StoreDetailScreenProps {
   storeId: number;
@@ -64,14 +70,21 @@ const ACTION_TOAST_DURATION_MS = 4000;
 const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   soldOut: '아쉽게도 그사이 수량이 모두 소진됐어요',
   limitReached: '오늘 받을 수 있는 쿠폰을 모두 받았어요',
+  alreadyIssued: '오늘 이미 받은 쿠폰이에요',
+  notWished: '찜한 뒤에 받을 수 있어요',
+  notOpen: '지금은 받을 수 없는 시간이에요',
 };
 
 const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
 
-const loadCouponInfo = async (campaignId: string): Promise<CouponInfo> => {
+// 발급 상태는 가게 단위로 물어서 이 가게의 ID를 함께 보낸다
+const loadCouponInfo = async (
+  campaignId: string,
+  storeId: number,
+): Promise<CouponInfo> => {
   const [isWished, issueStatus] = await Promise.all([
     fetchIsWished(campaignId),
-    fetchIssueStatus([campaignId]),
+    fetchIssueStatus([{ campaignId, storeId: String(storeId) }]),
   ]);
   const status = issueStatus.campaigns[0];
   if (!status) throw new Error('발급 상태가 없는 캠페인');
@@ -84,19 +97,27 @@ const loadCouponInfo = async (campaignId: string): Promise<CouponInfo> => {
   };
 };
 
-// 가게 상세. 탐색 목록이나 지도에서 가게를 눌러 들어온다
+// 가게 상세. 탐색 목록, 지도, 알림에서 가게를 눌러 들어온다
 // 찜 목록까지 가지 않아도 여기서 바로 찜하고, 11:00 오픈 뒤에는 바로 쿠폰을 받을 수 있다
 const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const navigate = useNavigate();
   // undefined: 불러오는 중, null: 없는 가게
   const [store, setStore] = useState<StoreDetail | null | undefined>();
-  const [route, setRoute] = useState<WalkingRoute | null>(null);
+  const showSkeleton = useDelayedLoading(store === undefined);
+  // 가게 정보를 받지 못했는지. 없는 가게(null)와 달리 다시 시도할 수 있다
+  const [hasLoadError, setHasLoadError] = useState(false);
+  // 다시 시도할 때마다 올려서 처음부터 다시 받는다
+  const [attempt, setAttempt] = useState(0);
   const [couponInfo, setCouponInfo] = useState<CouponInfo | null>(null);
+  // 활성 캠페인은 있는데 찜 여부나 발급 상태를 받지 못했는지. 이때는 받기와 찜 버튼 없이 할인만 보여준다
+  const [hasCouponError, setHasCouponError] = useState(false);
   const [posterHtml, setPosterHtml] = useState<string | null | undefined>();
   const [isPending, setIsPending] = useState(false);
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 버튼이 받기로 바뀐다
-  const { isOpen, remainingMs } = useOpenCountdown();
+  const { isIssueClosed, isOpen, remainingMs } = useOpenCountdown();
+  // 도보 시간은 저장 위치와 가게 좌표의 직선거리로 계산한다. 걷는 길 API는 만들지 않기로 했다
+  const myLocation = useMyLocation();
 
   useEffect(() => {
     let ignore = false;
@@ -104,20 +125,28 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     // 가게 정보와 쿠폰 상태를 모두 받은 뒤에 그려, 버튼이 중간에 바뀌지 않게 한다
     // 포스터는 크고 화면 아래쪽에 있어 따로 받는다
     const load = async () => {
-      const [detail, walkingRoute] = await Promise.all([
-        fetchStoreDetail(storeId),
-        fetchWalkingRoute(storeId),
-      ]);
+      let detail: StoreDetail | null;
+      try {
+        detail = await fetchStoreDetail(storeId);
+      } catch {
+        if (!ignore) setHasLoadError(true);
+        return;
+      }
+
+      // 활성 캠페인이 있어도 받을 수 있다는 뜻은 아니라, 발급 상태를 받지 못하면 쿠폰 영역만 줄여 보여준다
       const campaignId = detail?.activeCampaign?.campaignId;
-      const info = campaignId ? await loadCouponInfo(campaignId) : null;
+      const info = campaignId
+        ? await loadCouponInfo(campaignId, storeId).catch(() => null)
+        : null;
       if (ignore) return;
 
       setStore(detail);
-      setRoute(walkingRoute);
       setCouponInfo(info);
+      setHasCouponError(Boolean(campaignId) && !info);
 
       if (campaignId) {
-        const html = await fetchCampaignPoster(campaignId);
+        // 포스터를 받지 못하면 포스터 없이 보여준다
+        const html = await fetchCampaignPoster(campaignId).catch(() => null);
         if (!ignore) setPosterHtml(html);
       }
     };
@@ -127,7 +156,16 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     return () => {
       ignore = true;
     };
-  }, [storeId]);
+  }, [attempt, storeId]);
+
+  const retry = () => {
+    setHasLoadError(false);
+    setStore(undefined);
+    setCouponInfo(null);
+    setHasCouponError(false);
+    setPosterHtml(undefined);
+    setAttempt((value) => value + 1);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -148,10 +186,28 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     }
   };
 
+  if (hasLoadError) {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page">
+        <EmptyState
+          description="잠시 후 다시 시도해 주세요"
+          image={mascotError}
+          title="가게 정보를 불러오지 못했어요"
+        >
+          <ActionButton onClick={retry}>다시 시도</ActionButton>
+          <ActionButton onClick={goBack} variant="ghost">
+            뒤로 가기
+          </ActionButton>
+        </EmptyState>
+      </div>
+    );
+  }
+
   if (store === undefined) {
     return (
       <>
-        <StoreDetailSkeleton onBack={goBack} />
+        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 뒤로 가기만 두고 회색 틀은 조금 기다린 뒤에 보여준다 */}
+        <StoreDetailSkeleton onBack={goBack} showBlocks={showSkeleton} />
         <p className="sr-only" role="status">
           가게 정보를 불러오는 중이에요
         </p>
@@ -163,7 +219,8 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     return (
       <div className="mx-auto flex min-h-dvh max-w-mobile flex-col bg-bg-page">
         <EmptyState
-          description="문을 닫았거나 주소가 바뀐 가게예요"
+          // 서버는 없는 가게와 등록이 덜 끝난 가게를 같은 404로 보내 이유를 단정하지 않는다
+          description="지금은 볼 수 없는 가게예요"
           image={mascotEmpty}
           title="가게를 찾을 수 없어요"
         >
@@ -180,6 +237,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     couponInfo &&
     getCouponState({
       dailyRemaining: couponInfo.dailyRemaining,
+      isClosed: isIssueClosed,
       isIssued: couponInfo.status.isIssued,
       isOpen,
       isWished: couponInfo.isWished,
@@ -196,7 +254,8 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
     try {
       await addWish(campaign.campaignId);
       setWished(true);
-      setToast({ message: '찜했어요. 10:50에 오픈 알림을 보내드려요' });
+      // 사진 위 하트로 아무 때나 찜할 수 있어, 지금 찜하면 언제 받는지는 스와이프 찜 토스트와 같은 기준으로 알려준다
+      setToast({ message: `찜했어요 · ${WISH_ISSUE_TIMING[getIssuePhase()]}` });
     } catch {
       setToast({ message: '찜하지 못했어요', tone: 'error' });
     } finally {
@@ -207,7 +266,11 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
   const handleUndoRemove = (campaignId: string) => {
     setWished(true);
     setToast(null);
-    restoreWish(campaignId);
+    // 다시 찜하지 못했으면 서버에는 취소된 채라, 하트를 다시 비우고 알린다
+    restoreWish(campaignId).catch(() => {
+      setWished(false);
+      setToast({ message: '찜을 되돌리지 못했어요', tone: 'error' });
+    });
   };
 
   // 응답을 기다리지 않고 바로 하트를 비워, 실수로 눌렀을 때 곧바로 되돌릴 수 있게 한다
@@ -237,13 +300,16 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
         await addWish(campaign.campaignId);
         setWished(true);
       }
-      const result = await issueCoupon(campaign.campaignId);
+      const result = await issueCoupon({
+        campaignId: campaign.campaignId,
+        eventId: couponInfo.status.eventId,
+      });
       // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
-      setCouponInfo(await loadCouponInfo(campaign.campaignId));
+      setCouponInfo(await loadCouponInfo(campaign.campaignId, storeId));
 
       setToast(
         result === 'issued'
-          ? { message: '쿠폰을 받았어요. 쿠폰함에서 확인하세요' }
+          ? { message: '쿠폰함에 쿠폰을 담았어요' }
           : { message: ISSUE_FAIL_MESSAGES[result], tone: 'error' },
       );
     } catch {
@@ -270,13 +336,19 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
       .catch(() => setToast({ message: '복사하지 못했어요', tone: 'error' }));
   };
 
-  const meta = [
-    route &&
-      `도보 ${Math.max(1, Math.round(route.totalDurationSeconds / 60))}분`,
-    route && `${route.totalDistanceMeters.toLocaleString('ko-KR')}m`,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  // 저장 위치를 모르면(불러오는 중이거나 위치를 설정하지 않음) 거리 줄을 숨긴다
+  const meta =
+    myLocation && myLocation.latitude !== null && myLocation.longitude !== null
+      ? formatWalkDistance(
+          getDistanceMeters(
+            {
+              latitude: myLocation.latitude,
+              longitude: myLocation.longitude,
+            },
+            store,
+          ),
+        )
+      : null;
 
   // 받은 쿠폰은 쿠폰함에서 관리하므로 받은 뒤에는 찜을 취소할 수 없다
   const canToggleWish = couponInfo && couponState !== 'issued' && !isPending;
@@ -288,36 +360,19 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
         couponState ? 'pb-[calc(124px+env(safe-area-inset-bottom))]' : 'pb-10'
       }`}
     >
-      {toast && (
-        // 사진 위 버튼을 가리지 않도록 하단 버튼 바로 위에 띄운다
-        <div
-          className={`fixed inset-x-0 z-30 mx-auto max-w-mobile px-page ${
-            couponState
-              ? 'bottom-[calc(132px+env(safe-area-inset-bottom))]'
-              : 'bottom-[max(16px,env(safe-area-inset-bottom))]'
-          }`}
-        >
+      {/* 하단 쿠폰 버튼이 있으면 그 바로 위에 띄운다 (CouponCta). 없으면 화면 아래에 띄운다 */}
+      {toast && !couponState && (
+        <div className="fixed inset-x-0 bottom-[max(16px,env(safe-area-inset-bottom))] z-30 mx-auto max-w-mobile px-page">
           <FeedbackToast {...toast} />
         </div>
       )}
       <div className="relative h-60 bg-surface-subtle">
-        {store.imageUrl ? (
-          <img
-            alt=""
-            className="size-full object-cover"
-            height={240}
-            src={store.imageUrl}
-            width={390}
-          />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="flex size-full items-center justify-center text-text-tertiary"
-          >
-            <Store className="size-12" />
-          </div>
-        )}
-        <div className="absolute inset-x-0 top-0 flex justify-between px-3 pt-[max(12px,env(safe-area-inset-top))]">
+        <StoreHeroImages
+          interiorImageUrls={store.interiorImageUrls}
+          mainImageUrl={store.imageUrl}
+        />
+        {/* 사진을 넘기는 손가락이 버튼 사이 빈 곳에 닿아도 사진이 넘어가도록, 버튼 줄은 버튼만 누를 수 있게 한다 */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-3 pt-[max(12px,env(safe-area-inset-top))] [&>button]:pointer-events-auto">
           <HeroButton label="뒤로 가기" onClick={goBack}>
             <ChevronLeft aria-hidden="true" className="size-6" />
           </HeroButton>
@@ -360,10 +415,15 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
               {meta}
             </p>
           )}
-          <div className="mt-4 grid grid-cols-3 rounded-xl border border-border-subtle bg-bg-surface py-2">
-            <QuickAction href={`tel:${store.phone}`} label="전화">
-              <Phone aria-hidden="true" className="size-5" />
-            </QuickAction>
+          {/* 전화번호가 비어 오면 전화 버튼을 빼고 둘로 나눈다 */}
+          <div
+            className={`mt-4 grid py-2 ${store.phone ? 'grid-cols-3' : 'grid-cols-2'} ${cardClassName}`}
+          >
+            {store.phone && (
+              <QuickAction href={`tel:${store.phone}`} label="전화">
+                <Phone aria-hidden="true" className="size-5" />
+              </QuickAction>
+            )}
             <QuickAction
               href={getKakaoDirectionsUrl(store)}
               label="길찾기"
@@ -377,7 +437,32 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           </div>
         </section>
 
-        {campaign && couponInfo && couponState ? (
+        {campaign && hasCouponError ? (
+          // 찜 여부나 발급 상태를 받지 못하면 받을 수 있는지 몰라, 할인만 알려 주고 다시 불러오게 한다
+          <section className="flex flex-col gap-2 rounded-xl bg-surface-brand px-4 py-3">
+            <p className="text-body-sm-mobile text-text-primary">
+              오늘{' '}
+              <strong className="font-bold text-text-brand">
+                {/* 메뉴 할인이면 어느 메뉴인지 앞에 붙인다 (예: 김치찌개 20% 할인) */}
+                {campaign.targetMenu && `${campaign.targetMenu.name} `}
+                {formatDiscount(campaign)}
+              </strong>{' '}
+              쿠폰이 있어요
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-caption-mobile text-text-secondary">
+                쿠폰 정보를 불러오지 못했어요
+              </p>
+              <button
+                className="-my-2 shrink-0 px-2 py-2 text-caption-mobile font-bold text-text-brand underline underline-offset-2"
+                onClick={retry}
+                type="button"
+              >
+                다시 시도
+              </button>
+            </div>
+          </section>
+        ) : campaign && couponInfo && couponState ? (
           <CouponSection
             campaign={campaign}
             dailyLimit={couponInfo.dailyLimit}
@@ -392,28 +477,37 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           </p>
         )}
 
-        <section className="flex flex-col gap-3">
-          <h2 className="text-h3-mobile font-bold text-text-primary">
-            대표 메뉴
-          </h2>
-          <ul className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-bg-surface px-4">
-            {store.menus.map((menu) => (
-              <li
-                className="flex items-center justify-between gap-3 py-3 text-body-mobile"
-                key={menu.menuId}
-              >
-                <span className="min-w-0 truncate text-text-primary">
-                  {menu.name}
-                </span>
-                <span className="shrink-0 font-bold text-text-primary">
-                  {formatPrice(menu.price)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        {/* 대표 메뉴가 없으면(menus=[]는 정상 응답) 구역을 숨긴다 */}
+        {store.menus.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-h3-mobile font-bold text-text-primary">
+              대표 메뉴
+            </h2>
+            <Card as="ul" className="divide-y divide-border-subtle px-4">
+              {store.menus.map((menu) => (
+                <MenuRow
+                  // 오늘 쿠폰의 할인 대상 메뉴에 할인을 붙인다
+                  couponLabel={
+                    campaign?.discountTargetType === 'MENU' &&
+                    campaign.targetMenu?.menuId === menu.menuId
+                      ? `쿠폰 ${
+                          campaign.discountType === 'PERCENT'
+                            ? `${campaign.discountValue}%`
+                            : formatPrice(campaign.discountValue)
+                        }`
+                      : null
+                  }
+                  key={menu.menuId}
+                  menu={menu}
+                />
+              ))}
+            </Card>
+          </section>
+        )}
 
-        <BusinessHoursSection hours={store.businessHours} />
+        {store.businessHours.length > 0 && (
+          <BusinessHoursSection hours={store.businessHours} />
+        )}
 
         <LocationSection
           onCopyAddress={() => copyText(store.roadAddress, '주소를 복사했어요')}
@@ -430,6 +524,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
           onWish={handleWish}
           remainingMs={remainingMs}
           state={couponState}
+          toast={toast}
         />
       )}
     </div>

@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router';
 
 import mascotAlert from '@user/assets/illustrations/mascot-alert.webp';
-import ActionButton from '@user/components/ActionButton/ActionButton';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import ActionButton from '@user/ui/ActionButton/ActionButton';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 // 오늘의 포스터를 모두 넘겼을 때 보여주는 화면
 // 넘긴 포스터는 찜이든 패스든 그날 다시 나오지 않아서 처음부터 다시 보기는 두지 않는다

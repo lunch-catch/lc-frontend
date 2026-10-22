@@ -1,120 +1,135 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
-import type { TableDensity } from '@admin/components/DataTable';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+import { shiftDate } from '@admin/api/analyticsDateUtils';
+import { getCampaignWarnings, getInvalidImpressions } from '@admin/api/fraud';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
+import {
+  queryChoice,
+  queryPage,
+  queryPastDate,
+  querySize,
+  queryText,
+} from '@admin/hooks/urlQuery';
+import { useApiResource } from '@admin/hooks/useApiResource';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import type { TableDensity } from '@admin/ui/DataTable';
 
-import type {
-  FraudFilters,
-  FraudSort,
-  FraudSortKey,
-  FraudTab,
-  FraudTableRow,
-} from './fraudTypes';
-import { buildFraudView, sortFraudRows } from './fraudUtils';
-import { useFraudReport } from './useFraudReport';
+import { getFraudRangeError } from './fraudUtils';
 
 export const useFraudManagement = () => {
-  const [tab, setTab] = useState<FraudTab>('impressions');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [density, setDensity] = useState<TableDensity>('normal');
-  const [period, setPeriod] = useState({ startDate: '', endDate: '' });
-  const [reasonCode, setReasonCode] =
-    useState<FraudFilters['reasonCode']>('ALL');
-  const [sort, setSort] = useState<FraudSort | null>(null);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
-    null,
-  );
-  const search = useDebouncedSearch({
-    onCommit: () => setCurrentPage(1),
+  const today = getKstToday();
+  // 시작일과 종료일을 모두 포함하므로 오늘에서 30일 전까지가 최대 31일이다.
+  const { filters, updateFilters } = useUrlFilters('fraud.', {
+    tab: queryChoice(['impressions', 'warnings'] as const, 'impressions'),
+    from: queryPastDate(shiftDate(today, -30)),
+    to: queryPastDate(today),
+    reason: queryChoice(
+      ['ALL', 'EXPIRED_OR_UNKNOWN', 'NOT_OWNER'] as const,
+      'ALL',
+    ),
+    type: queryChoice(
+      ['ALL', 'INVALID_RATIO', 'CONCENTRATION'] as const,
+      'ALL',
+    ),
+    campaignId: queryText(),
+    memberId: queryText(),
+    page: queryPage,
+    size: querySize,
+    sortBy: queryChoice(
+      [
+        '',
+        'count',
+        'campaignId',
+        'memberId',
+        'invalidRatio',
+        'topMembersShare',
+      ] as const,
+      '',
+    ),
+    sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
   });
-  const state = useFraudReport();
-  // 화면과 상세 패널이 동일한 기간·검색 조건을 공유한다.
-  const filters = useMemo<FraudFilters>(
-    () => ({
-      ...period,
-      reasonCode,
-      keyword: search.keyword,
-    }),
-    [period, reasonCode, search.keyword],
+  const campaign = useUrlSearch(filters.campaignId, (campaignId) =>
+    updateFilters({ campaignId, page: 1 }),
   );
-  const view = useMemo(
-    () => (state.report ? buildFraudView(state.report, filters) : null),
-    [state.report, filters],
+  const member = useUrlSearch(filters.memberId, (memberId) =>
+    updateFilters({ memberId, page: 1 }),
   );
-  const warningCampaigns =
-    view?.campaigns.filter(
-      (campaign) => campaign.highInvalidRate || campaign.concentrated,
-    ) ?? [];
-  const selectedCampaign = view?.campaigns.find(
-    (campaign) => campaign.campaignId === selectedCampaignId,
+  const [density, setDensity] = useState<TableDensity>('normal');
+  const idError =
+    filters.tab === 'impressions' &&
+    [filters.campaignId, filters.memberId].some(
+      (value) =>
+        value.trim() &&
+        (!/^[1-9]\d*$/.test(value.trim()) ||
+          !Number.isSafeInteger(Number(value))),
+    )
+      ? '캠페인 ID와 사용자 ID는 양의 정수로 입력해 주세요.'
+      : '';
+  const validation = getFraudRangeError(filters.from, filters.to) || idError;
+  const allowedSorts =
+    filters.tab === 'impressions'
+      ? ['count', 'campaignId', 'memberId']
+      : ['invalidRatio', 'topMembersShare', 'campaignId'];
+  const sortBy = allowedSorts.includes(filters.sortBy)
+    ? filters.sortBy
+    : filters.tab === 'impressions'
+      ? 'count'
+      : 'invalidRatio';
+  const params = new URLSearchParams({
+    from: filters.from,
+    to: filters.to,
+    page: String(filters.page - 1),
+    size: String(filters.size),
+    sortBy,
+    sortDir: filters.sortDir,
+  });
+  if (filters.tab === 'impressions') {
+    if (filters.reason !== 'ALL') params.set('reasonCode', filters.reason);
+    if (filters.campaignId.trim())
+      params.set('campaignId', filters.campaignId.trim());
+    if (filters.memberId.trim())
+      params.set('memberId', filters.memberId.trim());
+  } else if (filters.type !== 'ALL') params.set('type', filters.type);
+  const invalid = useApiResource(
+    getInvalidImpressions,
+    !validation && filters.tab === 'impressions' ? params.toString() : null,
   );
-  const rows: FraudTableRow[] =
-    tab === 'impressions'
-      ? (view?.invalidRows ?? [])
-      : (view?.rejectionRows.map((row) => ({ ...row, id: row.userId })) ?? []);
-  const sortedRows = sortFraudRows(rows, sort);
+  const warnings = useApiResource(
+    getCampaignWarnings,
+    !validation && filters.tab === 'warnings' ? params.toString() : null,
+  );
+  const resource = filters.tab === 'impressions' ? invalid : warnings;
   const pagination = {
-    currentPage,
-    pageSize,
-    totalCount: rows.length,
-    totalPages: Math.ceil(rows.length / pageSize),
-    onPageChange: setCurrentPage,
-    onPageSizeChange: (value: number) => {
-      // 표시 개수가 줄면 현재 페이지가 사라질 수 있어 첫 페이지로 이동한다.
-      setPageSize(value);
-      setCurrentPage(1);
-    },
+    currentPage: filters.page,
+    pageSize: filters.size,
+    totalCount: resource.data?.totalElements ?? 0,
+    totalPages: Math.ceil((resource.data?.totalElements ?? 0) / filters.size),
+    onPageChange: (page: number) => updateFilters({ page }),
+    onPageSizeChange: (size: number) => updateFilters({ size, page: 1 }),
   };
-  const handleSortChange = (key: FraudSortKey) => {
-    setCurrentPage(1);
-    // 공통 테이블 버튼의 안내와 동일하게 내림차순 → 오름차순 → 해제 순서를 따른다.
-    setSort((previous) => {
-      if (!previous || previous.key !== key) return { key, direction: 'desc' };
-      if (previous.direction === 'desc') return { key, direction: 'asc' };
-      return null;
+  const sort = (
+    key:
+      'count' | 'campaignId' | 'memberId' | 'invalidRatio' | 'topMembersShare',
+  ) =>
+    updateFilters({
+      sortBy: key,
+      sortDir: key === sortBy && filters.sortDir === 'desc' ? 'asc' : 'desc',
+      page: 1,
     });
-  };
-  const changeTab = (value: string) => {
-    // 기간·검색어는 유지하고 탭마다 다른 열의 정렬과 상세 선택만 해제한다.
-    setTab(value as FraudTab);
-    setCurrentPage(1);
-    setSort(null);
-    setSelectedCampaignId(null);
-  };
-  const changeReason = (value: string) => {
-    setReasonCode(value as FraudFilters['reasonCode']);
-    setCurrentPage(1);
-  };
-  const changePeriod = (value: { startDate: string; endDate: string }) => {
-    setPeriod(value);
-    setCurrentPage(1);
-    setSelectedCampaignId(null);
-  };
-
   return {
-    tab,
+    filters,
+    updateFilters,
+    campaign,
+    member,
+    invalid,
+    warnings,
+    resource,
+    validation,
     density,
     setDensity,
-    period,
-    reasonCode,
-    sort,
-    selectedCampaignId,
-    setSelectedCampaignId,
-    search,
-    state,
-    filters,
-    view,
-    warningCampaigns,
-    selectedCampaign,
-    visibleRows: sortedRows.slice(
-      (currentPage - 1) * pageSize,
-      currentPage * pageSize,
-    ),
     pagination,
-    handleSortChange,
-    changeTab,
-    changeReason,
-    changePeriod,
+    sortBy,
+    sort,
   };
 };

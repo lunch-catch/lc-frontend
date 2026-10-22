@@ -76,7 +76,7 @@ src/
 │   ├── coupon/         # 쿠폰함, QR
 │   ├── explore/        # 탐색 목록, 지도
 │   └── store-detail/   # 가게 상세
-├── components/     # 여러 기능이 함께 쓰는 컴포넌트
+├── ui/             # 여러 기능이 함께 쓰는 컴포넌트
 ├── layout/         # 하단 탭바, 상단 바 틀
 ├── api/            # 서버 요청 함수와 mock 데이터
 └── auth/           # 로그인 상태와 접근 제어

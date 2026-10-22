@@ -1,175 +1,106 @@
-import { useMemo, useState } from 'react';
-import {
-  DateRangePicker,
-  type DateRangeValue,
-  MultiSelectField,
-  SearchField,
-  StatusBadge,
-} from '@repo/ui';
-import {
-  formatDateRange,
-  formatDateTime,
-  formatNumber,
-  formatPoints,
-} from '@repo/utils';
+import { useState } from 'react';
+import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
+import { formatDateTime, formatNumber, formatPoints } from '@repo/utils';
 
-import { campaigns, getMockCampaignReports } from '@admin/api/mocks/campaigns';
+import { campaignStatuses } from '@admin/api/campaigns';
+import { queryChoice, querySize, queryText } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
 import {
   DataTable,
   type DataTableColumn,
   TableCell,
   type TableDensity,
   TableEmpty,
+  TableError,
   TableHeaderCell,
+  TableLoading,
   TableRow,
-  type TableSortDirection,
-} from '@admin/components/DataTable';
-import { FilterBar } from '@admin/components/FilterBar/FilterBar';
-import { PaginationSummary } from '@admin/components/Pagination/PaginationSummary';
-import { useDebouncedSearch } from '@admin/hooks/useDebouncedSearch';
+  useTableColumnSettings,
+} from '@admin/ui/DataTable';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
+import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
 
-import type { Campaign, CampaignReport, CampaignStatus } from './campaignTypes';
-import { campaignStatusMeta } from './campaignUtils';
+import { CampaignDetails } from './CampaignDetails';
+import {
+  campaignStatusMeta,
+  getCampaignDiscount,
+  getCampaignPeriod,
+} from './campaignUtils';
+import { useCampaignReports } from './useCampaignReports';
+import { useCampaigns } from './useCampaigns';
 
-type CampaignSortKey =
-  | 'id'
-  | 'ownerId'
-  | 'registeredAt'
-  | 'validImpressions'
-  | 'storeName'
-  | 'status'
-  | 'startDate'
-  | 'dailyBudget'
-  | 'cumulativeSpent';
-interface CampaignSort {
-  key: CampaignSortKey;
-  direction: TableSortDirection;
-}
-
-interface CampaignRegistration extends Campaign {
-  report?: CampaignReport;
-}
-
-const getCampaignSortValue = (
-  campaign: CampaignRegistration,
-  key: CampaignSortKey,
-) => {
-  if (key === 'cumulativeSpent') return campaign.report?.spentPoints ?? null;
-  if (key === 'validImpressions')
-    return campaign.report?.validImpressions ?? null;
-  return campaign[key];
-};
-
-const statusOptions = Object.entries(campaignStatusMeta).map(
-  ([value, meta]) => ({
-    value,
-    label: meta.label,
-  }),
-);
-const initialStatuses: CampaignStatus[] = [
-  'SCHEDULED',
-  'ACTIVE',
-  'PAUSED',
-  'ENDED',
-];
-const columns: DataTableColumn[] = [10, 10, 13, 9, 15, 11, 11, 10, 11].map(
-  (width) => ({
+const columns: DataTableColumn[] = [
+  { key: 'campaignId', label: '캠페인 ID', width: '8%', minWidth: 100 },
+  { key: 'storeId', label: '가게 ID', width: '7%', minWidth: 90 },
+  { key: 'storeName', label: '가게명', width: '16%', minWidth: 140 },
+  { key: 'status', label: '상태', width: '8%', minWidth: 110 },
+  { key: 'createdAt', label: '등록 시각', width: '13%', minWidth: 165 },
+  { key: 'discount', label: '할인', width: '12%', minWidth: 150 },
+  {
+    key: 'dailyBudget',
+    label: '하루 예산',
+    width: '8%',
+    minWidth: 110,
+    align: 'right',
+  },
+  { key: 'period', label: '집행 기간', width: '12%', minWidth: 175 },
+  {
+    key: 'spentAmount',
+    label: '소진 포인트',
+    width: '8%',
     minWidth: 120,
-    width: `${width}%`,
-  }),
-);
-const headers: { label: string; key: CampaignSortKey }[] = [
-  { label: '캠페인 ID', key: 'id' },
-  { label: '점주 ID', key: 'ownerId' },
-  { label: '가게', key: 'storeName' },
-  { label: '상태', key: 'status' },
-  { label: '등록 시각', key: 'registeredAt' },
-  { label: '하루 예산', key: 'dailyBudget' },
-  { label: '누적 소진 포인트', key: 'cumulativeSpent' },
-  { label: '누적 유효 노출', key: 'validImpressions' },
-  { label: '집행 기간', key: 'startDate' },
+    align: 'right',
+  },
+  {
+    key: 'validImpressionCount',
+    label: '유효 노출',
+    width: '8%',
+    minWidth: 110,
+    align: 'right',
+  },
+];
+const campaignQuery = {
+  storeId: queryText(),
+  status: queryChoice(['ALL', ...campaignStatuses] as const, 'ALL'),
+  size: querySize,
+  detail: queryText(),
+};
+const statusOptions = [
+  { value: 'ALL', label: '상태 전체' },
+  ...campaignStatuses.map((status) => ({
+    value: status,
+    label: campaignStatusMeta[status].label,
+  })),
 ];
 
 export const CampaignManagementContent = () => {
-  const [statuses, setStatuses] = useState<CampaignStatus[]>(initialStatuses);
-  const [range, setRange] = useState<DateRangeValue>({
-    startDate: '',
-    endDate: '',
-  });
+  // 기존 가게 우선 열 설정이 새 캠페인 ID 우선 구성을 덮어쓰지 않도록 구분한다.
+  const columnSettings = useTableColumnSettings('campaigns-id-first', columns);
+  const { filters, updateFilters } = useUrlFilters('campaigns.', campaignQuery);
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [sort, setSort] = useState<CampaignSort>({
-    key: 'registeredAt',
-    direction: 'desc',
-  });
-  const [reports] = useState(getMockCampaignReports);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const { draftKeyword, keyword, setDraftKeyword } = useDebouncedSearch({
-    onCommit: () => setPage(1),
-  });
-
-  const filteredCampaigns = useMemo(() => {
-    // 목록과 분석 리포트를 ID로 합치며, 누락된 집계를 0으로 확정하지 않는다.
-    const reportMap = new Map(
-      reports.map((report) => [report.campaignId, report]),
-    );
-    const registrationCampaigns = campaigns.map((campaign) => ({
-      ...campaign,
-      report: reportMap.get(campaign.id),
-    }));
-    const query = keyword.trim().toLowerCase();
-    const result = registrationCampaigns.filter(
-      (campaign) =>
-        statuses.includes(campaign.status) &&
-        (!query ||
-          [campaign.id, campaign.ownerId, campaign.storeName].some((value) =>
-            value.toLowerCase().includes(query),
-          )) &&
-        // 선택 기간과 집행 기간이 하루라도 겹치는 캠페인을 조회한다.
-        (!range.startDate || campaign.endDate >= range.startDate) &&
-        (!range.endDate || campaign.startDate <= range.endDate),
-    );
-    return result.sort((first, second) => {
-      const a = getCampaignSortValue(first, sort.key);
-      const b = getCampaignSortValue(second, sort.key);
-      // 리포트가 없는 항목은 방향과 관계없이 확정 값 뒤에 둔다.
-      if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
-      const comparison =
-        typeof a === 'number' && typeof b === 'number'
-          ? a - b
-          : String(a).localeCompare(String(b), 'ko');
-      return sort.direction === 'asc' ? comparison : -comparison;
-    });
-  }, [keyword, range, sort, statuses, reports]);
-
-  const visibleCampaigns = filteredCampaigns.slice(
-    (page - 1) * pageSize,
-    page * pageSize,
+  const search = useUrlSearch(filters.storeId, (storeId) =>
+    updateFilters({ storeId }),
   );
-
-  const handleSort = (key: CampaignSortKey) => {
-    setPage(1);
-    setSort((current) =>
-      !current || current.key !== key
-        ? { key, direction: 'desc' }
-        : current.direction === 'desc'
-          ? { key, direction: 'asc' }
-          : { key: 'registeredAt', direction: 'desc' },
-    );
-  };
-
-  const pagination = {
-    currentPage: page,
-    onPageChange: setPage,
-    onPageSizeChange: (value: number) => {
-      // 개수를 바꾸면 기존 페이지가 범위를 벗어날 수 있어 첫 페이지로 돌아간다.
-      setPageSize(value);
-      setPage(1);
-    },
-    pageSize,
-    totalCount: filteredCampaigns.length,
-    totalPages: Math.ceil(filteredCampaigns.length / pageSize),
-  };
+  const storeId = search.keyword.trim();
+  const validationError =
+    storeId &&
+    (!/^[1-9]\d*$/.test(storeId) || !Number.isSafeInteger(Number(storeId)))
+      ? '가게 ID는 양의 정수로 입력해 주세요.'
+      : '';
+  // 목록 API가 지원하는 가게 ID·단일 상태·페이지 크기만 전송한다.
+  const params = new URLSearchParams({ pageSize: String(filters.size) });
+  if (storeId) params.set('storeId', storeId);
+  if (filters.status !== 'ALL') params.set('status', filters.status);
+  const resource = useCampaigns(validationError ? null : params.toString());
+  const items = resource.data?.items ?? [];
+  const performance = useCampaignReports(
+    items.map((item) => item.campaignId),
+    params.toString(),
+  );
+  const error = validationError || resource.error;
+  const openDetail = (id: number) => updateFilters({ detail: String(id) });
 
   return (
     <section className="flex flex-col">
@@ -178,125 +109,196 @@ export const CampaignManagementContent = () => {
           캠페인 관리
         </h2>
         <p className="mt-2 text-body-sm-web text-text-secondary">
-          전체 캠페인을 최신 등록순으로 조회합니다. 누적 소진 포인트와 유효
-          노출은 전일 확정 기준입니다.
+          전체 캠페인을 최신 등록순으로 조회합니다. 실적은 전일까지 집계된 전체
+          기간 기준입니다.
         </p>
       </header>
       <FilterBar
-        tableKey="campaigns"
+        columnSettings={columnSettings}
         className="mb-2"
         density={{ value: density, onValueChange: setDensity }}
-        pagination={pagination}
       >
         <SearchField
-          onChange={(event) => setDraftKeyword(event.target.value)}
-          value={draftKeyword}
+          aria-label="가게 ID 검색"
+          placeholder="가게 ID 검색"
+          value={search.draftKeyword}
+          onChange={(event) => search.setDraftKeyword(event.target.value)}
         />
-        <MultiSelectField
-          aria-label="캠페인 상태"
+        <SelectField
           fitContent
+          aria-label="캠페인 상태"
           options={statusOptions}
-          onValueChange={(value) => {
-            setStatuses(value as CampaignStatus[]);
-            setPage(1);
-          }}
-          value={statuses}
+          value={filters.status}
+          onValueChange={(status) =>
+            updateFilters({ status: status as typeof filters.status })
+          }
         />
-        <div className="w-[216px]">
-          <DateRangePicker
-            ariaLabel="집행 기간 범위"
-            placeholder="집행 기간 선택"
-            value={range}
-            onValueChange={(value) => {
-              setRange(value);
-              setPage(1);
-            }}
-          />
-        </div>
       </FilterBar>
       <DataTable
         className="table-fixed"
-        personalizationKey="campaigns"
-        columns={columns.map((column, index) => ({
-          ...column,
-          key: headers[index].key,
-          label: headers[index].label,
-        }))}
+        columnSettings={columnSettings}
+        columns={columns}
         density={density}
         resizableColumns
       >
         <thead>
           <tr>
-            {headers.map((header, index) => (
+            {columns.map((column, index) => (
               <TableHeaderCell
+                key={column.key}
                 columnIndex={index}
-                key={header.key}
-                onSortChange={() => handleSort(header.key)}
-                sortDirection={
-                  sort?.key === header.key ? sort.direction : undefined
+                sortDirection={column.key === 'campaignId' ? 'desc' : undefined}
+                title={
+                  column.key === 'campaignId'
+                    ? '캠페인 ID 내림차순 고정'
+                    : undefined
                 }
               >
-                {header.label}
+                {column.label}
               </TableHeaderCell>
             ))}
           </tr>
         </thead>
         <tbody>
-          {filteredCampaigns.length === 0 && (
+          {resource.loading && !resource.data ? (
             <tr>
-              <TableEmpty colSpan={headers.length}>
+              <TableLoading colSpan={columns.length} />
+            </tr>
+          ) : error && !resource.data ? (
+            <tr>
+              <TableError
+                colSpan={columns.length}
+                description={error}
+                onRetry={!validationError ? resource.refresh : undefined}
+              />
+            </tr>
+          ) : items.length === 0 ? (
+            <tr>
+              <TableEmpty colSpan={columns.length}>
                 조회된 캠페인이 없습니다
               </TableEmpty>
             </tr>
-          )}
-          {visibleCampaigns.map((campaign) => (
-            <TableRow key={campaign.id}>
-              <TableCell>{campaign.id}</TableCell>
-              <TableCell>{campaign.ownerId}</TableCell>
-              <TableCell title={campaign.storeName}>
-                {campaign.storeName}
-              </TableCell>
-              <TableCell>
-                <StatusBadge
-                  variant={campaignStatusMeta[campaign.status].variant}
+          ) : (
+            items.map((campaign) => {
+              const report = performance.reports.get(campaign.campaignId);
+              const unavailable = performance.error ? '조회 실패' : '조회 중';
+              return (
+                <TableRow
+                  key={campaign.campaignId}
+                  tabIndex={0}
+                  showDetailArrow
+                  className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
+                  onClick={() => openDetail(campaign.campaignId)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.target === event.currentTarget &&
+                      (event.key === 'Enter' || event.key === ' ')
+                    ) {
+                      event.preventDefault();
+                      openDetail(campaign.campaignId);
+                    }
+                  }}
                 >
-                  {campaignStatusMeta[campaign.status].label}
-                </StatusBadge>
-              </TableCell>
-              <TableCell>{formatDateTime(campaign.registeredAt)}</TableCell>
-              <TableCell>{formatPoints(campaign.dailyBudget)}</TableCell>
-              <TableCell
-                title={
-                  campaign.report
-                    ? `${campaign.report.confirmedThrough} 확정 기준`
-                    : '리포트 없음'
-                }
-              >
-                {campaign.report
-                  ? formatPoints(campaign.report.spentPoints)
-                  : '-'}
-              </TableCell>
-              <TableCell
-                title={
-                  campaign.report
-                    ? `${campaign.report.confirmedThrough} 확정 기준`
-                    : '리포트 없음'
-                }
-              >
-                {campaign.report
-                  ? `${formatNumber(campaign.report.validImpressions)}회`
-                  : '-'}
-              </TableCell>
-              <TableCell
-                title={formatDateRange(campaign.startDate, campaign.endDate)}
-              >
-                {formatDateRange(campaign.startDate, campaign.endDate)}
-              </TableCell>
-            </TableRow>
-          ))}
+                  <TableCell>
+                    <button
+                      type="button"
+                      className="text-text-primary hover:underline focus-visible:outline-2 focus-visible:outline-action-primary"
+                      aria-label={`캠페인 ${campaign.campaignId} 상세 보기`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openDetail(campaign.campaignId);
+                      }}
+                    >
+                      {campaign.campaignId}
+                    </button>
+                  </TableCell>
+                  <TableCell>{campaign.storeId}</TableCell>
+                  <TableCell title={campaign.storeName ?? undefined}>
+                    {campaign.storeName ?? '미등록 가게'}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      variant={campaignStatusMeta[campaign.status].variant}
+                    >
+                      {campaignStatusMeta[campaign.status].label}
+                    </StatusBadge>
+                  </TableCell>
+                  <TableCell>{formatDateTime(campaign.createdAt)}</TableCell>
+                  <TableCell>{getCampaignDiscount(campaign)}</TableCell>
+                  <TableCell>
+                    {campaign.dailyBudget === null
+                      ? '미설정'
+                      : formatPoints(campaign.dailyBudget)}
+                  </TableCell>
+                  <TableCell>{getCampaignPeriod(campaign)}</TableCell>
+                  <TableCell>
+                    {report ? formatPoints(report.spentAmount) : unavailable}
+                  </TableCell>
+                  <TableCell>
+                    {report
+                      ? `${formatNumber(report.validImpressionCount)}회`
+                      : unavailable}
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+          {resource.data && resource.error && (
+            <tr>
+              <TableError
+                colSpan={columns.length}
+                description={resource.error}
+                onRetry={resource.loadMore}
+              />
+            </tr>
+          )}
         </tbody>
       </DataTable>
-      <PaginationSummary {...pagination} />
+      {performance.error && (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p role="alert" className="text-body-sm-web text-status-danger-fg">
+            실적 조회 실패: {performance.error}
+          </p>
+          <Button variant="neutral" onClick={performance.refresh}>
+            실적 다시 조회
+          </Button>
+        </div>
+      )}
+      <LoadMoreButton
+        hasMore={Boolean(resource.data?.nextPageToken && !resource.error)}
+        loading={resource.loading}
+        onClick={resource.loadMore}
+        controls={
+          <>
+            {/* 커서 응답에는 전체 건수가 없으므로 현재까지 불러온 개수만 표시한다. */}
+            {resource.data && (
+              <span className="text-caption-web text-text-secondary">
+                불러온 캠페인 {items.length}건
+              </span>
+            )}
+            <SelectField
+              aria-label="한 번에 불러올 항목 수"
+              fitContent
+              menuPlacement="top"
+              size="compact"
+              value={String(filters.size)}
+              options={[5, 10, 20, 50].map((size) => ({
+                label: `${size}개씩 불러오기`,
+                value: String(size),
+              }))}
+              onValueChange={(value) => updateFilters({ size: Number(value) })}
+            />
+          </>
+        }
+      />
+      <AdminDrawer
+        open={Boolean(filters.detail)}
+        onClose={() => updateFilters({ detail: '' })}
+        title="캠페인 상세"
+        resizable
+      >
+        {filters.detail && <CampaignDetails campaignId={filters.detail} />}
+      </AdminDrawer>
     </section>
   );
 };

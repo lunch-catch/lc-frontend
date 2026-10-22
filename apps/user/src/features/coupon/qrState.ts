@@ -1,4 +1,3 @@
-import { getTodayAt } from '@user/api/clock';
 import type { Coupon, QrToken } from '@user/api/coupon';
 
 // QR 화면이 보여줄 상태
@@ -7,6 +6,7 @@ export type QrState =
   | 'active'
   | 'urgent'
   | 'refreshing'
+  | 'failed'
   | 'offline'
   | 'used'
   | 'expired';
@@ -19,23 +19,28 @@ interface QrStateInput {
   now: number;
   token: QrToken | null;
   isOnline: boolean;
+  // QR을 받지 못했는지
+  hasFailed: boolean;
 }
 
 // 앞에 있는 조건이 먼저다. 쓸 수 없는 쿠폰인지부터 보고, 쓸 수 있으면 QR이 준비됐는지 본다
 export const getQrState = ({
   coupon,
+  hasFailed,
   isOnline,
   now,
   token,
 }: QrStateInput): QrState => {
-  if (coupon.status === 'used') return 'used';
-  if (coupon.status === 'expired' || now >= Date.parse(coupon.expiresAt)) {
+  if (coupon.state === 'USED') return 'used';
+  if (coupon.state === 'EXPIRED' || now >= Date.parse(coupon.usableEndTime)) {
     return 'expired';
   }
-  if (now < getTodayAt(coupon.usableFrom, now)) return 'beforeUse';
+  if (now < Date.parse(coupon.usableStartTime)) return 'beforeUse';
   // 연결이 끊기면 새 QR을 받을 수 없어 마지막 QR의 남은 시간만 보여준다
   if (!isOnline) return 'offline';
-  if (!token || token.expiresAt <= now) return 'refreshing';
+  if (!token || token.expiresAt <= now) {
+    return hasFailed ? 'failed' : 'refreshing';
+  }
   if (token.expiresAt - now <= QR_URGENT_MS) return 'urgent';
   return 'active';
 };

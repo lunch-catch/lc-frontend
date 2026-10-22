@@ -1,73 +1,112 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Tabs } from '@repo/ui';
 
-import { createMockBillingState } from '@admin/api/mocks/billing';
-import type { TableDensity } from '@admin/components/DataTable';
+import { useAdminAuth } from '@admin/auth/useAdminAuth';
+import { queryChoice } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import type { TableDensity } from '@admin/ui/DataTable';
 
-import { createDailyCache, getKoreaDate } from './billingUtils';
+import { getKoreaDate } from './billingUtils';
 import { PaymentHistoryTab } from './tabs/PaymentHistoryTab';
 import { PointLedgerTab } from './tabs/PointLedgerTab';
 import { PointPolicyTab } from './tabs/PointPolicyTab';
 import { RefundRequestsTab } from './tabs/RefundRequestsTab';
 import { SalesOverviewTab } from './tabs/SalesOverviewTab';
+import { SettlementMismatchesTab } from './tabs/SettlementMismatchesTab';
 
-type BillingTab = 'payments' | 'refunds' | 'ledger' | 'sales' | 'policy';
+type BillingTab =
+  'payments' | 'ledger' | 'refunds' | 'policy' | 'mismatches' | 'sales';
 
 interface BillingTabItem {
-  disabled?: boolean;
   label: string;
   value: BillingTab;
 }
 
 const tabs: BillingTabItem[] = [
+  { label: '정산 검증', value: 'mismatches' },
+  { label: '환불 요청', value: 'refunds' },
   { label: '결제 내역', value: 'payments' },
-  { label: '환불 요청', value: 'refunds', disabled: true },
   { label: '포인트 변동 내역', value: 'ledger' },
   { label: '매출 현황', value: 'sales' },
-  { label: '충전 정책', value: 'policy', disabled: true },
+  { label: '충전 정책', value: 'policy' },
 ];
+const tabQuery = {
+  tab: queryChoice(
+    tabs.map((item) => item.value),
+    'mismatches',
+  ),
+};
 
 export const BillingManagementContent = () => {
+  const { admin } = useAdminAuth();
+  const [ledgerRevision, setLedgerRevision] = useState(0);
+  const [ledgerNotice, setLedgerNotice] = useState('');
   const [today] = useState(getKoreaDate);
-  const [state, setState] = useState(() => createMockBillingState(today));
-  const [dailyCache] = useState(() => createDailyCache(state.ledger, today));
-  const [tab, setTab] = useState<BillingTab>('payments');
-  const activeTab =
-    tabs.find((item) => item.value === tab && !item.disabled)?.value ??
-    'payments';
+  const {
+    filters: { tab },
+    updateFilters,
+  } = useUrlFilters('', tabQuery);
   const [density, setDensity] = useState<TableDensity>('normal');
-  const [pageSize, setPageSize] = useState(20);
-  const preferences = { density, setDensity, pageSize, setPageSize };
-  const props = { state, setState, today, preferences };
+  const preferences = { density, setDensity };
 
   return (
     <section className="flex flex-col gap-4">
       <header>
         <h2 className="text-display-web font-semibold">포인트 / 정산 관리</h2>
         <p className="mt-2 text-body-sm-web text-text-secondary">
-          충전과 환불, 점주별 포인트 원장 및 플랫폼 집계 현황을 관리합니다.
+          결제·포인트 내역과 환불 요청, 충전 정책 및 정산 불일치를 관리합니다.
         </p>
       </header>
-      <div className="overflow-x-auto">
-        <Tabs
-          items={tabs}
-          onValueChange={(value) => {
-            const next = tabs.find(
-              (item) => item.value === value && !item.disabled,
-            );
+      <div className="overflow-x-auto ui-scrollbar">
+        <div className="w-max">
+          <Tabs
+            items={tabs}
+            onValueChange={(value) => {
+              const next = tabs.find((item) => item.value === value);
 
-            if (next) setTab(next.value);
-          }}
-          value={activeTab}
-        />
+              if (next) updateFilters({ tab: next.value });
+            }}
+            value={tab}
+          />
+        </div>
       </div>
-      {activeTab === 'payments' && <PaymentHistoryTab {...props} />}
-      {activeTab === 'refunds' && <RefundRequestsTab {...props} />}
-      {activeTab === 'ledger' && <PointLedgerTab {...props} />}
-      {activeTab === 'sales' && (
-        <SalesOverviewTab {...props} dailyCache={dailyCache} />
+      {tab === 'payments' && <PaymentHistoryTab preferences={preferences} />}
+      {tab === 'ledger' && (
+        <>
+          {ledgerNotice && (
+            <p role="status" className="text-body-sm-web text-text-secondary">
+              {ledgerNotice}
+            </p>
+          )}
+          {/* 조정 후 기존 커서를 버리고 원장과 기간 합계를 함께 다시 읽는다. */}
+          <PointLedgerTab
+            key={`${admin?.adminId}:${ledgerRevision}`}
+            today={today}
+            preferences={preferences}
+            onAdjusted={(ledgerId) => {
+              setLedgerRevision((value) => value + 1);
+              setLedgerNotice(
+                `포인트 조정을 완료했습니다. (원장 ID: ${ledgerId})`,
+              );
+            }}
+          />
+        </>
       )}
-      {activeTab === 'policy' && <PointPolicyTab {...props} />}
+      {tab === 'refunds' && (
+        <RefundRequestsTab key={admin?.adminId} preferences={preferences} />
+      )}
+      {tab === 'policy' && (
+        <PointPolicyTab key={admin?.adminId} preferences={preferences} />
+      )}
+      {tab === 'mismatches' && (
+        <SettlementMismatchesTab
+          key={admin?.adminId}
+          preferences={preferences}
+        />
+      )}
+      {tab === 'sales' && (
+        <SalesOverviewTab today={today} preferences={preferences} />
+      )}
     </section>
   );
 };

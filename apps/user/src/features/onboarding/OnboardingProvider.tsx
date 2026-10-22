@@ -13,7 +13,6 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
     terms: false,
     privacy: false,
     location: false,
-    marketing: false,
   });
   const [gender, setGender] = useState<Gender | null>(null);
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);

@@ -1,83 +1,84 @@
-import { type ReactNode, useState } from 'react';
+import {
+  type ReactNode,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import { LoaderCircle } from 'lucide-react';
 
-import { initialAdminAccounts } from '@admin/api/mocks/adminAccounts';
-import type { AdminAccountRole } from '@admin/features/admin-account/adminAccountTypes';
+import { ApiError } from '@admin/api/client';
+import { TableSettingsAccountContext } from '@admin/ui/DataTable/tableSettingsAccountContext';
 
-import { AdminAuthContext, type AdminLoginValues } from './adminAuthContext';
+import { AdminAuthContext } from './adminAuthContext';
+import {
+  getAuthState,
+  loginAdmin,
+  logoutAdmin,
+  restoreAdmin,
+  subscribeAuth,
+} from './adminAuthStore';
 
-// 목업 상태만 현재 탭에 유지한다. 실제 인증·권한은 서버 응답으로 대체한다.
-const storageKey = 'lunch-catch-admin-mock-authenticated';
-const accountKey = 'lunch-catch-admin-mock-account-id';
+const AuthLoading = () => {
+  const [showSpinner, setShowSpinner] = useState(false);
 
-const getMockRole = (loginId: string): AdminAccountRole =>
-  initialAdminAccounts.find(
-    (account) => account.id === loginId && account.status === 'ACTIVE',
-  )?.role ?? 'ADMIN';
+  useEffect(() => {
+    // 빠른 인증 복원에서는 로딩 표시가 나타났다 사라지는 깜빡임을 피한다.
+    const timer = window.setTimeout(() => setShowSpinner(true), 300);
+    return () => window.clearTimeout(timer);
+  }, []);
 
-const readRole = (): AdminAccountRole | null => {
-  try {
-    return readAuthentication()
-      ? getMockRole(window.sessionStorage.getItem(accountKey) ?? '')
-      : null;
-  } catch {
-    return null;
-  }
-};
-
-const readAuthentication = () => {
-  try {
-    return window.sessionStorage.getItem(storageKey) === 'true';
-  } catch {
-    return false;
-  }
+  return (
+    <main
+      aria-busy="true"
+      className="flex min-h-screen items-center justify-center bg-bg-page"
+    >
+      {showSpinner && (
+        <div role="status">
+          <LoaderCircle
+            aria-hidden="true"
+            className="size-5 animate-spin text-text-tertiary motion-reduce:animate-none"
+          />
+          <span className="sr-only">로그인 상태 확인 중</span>
+        </div>
+      )}
+    </main>
+  );
 };
 
 export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(readAuthentication);
-  const [role, setRole] = useState(readRole);
+  const { admin, authNotice, isRestoring, restoreError } = useSyncExternalStore(
+    subscribeAuth,
+    getAuthState,
+  );
+  useEffect(() => {
+    void restoreAdmin().catch(() => undefined);
+  }, []);
 
-  const saveAuthentication = (authenticated: boolean) => {
-    setIsAuthenticated(authenticated);
-    try {
-      if (authenticated) window.sessionStorage.setItem(storageKey, 'true');
-      else window.sessionStorage.removeItem(storageKey);
-    } catch {
-      // 저장소를 사용할 수 없어도 현재 화면의 로그인·로그아웃은 동작한다.
-    }
-  };
-
-  const login = ({ loginId, password }: AdminLoginValues) => {
-    if (!loginId || !password) return;
-    const accountId = loginId.trim().toUpperCase();
-    setRole(getMockRole(accountId));
-    saveAuthentication(true);
-    try {
-      window.sessionStorage.setItem(accountKey, accountId);
-    } catch {
-      // 저장소가 차단된 환경에서는 현재 화면의 역할만 유지한다.
-    }
-  };
-
-  const logout = () => {
-    saveAuthentication(false);
-    setRole(null);
-    try {
-      window.sessionStorage.removeItem(accountKey);
-    } catch {
-      // 저장소 사용 여부와 관계없이 메모리의 인증·권한은 해제한다.
-    }
-  };
+  // 쿠키 복원이 끝나기 전에 로그인 화면으로 이동하면 원래 방문한 경로가 사라진다.
+  if (isRestoring) return <AuthLoading />;
+  // 복원 실패가 공개 로그인 화면까지 가리지 않도록 오류는 로그인 안내로만 전달한다.
+  const restoreNotice =
+    restoreError instanceof ApiError
+      ? restoreError.message
+      : restoreError
+        ? '로그인 상태를 확인하지 못했습니다. 연결 상태를 확인한 뒤 로그인해 주세요.'
+        : null;
 
   return (
     <AdminAuthContext
       value={{
-        isAuthenticated,
-        role,
-        login,
-        logout,
+        admin,
+        authNotice: authNotice ?? restoreNotice,
+        isAuthenticated: admin !== null,
+        role: admin?.role ?? null,
+        login: loginAdmin,
+        logout: logoutAdmin,
       }}
     >
-      {children}
+      {/* 계정 변경을 테이블 설정에 전달하되 저장된 설정은 로그아웃 후에도 보관한다. */}
+      <TableSettingsAccountContext value={admin?.adminId ?? null}>
+        {children}
+      </TableSettingsAccountContext>
     </AdminAuthContext>
   );
 };

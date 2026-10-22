@@ -1,12 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChoiceChip } from '@repo/ui';
 
-import { type Coupon, fetchCoupons } from '@user/api/coupon';
-import mascotEmpty from '@user/assets/illustrations/mascot-empty.webp';
-import EmptyState from '@user/components/EmptyState/EmptyState';
+import {
+  type Coupon,
+  type CouponFilter,
+  fetchCouponSummary,
+} from '@user/api/coupon';
+import mascotHistoryEmpty from '@user/assets/illustrations/mascot-history-empty.webp';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
+import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 import CouponCard from './CouponCard';
+import { formatClock } from './couponFormat';
 import CouponListSkeleton from './CouponListSkeleton';
+import CouponLoadError from './CouponLoadError';
+import { useCouponHistory } from './useCouponHistory';
 
 type HistoryFilter = 'all' | 'used' | 'expired';
 
@@ -17,6 +25,14 @@ const filterOptions: { value: HistoryFilter; label: string }[] = [
   { value: 'expired', label: '만료' },
 ];
 
+// 필터 칩마다 서버에 보낼 필터. 전체는 사용 완료와 만료를 함께 받아야 해서 필터 없이 받고 미사용 쿠폰만 뺀다
+// (서버는 한 번에 한 상태만 고를 수 있다)
+const serverFilters: Record<HistoryFilter, CouponFilter | undefined> = {
+  all: undefined,
+  used: 'used',
+  expired: 'expired',
+};
+
 const filterEmptyMessages: Record<HistoryFilter, string> = {
   all: '사용 내역이 없어요',
   used: '사용한 쿠폰이 없어요',
@@ -25,20 +41,15 @@ const filterEmptyMessages: Record<HistoryFilter, string> = {
 
 // 사용 완료는 사용한 시각, 만료는 만료된 시각을 기준으로 묶고 정렬한다
 const getEventAt = (coupon: Coupon) =>
-  coupon.status === 'used' && coupon.usedAt ? coupon.usedAt : coupon.expiresAt;
+  coupon.state === 'USED' && coupon.useTime
+    ? coupon.useTime
+    : coupon.usableEndTime;
 
 const formatDate = (isoString: string) =>
   new Date(isoString).toLocaleDateString('ko-KR', {
     day: 'numeric',
     month: 'long',
     weekday: 'short',
-  });
-
-const formatTime = (isoString: string) =>
-  new Date(isoString).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
   });
 
 // 최근 것이 위로 오게 정렬한 뒤 같은 날짜끼리 묶는다
@@ -62,17 +73,26 @@ const groupByDate = (coupons: Coupon[]) => {
 };
 
 // 쿠폰함 사용 내역 탭. 사용 완료와 만료된 쿠폰을 날짜별로 보여준다
+// 계속 쌓이는 목록이라 20개씩 받고, 목록 끝에 가까워지면 다음 20개를 이어서 받는다
 const CouponHistory = () => {
-  const [coupons, setCoupons] = useState<Coupon[] | null>(null);
   const [filter, setFilter] = useState<HistoryFilter>('all');
+  const history = useCouponHistory(serverFilters[filter]);
+  // 사용한 횟수는 나눠 받은 목록으로 셀 수 없어 쿠폰 요약의 누적 값을 쓴다. 못 받으면 문구를 숨긴다
+  // undefined면 불러오는 중, null이면 받지 못함
+  const [usedCount, setUsedCount] = useState<number | null | undefined>();
+  // 목록 끝에 두어, 화면에 가까워지면 다음 페이지를 받는다
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let ignore = false;
 
-    fetchCoupons().then((items) => {
-      if (ignore) return;
-      setCoupons(items.filter((coupon) => coupon.status !== 'available'));
-    });
+    fetchCouponSummary()
+      .then((summary) => {
+        if (!ignore) setUsedCount(summary.usedCouponCount);
+      })
+      .catch(() => {
+        if (!ignore) setUsedCount(null);
+      });
 
     // 응답 전에 화면을 벗어나면 결과를 버린다
     return () => {
@@ -80,21 +100,66 @@ const CouponHistory = () => {
     };
   }, []);
 
-  if (coupons?.length === 0) {
+  const { hasMore, hasMoreError, isLoadingMore, items, loadMore } = history;
+  // 처음 화면을 그릴 만큼 받았는지. 목록과 사용 횟수를 둘 다 받은 뒤(실패 포함)에 한 번만 켠다
+  const [hasFirstLoaded, setHasFirstLoaded] = useState(false);
+  const isFirstLoading =
+    !hasFirstLoaded && (items === undefined || usedCount === undefined);
+  if (!hasFirstLoaded && !isFirstLoading) setHasFirstLoaded(true);
+  const showSkeleton = useDelayedLoading(items === undefined || isFirstLoading);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || isLoadingMore || hasMoreError) return;
+
+    // 끝에 닿기 전에 미리 받도록 화면 아래 300px 앞에서 받는다
+    // 받은 뒤에도 끝이 화면 안에 있으면(전체에서 미사용 쿠폰을 빼 목록이 짧을 때) 새로 관찰하며 이어서 받는다
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) loadMore();
+      },
+      { rootMargin: '0px 0px 300px 0px' },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, hasMoreError, isLoadingMore, items, loadMore]);
+
+  const changeFilter = (nextFilter: HistoryFilter) => {
+    if (nextFilter === filter) return;
+    history.reset();
+    setFilter(nextFilter);
+  };
+
+  const historyCoupons =
+    items?.filter((coupon) => coupon.state !== 'ISSUED') ?? [];
+  // 마지막 페이지까지 받았는데 아무것도 없을 때만 비었다고 본다
+  const isEmpty = items && !hasMore && historyCoupons.length === 0;
+
+  if (isEmpty && filter === 'all' && !isFirstLoading) {
     return (
       <EmptyState
         description="쿠폰을 사용하면 여기에 기록돼요"
-        image={mascotEmpty}
+        image={mascotHistoryEmpty}
         title="아직 사용 내역이 없어요"
       />
     );
   }
 
-  const usedCount =
-    coupons?.filter((coupon) => coupon.status === 'used').length ?? 0;
-  const filteredCoupons =
-    coupons?.filter((coupon) => filter === 'all' || coupon.status === filter) ??
-    [];
+  // 처음 불러오는 동안에는 필터 칩과 사용 횟수를 그리지 않는다
+  // 먼저 칩을 그리면 내역이 없을 때 칩이 나왔다가 빈 화면으로 바뀌며 번쩍이고,
+  // 사용 횟수가 따로 늦게 붙으면 아래 목록이 한 번 밀린다. 목록과 횟수를 다 받으면 한 번에 보여준다
+  // 한 번 보여준 뒤 칩을 바꿔 다시 받을 때는 칩을 그대로 두고 목록 자리만 바꾼다
+  if (isFirstLoading) {
+    return (
+      <div className="flex flex-col px-page pt-3 pb-6">
+        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
+        {showSkeleton && <CouponListSkeleton />}
+        <p className="sr-only" role="status">
+          사용 내역을 불러오는 중이에요
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 px-page pt-3 pb-6">
@@ -105,57 +170,69 @@ const CouponHistory = () => {
             checked={filter === option.value}
             key={option.value}
             name="coupon-history-filter"
-            onChange={() => setFilter(option.value)}
+            onChange={() => changeFilter(option.value)}
             value={option.value}
           >
             {option.label}
           </ChoiceChip>
         ))}
       </fieldset>
-      {!coupons && (
+      {typeof usedCount === 'number' && (
+        <p className="text-caption-mobile text-text-secondary">
+          지금까지 쿠폰을{' '}
+          <strong className="font-bold text-text-primary">{usedCount}번</strong>{' '}
+          사용했어요
+        </p>
+      )}
+      {items === null && <CouponLoadError onRetry={history.retry} />}
+      {items === undefined && (
         <>
-          <CouponListSkeleton />
+          {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
+          {showSkeleton && <CouponListSkeleton />}
           <p className="sr-only" role="status">
             사용 내역을 불러오는 중이에요
           </p>
         </>
       )}
-      {coupons && (
-        <>
-          <p className="text-caption-mobile text-text-secondary">
-            지금까지 쿠폰을{' '}
-            <strong className="font-bold text-text-primary">
-              {usedCount}번
-            </strong>{' '}
-            사용했어요
-          </p>
-          {filteredCoupons.length === 0 && (
-            <p className="py-10 text-center text-body-sm-mobile text-text-secondary">
-              {filterEmptyMessages[filter]}
-            </p>
+      {isEmpty && (
+        <p className="py-10 text-center text-body-sm-mobile text-text-secondary">
+          {filterEmptyMessages[filter]}
+        </p>
+      )}
+      {groupByDate(historyCoupons).map((group) => (
+        <section className="flex flex-col gap-2" key={group.date}>
+          <h3 className="text-caption-mobile font-bold text-text-secondary">
+            {group.date}
+          </h3>
+          <ul className="flex flex-col gap-3">
+            {group.coupons.map((coupon) => (
+              <CouponCard
+                coupon={coupon}
+                detail={
+                  coupon.state === 'USED'
+                    ? `사용 완료 · ${formatClock(getEventAt(coupon))}`
+                    : `만료 · ${formatClock(getEventAt(coupon))}`
+                }
+                dimmed
+                key={coupon.memberCouponId}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
+      {items && hasMore && (
+        <div ref={sentinelRef}>
+          {hasMoreError ? (
+            <CouponLoadError onRetry={loadMore} />
+          ) : (
+            <>
+              <CouponListSkeleton />
+              <p className="sr-only" role="status">
+                사용 내역을 더 불러오는 중이에요
+              </p>
+            </>
           )}
-          {groupByDate(filteredCoupons).map((group) => (
-            <section className="flex flex-col gap-2" key={group.date}>
-              <h3 className="text-caption-mobile font-bold text-text-secondary">
-                {group.date}
-              </h3>
-              <ul className="flex flex-col gap-3">
-                {group.coupons.map((coupon) => (
-                  <CouponCard
-                    coupon={coupon}
-                    detail={
-                      coupon.status === 'used'
-                        ? `사용 완료 · ${formatTime(getEventAt(coupon))}`
-                        : `만료 · ${formatTime(getEventAt(coupon))}`
-                    }
-                    dimmed
-                    key={coupon.issueId}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </>
+        </div>
       )}
     </div>
   );

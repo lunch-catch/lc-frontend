@@ -1,10 +1,16 @@
-export type AdminAccountRole = 'ADMIN' | 'SUPER_ADMIN';
-export type AdminAccountStatus = 'ACTIVE' | 'DELETED';
+import type { AdminAccountRole } from '@admin/api/adminAccounts';
 
-export interface AdminAccount {
-  createdAt: string;
+export interface AdminAccountForm {
   id: string;
   name: string;
+  password: string;
+  passwordConfirmation: string;
   role: AdminAccountRole;
-  status: AdminAccountStatus;
+}
+
+export interface AdminAccountFormErrors {
+  id?: string;
+  name?: string;
+  password?: string;
+  passwordConfirmation?: string;
 }

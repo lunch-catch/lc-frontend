@@ -1,5 +1,6 @@
 import type { StoreDetailCampaign } from '@user/api/store';
-import { formatDiscount } from '@user/features/explore/storeFormat';
+import PosterFrame from '@user/ui/PosterFrame/PosterFrame';
+import { formatDiscount } from '@user/ui/storeFormat';
 
 import type { CouponState } from './couponState';
 
@@ -13,11 +14,12 @@ interface CouponSectionProps {
   posterHtml: string | null | undefined;
 }
 
-const TARGET_LABELS: Record<StoreDetailCampaign['discountTargetType'], string> =
-  {
-    ALL: '전 메뉴',
-    MENU: '지정 메뉴',
-  };
+// 할인 대상. 메뉴 할인이면 그 메뉴 이름을 쓰고, 이름이 없는 예전 응답이면 '지정 메뉴'로 둔다
+const getTargetLabel = ({
+  discountTargetType,
+  targetMenu,
+}: StoreDetailCampaign) =>
+  discountTargetType === 'ALL' ? '전 메뉴' : (targetMenu?.name ?? '지정 메뉴');
 
 // 오늘의 쿠폰과 점주가 만든 포스터
 const CouponSection = ({
@@ -34,6 +36,8 @@ const CouponSection = ({
     available: `발급 가능 · 잔여 ${remainingCount}장`,
     soldOut: '마감 · 수량 소진',
     limitReached: `발급 제한 · 오늘 ${dailyLimit}개 완료`,
+    closedNotWished: '오늘 발급 마감',
+    closedWished: '오늘 발급 마감 · 찜 완료',
     issued: '발급 완료 · 쿠폰함에서 확인',
   };
 
@@ -47,8 +51,7 @@ const CouponSection = ({
           매일 11:00 선착순 발급
         </p>
         <p className="mt-1 text-h2-mobile font-bold text-text-primary">
-          {TARGET_LABELS[campaign.discountTargetType]}{' '}
-          {formatDiscount(campaign)}
+          {getTargetLabel(campaign)} {formatDiscount(campaign)}
         </p>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-dashed border-action-primary/30 pt-3 text-caption-mobile">
           <span className="text-text-secondary">
@@ -56,7 +59,10 @@ const CouponSection = ({
           </span>
           <span
             className={`shrink-0 font-bold ${
-              state === 'soldOut' || state === 'limitReached'
+              state === 'soldOut' ||
+              state === 'limitReached' ||
+              state === 'closedWished' ||
+              state === 'closedNotWished'
                 ? 'text-text-tertiary'
                 : 'text-text-brand'
             }`}
@@ -66,17 +72,10 @@ const CouponSection = ({
         </div>
       </div>
       {posterHtml !== null && (
-        // 포스터는 점주 화면과 같은 3:4. 불러오는 동안에는 회색 배경이 보인다
-        <div className="relative aspect-3/4 overflow-hidden rounded-xl bg-surface-subtle">
+        // 포스터는 점주 화면과 같은 A4(210:297). 불러오는 동안에는 회색 배경이 보인다
+        <div className="relative aspect-210/297 overflow-hidden rounded-xl bg-surface-subtle">
           {posterHtml && (
-            <iframe
-              className="pointer-events-none absolute inset-0 size-full border-0"
-              // 포스터 안의 스크립트, 폼, 링크 이동을 모두 막는다
-              sandbox=""
-              srcDoc={posterHtml}
-              tabIndex={-1}
-              title={`${storeName} 포스터`}
-            />
+            <PosterFrame html={posterHtml} title={`${storeName} 포스터`} />
           )}
         </div>
       )}

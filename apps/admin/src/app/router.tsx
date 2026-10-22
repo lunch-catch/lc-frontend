@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+﻿import { createBrowserRouter, Navigate } from 'react-router';
 
 import { RequireAdminAuth } from '@admin/auth/RequireAdminAuth';
 import { AdminLayout } from '@admin/layout/AdminLayout';
@@ -8,7 +8,6 @@ import { DashboardPage } from '@admin/pages/DashboardPage';
 import { FraudManagementPage } from '@admin/pages/FraudManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
 import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
-import { PendingManagementPage } from '@admin/pages/PendingManagementPage';
 import { PointSettlementPage } from '@admin/pages/PointSettlementPage';
 import { TemplateCreatePage } from '@admin/pages/TemplateCreatePage';
 import { TemplateManagementPage } from '@admin/pages/TemplateManagementPage';
@@ -30,6 +29,7 @@ export const router = createBrowserRouter([
           { path: '/campaigns', element: <CampaignManagementPage /> },
           { path: '/templates', element: <TemplateManagementPage /> },
           { path: '/templates/new', element: <TemplateCreatePage /> },
+          { path: '/templates/:templateId', element: <TemplateCreatePage /> },
           {
             path: '/templates/drafts/:templateId/edit',
             element: <TemplateCreatePage />,
@@ -37,10 +37,6 @@ export const router = createBrowserRouter([
           { path: '/settlements', element: <PointSettlementPage /> },
           { path: '/members', element: <MemberManagementPage /> },
           { path: '/fraud', element: <FraudManagementPage /> },
-          {
-            path: '/reviews',
-            element: <PendingManagementPage title="심사 관리" />,
-          },
           { path: '/admin-accounts', element: <AdminAccountManagementPage /> },
           // 정의되지 않은 주소가 빈 화면으로 남지 않도록 기본 메뉴로 보낸다.
           { path: '*', element: <Navigate replace to="/dashboard" /> },

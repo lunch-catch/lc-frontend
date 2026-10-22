@@ -1,41 +1,44 @@
-import { Navigate, useNavigate, useParams } from 'react-router';
+﻿import { useLocation, useNavigate, useParams } from 'react-router';
 
-import { TemplateCreateContent } from '@admin/features/template/components/TemplateCreateContent';
-import type { PosterTemplate } from '@admin/features/template/templateTypes';
+import { getValidTemplateName } from '@admin/features/template/templateUtils';
+import { TemplateCreateContent } from '@admin/features/template/ui/TemplateCreateContent';
 import { useTemplateManagement } from '@admin/features/template/useTemplateManagement';
 
 export const TemplateCreatePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeState = location.state as {
+    templateName?: unknown;
+    createdTemplateId?: unknown;
+  } | null;
+  const initialName = getValidTemplateName(routeState?.templateName);
   const { templateId } = useParams();
-  const { templates, saveTemplate, saveTemporaryTemplate } =
-    useTemplateManagement();
-  const draftTemplate = templateId
-    ? (templates.find(
-        (template) => template.id === templateId && template.status === 'DRAFT',
-      ) ?? null)
-    : null;
-  // 임시저장은 메모리 목업이므로 새로고침 후 사라진 초안 주소는 목록으로 돌아간다.
-  if (templateId && !draftTemplate) return <Navigate replace to="/templates" />;
-
-  const saveAndReturn = (
-    template: PosterTemplate,
-    save: (template: PosterTemplate) => boolean,
-  ) => {
-    const saved = save(template);
-    // 저장 실패 시 작성 화면을 유지해 기존 오류 처리와 재시도를 보존한다.
-    if (saved) void navigate('/templates', { replace: true });
-    return saved;
+  // 첫 생성의 주소 변경에서는 대화를 유지하고, 다른 템플릿을 열면 작성 상태를 분리한다.
+  const editorKey =
+    templateId && routeState?.createdTemplateId !== templateId
+      ? templateId
+      : 'new';
+  const { refresh } = useTemplateManagement();
+  const returnToList = () => {
+    refresh();
+    // 상세 주소에도 목록의 조건을 유지해 공유 링크로 방문해도 같은 조건으로 돌아간다.
+    void navigate(`/templates${location.search}`);
   };
 
   return (
     <TemplateCreateContent
-      key={templateId ?? 'new'}
-      draftTemplate={draftTemplate}
-      onBack={() => void navigate('/templates')}
-      onSave={(template) => saveAndReturn(template, saveTemplate)}
-      onTemporarySave={(template) =>
-        saveAndReturn(template, saveTemporaryTemplate)
-      }
+      key={editorKey}
+      templateId={templateId}
+      initialName={initialName}
+      onBack={returnToList}
+      onPublished={returnToList}
+      onCreated={(id) => {
+        refresh();
+        void navigate(`/templates/drafts/${id}/edit${location.search}`, {
+          replace: true,
+          state: { createdTemplateId: String(id) },
+        });
+      }}
     />
   );
 };

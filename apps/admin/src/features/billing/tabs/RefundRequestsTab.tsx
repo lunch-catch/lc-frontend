@@ -1,198 +1,218 @@
 import { useState } from 'react';
-import { Button, Input, StatusBadge, type StatusBadgeVariant } from '@repo/ui';
+import { SearchField, SelectField, StatusBadge } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
 
-import { AdminDrawer } from '@admin/components/AdminDrawer/AdminDrawer';
-import type { RefundStatus } from '@admin/features/billing/billingTypes';
+import { type AdminRefund, getRefunds } from '@admin/api/refunds';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
+import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
+
 import {
-  getBalance,
-  getRefundBlockReason,
-  processRefund,
+  getBillingRangeError,
+  isBillingInputId,
   refundStatusLabels,
-} from '@admin/features/billing/billingUtils';
+  refundVariants,
+} from '../billingManagementUtils';
+import { refundQuery } from '../billingQuery';
+import type { BillingTablePreferences } from '../billingView';
 import {
-  type BillingTabProps,
-  cell,
-  currentTimestamp,
-  useBillingFeedback,
-} from '@admin/features/billing/billingView';
-import {
-  BillingFeedback,
-  DetailItem,
-} from '@admin/features/billing/components/BillingDetails';
-import { BillingTable } from '@admin/features/billing/components/BillingTable';
-const refundVariants: Record<RefundStatus, StatusBadgeVariant> = {
-  REQUESTED: 'warning',
-  APPROVED: 'success',
-  REJECTED: 'danger',
-};
+  type BillingServerColumn,
+  BillingServerTable,
+} from '../ui/BillingServerTable';
+import { RefundDetails } from '../ui/RefundDetails';
+import { useBillingResource } from '../useBillingResource';
 
-const columns = [
-  { label: '요청 ID', width: 15 },
-  { label: '점주 ID', width: 15 },
-  { label: '요청 포인트', width: 17 },
-  { label: '상태', width: 13 },
-  { label: '처리자 ID', width: 15 },
-  { label: '요청 시각', width: 25 },
+const columns: BillingServerColumn<AdminRefund>[] = [
+  {
+    key: 'requestedAt',
+    label: '요청 시각',
+    width: '18%',
+    minWidth: 160,
+    sortable: true,
+    render: (item) => formatDateTime(item.requestedAt),
+  },
+  {
+    key: 'refundRequestId',
+    label: '요청 ID',
+    width: '10%',
+    minWidth: 90,
+    render: (item) => item.refundRequestId,
+  },
+  {
+    key: 'ownerId',
+    label: '점주 ID',
+    width: '10%',
+    minWidth: 90,
+    render: (item) => item.ownerId,
+  },
+  {
+    key: 'amount',
+    label: '요청 포인트',
+    width: '16%',
+    minWidth: 120,
+    align: 'right',
+    sortable: true,
+    render: (item) => formatPoints(item.amount),
+  },
+  {
+    key: 'status',
+    label: '상태',
+    width: '14%',
+    minWidth: 110,
+    render: (item) => (
+      <StatusBadge variant={refundVariants[item.status]}>
+        {refundStatusLabels[item.status]}
+      </StatusBadge>
+    ),
+  },
+  {
+    key: 'processedBy',
+    label: '처리자 ID',
+    width: '12%',
+    minWidth: 100,
+    render: (item) => item.processedBy ?? '—',
+  },
+  {
+    key: 'processedAt',
+    label: '처리 시각',
+    width: '20%',
+    minWidth: 160,
+    sortable: true,
+    render: (item) =>
+      item.processedAt ? formatDateTime(item.processedAt) : '—',
+  },
 ];
-export const RefundRequestsTab = (props: BillingTabProps) => {
-  const { state, today } = props;
-  const { notice, error, setError, clearFeedback, runMutation } =
-    useBillingFeedback(props);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [reason, setReason] = useState('');
-  const selectedRefund = state.refunds.find((item) => item.id === selectedId);
-  const refundBlock = selectedRefund
-    ? getRefundBlockReason(state, selectedRefund)
-    : '';
-  const refundBalance = selectedRefund
-    ? getBalance(state.ledger, selectedRefund.ownerId)
-    : null;
-  const rows = state.refunds.map((item) => ({
-    id: item.id,
-    date: item.requestedAt,
-    status: item.status,
-    ownerId: item.ownerId,
-    search: item.id + ' ' + item.ownerId,
-    cells: [
-      cell(item.id, item.id),
-      cell(item.ownerId, item.ownerId),
-      cell(formatPoints(item.points), item.points),
-      cell(
-        <StatusBadge variant={refundVariants[item.status]}>
-          {refundStatusLabels[item.status]}
-        </StatusBadge>,
-        item.status,
-      ),
-      cell(item.actorId ?? '—', item.actorId ?? ''),
-      cell(formatDateTime(item.requestedAt), item.requestedAt),
-    ],
-  }));
-  const handleRefund = (decision: 'APPROVED' | 'REJECTED') => {
-    if (!selectedRefund) return;
-    if (decision === 'REJECTED' && !reason.trim()) {
-      setError('반려 사유를 입력해주세요.');
-      return;
-    }
-    if (
-      !window.confirm(
-        '이 요청을 ' +
-          (decision === 'APPROVED' ? '전액 환불 승인' : '반려') +
-          '하시겠습니까? 실제 결제가 아닌 목업 처리입니다.',
-      )
-    )
-      return;
-    runMutation(
-      (current) =>
-        processRefund(
-          current,
-          selectedRefund.id,
-          decision,
-          reason,
-          currentTimestamp(today),
-          'ADMIN-MOCK',
-        ),
-      decision === 'APPROVED'
-        ? '목업 환불 완료: REFUND 원장을 기록했습니다.'
-        : '환불 요청을 반려했습니다.',
-    );
+export const RefundRequestsTab = ({
+  preferences,
+}: {
+  preferences: BillingTablePreferences;
+}) => {
+  const { filters, updateFilters } = useUrlFilters('refunds.', refundQuery);
+  const [selected, setSelected] = useState<AdminRefund | null>(null);
+  const [notice, setNotice] = useState('');
+  const search = useUrlSearch(filters.ownerId, (ownerId) => {
+    updateFilters({ ownerId, page: 1 });
+    setSelected(null);
+  });
+  const owner = search.keyword.trim();
+  const pending = search.draftKeyword !== search.keyword;
+  const validation =
+    getBillingRangeError(filters.from, filters.to) ||
+    (owner && !isBillingInputId(owner)
+      ? '점주 ID를 양의 정수로 입력해 주세요.'
+      : '');
+  const query = new URLSearchParams({
+    page: String(filters.page - 1),
+    size: String(filters.size),
+    sortBy: filters.sortBy,
+    sortDir: filters.sortDir,
+  });
+  if (owner) query.set('ownerId', String(Number(owner)));
+  if (filters.status !== 'ALL') query.set('status', filters.status);
+  if (filters.from) query.set('from', filters.from);
+  if (filters.to) query.set('to', filters.to);
+  const resource = useBillingResource(
+    getRefunds,
+    !pending && !validation ? query.toString() : null,
+  );
+  const update = (patch: Partial<typeof filters>) => {
+    updateFilters({ ...patch, page: 1 });
+    setSelected(null);
+    setNotice('');
   };
-
   return (
     <>
-      <BillingFeedback notice={notice} error={error} />
-      <BillingTable
-        preferences={props.preferences}
+      {notice && (
+        <p role="status" className="text-body-sm-web text-text-secondary">
+          {notice}
+        </p>
+      )}
+      <BillingServerTable
+        tableId="billing.refunds"
         columns={columns}
-        rows={rows}
-        defaultStatus="REQUESTED"
-        statusOptions={Object.entries(refundStatusLabels)}
-        onRowClick={(id) => {
-          setSelectedId(id);
-          setDetailOpen(true);
-          setReason('');
-          clearFeedback();
+        items={resource.data?.items ?? []}
+        rowId={(item) => item.refundRequestId}
+        loading={resource.loading || pending}
+        error={validation || resource.error}
+        onRetry={!validation ? resource.refresh : undefined}
+        emptyMessage="조회된 환불 요청이 없습니다."
+        preferences={preferences}
+        page={filters.page}
+        size={filters.size}
+        total={resource.data?.totalElements ?? 0}
+        onPageChange={(page) => {
+          updateFilters({ page });
+          setSelected(null);
         }}
+        onSizeChange={(size) => update({ size })}
+        sort={{ key: filters.sortBy, direction: filters.sortDir }}
+        onSort={(key) =>
+          update({
+            sortBy: key as typeof filters.sortBy,
+            sortDir:
+              filters.sortBy === key && filters.sortDir === 'desc'
+                ? 'asc'
+                : 'desc',
+          })
+        }
+        onOpen={(item) => {
+          setNotice('');
+          setSelected(item);
+        }}
+        filters={
+          <>
+            <SearchField
+              aria-label="환불 점주 ID"
+              placeholder="점주 ID 검색"
+              inputMode="numeric"
+              value={search.draftKeyword}
+              onChange={(event) => search.setDraftKeyword(event.target.value)}
+            />
+            <SelectField
+              fitContent
+              aria-label="환불 상태"
+              value={filters.status}
+              options={[
+                { label: '상태 전체', value: 'ALL' },
+                ...Object.entries(refundStatusLabels).map(([value, label]) => ({
+                  value,
+                  label,
+                })),
+              ]}
+              onValueChange={(value) =>
+                update({ status: value as typeof filters.status })
+              }
+            />
+            <AdminDateRangePicker
+              ariaLabel="환불 요청일 범위"
+              placeholder="요청일 범위 선택"
+              value={{ startDate: filters.from, endDate: filters.to }}
+              onValueChange={(value) =>
+                update({ from: value.startDate, to: value.endDate })
+              }
+            />
+          </>
+        }
       />
       <AdminDrawer
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
+        open={selected !== null}
+        onClose={() => setSelected(null)}
         title="환불 요청 상세"
         resizable
       >
-        {selectedRefund && refundBalance && (
-          <div className="space-y-5">
-            <StatusBadge variant={refundVariants[selectedRefund.status]}>
-              {refundStatusLabels[selectedRefund.status]}
-            </StatusBadge>
-            <dl>
-              <DetailItem label="요청 ID">{selectedRefund.id}</DetailItem>
-              <DetailItem label="점주 ID">{selectedRefund.ownerId}</DetailItem>
-              <DetailItem label="요청 포인트">
-                {formatPoints(selectedRefund.points)}
-              </DetailItem>
-              <DetailItem label="현재 잔액">
-                {formatPoints(refundBalance.balance)}
-              </DetailItem>
-              <DetailItem label="예약 중 포인트">
-                {formatPoints(refundBalance.reserved)}
-              </DetailItem>
-              <DetailItem label="요청 시각">
-                {formatDateTime(selectedRefund.requestedAt)}
-              </DetailItem>
-              <DetailItem label="처리 시각">
-                {selectedRefund.processedAt
-                  ? formatDateTime(selectedRefund.processedAt)
-                  : '—'}
-              </DetailItem>
-              <DetailItem label="처리자">
-                {selectedRefund.actorId ?? '—'}
-              </DetailItem>
-              <DetailItem label="반려 사유">
-                {selectedRefund.rejectionReason || '—'}
-              </DetailItem>
-              <DetailItem label="취소 ID">
-                {selectedRefund.cancellationId || '—'}
-              </DetailItem>
-            </dl>
-            <p className="rounded-lg bg-surface-subtle p-4 text-caption-web text-text-secondary">
-              잔액 전액 환불만 가능합니다. 예약 중 포인트는 제외됩니다.
-              유효기간·환불 조건·수수료의 실제 적용은 백엔드 정책 연동이
-              필요하며 현재는 수수료 없는 목업입니다.
-            </p>
-            {selectedRefund.status === 'REQUESTED' && (
-              <>
-                <p className="text-body-sm-web text-status-warning-fg">
-                  {refundBlock ||
-                    '현재 잔액 전액 환불이 가능한 목업 요청입니다.'}
-                </p>
-                <Input
-                  label="반려 사유"
-                  value={reason}
-                  maxLength={300}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="반려 시 필수 입력"
-                />
-                <div className="flex justify-end gap-3">
-                  <Button
-                    variant="secondary"
-                    disabled={!reason.trim()}
-                    onClick={() => handleRefund('REJECTED')}
-                  >
-                    반려
-                  </Button>
-                  <Button
-                    disabled={Boolean(refundBlock)}
-                    onClick={() => handleRefund('APPROVED')}
-                  >
-                    전액 환불 승인
-                  </Button>
-                </div>
-              </>
-            )}
-            <BillingFeedback notice={notice} error={error} />
-          </div>
+        {selected && (
+          <RefundDetails
+            key={selected.refundRequestId}
+            refund={selected}
+            onRefresh={resource.refresh}
+            onCompleted={(message) => {
+              setSelected(null);
+              setNotice(message);
+              updateFilters({ page: 1 }, true);
+              resource.refresh();
+            }}
+          />
         )}
       </AdminDrawer>
     </>

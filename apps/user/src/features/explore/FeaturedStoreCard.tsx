@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
-
-import { formatDiscount, formatWalkTime } from './storeFormat';
+import { cardClassName } from '@user/ui/Card/Card';
+import {
+  formatDiscount,
+  formatDiscountTarget,
+  formatWalkTime,
+} from '@user/ui/storeFormat';
 
 interface FeaturedStoreCardProps {
   store: StoreListItem;
@@ -18,19 +23,24 @@ const FeaturedStoreCard = ({ store }: FeaturedStoreCardProps) => {
   ]
     .filter(Boolean)
     .join(' · ');
+  const target =
+    store.activeCampaign && formatDiscountTarget(store.activeCampaign);
+  const [hasImageError, setHasImageError] = useState(false);
 
   return (
     <li>
       <Link
-        className="block overflow-hidden rounded-xl border border-border-subtle bg-bg-surface focus-visible:outline-2 focus-visible:outline-action-primary"
+        className={`block overflow-hidden focus-visible:outline-2 focus-visible:outline-action-primary ${cardClassName}`}
         to={`/stores/${store.storeId}`}
       >
-        <div className="relative h-44 bg-surface-subtle">
-          {store.thumbnailUrl ? (
+        <div className="relative h-36 bg-surface-subtle">
+          {/* 주소가 있어도 열리지 않으면 깨진 그림 대신 가게 아이콘을 둔다 */}
+          {store.thumbnailUrl && !hasImageError ? (
             <img
               alt=""
               className="size-full object-cover"
               height={176}
+              onError={() => setHasImageError(true)}
               src={store.thumbnailUrl}
               width={350}
             />
@@ -46,19 +56,28 @@ const FeaturedStoreCard = ({ store }: FeaturedStoreCardProps) => {
             가장 가까운 쿠폰
           </span>
         </div>
-        <div className="flex items-end justify-between gap-3 p-4">
+        {/* 한 장뿐인 대표 카드라 이름은 굵게 두되, 아래 작은 카드와 크기 차이가 너무 나지 않게 한 단계 낮춘다 */}
+        <div className="flex items-end justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <p className="truncate text-h3-mobile font-bold text-text-primary">
+            <p className="truncate text-body-mobile font-bold text-text-primary">
               {store.name}
             </p>
             <p className="mt-1 truncate text-caption-mobile text-text-secondary">
               {meta}
             </p>
           </div>
+          {/* 할인 대상은 할인 아래에 작게 두어, 왼쪽 가게 이름·업종 두 줄과 높이를 맞춘다 */}
           {store.activeCampaign && (
-            <p className="shrink-0 text-h3-mobile font-bold text-text-brand">
-              {formatDiscount(store.activeCampaign)}
-            </p>
+            <div className="max-w-[45%] shrink-0 text-right">
+              <p className="text-body-mobile font-bold text-text-brand">
+                {formatDiscount(store.activeCampaign)}
+              </p>
+              {target && (
+                <p className="mt-1 truncate text-caption-mobile text-text-secondary">
+                  {target}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </Link>
