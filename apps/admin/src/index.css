@@ -4,6 +4,91 @@
 /* 앱 폴더 밖에 있는 공통 패키지의 Tailwind 클래스도 빌드에 포함한다 */
 @source '../../../packages/ui/src';
 
+/* 헤더와 호버 행의 농도를 구분하고 다른 조작 요소의 배경색과 분리한다. */
+:root {
+  --admin-table-header-bg: var(--primitive-neutral-100);
+  --admin-table-row-hover-bg: color-mix(
+    in srgb,
+    var(--primitive-neutral-100) 50%,
+    var(--semantic-bg-surface)
+  );
+}
+
+:root[data-theme='dark'] {
+  --admin-table-header-bg: color-mix(
+    in srgb,
+    var(--primitive-neutral-100) 12%,
+    var(--semantic-bg-surface)
+  );
+  --admin-table-row-hover-bg: color-mix(
+    in srgb,
+    var(--primitive-neutral-100) 6%,
+    var(--semantic-bg-surface)
+  );
+}
+
+/* 어두운 배경에서도 수치·표시점·테두리가 읽히도록 안내 카드의 빨강만 밝게 조정한다. */
+:root[data-theme='dark'] .dashboard-action-queue[data-has-pending='true'] {
+  --semantic-status-danger-fg: #ff5c5c;
+
+  background-color: color-mix(
+    in srgb,
+    var(--primitive-danger-500) 12%,
+    var(--semantic-bg-surface)
+  );
+  border-color: var(--semantic-status-danger-fg);
+}
+
+/* 관리자 뱃지만 조정해 다른 앱과 경고 안내·위험 작업 버튼의 색상은 유지한다. */
+:root[data-theme='dark'] [data-status-badge] {
+  --color-status-neutral-bg: color-mix(
+    in srgb,
+    var(--primitive-neutral-100) 12%,
+    var(--semantic-bg-surface)
+  );
+  --color-status-neutral-fg: var(--primitive-neutral-200);
+  --color-status-info-bg: color-mix(
+    in srgb,
+    var(--primitive-info-500) 32%,
+    var(--semantic-bg-surface)
+  );
+  --color-status-info-fg: color-mix(
+    in srgb,
+    var(--primitive-info-50) 75%,
+    var(--primitive-info-500)
+  );
+  --color-status-success-bg: color-mix(
+    in srgb,
+    var(--primitive-success-500) 32%,
+    var(--semantic-bg-surface)
+  );
+  --color-status-success-fg: color-mix(
+    in srgb,
+    var(--primitive-success-50) 75%,
+    var(--primitive-success-500)
+  );
+  --color-status-warning-bg: color-mix(
+    in srgb,
+    var(--primitive-warning-500) 32%,
+    var(--semantic-bg-surface)
+  );
+  --color-status-warning-fg: color-mix(
+    in srgb,
+    var(--primitive-warning-50) 75%,
+    var(--primitive-warning-500)
+  );
+  --color-status-danger-bg: color-mix(
+    in srgb,
+    var(--primitive-danger-500) 32%,
+    var(--semantic-bg-surface)
+  );
+  --color-status-danger-fg: color-mix(
+    in srgb,
+    var(--primitive-danger-50) 75%,
+    var(--primitive-danger-500)
+  );
+}
+
 /* 테마 전환 중에는 개별 효과를 멈추고 화면 스냅샷 전체를 같은 속도로 전환한다. */
 :root[data-admin-theme-transition] *,
 :root[data-admin-theme-transition] *::before,
