@@ -1,6 +1,7 @@
 import type { PointerEvent } from 'react';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { formatDate, formatNumber } from '@repo/utils';
+import { MousePointer2 } from 'lucide-react';
 
 import {
   getChartAxisMaximum,
@@ -76,10 +77,7 @@ export const DashboardTrendChart = ({
           end: Math.max(selection.start, selection.end),
         }
       : null;
-  const active = Math.min(
-    selection?.end ?? activeIndex ?? labels.length - 1,
-    labels.length - 1,
-  );
+  const active = Math.min(activeIndex ?? labels.length - 1, labels.length - 1);
   // 선택한 양끝 날짜를 포함하며 미확정 날짜를 0으로 간주하지 않는다.
   const selectedValues = selectedRange
     ? primary.values.slice(selectedRange.start, selectedRange.end + 1)
@@ -97,7 +95,8 @@ export const DashboardTrendChart = ({
         ? { ...current, end: index }
         : { start: index, end: null },
     );
-    setActiveIndex(index);
+    // 클릭 직후에는 구간 안내를 읽을 수 있도록 일별 호버 툴팁을 닫는다.
+    setActiveIndex(null);
     setPointerY(null);
   };
   const clearSelection = () => {
@@ -170,7 +169,7 @@ export const DashboardTrendChart = ({
     setActiveIndex(null);
     setPointerY(null);
   };
-  const tooltipVisible = activeIndex !== null || selectedRange !== null;
+  const tooltipVisible = activeIndex !== null;
   // 툴팁은 활성 구간 옆에 붙이되 차트 오른쪽 절반에서는 왼쪽으로 뒤집어 잘리지 않게 한다.
   const tooltipFlipped = x(active) > width / 2;
   const tooltipTop = Math.min(
@@ -184,16 +183,36 @@ export const DashboardTrendChart = ({
       </p>
     );
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {rangeSelection && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-caption-web text-text-secondary">
-          <p role="status" aria-live="polite">
-            {selectedRange
-              ? `${selectedDates} 기간 ${primary.name} ${selectedTotal === null ? '집계 미완료' : formatNumber(selectedTotal) + unit}`
-              : selection
-                ? `${formatDate(labels[selection.start])} 선택됨 · 종료일을 선택하세요.`
-                : '그래프에서 시작일과 종료일을 차례로 선택하세요.'}
-          </p>
+        <div className="flex min-h-12 flex-wrap items-center justify-between gap-2">
+          <div
+            id={`${id}-selection`}
+            role="status"
+            aria-live="polite"
+            className="space-y-1"
+          >
+            <p className="flex items-center gap-1.5 text-caption-web font-medium text-text-secondary">
+              <MousePointer2 aria-hidden className="size-3.5 shrink-0" />
+              {selectedRange
+                ? '구간 합계 · 다른 기간은 시작일과 종료일을 다시 클릭하세요.'
+                : selection
+                  ? `${formatDate(labels[selection.start])} 선택됨 · 종료일을 클릭하세요.`
+                  : '구간 합계 선택 · 그래프에서 시작일과 종료일을 차례로 클릭하세요.'}
+            </p>
+            {selectedRange && (
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-body-sm-web text-text-secondary">
+                <span>
+                  {selectedDates} 기간 {primary.name}
+                </span>
+                <strong className="text-h2-web font-semibold tabular-nums text-text-brand">
+                  {selectedTotal === null
+                    ? '집계 미완료'
+                    : formatNumber(selectedTotal) + unit}
+                </strong>
+              </p>
+            )}
+          </div>
           {selection && (
             <button
               type="button"
@@ -205,10 +224,14 @@ export const DashboardTrendChart = ({
           )}
         </div>
       )}
-      <div ref={chartRef} className="relative rounded-lg bg-bg-surface">
+      <div
+        ref={chartRef}
+        className={`relative rounded-lg bg-bg-surface ${rangeSelection ? 'ring-1 ring-inset ring-transparent transition-shadow hover:ring-border-subtle focus-within:ring-border-subtle' : ''}`}
+      >
         <svg
           aria-label={title}
-          className={`w-full text-caption-web ${rangeSelection ? 'cursor-pointer' : ''}`}
+          aria-describedby={rangeSelection ? `${id}-selection` : undefined}
+          className={`w-full text-caption-web ${rangeSelection ? 'cursor-crosshair' : ''}`}
           style={{
             height,
           }}
@@ -451,66 +474,51 @@ export const DashboardTrendChart = ({
         {tooltipVisible && (
           <div
             aria-hidden
-            className={`pointer-events-none absolute z-10 w-max max-w-full rounded-lg border border-border-subtle bg-bg-surface px-3 py-2 shadow-md ${selectedRange ? 'whitespace-normal' : 'whitespace-nowrap'}`}
+            className="pointer-events-none absolute z-10 w-max max-w-full rounded-lg whitespace-nowrap border border-border-subtle bg-bg-surface px-3 py-2 shadow-md"
             style={{
-              left: selectedRange ? width / 2 : x(active),
-              top: selectedRange ? height / 2 : tooltipTop,
-              transform: selectedRange
-                ? 'translate(-50%, -50%)'
-                : `translate(${tooltipFlipped ? 'calc(-100% - 12px)' : '12px'}, -50%)`,
+              left: x(active),
+              top: tooltipTop,
+              transform: `translate(${tooltipFlipped ? 'calc(-100% - 12px)' : '12px'}, -50%)`,
             }}
           >
             <p className="text-caption-web font-medium tabular-nums text-text-secondary">
-              {selectedRange ? selectedDates : labels[active]}
+              {labels[active]}
             </p>
             <div className="mt-1 space-y-1">
-              {selectedRange ? (
-                <p className="flex flex-wrap items-center justify-between gap-3 text-caption-web text-text-secondary">
-                  <span>기간 {primary.name}</span>
+              {[primary, ...(secondary ? [secondary] : [])].map(
+                (series, index) => (
+                  <p
+                    key={series.name}
+                    className="flex items-center justify-between gap-3 text-caption-web text-text-secondary"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={
+                          index === 0
+                            ? 'h-1 w-4 rounded-full bg-action-primary'
+                            : 'w-4 border-t-2 border-dashed border-action-secondary'
+                        }
+                      />
+                      {series.name}
+                    </span>
+                    <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                      {valueLabel(series.values[active])}
+                    </span>
+                  </p>
+                ),
+              )}
+              {/* 보조 수치는 받은 일별 데이터로 표시하며 그래프 선과 축 계산에는 포함하지 않는다. */}
+              {tooltipDetails.map((detail, index) => (
+                <p
+                  key={detail.name}
+                  className={`flex items-center justify-between gap-3 text-caption-web text-text-secondary ${index === 0 ? 'mt-2 border-t border-border-subtle pt-2' : ''}`}
+                >
+                  <span>{detail.name}</span>
                   <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
-                    {selectedTotal === null
-                      ? '집계 미완료'
-                      : formatNumber(selectedTotal) + unit}
+                    {valueLabel(detail.values[active])}
                   </span>
                 </p>
-              ) : (
-                <>
-                  {[primary, ...(secondary ? [secondary] : [])].map(
-                    (series, index) => (
-                      <p
-                        key={series.name}
-                        className="flex items-center justify-between gap-3 text-caption-web text-text-secondary"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={
-                              index === 0
-                                ? 'h-1 w-4 rounded-full bg-action-primary'
-                                : 'w-4 border-t-2 border-dashed border-action-secondary'
-                            }
-                          />
-                          {series.name}
-                        </span>
-                        <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
-                          {valueLabel(series.values[active])}
-                        </span>
-                      </p>
-                    ),
-                  )}
-                  {/* 보조 수치는 받은 일별 데이터로 표시하며 그래프 선과 축 계산에는 포함하지 않는다. */}
-                  {tooltipDetails.map((detail, index) => (
-                    <p
-                      key={detail.name}
-                      className={`flex items-center justify-between gap-3 text-caption-web text-text-secondary ${index === 0 ? 'mt-2 border-t border-border-subtle pt-2' : ''}`}
-                    >
-                      <span>{detail.name}</span>
-                      <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
-                        {valueLabel(detail.values[active])}
-                      </span>
-                    </p>
-                  ))}
-                </>
-              )}
+              ))}
             </div>
           </div>
         )}

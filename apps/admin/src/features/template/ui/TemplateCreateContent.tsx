@@ -102,15 +102,25 @@ export const TemplateCreateContent = ({
           </section>
           <section className="template-editor__panel flex min-h-0 min-w-0 flex-col gap-4 p-4">
             <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="secondary" disabled={locked} onClick={onBack}>
+              {/* aria-disabled는 색상을 유지하므로 클릭 핸들러에서도 전송 중 동작을 차단한다. */}
+              <Button
+                variant="secondary"
+                aria-disabled={locked || undefined}
+                className={locked ? 'cursor-wait' : undefined}
+                onClick={() => {
+                  if (!locked) onBack();
+                }}
+              >
                 목록으로
               </Button>
               {!published && (
                 <Button
-                  disabled={
-                    locked || !editor.template || versionNumber === undefined
-                  }
-                  onClick={() => setSaveModalOpen(true)}
+                  disabled={!editor.template || versionNumber === undefined}
+                  aria-disabled={locked || undefined}
+                  className={locked ? 'cursor-wait' : undefined}
+                  onClick={() => {
+                    if (!locked) setSaveModalOpen(true);
+                  }}
                 >
                   저장
                 </Button>

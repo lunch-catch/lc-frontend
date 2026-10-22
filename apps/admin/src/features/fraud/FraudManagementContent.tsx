@@ -15,7 +15,16 @@ import {
 } from './fraudUtils';
 import { useFraudManagement } from './useFraudManagement';
 
+// 기본 정렬(count 내림차순) 열을 첫 번째에 둔다. 사용자가 저장한 열 순서는 유지한다.
 const invalidColumns: FraudColumn<InvalidImpression>[] = [
+  {
+    key: 'count',
+    label: '무효 노출 수',
+    align: 'right',
+    minWidth: 130,
+    sortable: true,
+    render: (item) => formatNumber(item.count) + '건',
+  },
   {
     key: 'memberId',
     label: '사용자 ID',
@@ -40,14 +49,6 @@ const invalidColumns: FraudColumn<InvalidImpression>[] = [
       </span>
     ),
   },
-  {
-    key: 'count',
-    label: '무효 노출 수',
-    align: 'right',
-    minWidth: 130,
-    sortable: true,
-    render: (item) => formatNumber(item.count) + '건',
-  },
 ];
 export const FraudManagementContent = () => {
   const state = useFraudManagement();
@@ -62,7 +63,16 @@ export const FraudManagementContent = () => {
     pagination,
     sortBy,
   } = state;
+  // 캠페인 경고의 기본 정렬은 invalidRatio 내림차순이다.
   const warningColumns: FraudColumn<CampaignWarning>[] = [
+    {
+      key: 'invalidRatio',
+      label: '무효 / 유효 비율',
+      align: 'right',
+      minWidth: 150,
+      sortable: true,
+      render: (item) => formatFraudRatio(item.invalidRatio),
+    },
     {
       key: 'campaignId',
       label: '캠페인 ID',
@@ -85,14 +95,6 @@ export const FraudManagementContent = () => {
       render: (item) => formatNumber(item.invalidCount),
     },
     {
-      key: 'invalidRatio',
-      label: '무효 / 유효 비율',
-      align: 'right',
-      minWidth: 150,
-      sortable: true,
-      render: (item) => formatFraudRatio(item.invalidRatio),
-    },
-    {
       key: 'distinctMemberCount',
       label: '집중일 회원 수',
       align: 'right',
@@ -110,7 +112,9 @@ export const FraudManagementContent = () => {
     {
       key: 'warnings',
       label: '경고',
-      minWidth: 230,
+      // 두 경고 뱃지와 셀 좌우 여백을 포함해 기본 상태에서 한 줄로 표시한다.
+      minWidth: 280,
+      width: '280px',
       render: (item) => (
         <div className="flex flex-wrap gap-1">
           {item.invalidRatioWarning && (
