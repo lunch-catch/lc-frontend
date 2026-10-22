@@ -28,12 +28,12 @@ import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 const columns = [
+  { key: 'joinedAt', label: '가입일', minWidth: 170 },
   { key: 'ownerId', label: '점주 ID', minWidth: 100 },
   { key: 'storeName', label: '상호', minWidth: 150 },
   { key: 'status', label: '상태', minWidth: 100 },
   { key: 'storeRegistered', label: '가게 등록', minWidth: 110 },
   { key: 'businessNo', label: '사업자번호', minWidth: 140 },
-  { key: 'joinedAt', label: '가입 시각', minWidth: 170 },
   { key: 'lastLoginAt', label: '최근 로그인', minWidth: 170 },
 ];
 const statuses: Record<
@@ -86,7 +86,7 @@ export const OwnerMemberListContent = () => {
       >
         <SearchField
           aria-label="점주 ID 또는 상호 검색"
-          placeholder="점주 ID 또는 상호"
+          placeholder="점주 ID 또는 상호 검색"
           value={search.draftKeyword}
           onChange={(event) => search.setDraftKeyword(event.target.value)}
         />
@@ -117,10 +117,6 @@ export const OwnerMemberListContent = () => {
           }
         />
       </FilterBar>
-      <p className="mb-3 px-3 text-caption-web text-text-secondary">
-        가입일 최신순 · 20개씩 조회합니다. 숫자는 점주 ID, 그 외 검색어는 상호로
-        검색합니다.
-      </p>
       <DataTable
         aria-label="점주 목록"
         columns={columns}
@@ -159,6 +155,7 @@ export const OwnerMemberListContent = () => {
           ) : (
             resource.data.items.map((owner) => (
               <TableRow key={owner.ownerId}>
+                <TableCell>{formatDateTime(owner.joinedAt)}</TableCell>
                 <TableCell>{owner.ownerId}</TableCell>
                 <TableCell>{owner.storeName ?? '—'}</TableCell>
                 <TableCell>
@@ -174,7 +171,6 @@ export const OwnerMemberListContent = () => {
                   </StatusBadge>
                 </TableCell>
                 <TableCell>{owner.businessNo ?? '—'}</TableCell>
-                <TableCell>{formatDateTime(owner.joinedAt)}</TableCell>
                 <TableCell>{formatDateTime(owner.lastLoginAt)}</TableCell>
               </TableRow>
             ))
