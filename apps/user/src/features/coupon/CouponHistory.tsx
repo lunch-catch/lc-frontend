@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChoiceChip } from '@repo/ui';
+import { Clock } from 'lucide-react';
 
 import {
   type Coupon,
@@ -9,6 +10,7 @@ import {
 import mascotHistoryEmpty from '@user/assets/illustrations/mascot-history-empty.webp';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
+import { ticketPillClassName } from '@user/ui/Ticket/Ticket';
 
 import CouponCard from './CouponCard';
 import { formatClock } from './couponFormat';
@@ -207,13 +209,25 @@ const CouponHistory = () => {
           <ul className="flex flex-col gap-3">
             {group.coupons.map((coupon) => (
               <CouponCard
-                coupon={coupon}
-                detail={
-                  coupon.state === 'USED'
-                    ? `사용 완료 · ${formatClock(getEventAt(coupon))}`
-                    : `만료 · ${formatClock(getEventAt(coupon))}`
+                // 사용 완료와 만료는 찜 카드의 끝난 상태처럼 회색 알약으로 구분하고, 언제였는지는 왼쪽에 적는다
+                action={
+                  <span
+                    className={`${ticketPillClassName} bg-surface-subtle text-text-tertiary`}
+                  >
+                    {coupon.state === 'USED' ? '사용 완료' : '만료'}
+                  </span>
                 }
+                coupon={coupon}
                 dimmed
+                info={
+                  <>
+                    <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+                    <span className="truncate">
+                      {formatClock(getEventAt(coupon))}{' '}
+                      {coupon.state === 'USED' ? '사용' : '만료'}
+                    </span>
+                  </>
+                }
                 key={coupon.memberCouponId}
               />
             ))}

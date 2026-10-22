@@ -3,50 +3,55 @@ import { Store, X } from 'lucide-react';
 
 import type { Coupon } from '@user/api/coupon';
 import Card from '@user/ui/Card/Card';
+import { TicketDivider } from '@user/ui/Ticket/Ticket';
 
 import { formatDiscount, formatTarget } from './couponFormat';
 
 interface CouponCardProps {
   coupon: Coupon;
-  // 카드 세 번째 줄. 쿠폰 상태에 따라 사용 시간이나 사용 날짜를 보여준다
-  detail: ReactNode;
-  // 카드 아래에 두는 버튼 (QR 보기 등). 찜 목록 카드의 받기 버튼과 같은 자리다
-  footer?: ReactNode;
-  // 이미 쓴 쿠폰처럼 더 쓸 수 없는 쿠폰은 사진을 흑백으로 흐리게 보여준다
+  // 아래 줄 왼쪽 정보. 쿠폰 상태에 따라 사용 시간이나 사용한 시각을 보여준다
+  info: ReactNode;
+  // 아래 줄 오른쪽 알약 (QR 보기, 사용 완료 등). 찜 카드의 쿠폰 받기 알약과 같은 자리다
+  action?: ReactNode;
+  // 이미 쓴 쿠폰처럼 더 쓸 수 없는 쿠폰은 위쪽 내용을 흐리게 하고 사진을 흑백으로 보여준다
   dimmed?: boolean;
-  // 넘기면 오른쪽 위에 삭제(×) 버튼을 둔다. 찜 목록 카드와 같은 자리다
+  // 넘기면 오른쪽 위에 삭제(×) 버튼을 둔다. 찜 카드와 같은 자리다
   onRemove?: () => void;
 }
 
 // 쿠폰함의 받은 쿠폰 한 장
+// 찜 카드와 같은 쿠폰 모양(점선과 반원 홈, 알약)으로 두어 쿠폰함 탭끼리 같은 카드로 보이게 한다
+// 가게 이름은 작게, 할인은 크게 주황으로 두어 어떤 쿠폰인지 먼저 눈에 들어오게 한다
 const CouponCard = ({
+  action,
   coupon,
-  detail,
   dimmed = false,
-  footer,
+  info,
   onRemove,
 }: CouponCardProps) => (
-  <Card as="li" className="relative flex flex-col gap-2.5 p-3">
+  // 홈이 카드 밖으로 나간 반쪽을 가리도록 카드를 넘치지 않게 자른다
+  <Card as="li" className="relative overflow-hidden">
+    {/* 흐리게 한 내용(opacity)이 새 쌓임 순서를 만들어 버튼을 덮지 않도록 z-10으로 위에 둔다 */}
     {onRemove && (
       <button
         aria-label={`${coupon.storeName} 쿠폰 삭제`}
-        className="absolute top-1 right-1 flex size-10 items-center justify-center rounded-full text-text-tertiary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
+        className="absolute top-1 right-1 z-10 flex size-10 items-center justify-center rounded-full text-text-tertiary active:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-action-primary"
         onClick={onRemove}
         type="button"
       >
         <X aria-hidden="true" className="size-4" />
       </button>
     )}
-    <div className="flex items-center gap-3">
+    <div
+      className={`flex items-center gap-3 p-3 ${onRemove ? 'pr-10' : ''} ${dimmed ? 'opacity-60' : ''}`}
+    >
       {coupon.storeImageUrl ? (
         <img
           alt=""
-          className={`size-14 shrink-0 rounded-lg bg-surface-subtle object-cover ${
-            dimmed ? 'opacity-60 grayscale' : ''
-          }`}
-          height={72}
+          className={`size-14 shrink-0 rounded-lg bg-surface-subtle object-cover ${dimmed ? 'grayscale' : ''}`}
+          height={56}
           src={coupon.storeImageUrl}
-          width={72}
+          width={56}
         />
       ) : (
         // 가게 사진이 없으면 회색 바탕에 가게 아이콘을 둔다
@@ -57,26 +62,31 @@ const CouponCard = ({
           <Store className="size-6" />
         </div>
       )}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        {/* 삭제 버튼이 있으면 가게 이름이 그 밑으로 들어가지 않게 오른쪽을 비운다 */}
-        <h3
-          className={`truncate text-body-mobile font-bold text-text-primary ${onRemove ? 'pr-6' : ''}`}
-        >
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+        <h3 className="max-w-full truncate text-body-sm-mobile font-medium text-text-primary">
           {coupon.storeName}
         </h3>
-        {/* 공간이 좁아 글자가 잘리면 메뉴 이름 쪽이 잘리도록 할인 금액을 앞에 둔다 */}
-        <p className="truncate text-caption-mobile text-text-secondary">
-          <strong className="font-bold text-text-primary">
+        {/* 할인 대상은 같은 줄 옆에 작게 둔다. 좁으면 대상 쪽이 말줄임으로 줄어든다 */}
+        <div className="flex max-w-full min-w-0 items-center gap-1.5">
+          <strong
+            className={`shrink-0 text-h3-mobile font-bold ${dimmed ? 'text-text-secondary' : 'text-text-brand'}`}
+          >
             {formatDiscount(coupon)}
-          </strong>{' '}
-          · {formatTarget(coupon)}
-        </p>
-        <p className="truncate text-caption-mobile font-medium text-text-secondary">
-          {detail}
-        </p>
+          </strong>
+          <span className="min-w-0 truncate text-caption-mobile text-text-secondary">
+            {formatTarget(coupon)}
+          </span>
+        </div>
       </div>
     </div>
-    {footer}
+    <TicketDivider />
+    {/* 정보 줄 오른쪽에 알약을 두어 버튼 줄 하나를 줄인다 */}
+    <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+      <p className="flex min-w-0 items-center gap-1.5 text-caption-mobile text-text-secondary">
+        {info}
+      </p>
+      {action}
+    </div>
   </Card>
 );
 

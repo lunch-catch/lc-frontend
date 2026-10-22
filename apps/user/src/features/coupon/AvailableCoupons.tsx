@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BottomSheet } from '@repo/ui';
-import { QrCode } from 'lucide-react';
+import { Clock, QrCode } from 'lucide-react';
 
 import { ApiError } from '@user/api/client';
 import { type Coupon, deleteCoupon, fetchCoupons } from '@user/api/coupon';
@@ -10,6 +10,10 @@ import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import EmptyState from '@user/ui/EmptyState/EmptyState';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
+import {
+  ticketPillClassName,
+  ticketPressableClassName,
+} from '@user/ui/Ticket/Ticket';
 
 import CouponCard from './CouponCard';
 import CouponDeleteConfirm from './CouponDeleteConfirm';
@@ -141,20 +145,25 @@ const AvailableCoupons = () => {
             <CouponCard
               coupon={coupon}
               // 쿠폰은 받은 날 사용 시간 안에만 쓸 수 있다
-              detail={`사용 ${formatUsableTime(coupon)} · 오늘`}
-              footer={
-                // 가게에 가서 천천히 여는 버튼이라 주황 대신 테두리 버튼으로 둔다
-                // 쿠폰이 여러 장이어도 화면이 주황으로 덮이지 않고, 회색으로 채운 비활성 버튼과도 헷갈리지 않는다
-                <ActionButton
+              info={
+                <>
+                  <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+                  <span className="truncate">
+                    오늘 {formatUsableTime(coupon)} 사용
+                  </span>
+                </>
+              }
+              action={
+                // 찜 카드의 쿠폰 받기와 같은 연한 주황 알약. 쿠폰이 여러 장이어도 화면이 주황으로 덮이지 않는다
+                <button
                   aria-label={`${coupon.storeName} 쿠폰 QR 보기`}
-                  className="gap-1.5"
+                  className={`${ticketPillClassName} ${ticketPressableClassName} bg-surface-brand text-text-brand active:bg-brand-200`}
                   onClick={() => setSelectedCoupon(coupon)}
-                  size="small"
-                  variant="outline"
+                  type="button"
                 >
-                  <QrCode aria-hidden="true" className="size-4" />
+                  <QrCode aria-hidden="true" className="size-3.5" />
                   QR 보기
-                </ActionButton>
+                </button>
               }
               key={coupon.memberCouponId}
               onRemove={() => {
