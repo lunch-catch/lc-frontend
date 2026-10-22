@@ -45,6 +45,7 @@ export const useApiResource = <T>(
   }, [key, query, load, formatError]);
   const current = key !== null && result?.key === key ? result : null;
   return {
+    enabled: key !== null,
     data: current?.data,
     error: current?.error,
     loading: key !== null && !current,
