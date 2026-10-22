@@ -4,6 +4,11 @@
 /* 앱 폴더 밖에 있는 공통 패키지의 Tailwind 클래스도 빌드에 포함한다 */
 @source '../../../packages/ui/src';
 
+/* 작은 드롭다운 글자도 밝은 선택 배경에서 충분한 대비를 갖도록 한다. */
+:root:not([data-theme='dark']) [role='option'][aria-selected='true'] > button {
+  color: var(--primitive-brand-700);
+}
+
 /* 헤더와 호버 행의 농도를 구분하고 다른 조작 요소의 배경색과 분리한다. */
 :root {
   --admin-table-header-bg: var(--primitive-neutral-100);
