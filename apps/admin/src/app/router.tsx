@@ -1,16 +1,19 @@
-﻿import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 
 import { RequireAdminAuth } from '@admin/auth/RequireAdminAuth';
 import { AdminLayout } from '@admin/layout/AdminLayout';
-import { AdminAccountManagementPage } from '@admin/pages/AdminAccountManagementPage';
-import { CampaignManagementPage } from '@admin/pages/CampaignManagementPage';
-import { DashboardPage } from '@admin/pages/DashboardPage';
-import { FraudManagementPage } from '@admin/pages/FraudManagementPage';
 import { LoginPage } from '@admin/pages/LoginPage';
-import { MemberManagementPage } from '@admin/pages/MemberManagementPage';
-import { PointSettlementPage } from '@admin/pages/PointSettlementPage';
-import { TemplateCreatePage } from '@admin/pages/TemplateCreatePage';
-import { TemplateManagementPage } from '@admin/pages/TemplateManagementPage';
+
+import {
+  AdminAccountManagementPage,
+  CampaignManagementPage,
+  DashboardPage,
+  FraudManagementPage,
+  MemberManagementPage,
+  PointSettlementPage,
+  TemplateCreatePage,
+  TemplateManagementPage,
+} from './lazyPages';
 
 // 로그인 화면만 공개하고 모든 관리자 메뉴는 인증 가드와 공통 레이아웃 아래에 둔다.
 export const router = createBrowserRouter([
