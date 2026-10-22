@@ -43,12 +43,21 @@ const SettingsScreen = () => {
     <div className="flex flex-col">
       <TopBar onBack={() => navigate(-1)} title="설정" />
       <div className="flex flex-col gap-6 px-page pt-4 pb-6">
-        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
-        {showSkeleton && (
-          <div
-            aria-hidden="true"
-            className="h-36 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
-          />
+        {/* 받기 전에도 위치 설정과 같은 모양(제목 + 스위치 한 줄)으로 자리를 잡아 두어, 받은 뒤 아래 화면 모드와 계정이 움직이지 않게 한다 */}
+        {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 깜빡인다 */}
+        {profile.data === undefined && (
+          <div aria-hidden="true">
+            <p className="mb-2 px-1 text-body-sm-mobile font-bold text-text-primary">
+              위치
+            </p>
+            <div
+              className={`h-16 rounded-xl ${
+                showSkeleton
+                  ? 'animate-pulse bg-surface-subtle motion-reduce:animate-none'
+                  : ''
+              }`}
+            />
+          </div>
         )}
         {profile.data === null && (
           <div

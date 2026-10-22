@@ -76,6 +76,8 @@ const ExploreScreen = () => {
     snapshot?.stores,
   );
   const showSkeleton = useDelayedLoading(stores === undefined);
+  // 업종·검색어를 바꿔 새 목록을 받는 중인지. 그동안 이전 목록을 흐리게 남겨 둔다 (refreshStores)
+  const [isRefreshing, setIsRefreshing] = useState(false);
   // 다음 페이지 커서. 마지막 페이지면 null
   const [nextPageToken, setNextPageToken] = useState<string | null>(
     snapshot?.nextPageToken ?? null,
@@ -91,9 +93,9 @@ const ExploreScreen = () => {
   // 저장해 둔 목록으로 그렸으면 같은 조건의 첫 요청을 건너뛴다. 조건이 바뀌면 비운다
   const skipFetchKey = useRef(snapshot ? `${listKey}#0` : null);
   // 떠날 때 저장할 지금 목록과 스크롤 위치. 화면을 벗어나는 순간에는 상태를 읽을 수 없어 늘 최신으로 담아 둔다
-  const latest = useRef({ listKey, nextPageToken, stores });
+  const latest = useRef({ isRefreshing, listKey, nextPageToken, stores });
   useEffect(() => {
-    latest.current = { listKey, nextPageToken, stores };
+    latest.current = { isRefreshing, listKey, nextPageToken, stores };
   });
   const scrollYRef = useRef(0);
   // 저장 위치를 받았는데 좌표가 없으면 위치부터 설정하게 한다
@@ -103,9 +105,23 @@ const ExploreScreen = () => {
     (latitude === null || longitude === null);
   const storeCategory = category === 'ALL' ? undefined : category;
 
-  // 조건이 바뀌면 이전 결과 대신 회색 틀을 보여준다
+  // 위치가 바뀌거나 다시 시도하면 이전 결과 대신 회색 틀을 보여준다
   const resetStores = () => {
     setStores(undefined);
+    setIsRefreshing(false);
+    setNextPageToken(null);
+    setIsLoadingMore(false);
+    setHasMoreError(false);
+  };
+
+  // 업종이나 검색어를 바꾸면 새 목록이 올 때까지 이전 목록을 흐리게 남겨 둔다
+  // 목록을 비우면 응답이 빠를 때 화면이 비었다 채워지며 번쩍인다. 다음 페이지는 이전 조건 것이라 받지 않는다
+  const refreshStores = () => {
+    if (!stores) {
+      resetStores();
+      return;
+    }
+    setIsRefreshing(true);
     setNextPageToken(null);
     setIsLoadingMore(false);
     setHasMoreError(false);
@@ -139,11 +155,15 @@ const ExploreScreen = () => {
       .then((response) => {
         if (ignore || current !== generation.current) return;
         setStores(response.items);
+        setIsRefreshing(false);
         setNextPageToken(response.nextPageToken);
         setHasMoreError(false);
       })
       .catch(() => {
-        if (!ignore && current === generation.current) setStores(null);
+        if (!ignore && current === generation.current) {
+          setStores(null);
+          setIsRefreshing(false);
+        }
       });
 
     // 응답 전에 조건이 바뀌거나 화면을 벗어나면 결과를 버린다
@@ -165,8 +185,10 @@ const ExploreScreen = () => {
         listKey: key,
         nextPageToken: token,
         stores: list,
+        isRefreshing: wasRefreshing,
       } = latest.current;
-      if (!list) return;
+      // 새 조건의 목록을 받기 전이면 남아 있는 건 이전 조건의 목록이라 저장하지 않는다
+      if (!list || wasRefreshing) return;
       saveExploreSnapshot({
         key,
         nextPageToken: token,
@@ -275,7 +297,7 @@ const ExploreScreen = () => {
 
   const changeQuery = (nextQuery: string) => {
     if (nextQuery === query) return;
-    resetStores();
+    refreshStores();
     updateParams({ q: nextQuery || null });
   };
 
@@ -291,7 +313,7 @@ const ExploreScreen = () => {
 
   const changeCategory = (nextCategory: CategoryFilter) => {
     if (nextCategory === category) return;
-    resetStores();
+    refreshStores();
     updateParams({ category: nextCategory === 'ALL' ? null : nextCategory });
   };
 
@@ -528,7 +550,15 @@ const ExploreScreen = () => {
             )}
           </div>
         )}
-        {renderContent()}
+        {/* 새 목록을 받는 동안 이전 목록을 흐리게 보여주고 누를 수 없게 한다 */}
+        <div
+          aria-busy={isRefreshing || undefined}
+          className={`flex flex-1 flex-col transition-opacity motion-reduce:transition-none ${
+            isRefreshing ? 'pointer-events-none opacity-50' : ''
+          }`}
+        >
+          {renderContent()}
+        </div>
       </div>
     </>
   );

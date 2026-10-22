@@ -7,6 +7,7 @@ import {
   QR_TOKEN_LIFETIME_MS,
   type QrToken,
 } from '@user/api/coupon';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 
 import {
   formatClock,
@@ -114,6 +115,9 @@ const QrPanel = ({ coupon, now, onRetry, state, token }: QrPanelProps) => {
     ? Math.min(token.expiresAt - now, QR_TOKEN_LIFETIME_MS)
     : 0;
   const isUrgent = state === 'urgent';
+  const isQrLoading = !token || state === 'refreshing';
+  // QR이 빨리 오면 회색 틀이 잠깐 깜빡였다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다
+  const showQrSkeleton = useDelayedLoading(isQrLoading);
   const showsQr =
     state === 'active' ||
     state === 'urgent' ||
@@ -213,7 +217,7 @@ const QrPanel = ({ coupon, now, onRetry, state, token }: QrPanelProps) => {
         스캐너에 QR을 비춰 주세요
       </p>
       <div className="flex size-64 items-center justify-center overflow-hidden rounded-xl border border-border-subtle bg-white">
-        {token && state !== 'refreshing' ? (
+        {!isQrLoading ? (
           // 서버가 그려 준 QR 이미지. 스캐너가 경계를 찾는 여백은 이미지에 들어 있다
           <img
             alt="쿠폰 QR 코드"
@@ -225,16 +229,18 @@ const QrPanel = ({ coupon, now, onRetry, state, token }: QrPanelProps) => {
             width={QR_SIZE}
           />
         ) : (
-          <div
-            aria-hidden="true"
-            className="size-52 animate-pulse rounded-md bg-surface-subtle motion-reduce:animate-none"
-          />
+          showQrSkeleton && (
+            <div
+              aria-hidden="true"
+              className="size-52 animate-pulse rounded-md bg-surface-subtle motion-reduce:animate-none"
+            />
+          )
         )}
       </div>
       <div
         className={`flex items-center gap-2 text-caption-mobile ${isUrgent ? 'font-bold text-text-brand' : 'text-text-secondary'}`}
       >
-        {token && state !== 'refreshing' && (
+        {!isQrLoading && (
           <RefreshRing isUrgent={isUrgent} remainingMs={remainingMs} />
         )}
         {/* 숫자와 글자를 한 덩어리로 묶어, 원과의 간격(gap)이 숫자와 글자 사이에도 끼어들지 않게 한다 */}

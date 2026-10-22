@@ -10,6 +10,7 @@ import {
   saveMyLocation,
 } from '@user/api/location';
 import { fetchMyProfile } from '@user/api/member';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import {
   getLocationLabel,
   rememberMyLocation,
@@ -90,6 +91,8 @@ const LocationSettingsScreen = ({
   const isOnboarding = mode === 'onboarding';
   // undefined면 불러오는 중, null이면 실패
   const [settings, setSettings] = useState<LocationSettings | null>();
+  // 응답이 빠르면 회색 틀이 잠깐 깜빡였다 사라져 번쩍이므로, 조금 기다린 뒤에만 깜빡인다
+  const showSettingsSkeleton = useDelayedLoading(settings === undefined);
   // 다시 시도할 때마다 올려서 요청을 새로 보낸다
   const [attempt, setAttempt] = useState(0);
   const [pending, setPending] = useState<'locate' | 'save' | 'delete' | null>(
@@ -303,10 +306,15 @@ const LocationSettingsScreen = ({
               내 위치
             </h2>
 
+            {/* 받기 전에도 자리를 잡아 두어, 받은 뒤 아래 내용이 밀리지 않게 한다 */}
             {settings === undefined && (
               <div
                 aria-hidden="true"
-                className="h-13 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
+                className={`h-13 rounded-xl ${
+                  showSettingsSkeleton
+                    ? 'animate-pulse bg-surface-subtle motion-reduce:animate-none'
+                    : ''
+                }`}
               />
             )}
 

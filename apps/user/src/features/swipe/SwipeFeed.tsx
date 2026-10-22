@@ -10,6 +10,7 @@ import {
   type SwipeAction,
 } from '@user/api/feed';
 import { type FeedFilter, saveFeedFilter } from '@user/api/feedFilter';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import {
   getHeaderLocationName,
   refreshMyLocation,
@@ -140,6 +141,15 @@ const SwipeFeed = () => {
   const [isClearingCategories, setIsClearingCategories] = useState(false);
   // 업종을 골라 둔 채 카드가 없으면 필터 때문일 수 있어, 필터를 풀어 보라고 따로 안내한다
   const hasCategoryFilter = (feedFilter.filter?.categories.length ?? 0) > 0;
+  // 받는 동안 보여줄 모양 (loadNextFeed 참고)
+  // 처음 들어올 때(initial)는 카드가 올지 빈 화면이 올지 몰라, 카드 자리를 미리 그리지 않는다
+  // 미리 그리면 카드가 없을 때 회색 틀과 패스·찜 버튼이 나왔다가 빈 화면으로 바뀌며 번쩍인다
+  const [loadingView, setLoadingView] = useState<
+    'initial' | 'cards' | 'message'
+  >('initial');
+  const showPosterSkeleton = useDelayedLoading(
+    status === 'loading' && loadingView !== 'message',
+  );
   // 피드 응답을 받는 쪽(effect)에서 읽는다. 업종을 골라 둔 채 비면 "오늘 다 봤어요" 대신 필터 안내를 보여준다
   const hasCategoryFilterRef = useRef(hasCategoryFilter);
   useEffect(() => {
@@ -210,7 +220,11 @@ const SwipeFeed = () => {
     if (status !== 'loading') clearFeedSession();
   }, [cards, currentIndex, nextFeedAt, receivedAt, status]);
 
-  const loadNextFeed = () => {
+  // view: 받는 동안 보여줄 모양. cards는 카드 자리(포스터 회색 틀), message는 기다림 화면과 같은 안내
+  // 카드를 보다가 받으면 카드 자리를 그대로 두고, 기다림·빈 화면에서 받으면 그 화면 모양을 이어 간다
+  // 화면 모양이 오가면 필터 줄이 위와 가운데를 오가며 번쩍여서, 받는 동안에는 직전 모양을 유지한다
+  const loadNextFeed = (view: 'cards' | 'message' = 'cards') => {
+    setLoadingView(view);
     setStatus('loading');
     setAttempt((current) => current + 1);
   };
@@ -218,7 +232,7 @@ const SwipeFeed = () => {
   const retry = () => {
     refreshMyLocation();
     hasRetriedRateLimit.current = false;
-    loadNextFeed();
+    loadNextFeed('message');
   };
 
   // 받아 둔 카드를 다 넘겼을 때. 다음 피드를 받고, 아직 이르면 받을 수 있는 시각까지 기다린다
@@ -288,7 +302,7 @@ const SwipeFeed = () => {
     const loadWhenVisible = () => {
       if (!isWaiting || document.visibilityState !== 'visible') return;
       isWaiting = false;
-      loadNextFeed();
+      loadNextFeed('message');
     };
     const timer = setTimeout(
       loadWhenVisible,
@@ -363,8 +377,14 @@ const SwipeFeed = () => {
     onSwipe: handleSwipe,
   });
 
-  // 카드 자리를 보여주는지. 불러오는 중에는 회색 틀을 보여준다
-  const hasCardArea = status === 'loading' || Boolean(topCard);
+  // 카드 자리를 보여주는지. 카드를 보다가 받는 중이면 카드 자리를 그대로 둔다
+  // 처음 들어올 때는 응답이 늦어 회색 틀을 띄울 때만 카드 자리를 그린다. 그 전에는 필터 줄만 위에 둔다
+  const isLoadingAsMessage = status === 'loading' && loadingView === 'message';
+  const hasCardArea =
+    (status === 'loading' &&
+      (loadingView === 'cards' ||
+        (loadingView === 'initial' && showPosterSkeleton))) ||
+    Boolean(topCard);
   // 카드 바로 위 줄. 왼쪽은 피드에 거는 필터("필터"라고 적어 처음 보는 사람도 알 수 있게 한다)
   // 오른쪽은 11:00 오픈까지 남은 시간. 오픈 뒤에는 비워 둔다
   // 필터 때문에 카드가 없을 수도 있어, 카드가 없는 화면에도 둔다. 위치가 없을 때만 위치 설정이 먼저라 뺀다
@@ -408,7 +428,10 @@ const SwipeFeed = () => {
           />
         )}
         {status === 'done' && <SwipeDone />}
-        {status === 'waiting' && <SwipeWaiting until={waitUntil} />}
+        {/* 기다림·빈 화면에서 다시 받는 동안에도 같은 화면에 "새 카드를 불러오고 있어요"만 띄운다 */}
+        {(status === 'waiting' || isLoadingAsMessage) && (
+          <SwipeWaiting until={status === 'waiting' ? waitUntil : 0} />
+        )}
         {/* 불러오는 중에는 카드 자리에 회색 틀을 보여준다 */}
         {hasCardArea && (
           // 날아가는 카드 때문에 가로 스크롤이 생기지 않도록 잘라낸다
@@ -426,9 +449,10 @@ const SwipeFeed = () => {
               <div className="mb-2">{filterRow}</div>
               {/* 카드는 남는 높이만큼 늘어나되, 포스터가 점주 화면과 같은 A4(210:297, 141.43cqw)보다 길어지지 않게 한다 */}
               <div className="relative flex max-h-[141.43cqw] flex-1 flex-col">
+                {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
                 {!topCard && (
                   <>
-                    <PosterSkeleton />
+                    {showPosterSkeleton && <PosterSkeleton />}
                     <p className="sr-only" role="status">
                       포스터를 불러오는 중이에요
                     </p>

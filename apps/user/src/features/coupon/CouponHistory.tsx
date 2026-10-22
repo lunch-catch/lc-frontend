@@ -211,44 +211,52 @@ const CouponHistory = () => {
           </p>
         </>
       )}
-      {isEmpty && (
-        <p className="py-10 text-center text-body-sm-mobile text-text-secondary">
-          {filterEmptyMessages[filter]}
-        </p>
-      )}
-      {groupByDate(historyCoupons).map((group) => (
-        <section className="flex flex-col gap-2" key={group.date}>
-          <h3 className="text-caption-mobile font-bold text-text-secondary">
-            {group.date}
-          </h3>
-          <ul className="flex flex-col gap-3">
-            {group.coupons.map((coupon) => (
-              <CouponCard
-                // 사용 완료와 만료는 찜 카드의 끝난 상태처럼 회색 알약으로 구분하고, 언제였는지는 왼쪽에 적는다
-                action={
-                  <span
-                    className={`${ticketPillClassName} bg-surface-subtle text-text-tertiary`}
-                  >
-                    {coupon.state === 'USED' ? '사용 완료' : '만료'}
-                  </span>
-                }
-                coupon={coupon}
-                dimmed
-                info={
-                  <>
-                    <Clock aria-hidden="true" className="size-3.5 shrink-0" />
-                    <span className="truncate">
-                      {formatClock(getEventAt(coupon))}{' '}
-                      {coupon.state === 'USED' ? '사용' : '만료'}
+      {/* 필터를 바꿔 새 목록을 받는 동안에는 이전 목록을 흐리게 남겨, 화면이 비었다 채워지며 번쩍이지 않게 한다 */}
+      <div
+        aria-busy={history.isRefreshing || undefined}
+        className={`flex flex-col gap-4 transition-opacity motion-reduce:transition-none ${
+          history.isRefreshing ? 'opacity-50' : ''
+        }`}
+      >
+        {isEmpty && (
+          <p className="py-10 text-center text-body-sm-mobile text-text-secondary">
+            {filterEmptyMessages[filter]}
+          </p>
+        )}
+        {groupByDate(historyCoupons).map((group) => (
+          <section className="flex flex-col gap-2" key={group.date}>
+            <h3 className="text-caption-mobile font-bold text-text-secondary">
+              {group.date}
+            </h3>
+            <ul className="flex flex-col gap-3">
+              {group.coupons.map((coupon) => (
+                <CouponCard
+                  // 사용 완료와 만료는 찜 카드의 끝난 상태처럼 회색 알약으로 구분하고, 언제였는지는 왼쪽에 적는다
+                  action={
+                    <span
+                      className={`${ticketPillClassName} bg-surface-subtle text-text-tertiary`}
+                    >
+                      {coupon.state === 'USED' ? '사용 완료' : '만료'}
                     </span>
-                  </>
-                }
-                key={coupon.memberCouponId}
-              />
-            ))}
-          </ul>
-        </section>
-      ))}
+                  }
+                  coupon={coupon}
+                  dimmed
+                  info={
+                    <>
+                      <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+                      <span className="truncate">
+                        {formatClock(getEventAt(coupon))}{' '}
+                        {coupon.state === 'USED' ? '사용' : '만료'}
+                      </span>
+                    </>
+                  }
+                  key={coupon.memberCouponId}
+                />
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
       {items && hasMore && (
         <div ref={sentinelRef}>
           {hasMoreError ? (
