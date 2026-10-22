@@ -345,7 +345,10 @@ export const FraudManagementContent = () => {
           onSort={onSort}
         />
       )}
-      <PaginationSummary {...pagination} />
+      <PaginationSummary
+        {...pagination}
+        totalCount={state.resource.data?.totalElements}
+      />
     </section>
   );
 };

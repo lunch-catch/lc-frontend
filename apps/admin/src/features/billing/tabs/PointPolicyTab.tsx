@@ -212,7 +212,7 @@ export const PointPolicyTab = ({
           preferences={preferences}
           page={filters.page}
           size={filters.size}
-          total={history.data?.totalElements ?? 0}
+          total={history.data?.totalElements}
           onPageChange={(page) => updateFilters({ page })}
           onSizeChange={(size) => updateFilters({ size, page: 1 })}
         />

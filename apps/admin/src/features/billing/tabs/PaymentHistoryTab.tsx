@@ -291,7 +291,10 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
           )}
         </tbody>
       </DataTable>
-      <PaginationSummary {...pagination} />
+      <PaginationSummary
+        {...pagination}
+        totalCount={payments.data?.totalElements}
+      />
       <AdminDrawer
         open={selectedPayment !== null}
         onClose={() => setSelected(null)}

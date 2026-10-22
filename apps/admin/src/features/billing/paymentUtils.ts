@@ -7,6 +7,8 @@ import type {
   PaymentStatus,
 } from '@admin/api/payments';
 
+import { isBillingInputId } from './billingManagementUtils';
+
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   REQUESTED: '결제 대기',
   APPROVED: '결제 성공',
@@ -55,13 +57,7 @@ export const getPaymentFilterError = (
 ) => {
   if (from && to && from > to)
     return '시작 날짜는 종료 날짜보다 늦을 수 없습니다.';
-  if (
-    searchType === 'OWNER_ID' &&
-    keyword &&
-    (!/^\d+$/.test(keyword) ||
-      !Number.isSafeInteger(Number(keyword)) ||
-      Number(keyword) <= 0)
-  )
+  if (searchType === 'OWNER_ID' && keyword && !isBillingInputId(keyword))
     return '점주 ID를 양의 정수로 입력해 주세요.';
   return '';
 };

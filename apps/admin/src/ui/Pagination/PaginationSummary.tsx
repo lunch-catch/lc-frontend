@@ -4,7 +4,8 @@ import { formatNumber } from '@repo/utils';
 export interface PaginationSummaryProps {
   onPageSizeChange?: (pageSize: number) => void;
   pageSize?: number;
-  totalCount: number;
+  /** 응답 전·오류·조회 보류는 undefined, 조회 성공 후 빈 목록은 0이다. */
+  totalCount?: number;
 }
 
 // 화면별 선택지 차이를 막기 위해 공통 컴포넌트에서만 정의한다.
@@ -22,9 +23,11 @@ export const PaginationSummary = ({
   totalCount,
 }: PaginationSummaryProps) => (
   <div className="relative mt-3 flex w-full flex-wrap items-center justify-end gap-3 [&:has([aria-expanded=true])]:z-30">
-    <span className="whitespace-nowrap text-caption-web text-text-secondary">
-      총 {formatNumber(totalCount)}건
-    </span>
+    {totalCount !== undefined && (
+      <span className="whitespace-nowrap text-caption-web text-text-secondary">
+        총 {formatNumber(totalCount)}건
+      </span>
+    )}
     {onPageSizeChange && (
       <SelectField
         aria-label="페이지당 항목 수"
