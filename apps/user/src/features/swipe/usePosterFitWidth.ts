@@ -2,9 +2,9 @@ import { useCallback, useState } from 'react';
 
 // 카드 묶음 최대 폭 (큰 폰에서 폭을 채우되 너무 넓어지지 않게)
 const MAX_WIDTH = 400;
-// 카드 묶음에서 포스터를 뺀 높이: 버튼 줄(48px) + 한 줄 안내 문구(21px)
-// 버튼 줄(GestureRail)이나 안내 문구(SwipeHint) 높이를 바꾸면 여기도 맞춘다
-const NON_POSTER_HEIGHT = 69;
+// 카드 묶음에서 포스터를 뺀 높이: 필터 줄(32px)과 아래 간격(8px) + 버튼 줄(48px) + 한 줄 안내 문구(21px)
+// 필터 줄, 버튼 줄(GestureRail), 안내 문구(SwipeHint) 높이를 바꾸면 여기도 맞춘다
+const NON_POSTER_HEIGHT = 109;
 // 포스터는 점주 화면과 같은 A4 (폭 = 높이 × 210/297). 템플릿을 A4 비율로 만든다
 const POSTER_WIDTH_PER_HEIGHT = 210 / 297;
 
