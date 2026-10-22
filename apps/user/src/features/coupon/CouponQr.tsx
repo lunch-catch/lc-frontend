@@ -64,7 +64,8 @@ const QrPanel = ({ coupon, now, onRetry, state, token }: QrPanelProps) => {
     { title: string; value?: string; description: ReactNode }
   > = {
     active: {
-      title: '직원에게 보여주세요',
+      // 가게는 직원이 눈으로 확인하지 않고 스캐너로 읽으므로, 손님이 할 일(스캐너에 화면을 대기)을 말한다
+      title: '스캐너에 QR을 비춰 주세요',
       description: <>{remaining} 뒤 새 QR로 바뀌어요</>,
     },
     urgent: {
@@ -177,7 +178,7 @@ interface CouponQrProps {
   coupon: Coupon;
 }
 
-// 가게에서 직원에게 보여주는 쿠폰 QR. 쿠폰함에서 시트로 띄운다
+// 가게 스캐너에 비추는 쿠폰 QR. 쿠폰함에서 시트로 띄운다
 // 띄워 둔 동안 점주가 스캔하면 단건 조회로 알아채고 사용 완료로 바꾼다
 const CouponQr = ({ coupon: listCoupon }: CouponQrProps) => {
   const coupon = useLatestCoupon(listCoupon);
