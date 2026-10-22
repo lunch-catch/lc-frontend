@@ -35,6 +35,7 @@ export const PointAdjustmentModal = ({
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const kstToday = getKstToday();
   const pendingRequest = useRef<{ key: string; requestId: string } | null>(
     null,
   );
@@ -180,7 +181,8 @@ export const PointAdjustmentModal = ({
                   </span>
                 </p>
                 <DatePicker
-                  maxDate={getKstToday()}
+                  maxDate={kstToday}
+                  todayDate={kstToday}
                   ariaLabel="대상 영업일"
                   value={targetBusinessDate}
                   disabled={campaignRequired}
