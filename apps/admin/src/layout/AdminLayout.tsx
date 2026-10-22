@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Button, getTheme, setTheme } from '@repo/ui';
@@ -10,6 +10,7 @@ import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 import { AdminSidebar } from '@admin/ui/AdminSidebar/AdminSidebar';
 
 import { adminNavigationPaths, getActiveAdminItem } from './adminNavigation';
+import { AdminPageErrorBoundary } from './AdminPageErrorBoundary';
 
 export const AdminLayout = () => {
   const { pathname } = useLocation();
@@ -112,7 +113,21 @@ export const AdminLayout = () => {
             pathname.startsWith('/templates/') ? '/templates/editor' : pathname
           }
         >
-          <Outlet />
+          {/* 로딩과 실패를 본문에서 처리해 사이드바·계정 동작을 유지한다. */}
+          <AdminPageErrorBoundary>
+            <Suspense
+              fallback={
+                <p
+                  role="status"
+                  className="flex min-h-40 items-center justify-center text-body-sm-web text-text-secondary"
+                >
+                  페이지를 불러오는 중입니다.
+                </p>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </AdminPageErrorBoundary>
         </main>
       </div>
       <AdminModal
