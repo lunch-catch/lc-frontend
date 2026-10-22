@@ -169,7 +169,7 @@ const DataTableView = ({
             <table
               className={[
                 // 실제 데이터 셀이 있을 때만 헤더를 고정한다. 빈 상태·로딩·오류 행은 제외한다.
-                'w-full text-left [&_thead]:static [&:has(tbody_[data-table-cell])_thead]:sticky [&_thead]:top-[var(--table-header-offset)] [&_thead]:z-10 [&_thead]:bg-[var(--admin-table-header-bg)] [&_td:first-child]:pl-[var(--space-6)] [&_td:last-child]:pr-[var(--space-6)] [&_th:first-child]:pl-[var(--space-6)] [&_th:last-child]:pr-[var(--space-6)]',
+                'w-full text-left [&_thead]:static [&:has(tbody_[data-table-cell])_thead]:sticky [&_thead]:top-[var(--table-header-offset)] [&_thead]:z-10 [&_thead]:bg-[var(--admin-table-header-bg,var(--semantic-surface-subtle))] [&_td:first-child]:pl-[var(--space-6)] [&_td:last-child]:pr-[var(--space-6)] [&_th:first-child]:pl-[var(--space-6)] [&_th:last-child]:pr-[var(--space-6)]',
                 // 내부 스크롤에서는 병합 테두리의 sticky 겹침을 피하고 모서리는 바깥 프레임에서 자른다.
                 internalScroll
                   ? 'border-separate border-spacing-0 [&_th:first-child]:rounded-none [&_th:last-child]:rounded-none [&_tbody_td]:border-b [&_tbody_td]:border-table-divider [&_tbody_tr:last-child_td]:border-b-0'
@@ -260,7 +260,7 @@ export const TableHeaderCell = ({
               : undefined
       }
       className={[
-        'group/header relative h-10 bg-[var(--admin-table-header-bg)] px-4 text-caption-web font-normal text-table-header-text first:rounded-tl-md last:rounded-tr-md',
+        'group/header relative h-10 bg-[var(--admin-table-header-bg,var(--semantic-surface-subtle))] px-4 text-caption-web font-normal text-table-header-text first:rounded-tl-md last:rounded-tr-md',
         className,
       ]
         .filter(Boolean)
@@ -380,7 +380,7 @@ export const TableRow = ({
     <TableDetailArrowContext.Provider value={showDetailArrow}>
       <tr
         className={[
-          'group border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-[var(--admin-table-row-hover-bg)] last:border-b-0 last:[&>td:first-child]:rounded-bl-md last:[&>td:last-child]:rounded-br-md motion-reduce:transition-none',
+          'group border-b border-table-divider bg-bg-surface transition-[height,background-color] duration-200 ease-out hover:bg-[var(--admin-table-row-hover-bg,var(--semantic-surface-subtle))] last:border-b-0 last:[&>td:first-child]:rounded-bl-md last:[&>td:last-child]:rounded-br-md motion-reduce:transition-none',
           className,
         ]
           .filter(Boolean)
