@@ -74,6 +74,16 @@
 
 코드 로딩 실패를 API 재시도로 복구하려 하지 않는다. 인증 저장소 장애를 데이터 없음으로 표현하거나, 데이터 조회 실패만으로 직접 로그아웃 처리하지 않는다.
 
+## 공통 로직과 import 위치
+
+- KST 날짜는 `hooks/queryDateUtils.ts`의 `getKstToday`를 사용한다. 결제 기능에서 별도의 날짜 포맷 함수를 정의하지 않는다.
+- 결제 기능의 양의 정수 입력 검증은 `billingManagementUtils.ts`의 `isBillingInputId`를 사용한다. 숫자 필드의 용도에 따른 오류 안내는 각 화면에 둔다.
+- JSON 변경 요청의 헤더·직렬화는 `api/client.ts`의 `jsonOptions`를 사용한다. 응답 스키마 검증과 업무 오류 코드 해석은 각 API·기능에 유지한다.
+- 검색 조건이 URL에 반영되는 화면은 `useUrlSearch`를 사용한다. 별도의 로컬 검색 상태를 다시 만드는 훅은 추가하지 않는다.
+- `AdminDrawer`는 관리자 전용 공통 UI이므로 `src/ui/AdminDrawer`에 둔다. 결제·캠페인 등 다른 모듈에서는 `@admin/ui/AdminDrawer/AdminDrawer`, 같은 폴더의 스토리에서는 `./AdminDrawer`로 가져온다.
+
+`@admin`은 관리자 앱의 `src`를 가리키며 외부 공통 패키지가 아니다. 여러 앱에서 공유하는 UI 패키지는 `@repo/ui`다. 모듈 경계를 넘는 경로는 [프로젝트 폴더 구조 규칙](../../../docs/folder-structure.md)에 맞추고, 관리자 전용 기능을 공유 패키지로 옮기지 않는다.
+
 ## 화면 점검 결과
 
 | 화면 | 조회·초기 상태 처리 |
