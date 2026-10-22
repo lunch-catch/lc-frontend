@@ -1,12 +1,6 @@
 import { useState } from 'react';
-import {
-  Button,
-  DateRangePicker,
-  SearchField,
-  SelectField,
-  StatusBadge,
-} from '@repo/ui';
-import { formatDate, formatDateTime } from '@repo/utils';
+import { Button, SearchField, SelectField, StatusBadge } from '@repo/ui';
+import { formatDateTime } from '@repo/utils';
 
 import { ApiError } from '@admin/api/client';
 import { getMembers, type MemberSortKey } from '@admin/api/members';
@@ -25,16 +19,17 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { memberQuery } from './memberQuery';
 
 const columns: DataTableColumn[] = [
+  { key: 'joinedAt', label: '가입일', minWidth: 170 },
   { key: 'memberId', label: '회원 ID', minWidth: 120 },
   { key: 'nickname', label: '닉네임', minWidth: 150 },
   { key: 'status', label: '상태', minWidth: 100 },
-  { key: 'joinedAt', label: '가입일', minWidth: 120 },
   { key: 'lastLoginAt', label: '최근 로그인일', minWidth: 160 },
 ];
 const statusMeta = {
@@ -64,7 +59,7 @@ export const UserMemberListContent = ({
   const dates = { startDate: filters.from, endDate: filters.to };
   const sort = filters.sortBy
     ? { key: filters.sortBy, direction: filters.sortDir }
-    : null;
+    : { key: 'joinedAt' as const, direction: 'desc' as const };
   const { draftKeyword, keyword, setDraftKeyword } = useUrlSearch(
     filters.keyword,
     (keyword) => {
@@ -149,7 +144,7 @@ export const UserMemberListContent = ({
       >
         <SearchField
           aria-label="닉네임 검색"
-          placeholder="닉네임을 입력하세요"
+          placeholder="닉네임 검색"
           value={draftKeyword}
           onChange={(event) => setDraftKeyword(event.target.value)}
         />
@@ -157,7 +152,7 @@ export const UserMemberListContent = ({
           fitContent
           aria-label="회원 상태"
           options={[
-            { label: '전체', value: 'ALL' },
+            { label: '상태 전체', value: 'ALL' },
             { label: '활성', value: 'ACTIVE' },
             { label: '정지', value: 'SUSPENDED' },
             { label: '탈퇴', value: 'WITHDRAWN' },
@@ -167,7 +162,7 @@ export const UserMemberListContent = ({
             updateFilters({ page: 1, status: value as typeof status });
           }}
         />
-        <DateRangePicker
+        <AdminDateRangePicker
           aria-label="가입일 범위"
           value={dates}
           onValueChange={(value) => {
@@ -226,6 +221,9 @@ export const UserMemberListContent = ({
           ) : (
             data.items.map((member) => (
               <TableRow key={member.memberId}>
+                <TableCell>
+                  {member.joinedAt ? formatDateTime(member.joinedAt) : '-'}
+                </TableCell>
                 <TableCell>{member.memberId}</TableCell>
                 <TableCell>
                   {member.status === 'WITHDRAWN'
@@ -236,9 +234,6 @@ export const UserMemberListContent = ({
                   <StatusBadge variant={statusMeta[member.status].variant}>
                     {statusMeta[member.status].label}
                   </StatusBadge>
-                </TableCell>
-                <TableCell>
-                  {member.joinedAt ? formatDate(member.joinedAt) : '-'}
                 </TableCell>
                 <TableCell>
                   {member.lastLoginAt

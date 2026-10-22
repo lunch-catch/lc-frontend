@@ -1,7 +1,7 @@
 import {
   queryChoice,
-  queryDate,
   queryPage,
+  queryPastDate,
   querySize,
   queryText,
 } from '@admin/hooks/urlQuery';
@@ -12,8 +12,8 @@ const listQuery = {
     ['ALL', 'ACTIVE', 'SUSPENDED', 'WITHDRAWN'] as const,
     'ALL',
   ),
-  from: queryDate(),
-  to: queryDate(),
+  from: queryPastDate(),
+  to: queryPastDate(),
   page: queryPage,
   size: querySize,
   sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
@@ -21,8 +21,9 @@ const listQuery = {
 
 export const memberQuery = {
   ...listQuery,
+  // 기본 정렬을 요청과 열 헤더에 명시해 가입일 최신순임을 함께 표시한다.
   sortBy: queryChoice(
     ['', 'memberId', 'nickname', 'joinedAt', 'lastLoginAt'] as const,
-    '',
+    'joinedAt',
   ),
 };

@@ -1,7 +1,7 @@
 import {
   queryChoice,
-  queryDate,
   queryPage,
+  queryPastDate,
   querySize,
   queryText,
 } from '@admin/hooks/urlQuery';
@@ -16,8 +16,8 @@ export const paymentQuery = {
     ['ALL', 'REQUESTED', 'APPROVED', 'FAILED', 'CANCELLED', 'UNKNOWN'] as const,
     'ALL',
   ),
-  from: queryDate(),
-  to: queryDate(),
+  from: queryPastDate(),
+  to: queryPastDate(),
   page: queryPage,
   size: querySize,
   sortBy: queryChoice(['', 'requestedAt', 'amount', 'approvedAt'] as const, ''),
@@ -30,8 +30,8 @@ export const refundQuery = {
     ['ALL', 'REQUESTED', 'APPROVED', 'REJECTED', 'COMPLETED'] as const,
     'ALL',
   ),
-  from: queryDate(),
-  to: queryDate(),
+  from: queryPastDate(),
+  to: queryPastDate(),
   page: queryPage,
   size: querySize,
   sortBy: queryChoice(
@@ -51,8 +51,8 @@ export const mismatchQuery = {
     'ALL',
   ),
   resolved: queryChoice(['ALL', 'true', 'false'] as const, 'ALL'),
-  from: queryDate(),
-  to: queryDate(),
+  from: queryPastDate(),
+  to: queryPastDate(),
   page: queryPage,
   size: querySize,
   sortBy: queryChoice(['createdAt', 'businessDate'] as const, 'createdAt'),
@@ -75,15 +75,15 @@ export const getLedgerQuery = (from: string, to: string) => ({
     ] as const,
     'ALL',
   ),
-  from: queryDate(from),
-  to: queryDate(to),
+  from: queryPastDate(from),
+  to: queryPastDate(to),
   size: querySize,
   sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
 });
 
 export const getSummaryQuery = (from: string, to: string) => ({
   period: queryChoice(['DAILY', 'WEEKLY', 'MONTHLY'] as const, 'DAILY'),
-  from: queryDate(from),
-  to: queryDate(to),
+  from: queryPastDate(from),
+  to: queryPastDate(to),
   sortDir: queryChoice(['asc', 'desc'] as const, 'desc'),
 });

@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { useCalendarPopover } from '../../hooks/useCalendarPopover';
 import {
   type DateRangeSelectionMode,
   type DateRangeValue,
@@ -18,15 +19,17 @@ export interface DateRangePickerProps {
   ariaLabel?: string;
   defaultValue?: DateRangeValue;
   disabled?: boolean;
+  /** 선택 가능한 마지막 날짜. 미지정 시 제한하지 않으며 주·월 구간에도 적용한다. */
+  maxDate?: string;
   onValueChange?: (value: DateRangeValue) => void;
   placeholder?: string;
+  /** 오늘로 취급할 기준 날짜(YYYY-MM-DD). 미지정 시 브라우저 현지 날짜를 사용한다. */
+  todayDate?: string;
   value?: DateRangeValue;
 }
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 const emptyDateRange: DateRangeValue = { endDate: '', startDate: '' };
-const popupWidth = 296;
-const popupMargin = 8;
 
 const createDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -39,31 +42,32 @@ const isSameDate = (firstDate: Date, secondDate: Date) =>
 
 /**
  * 시작·종료 구간을 선택하는 달력으로, 일·주는 날짜 격자, 월은 월 목록을 표시한다.
- * 주는 월요일~일요일, 월은 첫날~마지막 날을 YYYY-MM-DD 범위로 반환한다.
+ * 주는 월요일~일요일, 월은 첫날~마지막 날을 반환하며 maxDate가 있으면 종료일을 제한한다.
  * value가 있으면 부모 상태를 사용하고, 없으면 defaultValue에서 시작해 내부 상태로 관리한다.
  */
 export function DateRangePicker({
   ariaLabel = '날짜 범위 선택',
   defaultValue = emptyDateRange,
   disabled = false,
+  maxDate,
   onValueChange,
   placeholder = '가입일 범위 선택',
+  todayDate,
   value,
   selectionMode = 'day',
 }: DateRangePickerProps) {
-  const fieldRef = useRef<HTMLDivElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const { fieldRef, popupRef } = useCalendarPopover(isOpen);
   const [isSelectingStartDate, setIsSelectingStartDate] = useState(true);
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
   const selectedRange = value ?? uncontrolledValue;
+  const today = todayDate ? createDate(todayDate) : new Date();
   const referenceDate = selectedRange.startDate
     ? createDate(selectedRange.startDate)
-    : new Date();
+    : today;
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1),
   );
-  const today = new Date();
   const unitLabel =
     selectionMode === 'week' ? '주' : selectionMode === 'month' ? '월' : '일';
   const startLabel = selectionMode === 'day' ? '시작일' : `시작 ${unitLabel}`;
@@ -82,70 +86,6 @@ export function DateRangePicker({
     visibleMonth.getMonth() + 1,
     0,
   ).getDate();
-
-  useLayoutEffect(() => {
-    const popup = popupRef.current;
-    const field = fieldRef.current;
-
-    if (!isOpen || !popup || !field) {
-      return;
-    }
-
-    // Popover API의 최상위 레이어는 부모의 overflow와 stacking context에 영향을 받지 않는다.
-    // manual 모드로 브라우저의 자동 닫기를 끄고, 바깥 클릭·Escape와 isOpen으로 열림 상태를 관리한다.
-    // useLayoutEffect에서 배치해 최초 표시 때 위치가 튀는 것을 막는다.
-    popup.showPopover();
-
-    const updatePosition = () => {
-      // 모바일 키보드나 확대 때문에 실제 보이는 영역이 작아진 경우에도 그 영역 안에 배치한다.
-      const viewport = window.visualViewport;
-      const viewportLeft = viewport?.offsetLeft ?? 0;
-      const viewportTop = viewport?.offsetTop ?? 0;
-      const viewportWidth =
-        viewport?.width ?? document.documentElement.clientWidth;
-      const viewportHeight = viewport?.height ?? window.innerHeight;
-      const margin = popupMargin;
-      const minLeft = viewportLeft + margin;
-      const minTop = viewportTop + margin;
-      const viewportBottom = viewportTop + viewportHeight - margin;
-      const fieldRect = field.getBoundingClientRect();
-
-      // 좁은 화면에서는 폭에 따라 내용 높이도 달라지므로 크기를 제한한 후 위치 계산에 쓸 높이를 측정한다.
-      popup.style.width = `${Math.min(popupWidth, Math.max(0, viewportWidth - margin * 2))}px`;
-      popup.style.maxHeight = `${Math.max(0, viewportHeight - margin * 2)}px`;
-
-      const popupRect = popup.getBoundingClientRect();
-      const maxLeft = viewportLeft + viewportWidth - margin - popupRect.width;
-      const belowTop = fieldRect.bottom + margin;
-      const aboveTop = fieldRect.top - margin - popupRect.height;
-      // 아래 공간이 부족하면 위로 펼치고, 어느 쪽도 부족하면 화면 안으로 보정한다.
-      const preferredTop =
-        belowTop + popupRect.height <= viewportBottom ? belowTop : aboveTop;
-
-      popup.style.left = `${Math.max(minLeft, Math.min(fieldRect.left, maxLeft))}px`;
-      popup.style.top = `${Math.max(minTop, Math.min(preferredTop, viewportBottom - popupRect.height))}px`;
-    };
-
-    updatePosition();
-
-    // 월 변경으로 달력 높이가 달라지거나 화면을 스크롤해도 입력란을 따라간다.
-    const observer = new ResizeObserver(updatePosition);
-    observer.observe(popup);
-    observer.observe(field);
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    window.visualViewport?.addEventListener('resize', updatePosition);
-    window.visualViewport?.addEventListener('scroll', updatePosition);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-      window.visualViewport?.removeEventListener('resize', updatePosition);
-      window.visualViewport?.removeEventListener('scroll', updatePosition);
-      popup.hidePopover();
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -167,7 +107,7 @@ export function DateRangePicker({
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [fieldRef]);
 
   const handleValueChange = (nextValue: DateRangeValue) => {
     if (value === undefined) {
@@ -178,7 +118,10 @@ export function DateRangePicker({
   };
 
   const handleDateSelect = (nextDate: string) => {
+    if (maxDate && nextDate > maxDate) return;
     const nextUnit = getDateRangeUnit(nextDate, selectionMode);
+    // 현재 주·월을 선택해도 구간의 종료일이 허용된 날짜를 넘지 않게 한다.
+    if (maxDate && nextUnit.endDate > maxDate) nextUnit.endDate = maxDate;
     if (
       isSelectingStartDate ||
       !selectedRange.startDate ||
@@ -191,6 +134,7 @@ export function DateRangePicker({
 
     // 종료 구간을 먼저 선택해도 두 구간을 모두 포함하는 날짜 범위를 반환한다.
     const startUnit = getDateRangeUnit(selectedRange.startDate, selectionMode);
+    if (maxDate && startUnit.endDate > maxDate) startUnit.endDate = maxDate;
     handleValueChange({
       startDate:
         nextUnit.startDate < startUnit.startDate
@@ -320,6 +264,7 @@ export function DateRangePicker({
                   dateValue > selectedRange.startDate &&
                   dateValue < selectedRange.endDate;
                 const isToday = isSameDate(today, date);
+                const isUnavailable = !!maxDate && dateValue > maxDate;
 
                 return (
                   <div
@@ -334,13 +279,16 @@ export function DateRangePicker({
                       aria-current={isToday ? 'date' : undefined}
                       aria-label={`${date.getMonth() + 1}월 ${date.getDate()}일`}
                       aria-pressed={isSelectedBoundary}
+                      disabled={isUnavailable}
                       className={[
                         'relative z-10 flex size-8 items-center justify-center rounded-full text-caption-web transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary',
-                        isSelectedBoundary
-                          ? 'bg-action-primary font-semibold text-text-inverse'
-                          : isToday
-                            ? 'bg-surface-brand font-medium text-text-brand hover:bg-action-primary hover:text-text-inverse'
-                            : 'text-text-primary hover:bg-surface-subtle',
+                        isUnavailable
+                          ? 'cursor-not-allowed text-text-disabled'
+                          : isSelectedBoundary
+                            ? 'bg-action-primary font-semibold text-text-inverse'
+                            : isToday
+                              ? 'bg-surface-brand font-medium text-text-brand hover:bg-action-primary hover:text-text-inverse'
+                              : 'text-text-primary hover:bg-surface-subtle',
                       ].join(' ')}
                       onClick={() => handleDateSelect(dateValue)}
                       type="button"
@@ -358,6 +306,7 @@ export function DateRangePicker({
               visibleMonth={visibleMonth}
               selectedRange={selectedRange}
               onSelect={handleDateSelect}
+              maxDate={maxDate}
             />
           )}
 
@@ -373,7 +322,8 @@ export function DateRangePicker({
               초기화
             </button>
             <button
-              className="text-caption-web font-medium text-action-primary transition-colors hover:text-action-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+              className="text-caption-web font-medium text-action-primary transition-colors hover:text-action-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:text-text-disabled"
+              disabled={!!maxDate && formatDateValue(today) > maxDate}
               onClick={() => handleDateSelect(formatDateValue(today))}
               type="button"
             >

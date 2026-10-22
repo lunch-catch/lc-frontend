@@ -1,10 +1,12 @@
 import { useState } from 'react';
 
+import { shiftDate } from '@admin/api/analyticsDateUtils';
 import { getCampaignWarnings, getInvalidImpressions } from '@admin/api/fraud';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
 import {
   queryChoice,
-  queryDate,
   queryPage,
+  queryPastDate,
   querySize,
   queryText,
 } from '@admin/hooks/urlQuery';
@@ -16,10 +18,12 @@ import type { TableDensity } from '@admin/ui/DataTable';
 import { getFraudRangeError } from './fraudUtils';
 
 export const useFraudManagement = () => {
+  const today = getKstToday();
+  // 시작일과 종료일을 모두 포함하므로 오늘에서 30일 전까지가 최대 31일이다.
   const { filters, updateFilters } = useUrlFilters('fraud.', {
     tab: queryChoice(['impressions', 'warnings'] as const, 'impressions'),
-    from: queryDate(),
-    to: queryDate(),
+    from: queryPastDate(shiftDate(today, -30)),
+    to: queryPastDate(today),
     reason: queryChoice(
       ['ALL', 'EXPIRED_OR_UNKNOWN', 'NOT_OWNER'] as const,
       'ALL',

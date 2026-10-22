@@ -1,15 +1,10 @@
 import { type ReactNode, useMemo } from 'react';
-import {
-  DateRangePicker,
-  type DateRangeValue,
-  SearchField,
-  SelectField,
-} from '@repo/ui';
+import { type DateRangeValue, SearchField, SelectField } from '@repo/ui';
 
 import {
   queryChoice,
-  queryDate,
   queryPage,
+  queryPastDate,
   querySize,
   queryText,
 } from '@admin/hooks/urlQuery';
@@ -26,6 +21,7 @@ import {
   type TableSortDirection,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
@@ -42,6 +38,8 @@ interface Sort {
 }
 
 interface BillingTableProps {
+  heading?: string;
+  description?: ReactNode;
   loading?: boolean;
   error?: string;
   onRetry?: () => void;
@@ -60,6 +58,8 @@ interface BillingTableProps {
 }
 
 export const BillingTable = ({
+  heading,
+  description,
   queryPrefix,
   columns,
   rows,
@@ -93,8 +93,8 @@ export const BillingTable = ({
       ['ALL', ...statusOptions.map(([value]) => value)],
       defaultStatus,
     ),
-    from: queryDate(defaultRange.startDate),
-    to: queryDate(defaultRange.endDate),
+    from: queryPastDate(defaultRange.startDate),
+    to: queryPastDate(defaultRange.endDate),
     page: queryPage,
     size: querySize,
     sortBy: queryChoice(['', ...columns.map((column) => column.label)], ''),
@@ -172,6 +172,8 @@ export const BillingTable = ({
   return (
     <>
       <FilterBar
+        heading={heading}
+        description={description}
         columnSettings={columnSettings}
         className="!px-0 !py-0"
         density={{ value: density, onValueChange: setDensity }}
@@ -180,6 +182,7 @@ export const BillingTable = ({
         {extraFilters ??
           (showSearch && (
             <SearchField
+              placeholder="목록 검색"
               value={draftKeyword}
               onChange={(event) => setDraftKeyword(event.target.value)}
             />
@@ -202,7 +205,7 @@ export const BillingTable = ({
           />
         )}
         {showDateRange && (
-          <DateRangePicker
+          <AdminDateRangePicker
             ariaLabel="조회 기간"
             placeholder="조회 기간 선택"
             value={range}

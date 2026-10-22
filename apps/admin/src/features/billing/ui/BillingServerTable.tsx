@@ -23,6 +23,8 @@ export interface BillingServerColumn<T> extends DataTableColumn {
   render: (item: T) => ReactNode;
 }
 interface BillingServerTableProps<T> {
+  heading?: string;
+  description?: ReactNode;
   tableId: string;
   columns: BillingServerColumn<T>[];
   items: T[];
@@ -45,6 +47,8 @@ interface BillingServerTableProps<T> {
 
 /** 현재 페이지를 그대로 표시하고 검색·정렬·페이지 이동은 서버에 요청한다. */
 export const BillingServerTable = <T,>({
+  heading,
+  description,
   tableId,
   columns,
   items,
@@ -76,6 +80,8 @@ export const BillingServerTable = <T,>({
   return (
     <>
       <FilterBar
+        heading={heading}
+        description={description}
         className="!px-0 !py-0"
         columnSettings={settings}
         density={{

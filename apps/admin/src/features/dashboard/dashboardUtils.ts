@@ -2,6 +2,8 @@ import type { AnalyticsBucket } from '@admin/api/analytics';
 
 import type { FunnelMetric } from './dashboardTypes';
 
+export { getKstToday } from '@admin/hooks/queryDateUtils';
+
 /** API 조회 대기와 서버의 집계 미완료를 구분한다. */
 export const getDashboardMetricHint = (resource: {
   loading: boolean;

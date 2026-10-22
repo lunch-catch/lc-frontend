@@ -65,16 +65,18 @@ const PolicySummary = ({
   title,
 }: {
   policy: PointPolicy;
-  title: string;
+  title?: string;
 }) => (
   <section className="min-w-0 rounded-lg border border-border-subtle bg-bg-surface p-4">
-    <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <h4 className="text-body-sm-web font-semibold">{title}</h4>
-      <span className="text-caption-web text-text-secondary">
-        {formatDate(policy.effectiveDate)}부터
-      </span>
-    </div>
-    <dl className="mt-4 space-y-4">
+    {title && (
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h4 className="text-body-sm-web font-semibold">{title}</h4>
+        <span className="text-caption-web text-text-secondary">
+          {formatDate(policy.effectiveDate)}부터
+        </span>
+      </div>
+    )}
+    <dl className={title ? 'mt-4 space-y-4' : 'space-y-4'}>
       <div>
         <dt className="text-caption-web text-text-secondary">최소 충전 금액</dt>
         <dd className="mt-1 text-h2-web font-semibold tabular-nums">
@@ -135,10 +137,12 @@ export const PointPolicyTab = ({
           {notice}
         </p>
       )}
-      <section aria-label="충전 정책" className="flex flex-col gap-4">
+      <section aria-label="현재 충전 정책" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-heading-sm-web font-semibold">충전 정책</h3>
+            <h3 className="text-heading-sm-web font-semibold">
+              현재 충전 정책
+            </h3>
             <p className="mt-1 inline-flex items-center gap-1.5 text-caption-web text-text-secondary">
               <Clock3 aria-hidden className="size-3.5 shrink-0" />
               변경 사항은 내일 00:00(한국 시간)부터 적용됩니다.
@@ -173,10 +177,7 @@ export const PointPolicyTab = ({
         ) : (
           policies.data && (
             <div className="grid gap-3 pb-2 @3xl:grid-cols-2">
-              <PolicySummary
-                policy={policies.data.current}
-                title="현재 적용 중"
-              />
+              <PolicySummary policy={policies.data.current} />
               {policies.data.next ? (
                 <PolicySummary
                   policy={policies.data.next}
@@ -197,13 +198,9 @@ export const PointPolicyTab = ({
         )}
       </section>
       <section className="flex flex-col gap-4 border-t border-border-subtle pt-6">
-        <div>
-          <h3 className="text-heading-sm-web font-semibold">정책 변경 이력</h3>
-          <p className="mt-1 text-caption-web text-text-secondary">
-            적용일 최신순으로 표시합니다.
-          </p>
-        </div>
         <BillingServerTable
+          heading="정책 변경 이력"
+          description="적용일 최신순으로 표시합니다."
           tableId="billing.policyHistory"
           columns={columns}
           items={history.data?.items ?? []}

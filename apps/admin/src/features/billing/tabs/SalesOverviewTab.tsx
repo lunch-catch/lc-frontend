@@ -1,5 +1,5 @@
-import { DateRangePicker, SegmentedControl, StatusBadge } from '@repo/ui';
-import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
+import { SegmentedControl, StatusBadge } from '@repo/ui';
+import { formatPoints, formatWon } from '@repo/utils';
 
 import { getSales } from '@admin/api/analytics';
 import {
@@ -7,7 +7,7 @@ import {
   shiftDate,
 } from '@admin/api/analyticsDateUtils';
 import { analyticsPeriods, sumAnalytics } from '@admin/api/analyticsUtils';
-import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
+import { queryChoice, queryPastDate } from '@admin/hooks/urlQuery';
 import { useAnalyticsQuery } from '@admin/hooks/useAnalyticsQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import {
@@ -16,6 +16,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import type {
   BillingColumn,
@@ -53,8 +55,8 @@ export const SalesOverviewTab = ({
   preferences: BillingTablePreferences;
 }) => {
   const { filters, updateFilters } = useUrlFilters('sales.', {
-    from: queryDate(shiftDate(today, -1).slice(0, 7) + '-01'),
-    to: queryDate(shiftDate(today, -1)),
+    from: queryPastDate(shiftDate(today, -1).slice(0, 7) + '-01'),
+    to: queryPastDate(shiftDate(today, -1)),
     period: queryChoice(['day', 'week', 'month'] as const, 'day'),
   });
   const range = { startDate: filters.from, endDate: filters.to };
@@ -99,38 +101,33 @@ export const SalesOverviewTab = ({
   }));
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <SegmentedControl
-          ariaLabel="매출 집계 단위"
-          value={filters.period}
-          items={[
-            { label: '일별', value: 'day' },
-            { label: '주별', value: 'week' },
-            { label: '월별', value: 'month' },
-          ]}
-          onValueChange={(period) => updateFilters({ period })}
-        />
-        <DateRangePicker
-          ariaLabel="매출 조회 기간"
-          placeholder="조회 기간 선택"
-          selectionMode={filters.period}
-          value={range}
-          onValueChange={(value) =>
-            updateFilters({ from: value.startDate, to: value.endDate })
-          }
-        />
-        <span className="text-caption-web text-text-secondary">
-          마지막 집계{' '}
-          {data?.aggregatedAt ? formatDateTime(data.aggregatedAt) : '—'}
-        </span>
-      </div>
-      {validation && (
-        <p role="alert" className="text-body-sm-web text-status-danger-fg">
-          {validation}
-        </p>
-      )}
       <section aria-label="조회 기간별 매출 합계" className="space-y-3">
-        <h3 className="text-body-sm-web font-semibold">기간별 합계</h3>
+        <FilterBar heading="기간별 합계" className="!px-0 !py-0">
+          <SegmentedControl
+            ariaLabel="매출 집계 단위"
+            value={filters.period}
+            items={[
+              { label: '일별', value: 'day' },
+              { label: '주별', value: 'week' },
+              { label: '월별', value: 'month' },
+            ]}
+            onValueChange={(period) => updateFilters({ period })}
+          />
+          <AdminDateRangePicker
+            ariaLabel="매출 조회 기간"
+            placeholder="조회 기간 선택"
+            selectionMode={filters.period}
+            value={range}
+            onValueChange={(value) =>
+              updateFilters({ from: value.startDate, to: value.endDate })
+            }
+          />
+        </FilterBar>
+        {validation && (
+          <p role="alert" className="text-body-sm-web text-status-danger-fg">
+            {validation}
+          </p>
+        )}
         <DataTable
           aria-label="기간별 매출 합계"
           density={preferences.density}
@@ -166,9 +163,12 @@ export const SalesOverviewTab = ({
               : '미소진 잔액은 조회 기간 마지막 구간의 값이며 일별 잔액을 합산하지 않습니다.'}
         </p>
       </section>
-      <section aria-label="매출 내역" className="space-y-3">
-        <h3 className="text-body-sm-web font-semibold">기간별 내역</h3>
+      <section
+        aria-label="매출 내역"
+        className="space-y-3 border-t border-border-subtle pt-6"
+      >
         <BillingTable
+          heading="기간별 내역"
           queryPrefix="sales.table."
           preferences={preferences}
           columns={columns}

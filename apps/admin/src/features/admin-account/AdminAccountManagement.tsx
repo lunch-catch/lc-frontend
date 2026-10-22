@@ -162,7 +162,7 @@ export const AdminAccountManagement = () => {
           </tbody>
         </DataTable>
         {!list.loading && !list.error && (
-          <p className="text-caption-web text-text-secondary">
+          <p className="text-right text-caption-web text-text-secondary">
             총 {list.accounts.length}개
           </p>
         )}
