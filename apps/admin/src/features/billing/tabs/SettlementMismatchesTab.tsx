@@ -25,7 +25,16 @@ import {
 import { PointAdjustmentModal } from '../ui/PointAdjustmentModal';
 import { useBillingResource } from '../useBillingResource';
 
+// 기본 정렬(createdAt 내림차순)에 맞춰 발견 시각을 첫 열에 표시한다.
 const columns: BillingServerColumn<SettlementMismatch>[] = [
+  {
+    key: 'createdAt',
+    label: '발견 시각',
+    width: '13%',
+    minWidth: 170,
+    sortable: true,
+    render: (item) => formatDateTime(item.createdAt),
+  },
   {
     key: 'businessDate',
     label: '대상 영업일',
@@ -89,14 +98,6 @@ const columns: BillingServerColumn<SettlementMismatch>[] = [
         {item.resolutionType ? '해결됨' : '미해결'}
       </StatusBadge>
     ),
-  },
-  {
-    key: 'createdAt',
-    label: '발견 시각',
-    width: '13%',
-    minWidth: 170,
-    sortable: true,
-    render: (item) => formatDateTime(item.createdAt),
   },
 ];
 
