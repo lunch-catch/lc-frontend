@@ -19,10 +19,10 @@ export const getDashboardMetricHint = (resource: {
         : '데이터 없음';
 
 export const funnelMetrics: { value: FunnelMetric; label: string }[] = [
-  { value: 'impressions', label: '유효 노출' },
-  { value: 'saves', label: '찜' },
   { value: 'issued', label: '발급' },
   { value: 'used', label: '사용' },
+  { value: 'impressions', label: '유효 노출' },
+  { value: 'saves', label: '찜' },
 ];
 export const getChangeLabel = (current: number, previous: number) => {
   if (previous === 0)

@@ -44,6 +44,13 @@ export const DashboardSnapshots = ({
             value: stores.data?.items.at(-1)?.cumulativeStoreCount ?? null,
             unit: '개',
           },
+          // 활성 캠페인은 하루 시점 값이라 조회 기간이 아닌 기준일 현황에 둔다.
+          {
+            label: '활성 캠페인',
+            resource: stores,
+            value: stores.data?.items.at(-1)?.activeCampaignCount ?? null,
+            unit: '개',
+          },
           {
             label: '미소진 잔액',
             resource: sales,
@@ -55,13 +62,10 @@ export const DashboardSnapshots = ({
     (resource) => resource.error,
   );
   return (
-    <section
-      aria-label="누적·잔액 현황"
-      className="space-y-3 border-t border-border-subtle pt-5"
-    >
+    <section aria-label="누적·잔액 현황" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <h3 className="text-body-sm-web font-medium text-text-secondary">
+          <h3 className="text-h2-web font-semibold text-text-primary">
             누적·잔액 현황
           </h3>
           <p className="text-caption-web text-text-secondary">
@@ -85,9 +89,7 @@ export const DashboardSnapshots = ({
           onRetry={() => failures.forEach((resource) => resource.retry())}
         />
       )}
-      <dl
-        className={`grid gap-3 sm:grid-cols-2 ${view === 'members' ? 'xl:grid-cols-3' : ''}`}
-      >
+      <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map(({ resource, ...card }) => (
           <div
             key={card.label}
