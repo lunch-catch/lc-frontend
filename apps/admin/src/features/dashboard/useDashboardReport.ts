@@ -4,15 +4,11 @@ import {
   getAnalyticsRangeError,
   shiftDate,
 } from '@admin/api/analyticsDateUtils';
-import { queryChoice, queryDate } from '@admin/hooks/urlQuery';
+import { queryChoice, queryPastDate } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 
 import type { DashboardRange, FunnelMetric } from './dashboardTypes';
-
-const getKstToday = () =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(
-    new Date(),
-  );
+import { getKstToday } from './dashboardUtils';
 
 export const useDashboardReport = () => {
   // API와 같은 KST 날짜를 기준으로 초기 조회 기간을 어제까지 7일로 잡는다.
@@ -20,8 +16,8 @@ export const useDashboardReport = () => {
   const completedThrough = shiftDate(initialToday, -1);
   const { filters, updateFilters } = useUrlFilters('dashboard.', {
     view: queryChoice(['owners', 'members'] as const, 'owners'),
-    from: queryDate(shiftDate(completedThrough, -6)),
-    to: queryDate(completedThrough),
+    from: queryPastDate(shiftDate(completedThrough, -6)),
+    to: queryPastDate(completedThrough),
     preset: queryChoice(['today', '7', '30', 'custom'] as const, '7'),
     metric: queryChoice(
       ['impressions', 'saves', 'issued', 'used'] as const,

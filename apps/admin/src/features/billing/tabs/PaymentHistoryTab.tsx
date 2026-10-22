@@ -1,10 +1,5 @@
-﻿import { useState } from 'react';
-import {
-  DateRangePicker,
-  SearchField,
-  SelectField,
-  StatusBadge,
-} from '@repo/ui';
+import { useState } from 'react';
+import { SearchField, SelectField, StatusBadge } from '@repo/ui';
 import { formatDateTime, formatPoints, formatWon } from '@repo/utils';
 
 import type { AdminPayment, PaymentSortKey } from '@admin/api/payments';
@@ -22,6 +17,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
@@ -169,7 +165,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
         />
         <SearchField
           aria-label="결제 검색어"
-          placeholder={`${paymentSearchOptions.find((option) => option.value === searchType)?.label}를 입력하세요`}
+          placeholder={`${paymentSearchOptions.find((option) => option.value === searchType)?.label ?? '결제 정보'} 검색`}
           value={search.draftKeyword}
           onChange={(event) => search.setDraftKeyword(event.target.value)}
         />
@@ -189,7 +185,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
             setSelected(null);
           }}
         />
-        <DateRangePicker
+        <AdminDateRangePicker
           ariaLabel="결제 요청일 범위"
           placeholder="요청일 범위 선택"
           value={range}

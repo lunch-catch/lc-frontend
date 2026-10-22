@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Button, DateRangePicker, SegmentedControl, Tabs } from '@repo/ui';
+import { Button, SegmentedControl, Tabs } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
 import { Clock3, ExternalLink } from 'lucide-react';
 
@@ -8,12 +8,14 @@ import {
   getPreviousRange,
 } from '@admin/api/analyticsDateUtils';
 import { analyticsPeriods, sumAnalytics } from '@admin/api/analyticsUtils';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 
 import { DashboardActionQueue } from './DashboardActionQueue';
 import { DashboardFunnel } from './DashboardFunnel';
 import { DashboardMetricCard } from './DashboardMetricCard';
 import { DashboardMetricTrend } from './DashboardMetricTrend';
-import { DashboardOverview, DashboardSnapshots } from './DashboardOverview';
+import { DashboardOverview } from './DashboardOverview';
+import { DashboardSnapshots } from './DashboardSnapshots';
 import { getDashboardMetricHint } from './dashboardUtils';
 import { useDashboardMetrics } from './useDashboardMetrics';
 import { useDashboardReport } from './useDashboardReport';
@@ -91,7 +93,7 @@ const DashboardReport = () => {
           aria-label="조회 기간 설정"
         >
           {report.preset === 'custom' && (
-            <DateRangePicker
+            <AdminDateRangePicker
               ariaLabel="대시보드 조회 기간"
               selectionMode="day"
               value={range}
@@ -226,9 +228,9 @@ const DashboardReport = () => {
               </div>
             </>
           )}
-          <DashboardSnapshots metrics={metrics} view={view} />
         </>
       )}
+      <DashboardSnapshots view={view} />
     </div>
   );
 };

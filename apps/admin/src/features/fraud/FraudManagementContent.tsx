@@ -1,19 +1,18 @@
-import {
-  DateRangePicker,
-  SearchField,
-  SelectField,
-  StatusBadge,
-  Tabs,
-} from '@repo/ui';
+import { SearchField, SelectField, StatusBadge, Tabs } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
 import type { CampaignWarning, InvalidImpression } from '@admin/api/fraud';
 import { useTableColumnSettings } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { PaginationSummary } from '@admin/ui/Pagination/PaginationSummary';
 
 import { type FraudColumn, FraudTable } from './FraudTable';
-import { formatFraudRatio, invalidReasonLabels } from './fraudUtils';
+import {
+  formatFraudRatio,
+  invalidReasonDescriptions,
+  invalidReasonLabels,
+} from './fraudUtils';
 import { useFraudManagement } from './useFraudManagement';
 
 const invalidColumns: FraudColumn<InvalidImpression>[] = [
@@ -36,7 +35,7 @@ const invalidColumns: FraudColumn<InvalidImpression>[] = [
     label: '무효 사유',
     minWidth: 230,
     render: (item) => (
-      <span title={item.reasonCode}>
+      <span title={invalidReasonDescriptions[item.reasonCode]}>
         {invalidReasonLabels[item.reasonCode]}
       </span>
     ),
@@ -183,6 +182,18 @@ export const FraudManagementContent = () => {
             updateFilters({ tab, page: 1, sortBy: '', sortDir: 'desc' });
         }}
       />
+      {filters.tab === 'impressions' && (
+        <p className="mt-3 text-caption-web leading-5 text-text-secondary">
+          무효 노출은 서버에서 정상 노출로 인정하지 않은 광고 표시 요청입니다.
+          아래 두 사유로 무효 처리된 노출은 과금되지 않습니다.
+        </p>
+      )}
+      {filters.tab === 'warnings' && (
+        <p className="mt-3 text-caption-web text-text-secondary">
+          무효 비율 = 무효 ÷ 유효로 100%를 넘을 수 있습니다. 경고 판정은 서버
+          결과를 따릅니다. 상위 회원 점유율은 가장 집중된 하루 기준입니다.
+        </p>
+      )}
       <FilterBar
         className="mb-3 mt-3"
         columnSettings={settings}
@@ -193,7 +204,8 @@ export const FraudManagementContent = () => {
           <>
             <SearchField
               aria-label="캠페인 ID 검색"
-              placeholder="캠페인 ID"
+              placeholder="캠페인 ID 검색"
+              inputMode="numeric"
               value={state.campaign.draftKeyword}
               onChange={(event) =>
                 state.campaign.setDraftKeyword(event.target.value)
@@ -201,7 +213,8 @@ export const FraudManagementContent = () => {
             />
             <SearchField
               aria-label="사용자 ID 검색"
-              placeholder="사용자 ID"
+              placeholder="사용자 ID 검색"
+              inputMode="numeric"
               value={state.member.draftKeyword}
               onChange={(event) =>
                 state.member.setDraftKeyword(event.target.value)
@@ -247,7 +260,7 @@ export const FraudManagementContent = () => {
             }}
           />
         )}
-        <DateRangePicker
+        <AdminDateRangePicker
           ariaLabel="부정 관리 조회 기간"
           value={{ startDate: filters.from, endDate: filters.to }}
           onValueChange={(value) =>
@@ -256,42 +269,42 @@ export const FraudManagementContent = () => {
         />
       </FilterBar>
       {filters.tab === 'impressions' && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
-          {Object.entries(invalidReasonLabels)
-            .filter(
-              ([reason]) =>
-                filters.reason === 'ALL' || filters.reason === reason,
-            )
-            .map(([reason, label]) => {
-              const count = invalid.data
-                ? (invalid.data.summaryByReason.find(
-                    (item) => item.reasonCode === reason,
-                  )?.count ?? 0)
-                : undefined;
-              return (
-                <div
-                  key={reason}
-                  className="rounded-xl border border-border-subtle bg-bg-surface p-4"
-                >
-                  <p className="text-caption-web text-text-secondary">
-                    {label}
-                  </p>
-                  <p className="mt-2 text-h2-web font-semibold">
-                    {count === undefined ? '—' : formatNumber(count) + '건'}
-                  </p>
-                  <p className="mt-1 text-caption-web text-text-secondary">
-                    {reason}
-                  </p>
-                </div>
-              );
-            })}
+        <div className="mb-4 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {Object.entries(invalidReasonLabels)
+              .filter(
+                ([reason]) =>
+                  filters.reason === 'ALL' || filters.reason === reason,
+              )
+              .map(([reason, label]) => {
+                const count = invalid.data
+                  ? (invalid.data.summaryByReason.find(
+                      (item) => item.reasonCode === reason,
+                    )?.count ?? 0)
+                  : undefined;
+                return (
+                  <div
+                    key={reason}
+                    className="rounded-xl border border-border-subtle bg-bg-surface p-4"
+                  >
+                    <p className="text-caption-web text-text-secondary">
+                      {label}
+                    </p>
+                    <p className="mt-2 text-h2-web font-semibold">
+                      {count === undefined ? '—' : formatNumber(count) + '건'}
+                    </p>
+                    <p className="mt-2 text-caption-web leading-5 text-text-secondary">
+                      {
+                        invalidReasonDescriptions[
+                          reason as keyof typeof invalidReasonDescriptions
+                        ]
+                      }
+                    </p>
+                  </div>
+                );
+              })}
+          </div>
         </div>
-      )}
-      {filters.tab === 'warnings' && (
-        <p className="mb-3 text-caption-web text-text-secondary">
-          무효 비율 = 무효 ÷ 유효로 100%를 넘을 수 있습니다. 경고 판정은 서버
-          결과를 따릅니다. 상위 회원 점유율은 가장 집중된 하루 기준입니다.
-        </p>
       )}
       {filters.tab === 'impressions' ? (
         <FraudTable

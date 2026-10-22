@@ -1,5 +1,5 @@
-﻿import { useState } from 'react';
-import { Button, DateRangePicker, SearchField, SelectField } from '@repo/ui';
+import { useState } from 'react';
+import { Button, SearchField, SelectField } from '@repo/ui';
 import { formatDateTime, formatPoints } from '@repo/utils';
 import { SlidersHorizontal } from 'lucide-react';
 
@@ -18,6 +18,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
 
@@ -139,7 +140,7 @@ export const PointLedgerTab = ({
         </span>
         <SearchField
           aria-label="점주 ID"
-          placeholder="점주 ID를 입력하세요"
+          placeholder="점주 ID 검색"
           inputMode="numeric"
           value={ownerSearch.draftKeyword}
           onChange={(event) => ownerSearch.setDraftKeyword(event.target.value)}
@@ -164,24 +165,16 @@ export const PointLedgerTab = ({
         aria-label="개별 포인트 변동 내역"
         className="flex flex-col gap-4"
       >
-        <div className="flex flex-col gap-1">
-          <h3 className="text-heading-sm-web font-semibold text-text-primary">
-            개별 포인트 변동 내역
-          </h3>
-          <p className="text-caption-web leading-5 text-text-secondary">
-            점주 ID와 조회 기간을 입력하면 자동으로 조회됩니다. 사용 가능
-            잔액에는 예약 중 포인트가 포함되지 않습니다. 소진은 예약 포인트에서
-            차감되므로 사용 가능 잔액의 전후 금액이 같을 수 있습니다.
-          </p>
-        </div>
         <FilterBar
+          heading="개별 포인트 변동 내역"
+          description="점주 ID와 조회 기간을 입력하면 자동으로 조회됩니다. 사용 가능 잔액에는 예약 중 포인트가 포함되지 않습니다. 소진은 예약 포인트에서 차감되므로 사용 가능 잔액의 전후 금액이 같을 수 있습니다."
           columnSettings={columnSettings}
           className="!px-0 !py-0"
           density={{ value: density, onValueChange: setDensity }}
         >
           <SearchField
             aria-label="캠페인 ID"
-            placeholder="캠페인 ID (선택)"
+            placeholder="캠페인 ID 검색"
             inputMode="numeric"
             value={campaignSearch.draftKeyword}
             onChange={(event) => {
@@ -204,7 +197,7 @@ export const PointLedgerTab = ({
               updateFilters({ type: value as typeof type });
             }}
           />
-          <DateRangePicker
+          <AdminDateRangePicker
             ariaLabel="조회 기간"
             placeholder="조회 기간 선택"
             value={range}

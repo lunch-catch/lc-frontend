@@ -303,6 +303,15 @@ export const TableHeaderCell = ({
             }`}
           />
         </button>
+      ) : sortDirection ? (
+        // 서버 고정 정렬은 상태만 표시하고 정렬 변경 버튼은 만들지 않는다.
+        <span className="flex items-center gap-1">
+          <span>{children}</span>
+          <SortIcon
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-action-primary"
+          />
+        </span>
       ) : (
         children
       )}

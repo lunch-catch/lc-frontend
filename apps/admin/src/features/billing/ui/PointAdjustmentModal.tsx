@@ -4,6 +4,7 @@ import { formatPoints } from '@repo/utils';
 
 import { adjustPoints } from '@admin/api/pointAdjustments';
 import type { SettlementMismatch } from '@admin/api/settlementMismatches';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 
 import { getPointAdjustmentError } from '../billingManagementUtils';
@@ -34,6 +35,7 @@ export const PointAdjustmentModal = ({
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const kstToday = getKstToday();
   const pendingRequest = useRef<{ key: string; requestId: string } | null>(
     null,
   );
@@ -179,6 +181,8 @@ export const PointAdjustmentModal = ({
                   </span>
                 </p>
                 <DatePicker
+                  maxDate={kstToday}
+                  todayDate={kstToday}
                   ariaLabel="대상 영업일"
                   value={targetBusinessDate}
                   disabled={campaignRequired}
