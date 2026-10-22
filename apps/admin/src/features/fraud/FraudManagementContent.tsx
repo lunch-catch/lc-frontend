@@ -182,6 +182,18 @@ export const FraudManagementContent = () => {
             updateFilters({ tab, page: 1, sortBy: '', sortDir: 'desc' });
         }}
       />
+      {filters.tab === 'impressions' && (
+        <p className="mt-3 text-caption-web leading-5 text-text-secondary">
+          무효 노출은 서버에서 정상 노출로 인정하지 않은 광고 표시 요청입니다.
+          아래 두 사유로 무효 처리된 노출은 과금되지 않습니다.
+        </p>
+      )}
+      {filters.tab === 'warnings' && (
+        <p className="mt-3 text-caption-web text-text-secondary">
+          무효 비율 = 무효 ÷ 유효로 100%를 넘을 수 있습니다. 경고 판정은 서버
+          결과를 따릅니다. 상위 회원 점유율은 가장 집중된 하루 기준입니다.
+        </p>
+      )}
       <FilterBar
         className="mb-3 mt-3"
         columnSettings={settings}
@@ -192,7 +204,8 @@ export const FraudManagementContent = () => {
           <>
             <SearchField
               aria-label="캠페인 ID 검색"
-              placeholder="캠페인 ID"
+              placeholder="캠페인 ID 검색"
+              inputMode="numeric"
               value={state.campaign.draftKeyword}
               onChange={(event) =>
                 state.campaign.setDraftKeyword(event.target.value)
@@ -200,7 +213,8 @@ export const FraudManagementContent = () => {
             />
             <SearchField
               aria-label="사용자 ID 검색"
-              placeholder="사용자 ID"
+              placeholder="사용자 ID 검색"
+              inputMode="numeric"
               value={state.member.draftKeyword}
               onChange={(event) =>
                 state.member.setDraftKeyword(event.target.value)
@@ -256,10 +270,6 @@ export const FraudManagementContent = () => {
       </FilterBar>
       {filters.tab === 'impressions' && (
         <div className="mb-4 space-y-3">
-          <p className="text-caption-web leading-5 text-text-secondary">
-            무효 노출은 서버에서 정상 노출로 인정하지 않은 광고 표시 요청입니다.
-            아래 두 사유로 무효 처리된 노출은 과금되지 않습니다.
-          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {Object.entries(invalidReasonLabels)
               .filter(
@@ -295,12 +305,6 @@ export const FraudManagementContent = () => {
               })}
           </div>
         </div>
-      )}
-      {filters.tab === 'warnings' && (
-        <p className="mb-3 text-caption-web text-text-secondary">
-          무효 비율 = 무효 ÷ 유효로 100%를 넘을 수 있습니다. 경고 판정은 서버
-          결과를 따릅니다. 상위 회원 점유율은 가장 집중된 하루 기준입니다.
-        </p>
       )}
       {filters.tab === 'impressions' ? (
         <FraudTable
