@@ -38,13 +38,13 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
     ),
   });
   return (
-    <DashboardSection title={title} action={action}>
-      <div className="min-h-72">
+    <DashboardSection title={title} description={note} action={action}>
+      <div className="min-h-52">
         {loading ? (
           <div
             role="status"
             aria-label="지표를 불러오고 있습니다."
-            className="flex h-72 flex-col gap-3"
+            className="flex h-52 flex-col gap-3"
           >
             <div aria-hidden className="h-14 rounded-lg bg-bg-page" />
             <div
@@ -60,14 +60,14 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
             </div>
           </div>
         ) : error ? (
-          <p className="flex h-72 items-center justify-center text-body-sm-web text-text-secondary">
+          <p className="flex h-52 items-center justify-center text-body-sm-web text-text-secondary">
             지표를 조회하지 못했습니다.
           </p>
         ) : rows.length > 0 &&
           rows.every((row) => row.status === 'IN_PROGRESS') ? (
           <div
             role="status"
-            className="flex h-72 flex-col items-center justify-center gap-2 text-body-sm-web text-text-secondary"
+            className="flex h-52 flex-col items-center justify-center gap-2 text-body-sm-web text-text-secondary"
           >
             <p className="font-medium">집계 미완료</p>
             <p className="text-caption-web">
@@ -84,11 +84,6 @@ export const DashboardMetricTrend = <T extends AnalyticsBucket>({
           />
         )}
       </div>
-      {note && (
-        <p className="mt-3 border-t border-border-subtle pt-3 text-caption-web text-text-secondary">
-          {note}
-        </p>
-      )}
     </DashboardSection>
   );
 };

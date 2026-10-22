@@ -8,14 +8,7 @@ import {
   getNearestChartIndex,
 } from './dashboardChartUtils';
 
-const chartLayout = {
-  height: 208,
-  left: 64,
-  right: 32,
-  top: 20,
-  bottom: 160,
-  labelY: 192,
-};
+const chartLayout = { left: 64, right: 32, top: 20 };
 const axisFormatter = new Intl.NumberFormat('ko-KR', { notation: 'compact' });
 
 interface TrendSeries {
@@ -29,6 +22,7 @@ interface DashboardTrendChartProps {
   primary: TrendSeries;
   secondary?: TrendSeries;
   unit?: string;
+  height?: number;
 }
 
 export const DashboardTrendChart = ({
@@ -37,11 +31,16 @@ export const DashboardTrendChart = ({
   primary,
   secondary,
   unit = '건',
+  height = 208,
 }: DashboardTrendChartProps) => {
+  // 아래쪽 48px은 x축 라벨 영역으로 남긴다.
+  const bottom = height - 48;
+  const labelY = height - 16;
   const id = useId();
   const chartRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [pointerY, setPointerY] = useState<number | null>(null);
   const hasLabels = labels.length > 0;
   useLayoutEffect(() => {
     const container = chartRef.current;
@@ -73,8 +72,7 @@ export const DashboardTrendChart = ({
       ? chartLayout.left + plotWidth / 2
       : chartLayout.left + (index * plotWidth) / (labels.length - 1);
   const y = (value: number) =>
-    chartLayout.bottom -
-    ((value - min) / (max - min)) * (chartLayout.bottom - chartLayout.top);
+    bottom - ((value - min) / (max - min)) * (bottom - chartLayout.top);
   // 미확정 값을 0으로 그리거나 양옆의 확정 구간과 연결하지 않는다.
   const paths = (values: (number | null)[]) => {
     const segments: { points: string; start: number; end: number }[] = [];
@@ -95,6 +93,7 @@ export const DashboardTrendChart = ({
     const bounds = event.currentTarget.getBoundingClientRect();
     // 화면 좌표를 SVG 좌표로 변환해 마우스에 가장 가까운 구간을 선택한다.
     const position = ((event.clientX - bounds.left) / bounds.width) * width;
+    setPointerY(event.clientY - bounds.top);
     setActiveIndex(
       getNearestChartIndex(
         position,
@@ -115,6 +114,17 @@ export const DashboardTrendChart = ({
     if (index === labels.length - 1) return 'end';
     return 'middle';
   };
+  const hidePointer = () => {
+    setActiveIndex(null);
+    setPointerY(null);
+  };
+  const tooltipVisible = activeIndex !== null;
+  // 툴팁은 활성 구간 옆에 붙이되 차트 오른쪽 절반에서는 왼쪽으로 뒤집어 잘리지 않게 한다.
+  const tooltipFlipped = x(active) > width / 2;
+  const tooltipTop = Math.min(
+    bottom,
+    Math.max(chartLayout.top, pointerY ?? y(primary.values[active] ?? 0)),
+  );
   if (!labels.length)
     return (
       <p className="py-10 text-center text-body-sm-web text-text-secondary">
@@ -123,46 +133,16 @@ export const DashboardTrendChart = ({
     );
   return (
     <div className="space-y-2">
-      <div
-        id={id}
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-bg-page px-3 py-2"
-      >
-        <div className="space-y-1">
-          <p className="text-caption-web font-medium tabular-nums text-text-secondary">
-            <span className="sr-only">선택 구간 </span>
-            {labels[active]}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          {[primary, ...(secondary ? [secondary] : [])].map((series, index) => (
-            <div key={series.name} className="space-y-1">
-              <p className="flex items-center gap-2 text-caption-web text-text-secondary">
-                <span
-                  aria-hidden="true"
-                  className={
-                    index === 0
-                      ? 'h-1 w-4 rounded-full bg-action-primary'
-                      : 'w-4 border-t-2 border-dashed border-action-secondary'
-                  }
-                />
-                {series.name}
-              </p>
-              <p className="text-body-sm-web font-semibold tabular-nums text-text-primary">
-                {valueLabel(series.values[active])}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div ref={chartRef} className="rounded-lg bg-bg-surface">
+      <div ref={chartRef} className="relative rounded-lg bg-bg-surface">
         <svg
           aria-label={title}
           className="w-full text-caption-web"
           style={{
-            height: chartLayout.height,
+            height,
           }}
-          viewBox={`0 0 ${width} ${chartLayout.height}`}
+          viewBox={`0 0 ${width} ${height}`}
           onPointerMove={handlePointerMove}
+          onPointerLeave={hidePointer}
         >
           <defs>
             <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
@@ -225,10 +205,11 @@ export const DashboardTrendChart = ({
             )),
           )}
           <line
+            opacity={tooltipVisible ? 1 : 0}
             x1={x(active)}
             x2={x(active)}
             y1={chartLayout.top}
-            y2={chartLayout.bottom}
+            y2={bottom}
             stroke="var(--semantic-text-tertiary)"
             strokeOpacity="0.5"
             strokeDasharray="4 4"
@@ -240,24 +221,23 @@ export const DashboardTrendChart = ({
               <circle
                 role="img"
                 aria-label={`${label}, ${primary.name} ${valueLabel(primary.values[index])}${secondary ? `, ${secondary.name} ${valueLabel(secondary.values[index])}` : ''}`}
-                aria-describedby={id}
                 tabIndex={0}
                 cx={x(index)}
                 cy={y(primary.values[index] ?? 0)}
                 r="10"
                 fill="transparent"
                 className="focus:outline-action-primary"
-                onFocus={() => setActiveIndex(index)}
+                onFocus={() => {
+                  setPointerY(null);
+                  setActiveIndex(index);
+                }}
+                onBlur={hidePointer}
                 onMouseEnter={() => setActiveIndex(index)}
-              >
-                <title>
-                  {label}: {valueLabel(primary.values[index])}
-                </title>
-              </circle>
+              />
               {showLabel(index) && (
                 <text
                   x={x(index)}
-                  y={chartLayout.labelY}
+                  y={labelY}
                   textAnchor={getLabelAnchor(index)}
                   fill="var(--semantic-text-secondary)"
                 >
@@ -266,7 +246,7 @@ export const DashboardTrendChart = ({
               )}
             </g>
           ))}
-          <g pointerEvents="none">
+          <g pointerEvents="none" opacity={tooltipVisible ? 1 : 0}>
             <g opacity={primary.values[active] == null ? 0 : 1}>
               <circle
                 cx={x(active)}
@@ -296,6 +276,45 @@ export const DashboardTrendChart = ({
             )}
           </g>
         </svg>
+        {tooltipVisible && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute z-10 w-max rounded-lg whitespace-nowrap border border-border-subtle bg-bg-surface px-3 py-2 shadow-md"
+            style={{
+              left: x(active),
+              top: tooltipTop,
+              transform: `translate(${tooltipFlipped ? 'calc(-100% - 12px)' : '12px'}, -50%)`,
+            }}
+          >
+            <p className="text-caption-web font-medium tabular-nums text-text-secondary">
+              {labels[active]}
+            </p>
+            <div className="mt-1 space-y-1">
+              {[primary, ...(secondary ? [secondary] : [])].map(
+                (series, index) => (
+                  <p
+                    key={series.name}
+                    className="flex items-center justify-between gap-3 text-caption-web text-text-secondary"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={
+                          index === 0
+                            ? 'h-1 w-4 rounded-full bg-action-primary'
+                            : 'w-4 border-t-2 border-dashed border-action-secondary'
+                        }
+                      />
+                      {series.name}
+                    </span>
+                    <span className="text-body-sm-web font-semibold tabular-nums text-text-primary">
+                      {valueLabel(series.values[active])}
+                    </span>
+                  </p>
+                ),
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <div className="sr-only">
         <span>마우스 또는 키보드로 구간별 수치를 확인하세요.</span>
