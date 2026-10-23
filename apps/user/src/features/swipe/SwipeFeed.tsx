@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import { ApiError } from '@user/api/client';
 import { getNow } from '@user/api/clock';
@@ -121,6 +122,7 @@ const getInitialFeed = () => {
 };
 
 const SwipeFeed = () => {
+  const navigate = useNavigate();
   const [initial] = useState(getInitialFeed);
   const [status, setStatus] = useState<FeedStatus>(initial.status);
   const [cards, setCards] = useState<FeedCard[]>(initial.cards);
@@ -478,6 +480,10 @@ const SwipeFeed = () => {
 
   const { cardProps, direction, swipe } = useSwipeGesture({
     onSwipe: handleSwipe,
+    // 카드를 누르면 가게 상세로 간다. 돌아오면 보던 카드부터 이어 본다 (저장해 둔 묶음)
+    onTap: () => {
+      if (topCard) navigate(`/stores/${topCard.storeId}`);
+    },
   });
 
   // 카드 자리를 보여주는지. 카드를 보다가 받는 중이면 카드 자리를 그대로 둔다

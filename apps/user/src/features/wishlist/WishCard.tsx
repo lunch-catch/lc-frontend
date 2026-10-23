@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   ChevronRight,
   CircleCheck,
@@ -202,6 +202,65 @@ const WishCard = ({
 
   // 오늘 끝난 카드(쿠폰 없음, 사용 완료, 만료, 삭제함)도 같은 쿠폰 모양을 유지하고, 위쪽만 흐리게 해 끝났다는 걸 보여준다
   const isDimmed = isEnded || isFinishedToday(state);
+  const topContent = (
+    <>
+      {wish.imageUrl ? (
+        <img
+          alt=""
+          className="size-14 shrink-0 rounded-lg bg-surface-subtle object-cover"
+          height={56}
+          src={wish.imageUrl}
+          width={56}
+        />
+      ) : (
+        // 가게가 대표 사진을 올리지 않았으면 회색 바탕에 가게 아이콘을 둔다
+        <div
+          aria-hidden="true"
+          className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"
+        >
+          <Store className="size-6" />
+        </div>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+        <div className="flex max-w-full min-w-0 items-center gap-1.5">
+          {/* 찜 목록은 할인을 비교하는 화면이라, 이름은 한 단계 작은 보통 굵기로 두어 주황 할인이 먼저 눈에 들어오게 한다 */}
+          <h3 className="min-w-0 truncate text-body-sm-mobile font-medium text-text-primary">
+            {storeName}
+          </h3>
+        </div>
+        {wish.discount ? (
+          // 하루에 받을 수 있는 수가 정해져 있어, 카드끼리 할인을 쉽게 비교하도록 크게 둔다
+          // 할인 대상은 같은 줄 옆에 두어 카드가 한 줄 덜 길어지게 한다
+          <div className="flex max-w-full min-w-0 items-center gap-1.5">
+            {/* 바로 아래 받기 버튼과 같은 연한 주황 칸이면 할인도 눌리는 것처럼 보여, 바탕 없이 큰 주황 글자로만 둔다 */}
+            <strong className="shrink-0 text-h3-mobile font-bold text-text-brand">
+              {formatWishAmount(wish.discount)}
+            </strong>
+            <span className="min-w-0 truncate text-caption-mobile text-text-secondary">
+              {formatWishTarget(wish.discount)}
+            </span>
+          </div>
+        ) : (
+          isEnded && (
+            <p className="max-w-full truncate text-caption-mobile text-text-secondary">
+              할인이 끝나 받을 수 없어요
+            </p>
+          )
+        )}
+      </div>
+    </>
+  );
+  const topClassName = `flex items-center gap-3 p-3 pr-10 ${isDimmed ? 'opacity-60' : ''}`;
+  const topArea = isEnded ? (
+    <div className={topClassName}>{topContent}</div>
+  ) : (
+    <Link
+      className={`${topClassName} active:bg-surface-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action-primary`}
+      to={`/stores/${wish.storeId}`}
+    >
+      {topContent}
+    </Link>
+  );
   const action = renderAction();
   const info = renderInfo();
 
@@ -221,54 +280,8 @@ const WishCard = ({
         </button>
       )}
       {/* 끝난 캠페인과 오늘 끝난 카드는 위쪽 내용만 흐리게 해서 같은 틀 안에서 끝났다는 걸 보여준다 */}
-      <div
-        className={`flex items-center gap-3 p-3 pr-10 ${isDimmed ? 'opacity-60' : ''}`}
-      >
-        {wish.imageUrl ? (
-          <img
-            alt=""
-            className="size-14 shrink-0 rounded-lg bg-surface-subtle object-cover"
-            height={56}
-            src={wish.imageUrl}
-            width={56}
-          />
-        ) : (
-          // 가게가 대표 사진을 올리지 않았으면 회색 바탕에 가게 아이콘을 둔다
-          <div
-            aria-hidden="true"
-            className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-tertiary"
-          >
-            <Store className="size-6" />
-          </div>
-        )}
-        <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
-          <div className="flex max-w-full min-w-0 items-center gap-1.5">
-            {/* 찜 목록은 할인을 비교하는 화면이라, 이름은 한 단계 작은 보통 굵기로 두어 주황 할인이 먼저 눈에 들어오게 한다 */}
-            <h3 className="min-w-0 truncate text-body-sm-mobile font-medium text-text-primary">
-              {storeName}
-            </h3>
-          </div>
-          {wish.discount ? (
-            // 하루에 받을 수 있는 수가 정해져 있어, 카드끼리 할인을 쉽게 비교하도록 크게 둔다
-            // 할인 대상은 같은 줄 옆에 두어 카드가 한 줄 덜 길어지게 한다
-            <div className="flex max-w-full min-w-0 items-center gap-1.5">
-              {/* 바로 아래 받기 버튼과 같은 연한 주황 칸이면 할인도 눌리는 것처럼 보여, 바탕 없이 큰 주황 글자로만 둔다 */}
-              <strong className="shrink-0 text-h3-mobile font-bold text-text-brand">
-                {formatWishAmount(wish.discount)}
-              </strong>
-              <span className="min-w-0 truncate text-caption-mobile text-text-secondary">
-                {formatWishTarget(wish.discount)}
-              </span>
-            </div>
-          ) : (
-            isEnded && (
-              <p className="max-w-full truncate text-caption-mobile text-text-secondary">
-                할인이 끝나 받을 수 없어요
-              </p>
-            )
-          )}
-        </div>
-      </div>
+      {/* 사진·이름·할인을 누르면 가게 상세로 간다. 삭제와 쿠폰 알약은 따로 눌린다. 끝난 캠페인은 가게 정보가 비어 이동하지 않는다 */}
+      {topArea}
 
       {/* 발급 상태를 모르면 목록 맨 위 안내가 이유를 말해 주므로 아래쪽을 두지 않는다 */}
       {action && (
