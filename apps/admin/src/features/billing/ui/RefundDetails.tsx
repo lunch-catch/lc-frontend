@@ -13,7 +13,7 @@ import { DetailItem } from './BillingDetails';
 interface RefundDetailsProps {
   refund: AdminRefund;
   onCompleted: (message: string) => void;
-  onRefresh: () => void;
+  onRefresh: (cause: unknown) => void;
 }
 export const RefundDetails = ({
   refund,
@@ -50,7 +50,7 @@ export const RefundDetails = ({
           ['BILLING-014', 'BILLING-015'].includes(cause.code ?? '')
         )
           setUnavailable(true);
-        onRefresh();
+        onRefresh(cause);
       },
     );
   };
