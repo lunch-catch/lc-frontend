@@ -109,6 +109,26 @@
     }
   }
 
+  /* 카운트다운 숫자가 바뀔 때 위에서 내려오는 움직임 */
+  --animate-digit-roll: digit-roll 0.3s ease-out both;
+
+  @keyframes digit-roll {
+    from {
+      opacity: 0;
+      transform: translateY(-60%);
+    }
+  }
+
+  /* 배너 장식이 천천히 깜빡이는 움직임 */
+  --animate-banner-twinkle: banner-twinkle 2.4s ease-in-out infinite;
+
+  @keyframes banner-twinkle {
+    50% {
+      opacity: 0.3;
+      transform: scale(0.7);
+    }
+  }
+
   /* 튜토리얼에서 다음 장이 오른쪽에서 밀려 들어오는 움직임 */
   --animate-slide-in: slide-in 0.3s ease-out both;
 

@@ -31,6 +31,7 @@ import CategoryIconRow from './CategoryIconRow';
 import { readExploreSnapshot, saveExploreSnapshot } from './exploreSnapshot';
 import NearbyCouponSlider from './NearbyCouponSlider';
 import NearbyCouponSliderSkeleton from './NearbyCouponSliderSkeleton';
+import StatusBanner from './StatusBanner';
 import StoreCard from './StoreCard';
 import StoreListSkeleton from './StoreListSkeleton';
 import StoreMap from './StoreMap';
@@ -373,6 +374,7 @@ const ExploreScreen = () => {
           {/* 처음 둘러볼 때는 슬라이드 자리도 잡아 두어, 받은 뒤 목록이 아래로 밀려 내려가지 않게 한다 */}
           {showSkeleton && (
             <div className="flex flex-col gap-6">
+              {!query && category === 'ALL' && <StatusBanner />}
               {!query && category === 'ALL' && <NearbyCouponSliderSkeleton />}
               <StoreListSkeleton />
             </div>
@@ -444,6 +446,7 @@ const ExploreScreen = () => {
 
     return (
       <div className="flex flex-col gap-6">
+        {isBrowsing && <StatusBanner />}
         {isBrowsing && (
           <NearbyCouponSlider
             stores={stores.filter((store) => store.hasActiveCampaign)}
