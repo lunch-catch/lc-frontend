@@ -10,7 +10,6 @@ import {
 import type { StoreListItem } from '@user/api/store';
 
 import FeaturedStoreCard from './FeaturedStoreCard';
-import IssuePhaseLabel from './IssuePhaseLabel';
 
 // 슬라이드에 보여줄 가게 수
 const SLIDE_COUNT = 3;
@@ -325,8 +324,6 @@ const NearbyCouponSlider = ({ stores }: NearbyCouponSliderProps) => {
         id="nearby-coupons-title"
       >
         가까운 순 쿠폰 {nearest.length}곳
-        {/* 오픈 시각은 모든 가게가 같아서 카드마다 반복하지 않고 제목에 한 번만 둔다 */}
-        <IssuePhaseLabel />
       </h3>
       <Carousel stores={nearest} />
     </section>
