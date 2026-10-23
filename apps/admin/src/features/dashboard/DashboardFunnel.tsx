@@ -57,6 +57,8 @@ export const DashboardFunnel = ({
   const fraudQuery = resource.data
     ? getFraudDetailQuery(resource.data.from, resource.data.to)
     : '';
+  // 합계는 전체 선택 기간을 유지하고 링크가 조회할 기간만 별도로 표시한다.
+  const fraudPeriod = fraudQuery ? new URLSearchParams(fraudQuery) : null;
   return (
     <DashboardSection
       title="사용자 이용 현황"
@@ -108,6 +110,14 @@ export const DashboardFunnel = ({
                       </strong>
                     </span>
                     <ExternalLink aria-hidden className="size-3.5 shrink-0" />
+                    {fraudPeriod && (
+                      <span className="basis-full text-caption-web leading-5 text-text-secondary group-hover/impression-detail:text-text-brand group-focus-visible/impression-detail:text-text-brand">
+                        조회 기간: {fraudPeriod.get('fraud.from')} ~{' '}
+                        {fraudPeriod.get('fraud.to')}
+                        {fraudPeriod.get('fraud.from') !==
+                          resource.data?.from && ' (마지막 31일)'}
+                      </span>
+                    )}
                   </Link>
                 ) : undefined
               }
