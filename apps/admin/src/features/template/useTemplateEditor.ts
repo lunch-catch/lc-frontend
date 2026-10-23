@@ -17,6 +17,8 @@ import type {
 } from './templateTypes';
 import { getTemplateError } from './templateUtils';
 
+const RECHECK_TIMEOUT_MS = 10000;
+
 interface EditorResult {
   template: PosterTemplate;
   versions: TemplateVersion[];
@@ -33,6 +35,10 @@ export const useTemplateEditor = (initialId?: string) => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [requestPending, setRequestPending] = useState(false);
+  const [stopNotice, setStopNotice] = useState('');
+  const generationController = useRef<AbortController | null>(null);
+  const recheckController = useRef<AbortController | null>(null);
   const { isWaiting, retryAfterSeconds, reportError } = useRequestFeedback();
   const [loadingMore, setLoadingMore] = useState(false);
   const [versionsFresh, setVersionsFresh] = useState(false);
@@ -49,6 +55,8 @@ export const useTemplateEditor = (initialId?: string) => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      generationController.current?.abort();
+      recheckController.current?.abort();
     };
   }, []);
 
@@ -91,6 +99,53 @@ export const useTemplateEditor = (initialId?: string) => {
     // 아직 다음 페이지가 있으면 목록에 없다는 이유만으로 삭제됐다고 단정하지 않는다.
     return result?.nextPageToken ? 'unknown' : 'deleted';
   };
+
+  // 연결 중단이 서버 작업 취소를 보장하지 않으므로, 알고 있는 ID의 저장 결과만 확인한다.
+  const readSavedResult = async (id: string) => {
+    const controller = new AbortController();
+    recheckController.current?.abort();
+    recheckController.current = controller;
+    const timeout = window.setTimeout(
+      () => controller.abort(),
+      RECHECK_TIMEOUT_MS,
+    );
+    try {
+      const [template, page] = await Promise.all([
+        getTemplate(id, controller.signal),
+        getTemplateVersions(id, undefined, controller.signal),
+      ]);
+      if (!mounted.current || controller.signal.aborted) return;
+      setResult({
+        template,
+        versions: page.items,
+        nextPageToken: page.nextPageToken,
+      });
+      setVersionsFresh(true);
+    } finally {
+      window.clearTimeout(timeout);
+      if (recheckController.current === controller)
+        recheckController.current = null;
+    }
+  };
+  const recheckSaved = async () => {
+    const id = result ? String(result.template.templateId) : savedId.current;
+    if (!id || operationRef.current || moreRef.current) return;
+    operationRef.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await readSavedResult(id);
+    } catch {
+      if (mounted.current)
+        setError(
+          '저장 결과를 확인하지 못했습니다. 잠시 후 다시 확인해 주세요.',
+        );
+    } finally {
+      operationRef.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  };
+  const stopGeneration = () => generationController.current?.abort();
 
   const generate = async (
     name: string,
@@ -149,7 +204,11 @@ export const useTemplateEditor = (initialId?: string) => {
     if (pendingRequest.current?.key !== key)
       pendingRequest.current = { key, requestId: crypto.randomUUID() };
     operationRef.current = true;
+    const controller = new AbortController();
+    generationController.current = controller;
     setBusy(true);
+    setRequestPending(true);
+    setStopNotice('');
     setError(null);
     try {
       const generated = await generateTemplate(
@@ -159,7 +218,11 @@ export const useTemplateEditor = (initialId?: string) => {
           requestId: pendingRequest.current.requestId,
         },
         id,
+        controller.signal,
       );
+      // 취소 후 늦게 도착한 결과로 화면이나 재시도용 요청 ID를 덮어쓰지 않는다.
+      controller.signal.throwIfAborted();
+      if (mounted.current) setRequestPending(false);
       // 503·네트워크 오류에는 ID를 보존하고, 성공한 요청만 다음 전송과 구분한다.
       pendingRequest.current = null;
       if (!mounted.current) return null;
@@ -190,15 +253,35 @@ export const useTemplateEditor = (initialId?: string) => {
         );
       return mounted.current ? generated : null;
     } catch (cause) {
-      if (mounted.current) {
+      if (mounted.current && controller.signal.aborted) {
+        setRequestPending(false);
+        setStopNotice(
+          '응답 대기를 중단했습니다. 서버에서는 생성이 계속될 수 있으니, 다시 보내기 전에 저장 결과를 확인해 주세요.',
+        );
+        if (id) {
+          try {
+            await readSavedResult(id);
+          } catch {
+            if (mounted.current)
+              setError(
+                '저장 결과를 확인하지 못했습니다. 다시 확인하거나 목록을 열어 주세요.',
+              );
+          }
+        }
+      } else if (mounted.current) {
         setError(getTemplateError(cause));
         if (cause instanceof ApiError && cause.code === 'POSTER-004')
           reportError(cause);
       }
       return null;
     } finally {
+      if (generationController.current === controller)
+        generationController.current = null;
       operationRef.current = false;
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        setRequestPending(false);
+      }
     }
   };
 
@@ -313,6 +396,11 @@ export const useTemplateEditor = (initialId?: string) => {
     busy,
     isWaiting,
     retryAfterSeconds,
+    requestPending,
+    stopNotice,
+    stopGeneration,
+    recheckSaved,
+    canRecheck: Boolean(initialId || result || generation),
     loadingMore,
     generate,
     publish,

@@ -1,13 +1,17 @@
-import { StatusBadge } from '@repo/ui';
-import { Code2, MousePointer2, Send, X } from 'lucide-react';
+import { Button, StatusBadge } from '@repo/ui';
+import { Code2, MousePointer2, Send, Square, X } from 'lucide-react';
 
 import type { TemplateChatState } from '../useTemplateChat';
 
 interface TemplateChatComposerProps {
   chat: TemplateChatState;
+  onViewList: () => void;
 }
 
-export const TemplateChatComposer = ({ chat }: TemplateChatComposerProps) => {
+export const TemplateChatComposer = ({
+  chat,
+  onViewList,
+}: TemplateChatComposerProps) => {
   const {
     editor,
     prompt,
@@ -21,6 +25,8 @@ export const TemplateChatComposer = ({ chat }: TemplateChatComposerProps) => {
     changePrompt,
     displayName,
     selectionError,
+    isResponding,
+    stopResponse,
   } = chat;
 
   return (
@@ -47,6 +53,11 @@ export const TemplateChatComposer = ({ chat }: TemplateChatComposerProps) => {
         aria-busy={editor.busy}
         className="template-editor__composer flex shrink-0 flex-col gap-3 px-4 pb-4 pt-2"
       >
+        {editor.isWaiting && (
+          <p role="status" className="template-editor__hint text-caption-web">
+            {editor.retryAfterSeconds}초 후 같은 요청을 다시 보낼 수 있습니다.
+          </p>
+        )}
         <label htmlFor="template-request" className="sr-only">
           템플릿 생성·수정 요청
         </label>
@@ -119,18 +130,54 @@ export const TemplateChatComposer = ({ chat }: TemplateChatComposerProps) => {
           />
           <button
             type="button"
-            aria-label="생성·수정 요청 보내기"
+            aria-label={
+              isResponding
+                ? editor.requestPending
+                  ? '응답 대기 중단'
+                  : '답변 전체 표시'
+                : '생성·수정 요청 보내기'
+            }
+            title={
+              isResponding
+                ? editor.requestPending
+                  ? '응답 대기 중단 (서버 생성은 계속될 수 있습니다)'
+                  : '답변 전체 표시'
+                : '보내기'
+            }
             className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-lg bg-action-primary text-white transition-colors enabled:hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
-            disabled={locked || !displayName.trim() || !prompt.trim()}
-            onClick={() => void handleSend()}
+            disabled={
+              !isResponding && (locked || !displayName.trim() || !prompt.trim())
+            }
+            onClick={() => (isResponding ? stopResponse() : void handleSend())}
           >
-            <Send aria-hidden="true" className="size-4" />
+            {isResponding ? (
+              <Square aria-hidden="true" className="size-3.5 fill-current" />
+            ) : (
+              <Send aria-hidden="true" className="size-4" />
+            )}
           </button>
         </div>
-        {editor.isWaiting && (
-          <p role="status" className="template-editor__hint text-caption-web">
-            {editor.retryAfterSeconds}초 후 같은 요청을 다시 보낼 수 있습니다.
-          </p>
+        {editor.stopNotice && (
+          <div
+            role="status"
+            className="space-y-2 text-caption-web text-text-secondary"
+          >
+            <p>{editor.stopNotice}</p>
+            <div className="flex flex-wrap gap-2">
+              {editor.canRecheck && (
+                <Button
+                  variant="neutral"
+                  disabled={locked}
+                  onClick={() => void editor.recheckSaved()}
+                >
+                  저장 결과 다시 확인
+                </Button>
+              )}
+              <Button variant="tertiary" disabled={locked} onClick={onViewList}>
+                목록에서 확인
+              </Button>
+            </div>
+          </div>
         )}
         {selectionError && (
           <p role="alert" className="text-caption-web text-status-danger-fg">

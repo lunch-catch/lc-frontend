@@ -10,6 +10,7 @@ import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 import { useTemplateChat } from '../useTemplateChat';
 import { SelectableTemplatePreview } from './SelectableTemplatePreview';
 import { TemplateChatPanel } from './TemplateChatPanel';
+import { TemplateEditorPanels } from './TemplateEditorPanels';
 import { TemplateHtmlCode } from './TemplateHtmlCode';
 import { TemplateNameModal } from './TemplateNameModal';
 import { TemplatePreviewEmptyState } from './TemplatePreviewEmptyState';
@@ -83,23 +84,23 @@ export const TemplateCreateContent = ({
         className="template-editor__frame min-w-0 rounded-xl border shadow-sm focus-visible:outline-2 focus-visible:outline-action-primary"
       >
         {/* 세 영역을 함께 보며 편집할 수 있도록 최소 작업 너비 아래에서만 가로로 스크롤한다. */}
-        <div className="grid h-full min-h-0 min-w-[800px] grid-cols-[minmax(260px,1fr)_minmax(240px,1fr)_minmax(280px,1.2fr)]">
-          <TemplateChatPanel chat={chat} />
-          <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col border-r p-4">
-            <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
-              <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
-                {previewHtml ? (
-                  <SelectableTemplatePreview
-                    html={previewHtml}
-                    disabled={locked || published}
-                    selected={selectedTarget}
-                    onSelect={selectTarget}
-                    title={`${displayName || '템플릿'} 미리보기`}
-                  />
-                ) : (
+        <TemplateEditorPanels>
+          <TemplateChatPanel chat={chat} onViewList={onBack} />
+          <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col p-4">
+            <div className="flex min-h-0 flex-1">
+              {previewHtml ? (
+                <SelectableTemplatePreview
+                  html={previewHtml}
+                  disabled={locked || published}
+                  selected={selectedTarget}
+                  onSelect={selectTarget}
+                  title={`${displayName || '템플릿'} 미리보기`}
+                />
+              ) : (
+                <div className="grid min-h-0 flex-1 place-items-center">
                   <TemplatePreviewEmptyState />
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </section>
           <section className="template-editor__panel flex min-h-0 min-w-0 flex-col gap-4 p-4">
@@ -167,7 +168,7 @@ export const TemplateCreateContent = ({
               </div>
             )}
           </section>
-        </div>
+        </TemplateEditorPanels>
       </ScrollArea>
 
       <AdminModal

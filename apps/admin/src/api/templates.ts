@@ -123,6 +123,7 @@ export const generateTemplate = async (
     requestId: string;
   },
   id?: string,
+  signal?: AbortSignal,
 ) => {
   const path = id ? `${basePath}/${encodeURIComponent(id)}/versions` : basePath;
   const body = id
@@ -137,7 +138,7 @@ export const generateTemplate = async (
       };
   const data = await requestData<TemplateGeneration | TemplateChatReply>(
     path,
-    jsonOptions('POST', body),
+    { ...jsonOptions('POST', body), signal },
     [200, 201],
   );
   // 자연어 응답은 새 템플릿이나 버전을 만들지 않는다.

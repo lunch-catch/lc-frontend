@@ -12,6 +12,7 @@ import { TemplateVersionMessage } from './TemplateVersionMessage';
 
 interface TemplateChatPanelProps {
   chat: TemplateChatState;
+  onViewList: () => void;
 }
 
 /** 전송 대기 중과 완료된 말풍선에서 같은 선택 태그를 표시한다. */
@@ -37,7 +38,10 @@ const TemplateMessageTarget = ({ label }: { label: string }) => (
   </div>
 );
 
-export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
+export const TemplateChatPanel = ({
+  chat,
+  onViewList,
+}: TemplateChatPanelProps) => {
   const {
     editor,
     published,
@@ -62,7 +66,7 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
   };
 
   return (
-    <section className="template-editor__chat flex min-h-0 min-w-0 flex-col border-r">
+    <section className="template-editor__chat flex min-h-0 min-w-0 flex-col">
       <header className="template-editor__panel-heading flex shrink-0 items-center gap-2 border-b p-4">
         <MessageSquareText
           aria-hidden="true"
@@ -177,6 +181,8 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
               <TemplateChatBubble variant="assistant">
                 <TemplateChatReveal
                   text={message.assistantMessage}
+                  complete={chat.activeRevealId !== message.id}
+                  onComplete={() => chat.finishReveal(message.id)}
                   onProgress={followLatestMessage}
                 />
               </TemplateChatBubble>
@@ -214,7 +220,9 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
           </p>
         )}
       </ScrollArea>
-      {!published && <TemplateChatComposer chat={chat} />}
+      {!published && (
+        <TemplateChatComposer chat={chat} onViewList={onViewList} />
+      )}
     </section>
   );
 };
