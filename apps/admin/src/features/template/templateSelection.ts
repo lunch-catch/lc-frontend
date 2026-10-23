@@ -164,6 +164,15 @@ const slotLabels: Record<string, string> = {
   image: '이미지',
 };
 
+/** 이전 이력의 'h1 · 내용' 같은 라벨도 요소 본문 없이 같은 이름으로 표시한다. */
+export const formatTemplateTargetLabel = (label: string) => {
+  if (Object.values(slotLabels).includes(label)) return label;
+  const tag = /^<?(div|span|p|h[1-6]|strong|em|br|img)(?:>| ·[\s\S]*)?$/i.exec(
+    label,
+  );
+  return tag ? '<' + tag[1].toLowerCase() + '>' : '선택 영역';
+};
+
 /** 서버 원본 HTML에서도 찾을 수 있도록 편집기 장식은 제외하고 구조 기반 경로를 만든다. */
 export const selectTemplateElement = (element: Element): TemplateSelection => {
   const slot = element.getAttribute('data-slot');
@@ -188,15 +197,11 @@ export const selectTemplateElement = (element: Element): TemplateSelection => {
   copy
     .querySelectorAll('[data-editor-selected]')
     .forEach((child) => child.removeAttribute('data-editor-selected'));
-  const text = (element.textContent ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 30);
   return {
     source: 'preview',
     label:
       (knownSlot && slotLabels[knownSlot]) ||
-      `${element.tagName.toLowerCase()}${text ? ` · ${text}` : ''}`,
+      `<${element.tagName.toLowerCase()}>`,
     selector,
     html: copy.outerHTML,
   };
@@ -222,6 +227,19 @@ export const buildSelectedTemplatePrompt = (
       ? `${selection.html.slice(0, available - 1)}…`
       : selection.html;
   return `${prefix}${snippet}${suffix}`;
+};
+
+/** 편집기가 만든 선택 문구만 분리한다. 일반 요청이나 다른 형식의 이력은 원문을 유지한다. */
+export const parseSelectedTemplatePrompt = (
+  requestPrompt: string,
+): { text: string; targetLabel?: string } => {
+  const match =
+    /^수정 대상: ([^\n]+)\n위치: ([^\n]+)\n선택 코드:\n([\s\S]+)\n수정 요청: ([\s\S]+)\n선택한 부분 위주로 수정하고 다른 영역과 슬롯 구조는 유지해 주세요\.$/.exec(
+      requestPrompt,
+    );
+  if (!match || !match[1].trim() || !match[4].trim())
+    return { text: requestPrompt };
+  return { text: match[4], targetLabel: formatTemplateTargetLabel(match[1]) };
 };
 
 /** 미리보기의 스크립트 실행·폼 제출·외부 리소스 로딩을 제한한다. */

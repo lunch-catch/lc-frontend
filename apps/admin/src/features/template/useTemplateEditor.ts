@@ -301,6 +301,7 @@ export const useTemplateEditor = (initialId?: string) => {
     template: result?.template ?? null,
     generation,
     suggestedPrompts,
+    dismissSuggestions: () => setSuggestedPrompts([]),
     versions: result?.versions ?? [],
     nextPageToken: versionsFresh ? result?.nextPageToken : null,
     getVersionAvailability,
