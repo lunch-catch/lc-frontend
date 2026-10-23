@@ -10,6 +10,7 @@ import tutorialCoupon from '@user/assets/illustrations/tutorial-coupon.webp';
 import tutorialLike from '@user/assets/illustrations/tutorial-like.webp';
 import { useAuth } from '@user/auth/useAuth';
 import { useOnboarding } from '@user/features/onboarding/useOnboarding';
+import { prefetchFirstFeed } from '@user/features/swipe/posterPreload';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 
@@ -96,6 +97,9 @@ const TutorialStep = () => {
         notificationOptIn: false,
       });
       onboarding.clearOnboarding();
+      // 첫 스와이프 화면이 바로 완성된 카드로 열리도록, 이동하기 전에 첫 피드와 첫 포스터를 받아 둔다
+      // 받지 못해도, 오래 걸려도 이동은 막지 않는다
+      await prefetchFirstFeed();
       completeAuthOnboarding();
       navigate('/swipe', { replace: true });
     } catch {

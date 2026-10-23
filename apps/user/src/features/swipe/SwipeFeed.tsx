@@ -36,6 +36,12 @@ import {
 import GestureRail from './GestureRail';
 import OpenCountdown from './OpenCountdown';
 import PosterCard from './PosterCard';
+import {
+  clearPrefetchedFeed,
+  fetchPreparedFeed,
+  getPrefetchedFeed,
+  preparePosters,
+} from './posterPreload';
 import PosterSkeleton from './PosterSkeleton';
 import SwipeDone from './SwipeDone';
 import SwipeHint from './SwipeHint';
@@ -48,6 +54,16 @@ import { usePosterFitWidth } from './usePosterFitWidth';
 import { useSwipeGesture } from './useSwipeGesture';
 
 const TOAST_DURATION_MS = 2500;
+// 남은 카드가 이만큼 이하가 되면 뒤에서 다음 피드를 미리 받아 둔다
+// 다 넘긴 뒤에 받으면 그동안 불러오는 중 화면이 보인다. 1장은 빠르게 넘기는 사용자에게 아슬아슬해서 2장으로 둔다
+const PREFETCH_REMAINING_CARDS = 2;
+
+// 미리 받아 둔 다음 피드 묶음
+interface NextBatch {
+  cards: FeedCard[];
+  nextFeedAt: number | null;
+  receivedAt: number;
+}
 
 // waiting: 다음 피드를 받을 수 있을 때까지 기다리는 중, done: 오늘 받을 수 있는 카드를 모두 넘김
 type FeedStatus =
@@ -162,10 +178,18 @@ const SwipeFeed = () => {
 
     let ignore = false;
 
-    fetchFeed()
+    // 로그인이나 온보딩을 마칠 때 받아 둔 첫 피드가 있으면 새로 받지 않고 이어받는다
+    // 첫 카드의 포스터와 이미지까지 받아 둔 뒤에 카드를 그린다. 그동안은 불러오는 중 화면이 이어진다
+    // 먼저 그리면 카드 안에서 회색, 글자, 이미지가 차례로 바뀌며 번쩍인다
+    // 다시 시도(attempt 1 이상)는 새로 받는다
+    const request =
+      (attempt === 0 ? getPrefetchedFeed() : null) ?? fetchPreparedFeed();
+
+    request
       .then((response) => {
         if (ignore) return;
 
+        clearPrefetchedFeed();
         hasRetriedRateLimit.current = false;
         clearRateLimitedUntil();
         if (response.status === 'serving') {
@@ -208,6 +232,67 @@ const SwipeFeed = () => {
     };
   }, [attempt]);
 
+  // 미리 받아 둔 다음 묶음. 마지막 카드를 넘기면 불러오는 중 화면 없이 바로 이어 붙인다
+  const nextBatch = useRef<NextBatch | null>(null);
+  const isPrefetching = useRef(false);
+  // 보고 있는 묶음이 바뀔 때(새 묶음, 필터 변경, 다시 받기) 올려서, 그 전에 시작한 미리 받기 결과를 버린다
+  const batchGeneration = useRef(0);
+  const prefetchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      clearTimeout(prefetchTimer.current);
+    };
+  }, []);
+
+  // 남은 카드가 얼마 없으면 다음 피드를 미리 받는다
+  // 받을 수 있는 시각(요청 제한)이 아직이면 그 시각에 받고, 앱이 뒤로 가 있으면 받지 않는다 (명세의 요청 제한 규칙)
+  // 못 받거나 비었으면 조용히 그만두고, 다 넘긴 뒤 평소처럼 받는다
+  useEffect(() => {
+    if (status !== 'serving') return;
+    const remaining = cards.length - currentIndex;
+    if (remaining <= 0 || remaining > PREFETCH_REMAINING_CARDS) return;
+    if (nextFeedAt === null || nextBatch.current || isPrefetching.current) {
+      return;
+    }
+
+    isPrefetching.current = true;
+    const generation = batchGeneration.current;
+    const shownCampaignIds = new Set(cards.map((card) => card.campaignId));
+    prefetchTimer.current = setTimeout(
+      async () => {
+        try {
+          if (document.visibilityState !== 'visible') return;
+          const response = await fetchFeed();
+          if (response.status !== 'serving') return;
+
+          // 서버가 이미 내려준 캠페인은 빼 주지만, 같은 카드가 두 번 보이지 않게 한 번 더 거른다
+          const freshCards = response.cards.filter(
+            (card) => !shownCampaignIds.has(card.campaignId),
+          );
+          if (freshCards.length === 0) return;
+
+          await preparePosters(freshCards);
+          if (!isMounted.current || generation !== batchGeneration.current) {
+            return;
+          }
+          nextBatch.current = {
+            cards: freshCards,
+            nextFeedAt: response.nextFeedAt,
+            receivedAt: getNow(),
+          };
+        } catch {
+          // 받지 못했으면 다 넘긴 뒤 평소처럼 받는다
+        } finally {
+          isPrefetching.current = false;
+        }
+      },
+      Math.max(0, nextFeedAt - getNow()),
+    );
+  }, [cards, currentIndex, nextFeedAt, status]);
+
   // 보고 있는 묶음과 위치를 저장해 탭을 오가거나 새로고침해도 이어 보게 한다
   // 오늘 피드가 끝났거나(마감, 모두 봄) 받을 수 없으면 지워서 다음에 새로 받게 한다
   useEffect(() => {
@@ -224,6 +309,9 @@ const SwipeFeed = () => {
   // 카드를 보다가 받으면 카드 자리를 그대로 두고, 기다림·빈 화면에서 받으면 그 화면 모양을 이어 간다
   // 화면 모양이 오가면 필터 줄이 위와 가운데를 오가며 번쩍여서, 받는 동안에는 직전 모양을 유지한다
   const loadNextFeed = (view: 'cards' | 'message' = 'cards') => {
+    // 미리 받아 둔 묶음은 이 요청의 필터와 위치와 맞지 않을 수 있어 버린다
+    nextBatch.current = null;
+    batchGeneration.current += 1;
     setLoadingView(view);
     setStatus('loading');
     setAttempt((current) => current + 1);
@@ -237,6 +325,18 @@ const SwipeFeed = () => {
 
   // 받아 둔 카드를 다 넘겼을 때. 다음 피드를 받고, 아직 이르면 받을 수 있는 시각까지 기다린다
   const moveToNextFeed = () => {
+    // 미리 받아 둔 묶음이 있으면 불러오는 중 화면 없이 바로 이어 붙인다
+    const batch = nextBatch.current;
+    if (batch) {
+      nextBatch.current = null;
+      batchGeneration.current += 1;
+      hasServedCards.current = true;
+      setCards(batch.cards);
+      setCurrentIndex(0);
+      setReceivedAt(batch.receivedAt);
+      setNextFeedAt(batch.nextFeedAt);
+      return;
+    }
     if (nextFeedAt === null) {
       setStatus('done');
     } else if (getNow() >= nextFeedAt) {
@@ -250,6 +350,9 @@ const SwipeFeed = () => {
   const handleFilterSaved = (saved: FeedFilter) => {
     const isSortChanged = feedFilter.filter?.sort !== saved.sort;
     feedFilter.setFilter(saved);
+    // 미리 받아 둔 묶음은 바꾸기 전 필터로 만든 것이라 버리고, 필요하면 다시 받는다
+    nextBatch.current = null;
+    batchGeneration.current += 1;
     if (topCard) {
       // 업종은 받아 둔 카드 중 아직 안 본 카드에 바로 적용해, 고른 업종이 아닌 카드는 숨긴다
       // 새로 받으면 다음 피드 시각 전이라 거절되거나 받아 둔 카드를 못 보게 될 수 있어, 서버에 다시 묻지 않는다

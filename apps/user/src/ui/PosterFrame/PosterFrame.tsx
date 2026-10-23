@@ -5,7 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 const POSTER_BASE_WIDTH = 360;
 
 // 포스터 안의 이미지를 기다리는 최대 시간(ms). 이 시간이 지나면 덜 불러왔어도 보여준다
-const SHOW_TIMEOUT_MS = 2000;
+// 길게 기다리면 첫 카드가 느려 보이고, 너무 짧으면 이미지가 늦게 튀어나오는 번쩍임이 돌아온다
+const SHOW_TIMEOUT_MS = 700;
 
 // 서버가 준 포스터 HTML을 그대로 보여준다. 포스터 안의 배치(글자, 이미지 크기, 안쪽 여백)는 건드리지 않는다
 // 브라우저가 어떤 문서에나 자동으로 넣는 바깥 여백(8px)만 없앤다. 포스터 HTML에 있는 것이 아니라,

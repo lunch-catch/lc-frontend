@@ -10,6 +10,7 @@ import {
   startKakaoLogin,
 } from '@user/auth/kakaoLogin';
 import { useAuth } from '@user/auth/useAuth';
+import { prefetchFirstFeed } from '@user/features/swipe/posterPreload';
 
 import LoginStatusScreen, { type LoginFailure } from './LoginStatusScreen';
 import WithdrawStatusScreen, {
@@ -84,6 +85,9 @@ const KakaoCallbackStep = () => {
 
       const user = await loginWithKakaoCode(code, state);
       auth.login(user);
+      // 온보딩을 마친 회원은 "로그인 중" 화면이 떠 있는 동안 첫 피드와 첫 포스터를 받아 두고 이동한다
+      // 스와이프 화면에서 카드를 기다리는 시간이 없어진다. 받지 못해도 이동은 막지 않는다
+      if (user.isOnboarded) await prefetchFirstFeed();
       navigate(user.isOnboarded ? '/swipe' : '/onboarding', { replace: true });
     };
 
