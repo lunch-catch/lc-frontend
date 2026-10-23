@@ -83,7 +83,7 @@ const CouponSection = ({
       </Card>
       {posterHtml !== null && (
         // 포스터는 점주 화면과 같은 A4(210:297). 불러오는 동안에는 회색 배경이 보인다
-        <div className="relative aspect-210/297 overflow-hidden rounded-xl bg-surface-subtle">
+        <div className="relative aspect-210/297 overflow-hidden rounded-2xl border border-border-subtle bg-surface-subtle">
           {posterHtml && (
             <PosterFrame html={posterHtml} title={`${storeName} 포스터`} />
           )}

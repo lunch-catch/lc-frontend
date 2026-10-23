@@ -461,7 +461,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
 
         {campaign && hasCouponError ? (
           // 찜 여부나 발급 상태를 받지 못하면 받을 수 있는지 몰라, 할인만 알려 주고 다시 불러오게 한다
-          <section className="flex flex-col gap-2 rounded-xl bg-surface-brand px-4 py-3">
+          <section className="flex flex-col gap-2 rounded-2xl bg-surface-brand px-4 py-3">
             <p className="text-body-sm-mobile text-text-primary">
               오늘{' '}
               <strong className="font-bold text-text-brand">
@@ -494,7 +494,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
             storeName={store.name}
           />
         ) : (
-          <p className="rounded-xl bg-surface-subtle px-4 py-3 text-body-sm-mobile text-text-secondary">
+          <p className="rounded-2xl bg-surface-subtle px-4 py-3 text-body-sm-mobile text-text-secondary">
             지금 진행 중인 쿠폰이 없어요
           </p>
         )}
