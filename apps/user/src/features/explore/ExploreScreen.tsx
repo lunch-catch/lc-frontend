@@ -29,8 +29,9 @@ import EmptyState from '@user/ui/EmptyState/EmptyState';
 
 import CategoryIconRow from './CategoryIconRow';
 import { readExploreSnapshot, saveExploreSnapshot } from './exploreSnapshot';
-import FeaturedStoreCard from './FeaturedStoreCard';
 import IssuePhaseLabel from './IssuePhaseLabel';
+import NearbyCouponSlider from './NearbyCouponSlider';
+import NearbyCouponSliderSkeleton from './NearbyCouponSliderSkeleton';
 import StoreCard from './StoreCard';
 import StoreListSkeleton from './StoreListSkeleton';
 import StoreMap from './StoreMap';
@@ -357,7 +358,13 @@ const ExploreScreen = () => {
       return (
         <>
           {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
-          {showSkeleton && <StoreListSkeleton />}
+          {/* 처음 둘러볼 때는 슬라이드 자리도 잡아 두어, 받은 뒤 목록이 아래로 밀려 내려가지 않게 한다 */}
+          {showSkeleton && (
+            <div className="flex flex-col gap-6">
+              {!query && category === 'ALL' && <NearbyCouponSliderSkeleton />}
+              <StoreListSkeleton />
+            </div>
+          )}
           <p className="sr-only" role="status">
             가게를 불러오는 중이에요
           </p>
@@ -421,12 +428,17 @@ const ExploreScreen = () => {
         showPhase: false,
       },
     ].filter((group) => group.items.length > 0);
-    // 처음 둘러볼 때만 가장 가까운 쿠폰 가게(쿠폰 구역 첫 가게)를 크게 보여준다
-    // 검색하거나 업종을 고르면 빨리 찾도록 모두 같은 작은 카드로 둔다
+    // 처음 둘러볼 때만 목록 맨 위에 가까운 쿠폰 가게를 슬라이드로 보여준다
+    // 검색하거나 업종을 고르면 빨리 찾도록 슬라이드 없이 모두 같은 작은 카드로 둔다
     const isBrowsing = !query && category === 'ALL';
 
     return (
       <div className="flex flex-col gap-6">
+        {isBrowsing && (
+          <NearbyCouponSlider
+            stores={stores.filter((store) => store.hasActiveCampaign)}
+          />
+        )}
         {storeGroups.map((group) => (
           <section className="flex flex-col gap-3" key={group.title}>
             <h3 className="text-body-sm-mobile font-bold text-text-primary">
@@ -437,13 +449,10 @@ const ExploreScreen = () => {
               {group.showPhase && <IssuePhaseLabel />}
             </h3>
             <ul aria-label={group.title} className="flex flex-col gap-3">
-              {group.items.map((store, index) =>
-                isBrowsing && store.hasActiveCampaign && index === 0 ? (
-                  <FeaturedStoreCard key={store.storeId} store={store} />
-                ) : (
-                  <StoreCard key={store.storeId} store={store} />
-                ),
-              )}
+              {/* 슬라이드의 가게도 여기에 있다. 목록은 쿠폰 가게 전체이고 위 숫자와 맞아야 한다 */}
+              {group.items.map((store) => (
+                <StoreCard key={store.storeId} store={store} />
+              ))}
             </ul>
           </section>
         ))}
