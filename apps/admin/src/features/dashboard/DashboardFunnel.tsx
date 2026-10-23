@@ -10,7 +10,11 @@ import { DashboardMetricCard } from './DashboardMetricCard';
 import { DashboardSection } from './DashboardSection';
 import { DashboardTrendChart } from './DashboardTrendChart';
 import type { FunnelMetric } from './dashboardTypes';
-import { funnelMetrics, getDashboardMetricHint } from './dashboardUtils';
+import {
+  funnelMetrics,
+  getDashboardMetricHint,
+  getFraudDetailQuery,
+} from './dashboardUtils';
 
 interface FunnelResource {
   data?: AnalyticsSeries<FunnelMetrics>;
@@ -51,10 +55,7 @@ export const DashboardFunnel = ({
       ? valid / (valid + invalid)
       : null;
   const fraudQuery = resource.data
-    ? new URLSearchParams({
-        'fraud.from': resource.data.from,
-        'fraud.to': resource.data.to,
-      }).toString()
+    ? getFraudDetailQuery(resource.data.from, resource.data.to)
     : '';
   return (
     <DashboardSection
@@ -90,6 +91,7 @@ export const DashboardFunnel = ({
                   <Link
                     to={'/fraud' + (fraudQuery ? '?' + fraudQuery : '')}
                     aria-label="무효 노출 상세 보기"
+                    title="부정 관리는 선택한 기간의 마지막 최대 31일을 조회합니다."
                     className="group/impression-detail inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded hover:text-text-brand focus-visible:text-text-brand focus-visible:outline-2 focus-visible:outline-action-primary"
                   >
                     <span className="whitespace-nowrap">

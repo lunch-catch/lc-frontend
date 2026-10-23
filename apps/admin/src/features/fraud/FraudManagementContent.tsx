@@ -2,6 +2,7 @@ import { SearchField, SelectField, StatusBadge, Tabs } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
 import type { CampaignWarning, InvalidImpression } from '@admin/api/fraud';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
 import { useTableColumnSettings } from '@admin/ui/DataTable';
 import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
@@ -272,6 +273,12 @@ export const FraudManagementContent = () => {
           }
         />
       </FilterBar>
+      {filters.to === getKstToday() && (
+        <p className="mb-3 text-caption-web text-text-secondary">
+          오늘 데이터는 집계 전입니다. 전날 데이터는 매일 01:00(KST) 집계 후
+          확인할 수 있습니다.
+        </p>
+      )}
       {filters.tab === 'impressions' && (
         <div className="mb-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">

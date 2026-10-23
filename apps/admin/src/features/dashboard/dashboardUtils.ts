@@ -1,4 +1,5 @@
 import type { AnalyticsBucket } from '@admin/api/analytics';
+import { shiftDate } from '@admin/api/analyticsDateUtils';
 
 import type { FunnelMetric } from './dashboardTypes';
 
@@ -30,4 +31,13 @@ export const getChangeLabel = (current: number, previous: number) => {
   // 정정 내역으로 이전 소진액이 음수여도 증감 방향이 뒤집히지 않게 한다.
   const change = ((current - previous) / Math.abs(previous)) * 100;
   return `${change > 0 ? '+' : ''}${change.toFixed(1)}%`;
+};
+
+/** 부정 관리의 양끝 날짜 포함 31일 한도에 맞춰 종료일 기준으로 시작일만 줄인다. */
+export const getFraudDetailQuery = (from: string, to: string) => {
+  const earliest = shiftDate(to, -30);
+  return new URLSearchParams({
+    'fraud.from': from < earliest ? earliest : from,
+    'fraud.to': to,
+  }).toString();
 };
