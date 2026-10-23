@@ -150,12 +150,11 @@ const DashboardReport = () => {
                   />
                   <DashboardMetricTrend
                     title="신규 회원 추이"
-                    note="일별 신규 회원 수와 선택한 기간의 합계를 확인할 수 있습니다."
+                    note="일별 신규 회원 수와 누적 회원·탈퇴 수를 확인할 수 있습니다."
                     tooltipMetrics={[
                       { name: '누적 회원', field: 'cumulativeMemberCount' },
                       { name: '누적 탈퇴', field: 'withdrawnCount' },
                     ]}
-                    rangeSelection
                     variant="bar"
                     resource={members}
                     primary={{ name: '신규 회원', field: 'newMemberCount' }}
@@ -205,7 +204,6 @@ const DashboardReport = () => {
                   />
                   <DashboardMetricTrend
                     title="신규 입점 추이"
-                    rangeSelection
                     tooltipMetrics={[
                       { name: '누적 입점 업체', field: 'cumulativeStoreCount' },
                     ]}
@@ -216,7 +214,7 @@ const DashboardReport = () => {
                       field: 'newStoreCount',
                     }}
                     unit="개"
-                    note="일별 신규 입점 가게 수와 선택한 기간의 합계를 확인할 수 있습니다."
+                    note="일별 신규 입점 가게 수와 누적 입점 업체 수를 확인할 수 있습니다."
                   />
                 </div>
               </>
