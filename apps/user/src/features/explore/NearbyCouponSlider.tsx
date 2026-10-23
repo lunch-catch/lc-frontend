@@ -211,8 +211,11 @@ const Carousel = ({ stores }: NearbyCouponSliderProps) => {
         onClickCapture={handleClickCapture}
         // 마우스로 끌 때 브라우저가 링크(카드)를 끌어가는 동작을 시작해 슬라이드가 멈추지 않게 한다
         onDragStart={(event) => event.preventDefault()}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        // 터치 뒤에 브라우저가 흉내 내는 mouseenter는 mouseleave가 오지 않아 자동 넘김이 멈춰 버리므로, 마우스일 때만 본다
+        onPointerEnter={(event) => {
+          if (event.pointerType === 'mouse') setIsHovered(true);
+        }}
+        onPointerLeave={() => setIsHovered(false)}
         onPointerCancel={() => finishDrag(null)}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

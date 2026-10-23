@@ -87,7 +87,10 @@ const ExploreScreen = () => {
   // 업종·검색어를 바꿔 새 목록을 받는 중인지. 그동안 이전 목록을 흐리게 남겨 둔다 (refreshStores)
   const [isRefreshing, setIsRefreshing] = useState(false);
   // 처음 둘러볼 때 보여주는 가게 수. 조건(업종, 검색어, 위치)이 바뀌면 처음 값으로 돌아간다
-  const [visible, setVisible] = useState({ count: PAGE_STEP, key: listKey });
+  const [visible, setVisible] = useState(() => ({
+    count: snapshot?.visibleCount ?? PAGE_STEP,
+    key: listKey,
+  }));
   const visibleCount = visible.key === listKey ? visible.count : PAGE_STEP;
   // 다음 페이지 커서. 마지막 페이지면 null
   const [nextPageToken, setNextPageToken] = useState<string | null>(
@@ -104,9 +107,21 @@ const ExploreScreen = () => {
   // 저장해 둔 목록으로 그렸으면 같은 조건의 첫 요청을 건너뛴다. 조건이 바뀌면 비운다
   const skipFetchKey = useRef(snapshot ? `${listKey}#0` : null);
   // 떠날 때 저장할 지금 목록과 스크롤 위치. 화면을 벗어나는 순간에는 상태를 읽을 수 없어 늘 최신으로 담아 둔다
-  const latest = useRef({ isRefreshing, listKey, nextPageToken, stores });
+  const latest = useRef({
+    isRefreshing,
+    listKey,
+    nextPageToken,
+    stores,
+    visibleCount,
+  });
   useEffect(() => {
-    latest.current = { isRefreshing, listKey, nextPageToken, stores };
+    latest.current = {
+      isRefreshing,
+      listKey,
+      nextPageToken,
+      stores,
+      visibleCount,
+    };
   });
   const scrollYRef = useRef(0);
   // 저장 위치를 받았는데 좌표가 없으면 위치부터 설정하게 한다
@@ -197,6 +212,7 @@ const ExploreScreen = () => {
         nextPageToken: token,
         stores: list,
         isRefreshing: wasRefreshing,
+        visibleCount: count,
       } = latest.current;
       // 새 조건의 목록을 받기 전이면 남아 있는 건 이전 조건의 목록이라 저장하지 않는다
       if (!list || wasRefreshing) return;
@@ -206,6 +222,7 @@ const ExploreScreen = () => {
         savedAt: Date.now(),
         scrollY: scrollYRef.current,
         stores: list,
+        visibleCount: count,
       });
     };
   }, []);

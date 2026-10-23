@@ -59,7 +59,7 @@ export const useCouponHistory = (filter: CouponFilter | undefined) => {
   // 이전 목록을 흐리게 남겨 두고 새 목록이 오면 바꾼다. 다음 페이지는 이전 필터 것이라 받지 않는다
   const reset = () =>
     setState((prev) =>
-      prev.items
+      prev.items?.length
         ? { ...initialState, items: prev.items, isRefreshing: true }
         : initialState,
     );

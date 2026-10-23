@@ -69,11 +69,14 @@ const CouponSection = ({
         </div>
         <TicketDivider />
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-caption-mobile">
-          <span className="text-text-secondary">
-            오늘 {campaign.usableStartTime} – {campaign.usableEndTime} 사용
-          </span>
+          {/* 오늘 쿠폰이 없으면 오늘 사용 시간을 말하지 않는다 */}
+          {state !== 'noEvent' && (
+            <span className="text-text-secondary">
+              오늘 {campaign.usableStartTime} – {campaign.usableEndTime} 사용
+            </span>
+          )}
           <span
-            className={`shrink-0 font-bold ${
+            className={`ml-auto shrink-0 font-bold ${
               isUnavailable ? 'text-text-tertiary' : 'text-text-brand'
             }`}
           >

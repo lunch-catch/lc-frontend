@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import {
   ChevronRight,
   CircleCheck,
@@ -57,7 +57,6 @@ const WishCard = ({
   state,
   wish,
 }: WishCardProps) => {
-  const navigate = useNavigate();
   const isEnded = state === 'ended';
   // 찜을 지워도 받은 쿠폰은 쿠폰함에 그대로 남아, 받은 카드도 지울 수 있다 (내일 다시 받고 싶지 않을 때)
   // 받기 요청과 삭제 요청이 겹치지 않도록 받는 중에만 막는다
@@ -113,30 +112,28 @@ const WishCard = ({
         );
       case 'issued':
         return (
-          <button
+          <Link
             aria-label={`${storeName} 받은 쿠폰, 쿠폰함에서 보기`}
             className={`${pillClassName} ${pressableClassName} bg-status-success-bg text-status-success-fg active:opacity-80`}
-            onClick={() => navigate('/coupons')}
-            type="button"
+            to="/coupons"
           >
             <CircleCheck aria-hidden="true" className="size-3.5" />
             받았어요
             <ChevronRight aria-hidden="true" className="-mr-1 size-3.5" />
-          </button>
+          </Link>
         );
       // 받은 쿠폰이 쿠폰함에서 어디 있는지 알려 준다. 쓰거나 만료된 쿠폰은 사용 내역 탭에 있다
       case 'used':
       case 'expired':
         return (
-          <button
+          <Link
             aria-label={`${storeName} ${state === 'used' ? '사용 완료' : '만료'}된 쿠폰, 사용 내역에서 보기`}
             className={`${pillClassName} ${pressableClassName} bg-surface-subtle text-text-tertiary active:opacity-80`}
-            onClick={() => navigate('/coupons/history')}
-            type="button"
+            to="/coupons/history"
           >
             {state === 'used' ? '사용 완료' : '만료'}
             <ChevronRight aria-hidden="true" className="-mr-1 size-3.5" />
-          </button>
+          </Link>
         );
       // 사용자가 쿠폰함에서 지운 쿠폰이라 이동할 곳이 없다
       case 'removed':
