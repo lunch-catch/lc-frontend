@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 // 실제 API 모듈을 실행하되 fetch만 교체해 서버 없이 응답 계약을 검증한다.
-const setup = (data, status = 200) => {
+const setup = (data, status = 200, errorBody) => {
   const calls = [];
   const context = vm.createContext({
     fetch: async (url, options) => {
@@ -13,7 +13,7 @@ const setup = (data, status = 200) => {
       return status === 204
         ? new Response(null, { status })
         : Response.json(
-            {
+            errorBody ?? {
               code: 'SUCCESS',
               data:
                 typeof data === 'function' ? await data(url, options) : data,
@@ -37,9 +37,15 @@ const setup = (data, status = 200) => {
     'campaigns',
     'campaignReports',
     'templates',
+    'templateUtils',
   ]) {
     const source = readFileSync(
-      new URL(`../src/api/${name}.ts`, import.meta.url),
+      new URL(
+        name === 'templateUtils'
+          ? '../src/features/template/templateUtils.ts'
+          : `../src/api/${name}.ts`,
+        import.meta.url,
+      ),
       'utf8',
     ).replace('import.meta.env.VITE_API_BASE_URL', "'http://test'");
     const { outputText } = ts.transpileModule(source, {
@@ -51,7 +57,8 @@ const setup = (data, status = 200) => {
     const exports = {};
     vm.runInContext(`(function(exports, require) { ${outputText}\n})`, context)(
       exports,
-      (path) => modules[path.slice(2)],
+      (path) =>
+        path === '@admin/api/client' ? modules.client : modules[path.slice(2)],
     );
     modules[name] = exports;
   }
@@ -428,6 +435,47 @@ const templateRequest = {
   requestId: 'request-1',
 };
 
+const chatReply = {
+  templateId: null,
+  name: null,
+  versionNumber: null,
+  status: null,
+  html: null,
+  message: '안녕하세요. 어떤 템플릿이 필요하신가요?',
+  removedElements: [],
+  suggestedPrompts: [],
+};
+
+test('생성·수정 중 자연어 응답은 버전 없는 대화로 반환한다', async () => {
+  for (const id of [undefined, '1']) {
+    const { templates, calls } = setup(chatReply, 200);
+    const result = await templates.generateTemplate(templateRequest, id);
+    assert.equal(result.message, chatReply.message);
+    assert.equal(result.templateId, null);
+    assert.equal(result.versionNumber, null);
+    assert.equal(result.html, null);
+    assert.equal(result.suggestedPrompts.length, 0);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test('자연어 응답에서 템플릿 필드가 섞이거나 메시지가 잘못되면 거부한다', async () => {
+  for (const invalid of [
+    { ...chatReply, templateId: 1 },
+    { ...chatReply, html: templateHtml },
+    { ...chatReply, versionNumber: 1 },
+    { ...chatReply, message: null },
+    { ...chatReply, suggestedPrompts: ['수정'] },
+    null,
+  ]) {
+    const { templates, client } = setup(invalid, 200);
+    await assert.rejects(
+      templates.generateTemplate(templateRequest),
+      isApiError(client),
+    );
+  }
+});
+
 test('템플릿 생성·수정은 data.message와 서버 추천 문구를 유지한다', async () => {
   for (const id of [undefined, '1']) {
     const { templates, calls } = setup(generatedTemplate, 201);
@@ -680,4 +728,62 @@ test('조정 응답의 대상 영업일 누락·불일치와 캠페인 불일치
       isApiError(client),
     );
   }
+});
+
+test('템플릿 프롬프트 거절은 HTTP 상태 대신 서버의 구체적인 사유를 표시한다', async () => {
+  for (const code of [
+    'POSTER-022',
+    'POSTER-023',
+    'POSTER-024',
+    'POSTER-025',
+    'POSTER-026',
+  ]) {
+    for (const id of [undefined, '1']) {
+      const message = code + ': 요청 문구를 수정해 주세요.';
+      const { templates, templateUtils, client } = setup(null, 422, {
+        code,
+        message,
+        data: null,
+      });
+      await assert.rejects(
+        templates.generateTemplate(templateRequest, id),
+        (error) => {
+          assert.ok(error instanceof client.ApiError);
+          assert.equal(error.code, code);
+          assert.equal(templateUtils.getTemplateError(error), message);
+          // 다른 화면에서 쓰는 공통 안내는 유지한다.
+          assert.notEqual(error.message, message);
+          return true;
+        },
+      );
+    }
+  }
+});
+
+test('템플릿 오류는 잘못된 서버 메시지에 기본 안내를 쓰고 기존 코드 안내를 유지한다', async () => {
+  for (const message of [undefined, null, '', '   ', {}, 12]) {
+    const { templates, templateUtils } = setup(null, 422, {
+      code: 'POSTER-023',
+      message,
+      data: null,
+    });
+    await assert.rejects(
+      templates.generateTemplate(templateRequest),
+      (error) => {
+        assert.equal(templateUtils.getTemplateError(error), error.message);
+        assert.equal(error.serverMessage, undefined);
+        return true;
+      },
+    );
+  }
+  const { templates, templateUtils } = setup(null, 503, {
+    code: 'POSTER-004',
+    message: 'server timeout',
+    data: null,
+  });
+  await assert.rejects(templates.generateTemplate(templateRequest), (error) => {
+    assert.match(templateUtils.getTemplateError(error), /템플릿 생성이 지연/);
+    assert.equal(error.retryAfterSeconds, 1);
+    return true;
+  });
 });
