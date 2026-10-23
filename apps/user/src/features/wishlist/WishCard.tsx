@@ -20,6 +20,7 @@ import {
 } from '@user/ui/Ticket/Ticket';
 import type { WishState } from '@user/ui/wishState';
 
+import { isFinishedToday } from './finishedStates';
 import { formatWishAmount, formatWishTarget } from './wishFormat';
 
 // 카드가 보여줄 상태. unknown은 발급 상태를 불러오지 못해 받을 수 있는지 모르는 상태라 받기 버튼을 두지 않는다
@@ -168,7 +169,15 @@ const WishCard = ({
     }
     if (!issueStatus) return null;
     // 오늘 이벤트가 없으면 사용 시간도 없다 (서버가 빈 값을 준다)
-    if (!issueStatus.usableFrom) return null;
+    // 다른 카드가 사용 시간을 보여주는 자리라, 비워 두지 않고 없다고 알려 쿠폰 모양을 맞춘다
+    if (!issueStatus.usableFrom) {
+      return (
+        <>
+          <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+          <span className="truncate">사용 시간 없음</span>
+        </>
+      );
+    }
     return (
       <>
         <Clock aria-hidden="true" className="size-3.5 shrink-0" />
@@ -191,6 +200,8 @@ const WishCard = ({
     );
   };
 
+  // 오늘 끝난 카드(쿠폰 없음, 사용 완료, 만료, 삭제함)도 같은 쿠폰 모양을 유지하고, 위쪽만 흐리게 해 끝났다는 걸 보여준다
+  const isDimmed = isEnded || isFinishedToday(state);
   const action = renderAction();
   const info = renderInfo();
 
@@ -209,9 +220,9 @@ const WishCard = ({
           <X aria-hidden="true" className="size-4" />
         </button>
       )}
-      {/* 끝난 캠페인은 위쪽 내용만 흐리게 해서 같은 틀 안에서 끝났다는 걸 보여준다 */}
+      {/* 끝난 캠페인과 오늘 끝난 카드는 위쪽 내용만 흐리게 해서 같은 틀 안에서 끝났다는 걸 보여준다 */}
       <div
-        className={`flex items-center gap-3 p-3 pr-10 ${isEnded ? 'opacity-60' : ''}`}
+        className={`flex items-center gap-3 p-3 pr-10 ${isDimmed ? 'opacity-60' : ''}`}
       >
         {wish.imageUrl ? (
           <img

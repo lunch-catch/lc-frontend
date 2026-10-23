@@ -19,10 +19,11 @@ export const WISH_STATE_ORDER: Record<WishState, number> = {
   beforeOpen: 0,
   issued: 1,
   soldOut: 2,
-  noEvent: 2,
   limitReached: 2,
   // 마감 뒤에는 모든 카드가 같은 상태라 찜한 순서 그대로 둔다
   closed: 2,
+  // 오늘 이벤트가 열리지 않는 캠페인이라, 내일 다시 받을 수 있는 소진, 한도, 마감 카드 아래에 모은다
+  noEvent: 3,
 };
 
 interface WishStateInput {

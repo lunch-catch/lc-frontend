@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
 import { getNow } from '@user/api/clock';
 import {
@@ -30,6 +30,7 @@ import FeedbackToast, {
 } from '@user/ui/FeedbackToast/FeedbackToast';
 import { getWishState, WISH_STATE_ORDER } from '@user/ui/wishState';
 
+import { isFinishedToday } from './finishedStates';
 import WishCard, { type WishCardState } from './WishCard';
 import WishlistEmpty from './WishlistEmpty';
 import WishlistSkeleton from './WishlistSkeleton';
@@ -77,10 +78,10 @@ const CARD_STATE_ORDER: Record<WishCardState, number> = {
   ...WISH_STATE_ORDER,
   unknown: 0,
   // 받은 뒤 쓰거나 만료돼 오늘 할 일이 없는 카드는, 내일 다시 받을 수 있는 카드(소진, 마감 등) 아래에 둔다
-  used: 3,
-  expired: 3,
-  removed: 3,
-  ended: 4,
+  used: 4,
+  expired: 4,
+  removed: 4,
+  ended: 5,
 };
 
 // 오늘 받은 쿠폰을 찾을 만큼만 받는다. 하루에 3개까지라 최근 10개면 충분하다
@@ -185,6 +186,8 @@ const WishlistScreen = () => {
   );
   // 이 화면에서 쿠폰을 받았는지. 받았으면 맨 위 제목으로 알려준다
   const [hasIssued, setHasIssued] = useState(false);
+  // 오늘은 끝난 찜 묶음을 펼쳤는지. 평소에는 접어 둔다
+  const [isFinishedOpen, setIsFinishedOpen] = useState(false);
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 카드가 받기로 바뀐다
   const { isIssueClosed, isOpen, remainingMs } = useOpenCountdown();
@@ -437,6 +440,31 @@ const WishlistScreen = () => {
 
     if (wishes.length === 0) return <WishlistEmpty />;
 
+    const entries = getOrderedEntries();
+    // 오늘 더 할 일이 없는 찜(쿠폰 없음, 사용 완료, 만료, 삭제함)은 접는 묶음으로 모아 받거나 쓸 카드가 묻히지 않게 한다
+    // 지우지 않은 찜이라 숨기지 않고 개수와 이유를 보여준다 (찜 개수와 카드 수가 어긋나 보이지 않게)
+    // 끝난 캠페인은 사라질 카드라 묶음 밖 맨 아래에 둔다
+    const activeEntries = entries.filter(
+      ({ state }) => !isFinishedToday(state) && state !== 'ended',
+    );
+    const finishedEntries = entries.filter(({ state }) =>
+      isFinishedToday(state),
+    );
+    const endedEntries = entries.filter(({ state }) => state === 'ended');
+    const renderCard = ({ state, status, wish }: WishEntry) => (
+      <WishCard
+        dailyLimit={issueStatus?.dailyLimit ?? 0}
+        isIssueBlocked={issuingCampaignId !== null}
+        isIssuing={issuingCampaignId === wish.campaignId}
+        issueStatus={status}
+        key={wish.campaignId}
+        onIssue={() => handleIssue(wish.campaignId)}
+        onRemove={() => handleRemove(wish)}
+        state={state}
+        wish={wish}
+      />
+    );
+
     return (
       <div className="flex flex-col gap-4 px-page pt-4 pb-6">
         {issueStatus ? (
@@ -467,21 +495,38 @@ const WishlistScreen = () => {
             </button>
           </section>
         )}
-        <ul className="flex flex-col gap-4">
-          {getOrderedEntries().map(({ state, status, wish }) => (
-            <WishCard
-              dailyLimit={issueStatus?.dailyLimit ?? 0}
-              isIssueBlocked={issuingCampaignId !== null}
-              isIssuing={issuingCampaignId === wish.campaignId}
-              issueStatus={status}
-              key={wish.campaignId}
-              onIssue={() => handleIssue(wish.campaignId)}
-              onRemove={() => handleRemove(wish)}
-              state={state}
-              wish={wish}
-            />
-          ))}
-        </ul>
+        {activeEntries.length > 0 && (
+          <ul className="flex flex-col gap-4">
+            {activeEntries.map(renderCard)}
+          </ul>
+        )}
+        {finishedEntries.length > 0 && (
+          <section>
+            <button
+              aria-controls="wish-finished-list"
+              aria-expanded={isFinishedOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-1 text-body-sm-mobile font-medium text-text-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+              onClick={() => setIsFinishedOpen((open) => !open)}
+              type="button"
+            >
+              오늘은 끝난 찜 {finishedEntries.length}개
+              <ChevronDown
+                aria-hidden="true"
+                className={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${isFinishedOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {isFinishedOpen && (
+              <ul className="mt-2 flex flex-col gap-3" id="wish-finished-list">
+                {finishedEntries.map(renderCard)}
+              </ul>
+            )}
+          </section>
+        )}
+        {endedEntries.length > 0 && (
+          <ul className="flex flex-col gap-4">
+            {endedEntries.map(renderCard)}
+          </ul>
+        )}
       </div>
     );
   };
