@@ -7,8 +7,10 @@ import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
 import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
+import { ErrorState } from '@admin/ui/ErrorState/ErrorState';
 
 import {
+  getBillingManagementError,
   getBillingRangeError,
   isBillingInputId,
   refundStatusLabels,
@@ -89,7 +91,7 @@ export const RefundRequestsTab = ({
   preferences: BillingTablePreferences;
 }) => {
   const { filters, updateFilters } = useUrlFilters('refunds.', refundQuery);
-  const [selected, setSelected] = useState<AdminRefund | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const search = useUrlSearch(filters.ownerId, (ownerId) => {
     updateFilters({ ownerId, page: 1 });
@@ -116,6 +118,10 @@ export const RefundRequestsTab = ({
     getRefunds,
     !pending && !validation ? query.toString() : null,
   );
+  // 상세에도 재조회된 목록의 값을 사용한다. 클릭 당시 객체를 보관하면 잔액이 낡은 채 남는다.
+  const selectedRefund = resource.data?.items.find(
+    (item) => item.refundRequestId === selected,
+  );
   const update = (patch: Partial<typeof filters>) => {
     updateFilters({ ...patch, page: 1 });
     setSelected(null);
@@ -123,7 +129,7 @@ export const RefundRequestsTab = ({
   };
   return (
     <>
-      {notice && (
+      {notice && selected === null && (
         <p role="status" className="text-body-sm-web text-text-secondary">
           {notice}
         </p>
@@ -158,7 +164,7 @@ export const RefundRequestsTab = ({
         }
         onOpen={(item) => {
           setNotice('');
-          setSelected(item);
+          setSelected(item.refundRequestId);
         }}
         filters={
           <>
@@ -201,11 +207,28 @@ export const RefundRequestsTab = ({
         title="환불 요청 상세"
         resizable
       >
-        {selected && (
+        {notice && (
+          <p
+            role="alert"
+            className="mb-4 text-body-sm-web text-status-danger-fg"
+          >
+            {notice}
+          </p>
+        )}
+        {resource.loading ? (
+          <p role="status" className="text-body-sm-web text-text-secondary">
+            환불 요청 정보를 불러오는 중입니다.
+          </p>
+        ) : resource.error ? (
+          <ErrorState description={resource.error} onRetry={resource.refresh} />
+        ) : selectedRefund ? (
           <RefundDetails
-            key={selected.refundRequestId}
-            refund={selected}
-            onRefresh={resource.refresh}
+            key={selectedRefund.refundRequestId}
+            refund={selectedRefund}
+            onRefresh={(cause) => {
+              setNotice(getBillingManagementError(cause));
+              resource.refresh();
+            }}
             onCompleted={(message) => {
               setSelected(null);
               setNotice(message);
@@ -213,6 +236,11 @@ export const RefundRequestsTab = ({
               resource.refresh();
             }}
           />
+        ) : (
+          <p role="status" className="text-body-sm-web text-text-secondary">
+            현재 조회 조건에서 환불 요청을 찾을 수 없습니다. 목록을 확인해
+            주세요.
+          </p>
         )}
       </AdminDrawer>
     </>

@@ -1,5 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
+import { TemplateChatMarkdown } from './TemplateChatMarkdown';
+
 export interface TemplateChatBubbleProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
   variant: 'assistant' | 'loading' | 'user';
@@ -30,15 +32,19 @@ export const TemplateChatBubble = ({
       .join(' ')}
     {...props}
   >
-    {variant === 'loading'
-      ? [0, 1, 2].map((index) => (
-          <span
-            aria-hidden="true"
-            className="size-1.5 animate-bounce motion-reduce:animate-none rounded-full bg-text-secondary"
-            key={index}
-            style={{ animationDelay: `${index * 120}ms` }}
-          />
-        ))
-      : children}
+    {variant === 'loading' ? (
+      [0, 1, 2].map((index) => (
+        <span
+          aria-hidden="true"
+          className="size-1.5 animate-bounce motion-reduce:animate-none rounded-full bg-text-secondary"
+          key={index}
+          style={{ animationDelay: `${index * 120}ms` }}
+        />
+      ))
+    ) : variant === 'assistant' && typeof children === 'string' ? (
+      <TemplateChatMarkdown>{children}</TemplateChatMarkdown>
+    ) : (
+      children
+    )}
   </div>
 );

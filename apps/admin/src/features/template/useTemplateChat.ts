@@ -38,6 +38,7 @@ export const useTemplateChat = ({
     'text' | 'targetLabel'
   > | null>(null);
   const sendingRef = useRef(false);
+  const restorePromptFocus = useRef(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [pendingVersion, setPendingVersion] = useState<number | null>(null);
   const [selectionContext, setSelectionContext] = useState<{
@@ -146,6 +147,16 @@ export const useTemplateChat = ({
     });
   }, [messages, pendingMessage, editor.busy, editor.error, editor.loading]);
 
+  useEffect(() => {
+    if (locked || published || editor.loading || !restorePromptFocus.current)
+      return;
+    // disabled가 해제된 DOM에 포커스한다. 최초 진입·버전 조회에는 포커스를 빼앗지 않는다.
+    const input = promptRef.current;
+    if (!input || input.disabled) return;
+    input.focus({ preventScroll: true });
+    restorePromptFocus.current = false;
+  }, [locked, published, editor.loading]);
+
   const handleSend = async (quickPrompt?: string) => {
     const submittedPrompt = quickPrompt ?? prompt;
     if (sendingRef.current || locked || published || !submittedPrompt.trim())
@@ -170,6 +181,7 @@ export const useTemplateChat = ({
     // 이전 답변의 추천은 한 번 전송하면 소비하고, 다음 응답의 추천만 새로 표시한다.
     editor.dismissSuggestions();
     sendingRef.current = true;
+    restorePromptFocus.current = true;
     // 응답 전에 말풍선을 표시하고, 실패하면 원문을 복구해 같은 요청을 재시도할 수 있게 한다.
     setPrompt('');
     if (quickPrompt !== undefined) setSelectionContext(null);
