@@ -6,6 +6,7 @@ import {
   type PointLedgerPage,
   type PointLedgerType,
 } from '@admin/api/pointLedger';
+import { useAdminAuth } from '@admin/auth/useAdminAuth';
 
 export interface PointLedgerFilters {
   ownerId: string;
@@ -27,12 +28,18 @@ export const usePointLedger = (
   filters: PointLedgerFilters | null,
   sortDir: 'asc' | 'desc' = 'desc',
 ) => {
+  const { admin } = useAdminAuth();
   const [pageToken, setPageToken] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
-  const filterKey = JSON.stringify([pageSize, filters, sortDir]);
+  const filterKey = JSON.stringify([
+    admin?.adminId,
+    pageSize,
+    filters,
+    sortDir,
+  ]);
   const [previousFilterKey, setPreviousFilterKey] = useState(filterKey);
   const [result, setResult] = useState<PointLedgerResult | null>(null);
-  // 조건이 바뀌면 누적 목록과 커서를 함께 비워 서로 다른 검색 결과가 섞이지 않게 한다.
+  // 계정·조건이 바뀌면 누적 목록과 커서를 함께 비워 이전 결과가 섞이지 않게 한다.
   // 렌더링 중 조건부로 초기화해 요청 effect에 이전 조건의 커서가 전달되지 않도록 한다.
   if (previousFilterKey !== filterKey) {
     setPreviousFilterKey(filterKey);
@@ -51,7 +58,7 @@ export const usePointLedger = (
   const queryString = query.toString();
   // filterKey는 누적 목록의 조건, requestKey는 실패한 추가 조회의 재시도까지 구분한다.
   const requestKey = `${queryString}:${revision}`;
-  const enabled = filters !== null;
+  const enabled = admin !== null && filters !== null;
 
   useEffect(() => {
     if (!enabled) return;

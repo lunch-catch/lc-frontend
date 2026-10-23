@@ -36,7 +36,7 @@ interface BillingServerTableProps<T> {
   preferences: BillingTablePreferences;
   page: number;
   size: number;
-  total: number;
+  total?: number;
   onPageChange: (page: number) => void;
   onSizeChange: (size: number) => void;
   sort?: { key: string; direction: 'asc' | 'desc' };
@@ -73,7 +73,7 @@ export const BillingServerTable = <T,>({
     currentPage: page,
     pageSize: size,
     totalCount: total,
-    totalPages: Math.ceil(total / size),
+    totalPages: Math.ceil((total ?? 0) / size),
     onPageChange,
     onPageSizeChange: onSizeChange,
   };

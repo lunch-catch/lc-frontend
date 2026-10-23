@@ -18,23 +18,25 @@ export const useDashboardReport = () => {
     view: queryChoice(['owners', 'members'] as const, 'owners'),
     from: queryPastDate(shiftDate(completedThrough, -6)),
     to: queryPastDate(completedThrough),
-    preset: queryChoice(['today', '7', '30', 'custom'] as const, '7'),
+    preset: queryChoice(['7', '30', 'custom'] as const, '7'),
     metric: queryChoice(
-      ['impressions', 'saves', 'issued', 'used'] as const,
-      'impressions',
+      ['issued', 'used', 'impressions', 'saves'] as const,
+      'issued',
     ),
     compare: queryChoice(['true', 'false'] as const, 'true'),
   });
-  const range = { startDate: filters.from, endDate: filters.to };
+  const maxDate = shiftDate(getKstToday(), -1);
+  // 기존 URL에 오늘이 지정되어 있어도 어제까지만 조회한다.
+  const range = {
+    startDate: filters.from > maxDate ? maxDate : filters.from,
+    endDate: filters.to > maxDate ? maxDate : filters.to,
+  };
   // 대시보드는 일별 조회 한도(92일) 안에서 날짜 범위만 선택한다.
   const interval = 'day' as const;
   const { metric } = filters;
-  const getPresetRange = (preset: 'today' | '7' | '30') => {
-    if (preset === 'today') {
-      // 화면을 켜 둔 채 자정을 넘겨도 선택 시점의 KST 날짜로 조회한다.
-      const today = getKstToday();
-      return { startDate: today, endDate: today };
-    }
+  const getPresetRange = (preset: '7' | '30') => {
+    // 자정을 넘긴 뒤 프리셋을 다시 선택해도 그 시점의 KST 어제를 기준으로 계산한다.
+    const completedThrough = shiftDate(getKstToday(), -1);
     return {
       startDate: shiftDate(completedThrough, 1 - Number(preset)),
       endDate: completedThrough,
@@ -48,7 +50,7 @@ export const useDashboardReport = () => {
     range.endDate === presetRange.endDate
       ? filters.preset
       : 'custom';
-  const setPreset = (preset: 'today' | '7' | '30' | 'custom') => {
+  const setPreset = (preset: '7' | '30' | 'custom') => {
     if (preset === 'custom') updateFilters({ preset });
     else {
       const next = getPresetRange(preset);
@@ -71,6 +73,7 @@ export const useDashboardReport = () => {
     view: filters.view,
     setView: (view: 'owners' | 'members') => updateFilters({ view }),
     range,
+    maxDate,
     setRange,
     interval,
     preset,

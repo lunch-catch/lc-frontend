@@ -1,12 +1,11 @@
 import {
-  billingJson,
   isBillingId,
   isBillingRecord,
   isBillingText,
   isOptionalBillingId,
   readBillingPage,
 } from './billingResponse';
-import { ApiError, requestData } from './client';
+import { ApiError, jsonOptions, requestData } from './client';
 
 export interface PointPolicy {
   minChargeAmount: number;
@@ -72,7 +71,7 @@ export const savePointPolicy = async (
 ): Promise<PointPolicy> => {
   const data = await requestData<unknown>(
     '/v1/admin/point-policy/next',
-    billingJson('PUT', values),
+    jsonOptions('PUT', values),
     200,
   );
   if (!isPolicy(data))

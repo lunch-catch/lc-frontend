@@ -186,7 +186,7 @@ export const OwnerMemberListContent = () => {
         </tbody>
       </DataTable>
       <PaginationSummary
-        totalCount={resource.data?.totalElements ?? 0}
+        totalCount={resource.data?.totalElements}
         pageSize={20}
       />
     </>

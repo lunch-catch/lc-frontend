@@ -39,9 +39,3 @@ export const readBillingPage = <T>(
     throw new ApiError('목록 응답 형식을 확인할 수 없습니다.', 200);
   return data as unknown as BillingPage<T>;
 };
-
-export const billingJson = (method: 'POST' | 'PUT', body: object) => ({
-  method,
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});

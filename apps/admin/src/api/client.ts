@@ -21,6 +21,16 @@ export class ApiError extends Error {
   }
 }
 
+/** JSON 본문을 보내는 변경 요청의 헤더와 직렬화를 공통으로 구성한다. */
+export const jsonOptions = (
+  method: 'POST' | 'PUT' | 'PATCH',
+  body: object,
+) => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
 const getRetryAfter = (response: Response) => {
   const header = response.headers.get('Retry-After');
   if (!header) return response.status === 503 ? 1 : undefined;

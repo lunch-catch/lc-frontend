@@ -1,4 +1,4 @@
-﻿import { ApiError, request, requestData } from './client';
+﻿import { ApiError, jsonOptions, request, requestData } from './client';
 
 export type TemplateStatus = 'DRAFT' | 'PUBLISHED';
 
@@ -41,11 +41,6 @@ export interface TemplateGeneration {
 }
 
 const basePath = '/v1/admin/templates';
-const jsonOptions = (method: 'POST' | 'PATCH', body: object) => ({
-  method,
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
 
 const assertTemplate = (data: TemplateRecord) => {
   if (

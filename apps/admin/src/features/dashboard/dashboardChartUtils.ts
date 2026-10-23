@@ -8,7 +8,8 @@ export const getChartAxisMaximum = (values: number[]) => {
 };
 
 export const getChartLabelInterval = (count: number, width: number) =>
-  Math.max(1, Math.ceil(count / Math.max(2, Math.floor(width / 120))));
+  // 날짜 라벨이 겹치지 않는 범위에서 약 80px 간격으로 표시한다.
+  Math.max(1, Math.ceil(count / Math.max(2, Math.floor(width / 80))));
 
 export const getNearestChartIndex = (
   position: number,

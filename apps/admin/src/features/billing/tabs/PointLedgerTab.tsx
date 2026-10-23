@@ -22,10 +22,10 @@ import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker'
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
 
+import { isBillingInputId } from '../billingManagementUtils';
 import { getLedgerQuery } from '../billingQuery';
 import { ledgerTypeLabels } from '../billingUtils';
 import { type BillingTablePreferences, getMonthRange } from '../billingView';
-import { isPositivePointId } from '../pointSummaryUtils';
 import { PointAdjustmentModal } from '../ui/PointAdjustmentModal';
 import { PointLedgerDetails } from '../ui/PointLedgerDetails';
 import { PointSummarySection } from '../ui/PointSummarySection';
@@ -58,8 +58,8 @@ const getValidationError = (
   from: string,
   to: string,
 ) => {
-  if (!isPositivePointId(owner)) return '점주 ID를 숫자로 입력해 주세요.';
-  if (campaign && !isPositivePointId(campaign))
+  if (!isBillingInputId(owner)) return '점주 ID를 숫자로 입력해 주세요.';
+  if (campaign && !isBillingInputId(campaign))
     return '캠페인 ID를 숫자로 입력해 주세요.';
   // 서버는 KST 양 끝 날짜를 포함해 최대 31일까지 받는다. 날짜 문자열의 차이로 일수를 계산한다.
   const days = (Date.parse(to) - Date.parse(from)) / 86_400_000 + 1;
@@ -107,7 +107,7 @@ export const PointLedgerTab = ({
   const ownerInputPending = ownerSearch.draftKeyword !== ownerSearch.keyword;
   // 두 조회가 동일한 점주를 사용하도록 디바운스와 ID 정규화를 한 번만 적용한다.
   const selectedOwnerId =
-    !ownerInputPending && isPositivePointId(owner)
+    !ownerInputPending && isBillingInputId(owner)
       ? String(Number(owner))
       : null;
   const inputPending =

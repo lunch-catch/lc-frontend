@@ -90,11 +90,12 @@ export function AdminSidebar({
   };
 
   // 레이아웃 안에서 실제 너비를 차지해 펼칠 때 메인 영역을 덮지 않고 밀어낸다.
+  // 그림자는 너비에 영향을 주지 않아 펼침 동작을 유지하면서 본문과 구분한다.
   return (
     <aside
       ref={sidebarRef}
-      className={`relative z-30 flex h-dvh shrink-0 flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 transition-[width,box-shadow] duration-200 ease-out motion-reduce:transition-none ${
-        isExpanded ? 'w-60 shadow-lg' : 'w-[72px]'
+      className={`relative z-30 flex h-dvh shrink-0 flex-col gap-6 overflow-hidden bg-bg-surface pb-5 pt-4 shadow-[6px_0_18px_-4px_rgb(0_0_0_/_0.4)] transition-[width] duration-200 ease-out motion-reduce:transition-none ${
+        isExpanded ? 'w-60' : 'w-[72px]'
       }`}
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => {
@@ -139,7 +140,7 @@ export function AdminSidebar({
                     'flex h-10 w-full items-center justify-start gap-3 rounded-md px-[11px] text-left text-body-sm-web font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary',
                     isSelected
                       ? 'bg-surface-brand text-text-brand'
-                      : 'text-text-secondary hover:bg-surface-subtle hover:text-action-primary',
+                      : 'text-text-secondary hover:bg-surface-brand hover:text-text-brand',
                   ].join(' ')}
                   onClick={() => onItemSelect?.(id)}
                   type="button"
