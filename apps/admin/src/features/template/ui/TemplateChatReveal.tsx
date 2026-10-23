@@ -1,4 +1,11 @@
-import { useEffect, useEffectEvent, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { TemplateChatMarkdown } from './TemplateChatMarkdown';
 
@@ -9,7 +16,7 @@ const REVEAL_MAX_MS = 4000;
 
 interface TemplateChatRevealProps {
   text: string;
-  onProgress: () => void;
+  onProgress: (force?: boolean) => boolean;
 }
 
 /** 완성된 서버 응답을 화면에서만 점진적으로 표시한다. 서버 요청과 저장 원문은 바꾸지 않는다. */
@@ -33,6 +40,7 @@ export const TemplateChatReveal = ({
       : 0,
   );
   const reportProgress = useEffectEvent(onProgress);
+  const shouldFollow = useRef(false);
 
   useEffect(() => {
     // 접근성 설정에서는 즉시 표시하고, 긴 답변도 최대 4초 안에 끝낸다.
@@ -49,14 +57,18 @@ export const TemplateChatReveal = ({
           ((performance.now() - startedAt) / duration) * characters.length,
         ),
       );
+      // 높이가 늘기 전에 하단 추적 여부를 보존한다. 표·코드 블록은 한 번에 크게 늘 수 있다.
+      shouldFollow.current = reportProgress();
       setVisibleCount(count);
       if (count === characters.length) window.clearInterval(timer);
     }, REVEAL_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [characters]);
 
-  useEffect(() => {
-    reportProgress();
+  useLayoutEffect(() => {
+    // 변경된 높이로 다시 판단하지 않고, 페인트 전에 이전 추적 상태를 적용한다.
+    if (shouldFollow.current) reportProgress(true);
+    shouldFollow.current = false;
   }, [visibleCount]);
 
   // 글자가 늘어날 때마다 스크린 리더가 문장을 다시 읽지 않도록 한다.

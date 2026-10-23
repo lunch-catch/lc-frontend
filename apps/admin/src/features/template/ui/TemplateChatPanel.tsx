@@ -50,14 +50,15 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
     chatHistoryRef,
   } = chat;
 
-  const followLatestMessage = () => {
+  const followLatestMessage = (force = false) => {
     const history = chatHistoryRef.current;
-    if (!history) return;
+    if (!history) return false;
     // 하단 근처에서만 새 답변을 따라가고, 이전 대화를 읽는 중에는 위치를 유지한다.
     const distanceFromBottom =
       history.scrollHeight - history.scrollTop - history.clientHeight;
-    if (distanceFromBottom < 96)
-      history.scrollTo({ top: history.scrollHeight });
+    const shouldFollow = force || distanceFromBottom < 96;
+    if (shouldFollow) history.scrollTo({ top: history.scrollHeight });
+    return shouldFollow;
   };
 
   return (
