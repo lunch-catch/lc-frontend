@@ -1,8 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // 템플릿은 폭 360px 안팎으로 만들어져 있어, 점주 미리보기(apps/owner PosterPreview)와 같은 폭으로 그린 뒤 카드 폭에 맞게 줄인다
 // 카드 폭에 그대로 그리면 글자와 배치가 점주가 본 것과 달라진다
 const POSTER_BASE_WIDTH = 360;
+
+// 포스터 안의 이미지를 기다리는 최대 시간(ms). 이 시간이 지나면 덜 불러왔어도 보여준다
+const SHOW_TIMEOUT_MS = 2000;
 
 // 서버가 준 포스터 HTML을 그대로 보여준다. 포스터 안의 배치(글자, 이미지 크기, 안쪽 여백)는 건드리지 않는다
 // 브라우저가 어떤 문서에나 자동으로 넣는 바깥 여백(8px)만 없앤다. 포스터 HTML에 있는 것이 아니라,
@@ -54,13 +57,26 @@ const PosterFrame = ({ html, title }: PosterFrameProps) => {
     return () => observer.disconnect();
   }, []);
 
+  // 이미지까지 다 그려진 포스터의 HTML. 같은 HTML이면 다시 숨기지 않는다
+  const [shownHtml, setShownHtml] = useState<string | null>(null);
+  const isShown = shownHtml === html;
+
+  // 이미지가 너무 늦거나 막혀도 포스터가 계속 안 보이지 않도록 일정 시간 뒤에는 보여준다
+  useEffect(() => {
+    const timer = setTimeout(() => setShownHtml(html), SHOW_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [html]);
+
   const scale = size ? size.width / POSTER_BASE_WIDTH : 0;
 
   return (
     <div className="absolute inset-0 overflow-hidden" ref={measureRef}>
       {size && size.width > 0 && (
         <iframe
-          className="pointer-events-none absolute top-0 left-0 origin-top-left border-0"
+          // 포스터를 다 받기 전에 그리면 배경만 먼저 나오고 이미지가 늦게 튀어나와 번쩍여 보인다
+          // 이미지까지 불러온 뒤에 뒤 회색 바탕에서 서서히 나타나게 한다
+          className={`pointer-events-none absolute top-0 left-0 origin-top-left border-0 transition-opacity duration-150 motion-reduce:transition-none ${isShown ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setShownHtml(html)}
           // 줄인 뒤에도 틀 높이를 채우도록, 줄이기 전 높이를 배율만큼 늘려 둔다
           height={size.height / scale}
           // 포스터 안의 스크립트, 폼, 링크 이동을 모두 막는다
