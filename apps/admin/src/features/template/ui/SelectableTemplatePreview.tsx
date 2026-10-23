@@ -77,7 +77,8 @@ export const SelectableTemplatePreview = ({
   }, [document, disabled, onSelect]);
 
   useEffect(() => {
-    if (!document || disabled || !selected?.selector) return;
+    // 전송 중 선택 변경은 막되, 기존 강조 표시는 성공할 때까지 유지한다.
+    if (!document || !selected?.selector) return;
     const element = document.querySelector(selected.selector);
     if (!element) return;
     element.setAttribute('data-editor-selected', '');
@@ -123,7 +124,7 @@ export const SelectableTemplatePreview = ({
       overlay.remove();
       element.removeAttribute('data-editor-selected');
     };
-  }, [document, disabled, selected]);
+  }, [document, selected]);
 
   return (
     <div

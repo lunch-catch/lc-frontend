@@ -163,9 +163,8 @@ export const useTemplateChat = ({
     if (sendingRef.current || locked || published || !submittedPrompt.trim())
       return;
     // 실제 요청에 포함한 선택만 보관한다. 퀵응답에는 선택 문맥을 붙이지 않는다.
-    const submittedSelection =
-      quickPrompt === undefined && selectedTarget ? selectionContext : null;
-    const targetLabel = submittedSelection?.target.label;
+    const targetLabel =
+      quickPrompt === undefined ? selectedTarget?.label : undefined;
     let requestPrompt: string;
     try {
       // 추천 문구는 서버가 준 원문 그대로 보내며, 부분 선택 문맥을 덧붙이지 않는다.
@@ -188,8 +187,7 @@ export const useTemplateChat = ({
     restorePromptFocus.current = true;
     // 응답 전에 말풍선을 표시하고, 실패하면 원문을 복구해 같은 요청을 재시도할 수 있게 한다.
     setPrompt('');
-    // 요청에 담은 선택 문맥은 말풍선에 남기고, 입력 태그·미리보기·코드 선택은 즉시 해제한다.
-    setSelectionContext(null);
+    // 전송 중에도 선택 표시를 유지해 실패·중단 시 사라졌다 복원되는 깜빡임을 막는다.
     setPendingMessage({
       text: submittedPrompt.trim(),
       targetLabel,
@@ -202,14 +200,12 @@ export const useTemplateChat = ({
       );
       if (!generated) {
         setPrompt(submittedPrompt);
-        // selectedTarget은 현재 HTML·버전과 일치할 때만 표시되므로 낡은 선택은 노출하지 않는다.
-        setSelectionContext(submittedSelection);
         return;
       }
-      if (generated.status !== null) {
-        setSelectionContext(null);
+      // 자연어 응답을 포함해 성공한 요청의 선택만 해제한다.
+      setSelectionContext(null);
+      if (generated.status !== null)
         setSelectedVersion(generated.versionNumber);
-      }
       const messageId = crypto.randomUUID();
       setActiveRevealId(generated.message.trim() ? messageId : null);
       setMessages((current) => [

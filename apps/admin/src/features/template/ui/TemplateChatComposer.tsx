@@ -109,7 +109,8 @@ export const TemplateChatComposer = ({
               selectedTarget ? 'template-selection-label' : undefined
             }
             maxLength={500}
-            disabled={locked}
+            // disabled로 포커스를 잃지 않도록 전송 중에는 편집만 막는다.
+            readOnly={locked}
             value={prompt}
             onChange={(event) => changePrompt(event.target.value)}
             placeholder={
