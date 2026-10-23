@@ -1,7 +1,8 @@
 import '../templateEditor.css';
 
 import { useState } from 'react';
-import { Button } from '@repo/ui';
+import { Button, Toggle } from '@repo/ui';
+import { ArrowLeft, Braces } from 'lucide-react';
 
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
@@ -45,6 +46,7 @@ export const TemplateCreateContent = ({
     confirmVersionChange,
   } = chat;
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [wrapCode, setWrapCode] = useState(false);
 
   const handleSave = async () => {
     if (versionNumber === undefined) return;
@@ -81,9 +83,9 @@ export const TemplateCreateContent = ({
         className="template-editor__frame min-w-0 rounded-xl border shadow-sm focus-visible:outline-2 focus-visible:outline-action-primary"
       >
         {/* 세 영역을 함께 보며 편집할 수 있도록 최소 작업 너비 아래에서만 가로로 스크롤한다. */}
-        <div className="grid h-full min-h-0 min-w-[800px] grid-cols-[minmax(240px,0.8fr)_minmax(240px,1fr)_minmax(300px,1.2fr)]">
+        <div className="grid h-full min-h-0 min-w-[800px] grid-cols-[minmax(260px,1fr)_minmax(240px,1fr)_minmax(280px,1.2fr)]">
           <TemplateChatPanel chat={chat} />
-          <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col border-r p-3">
+          <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col border-r p-4">
             <div className="grid min-h-0 flex-1 place-items-center overflow-hidden [container-type:inline-size]">
               <div className="aspect-[210/297] h-[min(100%,141.428cqw)] max-w-full">
                 {previewHtml ? (
@@ -101,48 +103,68 @@ export const TemplateCreateContent = ({
             </div>
           </section>
           <section className="template-editor__panel flex min-h-0 min-w-0 flex-col gap-4 p-4">
-            <div className="flex flex-wrap justify-end gap-2">
-              {/* aria-disabled는 색상을 유지하므로 클릭 핸들러에서도 전송 중 동작을 차단한다. */}
-              <Button
-                variant="secondary"
-                aria-disabled={locked || undefined}
-                className={locked ? 'cursor-wait' : undefined}
-                onClick={() => {
-                  if (!locked) onBack();
-                }}
-              >
-                목록으로
-              </Button>
-              {!published && (
+            <header className="template-editor__panel-heading flex shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-3">
+              <Toggle
+                label="자동 줄바꿈"
+                checked={wrapCode}
+                onChange={(event) => setWrapCode(event.target.checked)}
+                className="cursor-pointer whitespace-nowrap has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-action-primary"
+              />
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                {/* aria-disabled는 색상을 유지하므로 클릭 핸들러에서도 전송 중 동작을 차단한다. */}
                 <Button
-                  disabled={!editor.template || versionNumber === undefined}
+                  variant="secondary"
+                  leadingIcon={
+                    <ArrowLeft aria-hidden="true" className="size-4" />
+                  }
                   aria-disabled={locked || undefined}
-                  className={locked ? 'cursor-wait' : undefined}
+                  className={
+                    '!min-h-8 !px-3 !py-1 text-caption-web' +
+                    (locked ? ' cursor-wait' : '')
+                  }
                   onClick={() => {
-                    if (!locked) setSaveModalOpen(true);
+                    if (!locked) onBack();
                   }}
                 >
-                  저장
+                  목록으로
                 </Button>
-              )}
-            </div>
+                {!published && (
+                  <Button
+                    disabled={!editor.template || versionNumber === undefined}
+                    aria-disabled={locked || undefined}
+                    className={
+                      '!min-h-8 !px-3 !py-1 text-caption-web' +
+                      (locked ? ' cursor-wait' : '')
+                    }
+                    onClick={() => {
+                      if (!locked) setSaveModalOpen(true);
+                    }}
+                  >
+                    저장
+                  </Button>
+                )}
+              </div>
+            </header>
             {previewHtml ? (
               <TemplateHtmlCode
                 html={previewHtml}
+                wrapLines={wrapCode}
                 disabled={locked || published}
                 selected={selectedTarget}
                 onSelect={selectTarget}
               />
             ) : (
-              <div className="template-editor__code flex min-h-0 flex-1 items-center justify-center rounded-xl border p-4 text-center text-body-sm-web">
-                템플릿을 생성하면 HTML이 표시됩니다.
+              <div className="template-editor__code flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-6 text-center text-caption-web">
+                <Braces
+                  aria-hidden="true"
+                  className="size-7 text-text-disabled"
+                />
+                <span className="text-text-secondary">
+                  생성된 포스터의 코드가
+                  <br />
+                  이곳에 표시됩니다.
+                </span>
               </div>
-            )}
-            {previewHtml && !published && (
-              <p className="template-editor__hint text-caption-web">
-                미리보기 요소를 클릭하거나 HTML 코드를 선택해 수정할 부분을
-                지정하세요.
-              </p>
             )}
           </section>
         </div>
