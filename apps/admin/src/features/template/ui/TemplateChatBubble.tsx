@@ -1,5 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
+import { TemplateChatMarkdown } from './TemplateChatMarkdown';
+
 export interface TemplateChatBubbleProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
   variant: 'assistant' | 'loading' | 'user';
@@ -17,27 +19,32 @@ export const TemplateChatBubble = ({
     }
     aria-live={variant === 'loading' ? 'polite' : undefined}
     className={[
-      'max-w-[92%] rounded-xl border px-3 py-2.5 text-body-sm-web leading-6',
+      'min-w-0 max-w-[94%] whitespace-pre-wrap break-words rounded-[22px] border px-3.5 text-body-sm-web leading-6',
+      variant === 'loading' ? 'py-2.5' : 'py-2',
       variant === 'assistant'
         ? 'template-editor__bubble-assistant self-start'
         : variant === 'user'
           ? 'template-editor__bubble-user self-end'
-          : 'template-editor__bubble-assistant flex self-start items-center gap-1 py-3',
+          : 'template-editor__bubble-assistant flex self-start items-center gap-1',
       className,
     ]
       .filter(Boolean)
       .join(' ')}
     {...props}
   >
-    {variant === 'loading'
-      ? [0, 1, 2].map((index) => (
-          <span
-            aria-hidden="true"
-            className="size-1.5 animate-bounce rounded-full bg-text-secondary"
-            key={index}
-            style={{ animationDelay: `${index * 120}ms` }}
-          />
-        ))
-      : children}
+    {variant === 'loading' ? (
+      [0, 1, 2].map((index) => (
+        <span
+          aria-hidden="true"
+          className="size-1.5 animate-bounce motion-reduce:animate-none rounded-full bg-text-secondary"
+          key={index}
+          style={{ animationDelay: `${index * 120}ms` }}
+        />
+      ))
+    ) : variant === 'assistant' && typeof children === 'string' ? (
+      <TemplateChatMarkdown>{children}</TemplateChatMarkdown>
+    ) : (
+      children
+    )}
   </div>
 );

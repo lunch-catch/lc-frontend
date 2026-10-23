@@ -10,8 +10,9 @@ import {
   startKakaoLogin,
 } from '@user/auth/kakaoLogin';
 import { useAuth } from '@user/auth/useAuth';
+import { prefetchFirstFeed } from '@user/hooks/posterPreload';
 
-import LoginStatusScreen from './LoginStatusScreen';
+import LoginStatusScreen, { type LoginFailure } from './LoginStatusScreen';
 import WithdrawStatusScreen, {
   type WithdrawFailure,
 } from './WithdrawStatusScreen';
@@ -26,12 +27,24 @@ const getWithdrawFailure = (error: unknown): WithdrawFailure => {
   return 'server';
 };
 
+const getLoginFailure = (error: unknown): LoginFailure => {
+  if (error instanceof InvalidCallbackError) return 'authentication';
+  if (!(error instanceof ApiError)) return 'network';
+  if (error.status === 429) return 'rateLimited';
+  if (error.code === 'AUTH-007') return 'authentication';
+  if (error.code === 'MEMBER-003') return 'suspended';
+  if (error.code === 'MEMBER-005') return 'pendingUnlink';
+  if (error.code === 'AUTH-002') return 'service';
+  return 'network';
+};
+
 // 카카오에서 돌아오는 화면. 떠나기 전에 적어 둔 목적에 따라 로그인하거나 탈퇴한다
 // 로그인과 탈퇴 재인증이 같은 콜백 주소를 쓰므로, 로그인 여부와 상관없이 들어올 수 있다
 const KakaoCallbackStep = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
+  const [loginFailure, setLoginFailure] = useState<LoginFailure>('network');
   const [withdrawFailure, setWithdrawFailure] =
     useState<WithdrawFailure>('cancelled');
   // 탈퇴 재인증은 로그인한 상태에서, 로그인은 로그아웃 상태에서만 시작하므로 들어올 때의 로그인 여부로 화면을 고른다
@@ -72,11 +85,15 @@ const KakaoCallbackStep = () => {
 
       const user = await loginWithKakaoCode(code, state);
       auth.login(user);
+      // 온보딩을 마친 회원은 "로그인 중" 화면이 떠 있는 동안 첫 피드와 첫 포스터를 받아 두고 이동한다
+      // 스와이프 화면에서 카드를 기다리는 시간이 없어진다. 받지 못해도 이동은 막지 않는다
+      if (user.isOnboarded) await prefetchFirstFeed();
       navigate(user.isOnboarded ? '/swipe' : '/onboarding', { replace: true });
     };
 
     handleCallback().catch((error: unknown) => {
       setWithdrawFailure(getWithdrawFailure(error));
+      setLoginFailure(getLoginFailure(error));
       setStatus('error');
     });
   }, [auth, navigate]);
@@ -95,7 +112,13 @@ const KakaoCallbackStep = () => {
     return <WithdrawStatusScreen failure={withdrawFailure} status={status} />;
   }
 
-  return <LoginStatusScreen onRetry={handleRetry} status={status} />;
+  return (
+    <LoginStatusScreen
+      failure={loginFailure}
+      onRetry={handleRetry}
+      status={status}
+    />
+  );
 };
 
 export default KakaoCallbackStep;

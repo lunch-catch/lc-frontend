@@ -1,6 +1,18 @@
 /* 편집기 UI에만 적용하며 iframe 안의 포스터 원본 색상은 유지한다. */
 .template-editor {
   --editor-panel: var(--semantic-bg-surface);
+  --editor-target-accent: var(--primitive-neutral-500);
+  --editor-target-bg: color-mix(
+    in srgb,
+    var(--editor-target-accent) 10%,
+    var(--editor-panel)
+  );
+  --editor-target-fg: var(--primitive-neutral-900);
+  --editor-target-border: color-mix(
+    in srgb,
+    var(--editor-target-accent) 35%,
+    var(--primitive-neutral-0)
+  );
   --editor-chat: var(--primitive-neutral-50);
   --editor-canvas: var(--primitive-neutral-100);
   --editor-code: var(--primitive-neutral-50);
@@ -19,6 +31,21 @@
 
 /* 다크모드는 밝은 브랜드 배경 대신 중립색에 섞어 글자 대비와 패널 구분을 유지한다. */
 :root[data-theme='dark'] .template-editor {
+  --editor-target-bg: color-mix(
+    in srgb,
+    var(--editor-target-accent) 32%,
+    var(--editor-panel)
+  );
+  --editor-target-fg: color-mix(
+    in srgb,
+    var(--primitive-neutral-100) 85%,
+    var(--editor-target-accent)
+  );
+  --editor-target-border: color-mix(
+    in srgb,
+    var(--editor-target-accent) 70%,
+    var(--editor-panel)
+  );
   --editor-chat: color-mix(in srgb, var(--primitive-neutral-900) 94%, black);
   --editor-canvas: color-mix(in srgb, var(--primitive-neutral-900) 82%, black);
   --editor-code: color-mix(in srgb, var(--primitive-neutral-900) 68%, black);
@@ -42,7 +69,7 @@
   --editor-message-fg: var(--primitive-neutral-100);
   --editor-message-border: color-mix(
     in srgb,
-    var(--primitive-brand-400) 25%,
+    var(--primitive-brand-400) 38%,
     var(--primitive-neutral-900)
   );
 }
@@ -59,10 +86,15 @@
 .template-editor__canvas {
   background: var(--editor-canvas);
   border-color: var(--editor-border);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--editor-muted) 24%, transparent) 0.7px,
+    transparent 0.7px
+  );
+  background-size: 16px 16px;
 }
 
-.template-editor__panel,
-.template-editor__composer {
+.template-editor__panel {
   background: var(--editor-panel);
   border-color: var(--editor-border);
 }
@@ -85,6 +117,8 @@
 
 .template-editor__input:focus-within {
   border-color: var(--semantic-action-primary);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--semantic-text-brand) 12%, transparent);
 }
 
 .template-editor__suggestion,
@@ -104,13 +138,16 @@
   background: var(--semantic-surface-brand);
 }
 
+.template-editor__bubble-assistant {
+  color: var(--editor-foreground);
+}
+
 .template-editor__bubble-user {
   background: var(--editor-message-bg);
   color: var(--editor-message-fg);
   border-color: var(--editor-message-border);
 }
 
-.template-editor__bubble-assistant,
 .template-editor__code {
   background: var(--editor-code);
   border-color: var(--editor-border);
@@ -120,4 +157,76 @@
 .template-editor textarea::placeholder {
   color: var(--editor-muted);
   opacity: 0.85;
+}
+
+/* 편집 도구와 포스터 작업 공간의 깊이를 나누되 실제 HTML 색상은 바꾸지 않는다. */
+.template-editor__panel-heading {
+  border-color: var(--editor-border);
+}
+.template-editor__starter {
+  background: var(--editor-control);
+  border-color: var(--editor-border);
+  color: var(--editor-foreground);
+}
+.template-editor__starter:enabled:hover {
+  border-color: var(--semantic-text-brand);
+  color: var(--semantic-text-brand);
+}
+.template-editor__empty-poster {
+  background: var(--editor-panel);
+  border-color: var(--editor-border);
+}
+.template-editor__poster-sketch {
+  color: var(--semantic-text-brand);
+  border-color: color-mix(in srgb, var(--semantic-text-brand) 22%, transparent);
+  background: var(--semantic-surface-brand);
+  transform: rotate(-5deg);
+}
+
+/* 코드 글자색은 유지하고 배경 농도로 호버와 선택을 구분한다. 공통 선택 토큰은 변경하지 않는다. */
+.template-editor__code-fragment[data-code-hovered='true'][data-code-selected='false'] {
+  background: color-mix(
+    in srgb,
+    var(--semantic-text-brand) 8%,
+    var(--editor-code)
+  );
+}
+.template-editor__code-fragment[data-code-selected='true'] {
+  background: color-mix(
+    in srgb,
+    var(--semantic-text-brand) 16%,
+    var(--editor-code)
+  );
+}
+.template-editor__code code::selection,
+.template-editor__code-fragment::selection {
+  background: color-mix(
+    in srgb,
+    var(--semantic-text-brand) 24%,
+    var(--editor-code)
+  );
+  color: var(--editor-foreground);
+}
+
+/* 어두운 코드 패널에서는 호버의 밝기와 선택의 색 농도를 별도로 높인다. */
+:root[data-theme='dark']
+  .template-editor__code-fragment[data-code-hovered='true'][data-code-selected='false'] {
+  background: color-mix(
+    in srgb,
+    var(--primitive-neutral-100) 14%,
+    var(--editor-code)
+  );
+}
+:root[data-theme='dark']
+  .template-editor__code-fragment[data-code-selected='true'] {
+  background: color-mix(
+    in srgb,
+    var(--primitive-brand-400) 32%,
+    var(--editor-code)
+  );
+}
+
+/* 추천 칩과 입력창을 채팅 배경에 연결해 하단에 큰 흰색 패널이 생기지 않게 한다. */
+.template-editor__composer {
+  background: var(--editor-chat);
 }

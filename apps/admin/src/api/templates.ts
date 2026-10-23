@@ -1,4 +1,4 @@
-﻿import { ApiError, request, requestData } from './client';
+import { ApiError, jsonOptions, request, requestData } from './client';
 
 export type TemplateStatus = 'DRAFT' | 'PUBLISHED';
 
@@ -40,12 +40,19 @@ export interface TemplateGeneration {
   suggestedPrompts: string[];
 }
 
+/** 저장된 템플릿·버전이 없는 자연어 응답(HTTP 200). */
+export interface TemplateChatReply {
+  templateId: null;
+  name: null;
+  versionNumber: null;
+  status: null;
+  html: null;
+  message: string;
+  removedElements: string[];
+  suggestedPrompts: string[];
+}
+
 const basePath = '/v1/admin/templates';
-const jsonOptions = (method: 'POST' | 'PATCH', body: object) => ({
-  method,
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
 
 const assertTemplate = (data: TemplateRecord) => {
   if (
@@ -128,17 +135,32 @@ export const generateTemplate = async (
         requestPrompt: values.requestPrompt,
         requestId: values.requestId,
       };
-  const data = await requestData<TemplateGeneration>(
+  const data = await requestData<TemplateGeneration | TemplateChatReply>(
     path,
     jsonOptions('POST', body),
-    201,
+    [200, 201],
   );
+  // 자연어 응답은 새 템플릿이나 버전을 만들지 않는다.
   if (
+    data?.status === null &&
+    data.templateId === null &&
+    data.name === null &&
+    data.versionNumber === null &&
+    data.html === null &&
+    typeof data.message === 'string' &&
+    Array.isArray(data.removedElements) &&
+    data.removedElements.length === 0 &&
+    Array.isArray(data.suggestedPrompts) &&
+    data.suggestedPrompts.length === 0
+  )
+    return data;
+  if (
+    !data ||
+    data.status !== 'DRAFT' ||
     !Number.isSafeInteger(data.templateId) ||
     data.templateId <= 0 ||
     !Number.isSafeInteger(data.versionNumber) ||
     data.versionNumber <= 0 ||
-    data.status !== 'DRAFT' ||
     typeof data.name !== 'string' ||
     typeof data.html !== 'string' ||
     typeof data.message !== 'string' ||

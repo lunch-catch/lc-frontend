@@ -17,16 +17,23 @@ const ROTATE_DEG_PER_PX = 0.06;
 const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// 이만큼 이하로 움직이고 놓으면 끈 것이 아니라 누른 것으로 본다
+const TAP_SLOP_PX = 8;
+
 interface UseSwipeGestureOptions {
   onSwipe: (action: SwipeAction) => void;
+  // 카드를 끌지 않고 눌렀을 때 (예: 가게 상세로 이동)
+  onTap?: () => void;
 }
 
-export const useSwipeGesture = ({ onSwipe }: UseSwipeGestureOptions) => {
+export const useSwipeGesture = ({ onSwipe, onTap }: UseSwipeGestureOptions) => {
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [leavingAction, setLeavingAction] = useState<SwipeAction | null>(null);
   const startX = useRef<number | null>(null);
   const cardWidth = useRef(0);
+  // 이번에 끌었는지. 끈 뒤에 따라오는 눌림은 카드를 여는 것이 아니다
+  const didDrag = useRef(false);
 
   const finish = (action: SwipeAction) => {
     setDragX(0);
@@ -57,6 +64,7 @@ export const useSwipeGesture = ({ onSwipe }: UseSwipeGestureOptions) => {
     }
 
     startX.current = event.clientX;
+    didDrag.current = false;
     cardWidth.current = event.currentTarget.offsetWidth;
     event.currentTarget.setPointerCapture(event.pointerId);
     setIsDragging(true);
@@ -65,7 +73,15 @@ export const useSwipeGesture = ({ onSwipe }: UseSwipeGestureOptions) => {
   const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
     if (startX.current === null) return;
 
-    setDragX(event.clientX - startX.current);
+    const distance = event.clientX - startX.current;
+    if (Math.abs(distance) > TAP_SLOP_PX) didDrag.current = true;
+    setDragX(distance);
+  };
+
+  // 끌지 않고 누르면 가게 상세로 간다. 날아가는 중이거나 끈 뒤의 눌림은 무시한다
+  const handleClick = () => {
+    if (leavingAction || didDrag.current) return;
+    onTap?.();
   };
 
   const handlePointerEnd = () => {
@@ -98,6 +114,7 @@ export const useSwipeGesture = ({ onSwipe }: UseSwipeGestureOptions) => {
     direction,
     swipe,
     cardProps: {
+      onClick: handleClick,
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerEnd,

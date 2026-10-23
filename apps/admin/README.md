@@ -42,6 +42,8 @@ pnpm dev:admin   # http://localhost:5175
 
 ## 폴더 구조
 
+상태의 관리 위치와 조회 전·로딩·오류·빈 결과 표시 기준은 [관리자 상태 관리 규칙](docs/state-management.md)을 참고합니다.
+
 ```
 src/
 ├── app/            # 라우터

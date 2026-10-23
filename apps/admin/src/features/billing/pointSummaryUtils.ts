@@ -3,12 +3,6 @@ import type { PointSummaryPeriod } from '@admin/api/pointSummary';
 const invalidRangeMessage =
   '합계 조회 기간의 시작일과 종료일을 올바르게 선택해 주세요.';
 
-// JavaScript가 정확하게 표현할 수 있는 양의 정수만 요청 ID로 사용한다.
-export const isPositivePointId = (value: string) =>
-  /^\d+$/.test(value) &&
-  Number.isSafeInteger(Number(value)) &&
-  Number(value) > 0;
-
 export const pointSummaryPeriods: {
   value: PointSummaryPeriod;
   label: string;

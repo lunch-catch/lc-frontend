@@ -10,6 +10,7 @@ import {
   saveMyLocation,
 } from '@user/api/location';
 import { fetchMyProfile } from '@user/api/member';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import {
   getLocationLabel,
   rememberMyLocation,
@@ -75,17 +76,23 @@ export type LocationSettingsMode = 'settings' | 'onboarding';
 
 interface LocationSettingsScreenProps {
   mode?: LocationSettingsMode;
+  onboardingLocationOptIn?: boolean;
+  onOnboardingContinue?: () => void;
 }
 
 // 위치 설정. 피드와 탐색에서 주변 가게를 찾을 기준 위치를 하나 정한다
 // GPS로 찾은 현재 위치나, 주소 검색으로 고른 위치를 저장한다
 const LocationSettingsScreen = ({
   mode = 'settings',
+  onboardingLocationOptIn = false,
+  onOnboardingContinue,
 }: LocationSettingsScreenProps) => {
   const navigate = useNavigate();
   const isOnboarding = mode === 'onboarding';
   // undefined면 불러오는 중, null이면 실패
   const [settings, setSettings] = useState<LocationSettings | null>();
+  // 응답이 빠르면 회색 틀이 잠깐 깜빡였다 사라져 번쩍이므로, 조금 기다린 뒤에만 깜빡인다
+  const showSettingsSkeleton = useDelayedLoading(settings === undefined);
   // 다시 시도할 때마다 올려서 요청을 새로 보낸다
   const [attempt, setAttempt] = useState(0);
   const [pending, setPending] = useState<'locate' | 'save' | 'delete' | null>(
@@ -100,13 +107,18 @@ const LocationSettingsScreen = ({
   useEffect(() => {
     let ignore = false;
 
-    Promise.all([fetchMyProfile(), fetchMyLocation()])
+    Promise.all([
+      isOnboarding ? Promise.resolve(null) : fetchMyProfile(),
+      fetchMyLocation(),
+    ])
       .then(([profile, location]) => {
         if (ignore) return;
         rememberMyLocation(location);
         setSettings({
           location,
-          locationOptIn: profile.consents.locationOptIn,
+          locationOptIn: isOnboarding
+            ? onboardingLocationOptIn
+            : (profile?.consents.locationOptIn ?? false),
         });
       })
       .catch(() => {
@@ -117,7 +129,7 @@ const LocationSettingsScreen = ({
     return () => {
       ignore = true;
     };
-  }, [attempt]);
+  }, [attempt, isOnboarding, onboardingLocationOptIn]);
 
   useEffect(() => {
     if (!toast) return;
@@ -132,8 +144,10 @@ const LocationSettingsScreen = ({
   };
 
   // 온보딩에서는 위치를 저장하거나 건너뛰면 서비스 안내로 넘어간다. 뒤로 가기로 이 단계에 돌아오지 않게 바꿔 넣는다
-  const goToTutorial = () =>
+  const goToTutorial = () => {
+    onOnboardingContinue?.();
     navigate('/onboarding/tutorial', { replace: true });
+  };
 
   const handleLocate = async () => {
     if (pending || !settings?.locationOptIn) return;
@@ -215,7 +229,6 @@ const LocationSettingsScreen = ({
     // 틀(StackLayout)이 하단 버튼 자리로 비워 둔 아래 여백만큼 당겨 화면 높이를 딱 맞춘다
     <div className="-mb-[calc(76px+env(safe-area-inset-bottom))] flex h-dvh flex-col">
       {isOnboarding ? (
-        // 서버에는 이미 온보딩을 저장해서 맞춤 정보로 돌아가지 않는다
         // 회사 주소를 바로 모를 수 있어 건너뛸 수 있게 하고, 나중에 홈 헤더의 위치에서 설정한다
         <TopBar
           action={
@@ -293,10 +306,15 @@ const LocationSettingsScreen = ({
               내 위치
             </h2>
 
+            {/* 받기 전에도 자리를 잡아 두어, 받은 뒤 아래 내용이 밀리지 않게 한다 */}
             {settings === undefined && (
               <div
                 aria-hidden="true"
-                className="h-13 animate-pulse rounded-xl bg-surface-subtle motion-reduce:animate-none"
+                className={`h-13 rounded-xl ${
+                  showSettingsSkeleton
+                    ? 'animate-pulse bg-surface-subtle motion-reduce:animate-none'
+                    : ''
+                }`}
               />
             )}
 

@@ -6,20 +6,34 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly retryAfterSeconds?: number;
+  // 공통 안내와 분리해 화면에서 필요한 경우에만 서버의 구체적인 사유를 사용한다.
+  readonly serverMessage?: string;
 
   constructor(
     message: string,
     status: number,
     code?: string,
     retryAfterSeconds?: number,
+    serverMessage?: string,
   ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.retryAfterSeconds = retryAfterSeconds;
+    this.serverMessage = serverMessage;
   }
 }
+
+/** JSON 본문을 보내는 변경 요청의 헤더와 직렬화를 공통으로 구성한다. */
+export const jsonOptions = (
+  method: 'POST' | 'PUT' | 'PATCH',
+  body: object,
+) => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
 
 const getRetryAfter = (response: Response) => {
   const header = response.headers.get('Retry-After');
@@ -94,11 +108,20 @@ const sendRequest = async (
     const waitMessage = retryAfterSeconds
       ? ` ${retryAfterSeconds}초 후 다시 시도해 주세요.`
       : '';
+    const serverMessage =
+      body &&
+      typeof body === 'object' &&
+      'message' in body &&
+      typeof body.message === 'string' &&
+      body.message.trim()
+        ? body.message.trim()
+        : undefined;
     throw new ApiError(
       getErrorMessage(response.status, code) + waitMessage,
       response.status,
       code,
       retryAfterSeconds,
+      serverMessage,
     );
   }
 

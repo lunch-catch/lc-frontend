@@ -27,15 +27,16 @@ const SwipeUnavailable = ({
   const navigate = useNavigate();
 
   // 업종을 골라 둔 채 카드가 없으면 주변에 쿠폰이 아예 없는 것처럼 보이지 않게, 필터 때문일 수 있다고 알리고 바로 풀게 한다
+  // "업종"은 점주 쪽 말이라 필터 시트처럼 사용자에게 익숙한 "음식"으로 쓴다
   if (reason === 'empty' && onShowAllCategories) {
     return (
       <EmptyState
-        description="필터를 풀면 다른 업종 쿠폰도 볼 수 있어요"
+        description="필터를 풀면 다른 음식 쿠폰도 볼 수 있어요"
         image={mascotEmpty}
-        title="고른 업종에 오늘 쿠폰이 없어요"
+        title="고른 음식에는 오늘 쿠폰이 없어요"
       >
         <ActionButton loading={isClearingFilter} onClick={onShowAllCategories}>
-          전체 업종 보기
+          모든 음식 보기
         </ActionButton>
       </EmptyState>
     );

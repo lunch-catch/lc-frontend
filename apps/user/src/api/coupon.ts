@@ -8,12 +8,17 @@ import {
   MOCK_DAILY_ISSUE_LIMIT,
 } from './mocks/coupon';
 
+// normal: 이벤트가 있고 수량이 남음(또는 오픈 전), soldOut: 수량이 모두 나감, noEvent: 오늘 이벤트가 없음
+export type EventStatus = 'normal' | 'soldOut' | 'noEvent';
+
 // 캠페인 하나의 발급 상태
 export interface CampaignIssueStatus {
   campaignId: string;
   // 오늘의 쿠폰 이벤트 ID. 발급할 때 서버에 보낸다. 오늘 이벤트가 없거나 mock이면 null
   eventId: number | null;
   remainingCount: number;
+  // 오늘 이벤트 상태. 수량이 0이어도 이벤트가 없는 것(noEvent)과 다 나간 것(soldOut)은 다르다
+  eventStatus: EventStatus;
   // 사용 시간 (HH:MM). 이벤트가 없으면 빈 문자열
   usableFrom: string;
   usableTo: string;
@@ -42,7 +47,9 @@ export type IssueResult =
   | 'limitReached'
   | 'alreadyIssued'
   | 'notWished'
-  | 'notOpen';
+  | 'notOpen'
+  | 'accountUnavailable'
+  | 'busy';
 
 // 받은 쿠폰의 상태 (GET /v1/coupons 명세)
 // ISSUED: 아직 안 씀(사용 시작 전 포함), USED: 사용 완료, EXPIRED: 사용 시간이 지남
@@ -170,6 +177,17 @@ const formatClockTime = (isoString: string | null) =>
       })
     : '';
 
+// 서버가 알려 준 eventState를 먼저 본다. 수량 0만으로 소진이라 하면 이벤트가 없는 찜도 소진으로 보인다
+// 열린 이벤트인데 수량이 0이면 소진 반영이 늦은 것이라 소진으로 본다
+const toEventStatus = (item: CouponEventStatusItem): EventStatus => {
+  if (item.eventState === 'NO_EVENT') return 'noEvent';
+  if (item.eventState === 'SOLD_OUT') return 'soldOut';
+  if (item.eventState === 'OPEN' && item.remainingQuantity === 0) {
+    return 'soldOut';
+  }
+  return 'normal';
+};
+
 // 한 번에 물을 수 있는 가게 수 (명세의 storeIds 최대 개수)
 const MAX_STATUS_STORE_IDS = 100;
 
@@ -209,6 +227,7 @@ const fetchCampaignStatuses = async (
         campaignId: target.campaignId,
         eventId: item.eventId,
         remainingCount: item.remainingQuantity,
+        eventStatus: toEventStatus(item),
         usableFrom: formatClockTime(item.usableStartTime),
         usableTo: formatClockTime(item.usableEndTime),
         isIssued: item.hasIssuedToday,
@@ -398,12 +417,18 @@ export const fetchQrToken = async (
 
 // 서버가 발급을 거절한 이유를 받기 결과로 바꾼다. 여기 없는 오류는 그대로 올린다
 const issueFailuresByCode: Record<string, Exclude<IssueResult, 'issued'>> = {
+  // 이벤트가 없거나 더는 조회할 수 없음
+  'COUPON-001': 'notOpen',
+  // 정지·탈퇴 등 쿠폰을 이용할 수 없는 회원 상태
+  'COUPON-003': 'accountUnavailable',
   'COUPON-004': 'notWished',
   'COUPON-005': 'alreadyIssued',
   'COUPON-006': 'soldOut',
   'COUPON-007': 'limitReached',
   // 발급 시간이 아니거나 이벤트가 열려 있지 않음
   'COUPON-002': 'notOpen',
+  // 발급 대기열 포화 또는 일시적인 복구 중
+  'COUPON-008': 'busy',
 };
 
 // 선착순 쿠폰을 받는다 (POST /v1/coupons). 발급 상태에서 받은 오늘 이벤트 ID로 받는다

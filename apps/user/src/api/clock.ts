@@ -2,6 +2,8 @@
 // 사용자 휴대폰 시계는 틀릴 수 있어서, API를 붙이면 서버 시각과의 차이로 맞춘다
 // 지금은 주소에 ?mockTime=10:59:50 처럼 붙이면 그 시각부터 시계가 흐르고, 앱 안에서 화면을 옮겨도 유지된다
 const clockOffsetMs = (() => {
+  if (!import.meta.env.DEV) return 0;
+
   const mockTime = new URLSearchParams(window.location.search).get('mockTime');
   if (!mockTime) return 0;
 

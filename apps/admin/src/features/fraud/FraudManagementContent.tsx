@@ -2,6 +2,7 @@ import { SearchField, SelectField, StatusBadge, Tabs } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
 
 import type { CampaignWarning, InvalidImpression } from '@admin/api/fraud';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
 import { useTableColumnSettings } from '@admin/ui/DataTable';
 import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
@@ -15,7 +16,16 @@ import {
 } from './fraudUtils';
 import { useFraudManagement } from './useFraudManagement';
 
+// 기본 정렬(count 내림차순) 열을 첫 번째에 둔다. 사용자가 저장한 열 순서는 유지한다.
 const invalidColumns: FraudColumn<InvalidImpression>[] = [
+  {
+    key: 'count',
+    label: '무효 노출 수',
+    align: 'right',
+    minWidth: 130,
+    sortable: true,
+    render: (item) => formatNumber(item.count) + '건',
+  },
   {
     key: 'memberId',
     label: '사용자 ID',
@@ -40,14 +50,6 @@ const invalidColumns: FraudColumn<InvalidImpression>[] = [
       </span>
     ),
   },
-  {
-    key: 'count',
-    label: '무효 노출 수',
-    align: 'right',
-    minWidth: 130,
-    sortable: true,
-    render: (item) => formatNumber(item.count) + '건',
-  },
 ];
 export const FraudManagementContent = () => {
   const state = useFraudManagement();
@@ -62,7 +64,16 @@ export const FraudManagementContent = () => {
     pagination,
     sortBy,
   } = state;
+  // 캠페인 경고의 기본 정렬은 invalidRatio 내림차순이다.
   const warningColumns: FraudColumn<CampaignWarning>[] = [
+    {
+      key: 'invalidRatio',
+      label: '무효 / 유효 비율',
+      align: 'right',
+      minWidth: 150,
+      sortable: true,
+      render: (item) => formatFraudRatio(item.invalidRatio),
+    },
     {
       key: 'campaignId',
       label: '캠페인 ID',
@@ -85,14 +96,6 @@ export const FraudManagementContent = () => {
       render: (item) => formatNumber(item.invalidCount),
     },
     {
-      key: 'invalidRatio',
-      label: '무효 / 유효 비율',
-      align: 'right',
-      minWidth: 150,
-      sortable: true,
-      render: (item) => formatFraudRatio(item.invalidRatio),
-    },
-    {
       key: 'distinctMemberCount',
       label: '집중일 회원 수',
       align: 'right',
@@ -110,7 +113,9 @@ export const FraudManagementContent = () => {
     {
       key: 'warnings',
       label: '경고',
-      minWidth: 230,
+      // 두 경고 뱃지와 셀 좌우 여백을 포함해 기본 상태에서 한 줄로 표시한다.
+      minWidth: 280,
+      width: '280px',
       render: (item) => (
         <div className="flex flex-wrap gap-1">
           {item.invalidRatioWarning && (
@@ -268,6 +273,12 @@ export const FraudManagementContent = () => {
           }
         />
       </FilterBar>
+      {filters.to === getKstToday() && (
+        <p className="mb-3 text-caption-web text-text-secondary">
+          오늘 데이터는 집계 전입니다. 전날 데이터는 매일 01:00(KST) 집계 후
+          확인할 수 있습니다.
+        </p>
+      )}
       {filters.tab === 'impressions' && (
         <div className="mb-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -341,7 +352,10 @@ export const FraudManagementContent = () => {
           onSort={onSort}
         />
       )}
-      <PaginationSummary {...pagination} />
+      <PaginationSummary
+        {...pagination}
+        totalCount={state.resource.data?.totalElements}
+      />
     </section>
   );
 };

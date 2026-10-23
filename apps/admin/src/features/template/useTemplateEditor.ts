@@ -27,6 +27,8 @@ interface EditorResult {
 export const useTemplateEditor = (initialId?: string) => {
   const [result, setResult] = useState<EditorResult | null>(null);
   const [generation, setGeneration] = useState<TemplateGeneration | null>(null);
+  // HTML을 유지하는 일반 대화에서도 이전 추천은 최신 응답의 빈 배열로 교체한다.
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
   const savedId = useRef(initialId);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +163,9 @@ export const useTemplateEditor = (initialId?: string) => {
       // 503·네트워크 오류에는 ID를 보존하고, 성공한 요청만 다음 전송과 구분한다.
       pendingRequest.current = null;
       if (!mounted.current) return null;
+      setSuggestedPrompts(generated.suggestedPrompts);
+      // 대화만 완료된 경우 미리보기·저장 ID·버전 이력은 그대로 유지한다.
+      if (generated.status === null) return generated;
       savedId.current = String(generated.templateId);
       setGeneration(generated);
       setVersionsFresh(false);
@@ -295,6 +300,8 @@ export const useTemplateEditor = (initialId?: string) => {
   return {
     template: result?.template ?? null,
     generation,
+    suggestedPrompts,
+    dismissSuggestions: () => setSuggestedPrompts([]),
     versions: result?.versions ?? [],
     nextPageToken: versionsFresh ? result?.nextPageToken : null,
     getVersionAvailability,

@@ -2,11 +2,11 @@
 import { Tabs } from '@repo/ui';
 
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
+import { getKstToday } from '@admin/hooks/queryDateUtils';
 import { queryChoice } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import type { TableDensity } from '@admin/ui/DataTable';
 
-import { getKoreaDate } from './billingUtils';
 import { PaymentHistoryTab } from './tabs/PaymentHistoryTab';
 import { PointLedgerTab } from './tabs/PointLedgerTab';
 import { PointPolicyTab } from './tabs/PointPolicyTab';
@@ -41,7 +41,7 @@ export const BillingManagementContent = () => {
   const { admin } = useAdminAuth();
   const [ledgerRevision, setLedgerRevision] = useState(0);
   const [ledgerNotice, setLedgerNotice] = useState('');
-  const [today] = useState(getKoreaDate);
+  const [today] = useState(getKstToday);
   const {
     filters: { tab },
     updateFilters,

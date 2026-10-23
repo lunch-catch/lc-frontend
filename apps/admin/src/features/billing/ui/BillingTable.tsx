@@ -322,7 +322,10 @@ export const BillingTable = ({
               })}
         </tbody>
       </DataTable>
-      <PaginationSummary {...pagination} />
+      <PaginationSummary
+        {...pagination}
+        totalCount={loading || error ? undefined : pagination.totalCount}
+      />
     </>
   );
 };

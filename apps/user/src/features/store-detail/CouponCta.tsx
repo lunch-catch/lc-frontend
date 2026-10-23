@@ -107,6 +107,12 @@ const CouponCta = ({
             오늘 수량이 모두 소진됐어요
           </ActionButton>
         );
+      case 'noEvent':
+        return (
+          <ActionButton disabled size="large">
+            오늘은 받을 수 있는 쿠폰이 없어요
+          </ActionButton>
+        );
       case 'limitReached':
         return (
           <ActionButton disabled size="large">

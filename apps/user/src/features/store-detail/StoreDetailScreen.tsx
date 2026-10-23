@@ -73,6 +73,8 @@ const ISSUE_FAIL_MESSAGES: Record<Exclude<IssueResult, 'issued'>, string> = {
   alreadyIssued: '오늘 이미 받은 쿠폰이에요',
   notWished: '찜한 뒤에 받을 수 있어요',
   notOpen: '지금은 받을 수 없는 시간이에요',
+  accountUnavailable: '현재 계정으로는 쿠폰을 받을 수 없어요',
+  busy: '발급 요청이 몰리고 있어요 · 잠시 후 다시 시도해 주세요',
 };
 
 const formatPrice = (price: number) => `${price.toLocaleString('ko-KR')}원`;
@@ -241,7 +243,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
       isIssued: couponInfo.status.isIssued,
       isOpen,
       isWished: couponInfo.isWished,
-      remainingCount: couponInfo.status.remainingCount,
+      eventStatus: couponInfo.status.eventStatus,
     });
 
   const setWished = (isWished: boolean) =>
@@ -304,14 +306,34 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
         campaignId: campaign.campaignId,
         eventId: couponInfo.status.eventId,
       });
-      // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
-      setCouponInfo(await loadCouponInfo(campaign.campaignId, storeId));
-
       setToast(
         result === 'issued'
           ? { message: '쿠폰함에 쿠폰을 담았어요' }
           : { message: ISSUE_FAIL_MESSAGES[result], tone: 'error' },
       );
+      // 발급 결과 안내는 확정된 POST 결과를 기준으로 먼저 보여준다. 후속 상태 조회 실패를 발급 실패로 오해하지 않는다
+      if (result === 'issued') {
+        setCouponInfo((current) =>
+          current
+            ? {
+                ...current,
+                dailyRemaining: Math.max(0, current.dailyRemaining - 1),
+                status: {
+                  ...current.status,
+                  isIssued: true,
+                  remainingCount: Math.max(
+                    0,
+                    current.status.remainingCount - 1,
+                  ),
+                },
+              }
+            : current,
+        );
+      }
+      // 잔여 수량은 다시 받되, 실패해도 이미 확정된 발급 결과 안내는 유지한다
+      loadCouponInfo(campaign.campaignId, storeId)
+        .then(setCouponInfo)
+        .catch(() => {});
     } catch {
       setToast({ message: '쿠폰 발급에 실패했어요', tone: 'error' });
     } finally {
@@ -439,7 +461,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
 
         {campaign && hasCouponError ? (
           // 찜 여부나 발급 상태를 받지 못하면 받을 수 있는지 몰라, 할인만 알려 주고 다시 불러오게 한다
-          <section className="flex flex-col gap-2 rounded-xl bg-surface-brand px-4 py-3">
+          <section className="flex flex-col gap-2 rounded-2xl bg-surface-brand px-4 py-3">
             <p className="text-body-sm-mobile text-text-primary">
               오늘{' '}
               <strong className="font-bold text-text-brand">
@@ -472,7 +494,7 @@ const StoreDetailScreen = ({ storeId }: StoreDetailScreenProps) => {
             storeName={store.name}
           />
         ) : (
-          <p className="rounded-xl bg-surface-subtle px-4 py-3 text-body-sm-mobile text-text-secondary">
+          <p className="rounded-2xl bg-surface-subtle px-4 py-3 text-body-sm-mobile text-text-secondary">
             지금 진행 중인 쿠폰이 없어요
           </p>
         )}

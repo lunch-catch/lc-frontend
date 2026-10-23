@@ -245,7 +245,7 @@ export const UserMemberListContent = ({
           )}
         </tbody>
       </DataTable>
-      <PaginationSummary {...pagination} />
+      <PaginationSummary {...pagination} totalCount={data?.totalElements} />
     </>
   );
 };

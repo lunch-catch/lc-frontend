@@ -62,24 +62,21 @@ export const SelectableTemplatePreview = ({
     const overlay = document.createElement('div');
     overlay.setAttribute('data-editor-selection-overlay', '');
     overlay.setAttribute('aria-hidden', 'true');
-    const color = getComputedStyle(window.document.documentElement)
-      .getPropertyValue('--semantic-code-selection-bg')
-      .trim();
-    overlay.style.setProperty('--template-selection-color', color);
     // 템플릿의 높은 z-index 위에 표시하면서 클릭은 원래 요소로 통과시킨다.
     Object.assign(overlay.style, {
       position: 'fixed',
       zIndex: '2147483647',
       pointerEvents: 'none',
       boxSizing: 'border-box',
-      border: '2px solid var(--template-selection-color)',
+      // 포스터 색·앱 테마와 무관하게 밝고 어두운 경계가 모두 남도록 한다.
+      border: '2px solid #ffffff',
+      boxShadow: '0 0 0 1px #1f2937, inset 0 0 0 1px #1f2937',
       borderRadius: '4px',
-      boxShadow:
-        '0 0 0 1px color-mix(in srgb, var(--template-selection-color) 30%, transparent), 0 0 12px 2px color-mix(in srgb, var(--template-selection-color) 55%, transparent)',
+      background: 'transparent',
     });
     document.body.append(overlay);
     // 테두리가 글자에 닿지 않도록 선택 영역보다 조금 넓게 그린다.
-    const outlinePadding = 2;
+    const outlinePadding = 3;
     const updateBounds = () => {
       const bounds = element.getBoundingClientRect();
       Object.assign(overlay.style, {

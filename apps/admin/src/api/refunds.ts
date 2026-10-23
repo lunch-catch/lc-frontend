@@ -1,5 +1,4 @@
 import {
-  billingJson,
   isBillingId,
   isBillingInteger,
   isBillingRecord,
@@ -7,7 +6,7 @@ import {
   isOptionalBillingId,
   readBillingPage,
 } from './billingResponse';
-import { ApiError, requestData } from './client';
+import { ApiError, jsonOptions, requestData } from './client';
 
 export type RefundStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
 export interface AdminRefund {
@@ -70,7 +69,7 @@ export const processRefund = async (
     `/v1/admin/refund-requests/${id}:${decision}`,
     decision === 'approve'
       ? { method: 'POST' }
-      : billingJson('POST', { rejectReason }),
+      : jsonOptions('POST', { rejectReason }),
     200,
   );
   if (

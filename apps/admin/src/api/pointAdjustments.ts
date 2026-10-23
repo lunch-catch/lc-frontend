@@ -1,12 +1,11 @@
 import {
-  billingJson,
   isBillingId,
   isBillingInteger,
   isBillingRecord,
   isBillingText,
   isOptionalBillingId,
 } from './billingResponse';
-import { ApiError, requestData } from './client';
+import { ApiError, jsonOptions, requestData } from './client';
 
 interface PointAdjustmentBaseValues {
   requestId: string;
@@ -37,7 +36,7 @@ export const adjustPoints = async (
 ): Promise<PointAdjustment> => {
   const data = await requestData<unknown>(
     '/v1/admin/point-adjustments',
-    billingJson('POST', values),
+    jsonOptions('POST', values),
     [200, 201],
   );
   if (

@@ -1,15 +1,31 @@
-import { MessageSquareText } from 'lucide-react';
+import { Image, Sparkles } from 'lucide-react';
 
 export const TemplatePreviewEmptyState = () => (
-  <div className="flex size-full flex-col items-center justify-center rounded-lg border border-border-subtle bg-bg-surface px-6 text-center shadow-md">
-    <span className="flex size-10 items-center justify-center rounded-full bg-surface-subtle text-text-secondary">
-      <MessageSquareText aria-hidden="true" className="size-5" />
+  <div className="template-editor__empty-poster flex size-full flex-col items-center justify-center rounded-lg border px-5 text-center shadow-sm">
+    {/* 실제 포스터가 아닌 빈 미리보기임을 나타내는 장식이다. */}
+    <div
+      aria-hidden="true"
+      className="template-editor__poster-sketch mb-6 flex w-28 flex-col items-center gap-2 rounded-lg border p-4"
+    >
+      <span className="h-1.5 w-12 rounded-full bg-current opacity-25" />
+      <span className="h-1 w-16 rounded-full bg-current opacity-15" />
+      <span className="my-2 flex h-14 w-full items-center justify-center rounded-md border border-dashed">
+        <Image className="size-6 opacity-40" />
+      </span>
+      <span className="h-1 w-14 rounded-full bg-current opacity-20" />
+      <span className="h-1 w-10 rounded-full bg-current opacity-15" />
+    </div>
+    <span className="mb-2 flex items-center gap-1.5 text-caption-web text-text-brand">
+      <Sparkles aria-hidden="true" className="size-3.5" />
+      아이디어가 포스터로
     </span>
-    <p className="mt-4 text-body-sm-web font-semibold text-text-primary">
-      채팅을 보내 템플릿을 생성해 보세요
+    <p className="text-body-sm-web font-semibold text-text-primary">
+      첫 대화를 시작해 보세요
     </p>
     <p className="mt-2 text-caption-web leading-5 text-text-secondary">
-      요청한 내용에 맞춰 포스터 미리보기를 만들어 드려요.
+      왼쪽에 요청을 입력하면
+      <br />
+      이곳에서 결과를 확인할 수 있어요.
     </p>
   </div>
 );

@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useMemo, useRef } from 'react';
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
@@ -10,6 +10,7 @@ import {
 
 interface TemplateHtmlCodeProps {
   html: string;
+  wrapLines: boolean;
   disabled: boolean;
   selected: TemplateSelection | null;
   onSelect: (selection: TemplateSelection) => void;
@@ -17,12 +18,17 @@ interface TemplateHtmlCodeProps {
 
 export const TemplateHtmlCode = ({
   html,
+  wrapLines,
   disabled,
   selected,
   onSelect,
 }: TemplateHtmlCodeProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef<HTMLElement>(null);
+  const [hoveredElement, setHoveredElement] = useState<{
+    html: string;
+    start: number;
+  } | null>(null);
   const elements = useMemo(() => getTemplateCodeElements(html), [html]);
   const chunks = useMemo(() => {
     // 중첩된 태그의 경계를 나누되 원본 문자열과 줄바꿈은 그대로 표시한다.
@@ -53,6 +59,11 @@ export const TemplateHtmlCode = ({
         (element) => element.selection.selector === selected.selector,
       )
     : undefined;
+  // 분할된 코드 조각이 아니라 원본 요소의 전체 범위로 호버를 표시한다.
+  const hovered =
+    !disabled && hoveredElement?.html === html
+      ? elements.find((element) => element.start === hoveredElement.start)
+      : undefined;
   const selectedStart = selectedElement?.start;
   useEffect(() => {
     if (selected?.source !== 'preview' || selectedStart === undefined) return;
@@ -69,7 +80,7 @@ export const TemplateHtmlCode = ({
       viewport.scrollTop += bounds.top - viewportTop;
     else if (bounds.bottom > viewportTop + viewport.clientHeight)
       viewport.scrollTop += bounds.bottom - viewportTop - viewport.clientHeight;
-  }, [selectedStart, selected?.source]);
+  }, [selectedStart, selected?.source, wrapLines]);
   const selectElement = (start: number, end?: number) => {
     if (disabled) return;
     const element = findTemplateCodeElement(elements, start, end);
@@ -112,10 +123,25 @@ export const TemplateHtmlCode = ({
       aria-label="선택한 템플릿의 HTML"
       role="region"
       tabIndex={0}
-      className="template-editor__code min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border focus-visible:outline-2 focus-visible:outline-action-primary"
+      className={
+        'template-editor__code min-w-0 overscroll-x-contain rounded-xl border focus-visible:outline-2 focus-visible:outline-action-primary ' +
+        (wrapLines ? 'overflow-x-hidden' : 'overflow-x-auto')
+      }
     >
-      <pre className="m-0 w-max min-w-full p-4 font-mono text-caption-web leading-6">
-        <code ref={codeRef} onMouseUp={handleMouseUp}>
+      {/* 자동 줄바꿈은 영역 끝에서 문자 단위로 접고, 원본 개행과 요소 선택에 쓰는 문자 위치는 유지한다. */}
+      <pre
+        className={
+          'm-0 p-4 font-mono text-caption-web leading-6 ' +
+          (wrapLines
+            ? 'w-full min-w-0 whitespace-pre-wrap break-all'
+            : 'w-max min-w-full whitespace-pre')
+        }
+      >
+        <code
+          ref={codeRef}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={() => setHoveredElement(null)}
+        >
           {chunks.map((chunk) => {
             const isSelected = Boolean(
               selectedElement &&
@@ -129,6 +155,19 @@ export const TemplateHtmlCode = ({
                 data-code-start={chunk.start}
                 data-code-end={chunk.end}
                 data-code-selected={isSelected}
+                data-code-selectable={selectable}
+                data-code-hovered={Boolean(
+                  hovered &&
+                  chunk.start >= hovered.start &&
+                  chunk.end <= hovered.end,
+                )}
+                onMouseEnter={() =>
+                  setHoveredElement(
+                    selectable && chunk.element
+                      ? { html, start: chunk.element.start }
+                      : null,
+                  )
+                }
                 role={selectable ? 'button' : undefined}
                 tabIndex={selectable ? 0 : undefined}
                 aria-label={
@@ -136,7 +175,7 @@ export const TemplateHtmlCode = ({
                     ? `${chunk.element.selection.label} 태그를 수정 대상으로 선택`
                     : undefined
                 }
-                className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action-primary ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'bg-code-selection text-code-selection-fg' : selectable ? 'hover:bg-bg-surface' : ''}`}
+                className={`template-editor__code-fragment outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action-primary ${selectable ? 'cursor-pointer' : ''}`}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();

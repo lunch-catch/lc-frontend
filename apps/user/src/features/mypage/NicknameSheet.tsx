@@ -39,7 +39,8 @@ const NicknameSheet = ({ nickname, onClose, onSaved }: NicknameSheetProps) => {
   };
 
   return (
-    <BottomSheet isOpen onClose={onClose} title="닉네임 바꾸기">
+    // 입력칸 위에 "닉네임"이 이미 적혀 있어 시트 제목은 두지 않는다
+    <BottomSheet ariaLabel="닉네임 변경" isOpen onClose={onClose}>
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <label className="flex flex-col gap-2">
           <span className="flex justify-between text-body-sm-mobile text-text-secondary">
