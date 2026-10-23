@@ -202,7 +202,7 @@ const Carousel = ({ stores }: NearbyCouponSliderProps) => {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col">
       <ul
         aria-label="가까운 쿠폰 가게"
         aria-roledescription="carousel"
@@ -273,7 +273,8 @@ const Carousel = ({ stores }: NearbyCouponSliderProps) => {
         })}
       </ul>
       {/* 지금 몇 번째인지 점으로 보여준다. 눌러서 그 카드로 갈 수 있다 */}
-      <div className="flex items-center justify-center">
+      {/* 점 버튼은 누르기 좋게 높이를 키웠다. 그 빈 높이가 보이는 간격이 되지 않게 아래로 당겨, 위(업종 줄과 제목)와 아래(주변 가게 제목) 간격을 같게 맞춘다 */}
+      <div className="-mb-[13px] flex items-center justify-center">
         {stores.map((store, index) => (
           <button
             aria-current={index === state.index || undefined}
