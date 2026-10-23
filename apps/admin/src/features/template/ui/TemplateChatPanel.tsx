@@ -7,6 +7,7 @@ import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 import type { TemplateChatState } from '../useTemplateChat';
 import { TemplateChatBubble } from './TemplateChatBubble';
 import { TemplateChatComposer } from './TemplateChatComposer';
+import { TemplateChatReveal } from './TemplateChatReveal';
 import { TemplateVersionMessage } from './TemplateVersionMessage';
 
 interface TemplateChatPanelProps {
@@ -48,6 +49,16 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
     requestVersionChange,
     chatHistoryRef,
   } = chat;
+
+  const followLatestMessage = () => {
+    const history = chatHistoryRef.current;
+    if (!history) return;
+    // 하단 근처에서만 새 답변을 따라가고, 이전 대화를 읽는 중에는 위치를 유지한다.
+    const distanceFromBottom =
+      history.scrollHeight - history.scrollTop - history.clientHeight;
+    if (distanceFromBottom < 96)
+      history.scrollTo({ top: history.scrollHeight });
+  };
 
   return (
     <section className="template-editor__chat flex min-h-0 min-w-0 flex-col border-r">
@@ -137,10 +148,7 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
               </TemplateChatBubble>
             )}
             {version.message.trim() && (
-              <TemplateChatBubble
-                variant="assistant"
-                className="whitespace-pre-wrap"
-              >
+              <TemplateChatBubble variant="assistant">
                 {version.message}
               </TemplateChatBubble>
             )}
@@ -163,13 +171,13 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
               )}
               {message.text}
             </TemplateChatBubble>
-            {/* LLM 설명은 검증되지 않은 텍스트이므로 HTML로 해석하지 않는다. */}
+            {/* AI 답변과 저장된 이력은 같은 마크다운 말풍선을 사용한다. */}
             {message.assistantMessage.trim() && (
-              <TemplateChatBubble
-                variant="assistant"
-                className="whitespace-pre-wrap"
-              >
-                {message.assistantMessage}
+              <TemplateChatBubble variant="assistant">
+                <TemplateChatReveal
+                  text={message.assistantMessage}
+                  onProgress={followLatestMessage}
+                />
               </TemplateChatBubble>
             )}
             {message.versionNumber !== null && (
