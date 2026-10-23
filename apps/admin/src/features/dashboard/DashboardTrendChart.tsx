@@ -1,7 +1,6 @@
 import type { PointerEvent } from 'react';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { formatDate, formatNumber } from '@repo/utils';
-import { MousePointer2 } from 'lucide-react';
+import { formatNumber } from '@repo/utils';
 
 import {
   getChartAxisMaximum,
@@ -28,8 +27,6 @@ interface DashboardTrendChartProps {
   unit?: string;
   height?: number;
   variant?: 'line' | 'bar';
-  /** 일별 신규 건수처럼 날짜 사이의 합계를 구할 수 있는 지표에만 사용한다. */
-  rangeSelection?: boolean;
 }
 
 export const DashboardTrendChart = ({
@@ -41,7 +38,6 @@ export const DashboardTrendChart = ({
   unit = '건',
   height = 208,
   variant = 'line',
-  rangeSelection = false,
 }: DashboardTrendChartProps) => {
   // 단일 지표는 범례와 넓은 여백을 덜어내고 축 라벨에 필요한 공간만 남긴다.
   const chartLayout = secondary ? comparisonLayout : singleSeriesLayout;
@@ -52,10 +48,6 @@ export const DashboardTrendChart = ({
   const [width, setWidth] = useState(640);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [pointerY, setPointerY] = useState<number | null>(null);
-  const [selection, setSelection] = useState<{
-    start: number;
-    end: number | null;
-  } | null>(null);
   const hasLabels = labels.length > 0;
   useLayoutEffect(() => {
     const container = chartRef.current;
@@ -70,40 +62,7 @@ export const DashboardTrendChart = ({
     observer.observe(container);
     return () => observer.disconnect();
   }, [hasLabels]);
-  const selectedRange =
-    selection?.end != null
-      ? {
-          start: Math.min(selection.start, selection.end),
-          end: Math.max(selection.start, selection.end),
-        }
-      : null;
   const active = Math.min(activeIndex ?? labels.length - 1, labels.length - 1);
-  // 선택한 양끝 날짜를 포함하며 미확정 날짜를 0으로 간주하지 않는다.
-  const selectedValues = selectedRange
-    ? primary.values.slice(selectedRange.start, selectedRange.end + 1)
-    : [];
-  const selectedTotal =
-    selectedRange && selectedValues.every((value) => value !== null)
-      ? selectedValues.reduce<number>((total, value) => total + (value ?? 0), 0)
-      : null;
-  const selectedDates = selectedRange
-    ? `${formatDate(labels[selectedRange.start])} ~ ${formatDate(labels[selectedRange.end])}`
-    : '';
-  const selectIndex = (index: number) => {
-    setSelection((current) =>
-      current && current.end === null
-        ? { ...current, end: index }
-        : { start: index, end: null },
-    );
-    // 클릭 직후에는 구간 안내를 읽을 수 있도록 일별 호버 툴팁을 닫는다.
-    setActiveIndex(null);
-    setPointerY(null);
-  };
-  const clearSelection = () => {
-    setSelection(null);
-    setActiveIndex(null);
-    setPointerY(null);
-  };
   const tickInterval = getChartLabelInterval(labels.length, width);
   const values = [...primary.values, ...(secondary?.values ?? [])].filter(
     (value): value is number => value !== null,
@@ -178,98 +137,25 @@ export const DashboardTrendChart = ({
   );
   if (!labels.length)
     return (
-      <p className="py-10 text-center text-body-sm-web text-text-secondary">
+      <p
+        style={{ height }}
+        className="flex items-center justify-center text-center text-body-sm-web text-text-secondary"
+      >
         집계 완료된 데이터가 없습니다.
       </p>
     );
   return (
     <div className="space-y-3">
-      {rangeSelection && (
-        <div className="flex min-h-12 flex-wrap items-center justify-between gap-2">
-          <div
-            id={`${id}-selection`}
-            role="status"
-            aria-live="polite"
-            className="space-y-1"
-          >
-            <p className="flex items-center gap-1.5 text-caption-web font-medium text-text-secondary">
-              <MousePointer2 aria-hidden className="size-3.5 shrink-0" />
-              {selectedRange
-                ? '구간 합계 · 다른 기간은 시작일과 종료일을 다시 클릭하세요.'
-                : selection
-                  ? `${formatDate(labels[selection.start])} 선택됨 · 종료일을 클릭하세요.`
-                  : '구간 합계 선택 · 그래프에서 시작일과 종료일을 차례로 클릭하세요.'}
-            </p>
-            {selectedRange && (
-              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-body-sm-web text-text-secondary">
-                <span>
-                  {selectedDates} 기간 {primary.name}
-                </span>
-                <strong className="text-h2-web font-semibold tabular-nums text-text-brand">
-                  {selectedTotal === null
-                    ? '집계 미완료'
-                    : formatNumber(selectedTotal) + unit}
-                </strong>
-              </p>
-            )}
-          </div>
-          {selection && (
-            <button
-              type="button"
-              onClick={clearSelection}
-              className="shrink-0 cursor-pointer rounded text-text-brand underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-action-primary"
-            >
-              선택 해제
-            </button>
-          )}
-        </div>
-      )}
-      <div
-        ref={chartRef}
-        className={`relative rounded-lg bg-bg-surface ${rangeSelection ? 'ring-1 ring-inset ring-transparent transition-shadow hover:ring-border-subtle focus-within:ring-border-subtle' : ''}`}
-      >
+      <div ref={chartRef} className="relative rounded-lg bg-bg-surface">
         <svg
           aria-label={title}
-          aria-describedby={rangeSelection ? `${id}-selection` : undefined}
-          className={`w-full text-caption-web ${rangeSelection ? 'cursor-crosshair' : ''}`}
+          className="w-full text-caption-web"
           style={{
             height,
           }}
           viewBox={`0 0 ${width} ${height}`}
           onPointerMove={handlePointerMove}
           onPointerLeave={hidePointer}
-          onClick={
-            rangeSelection
-              ? (event) => {
-                  const bounds = event.currentTarget.getBoundingClientRect();
-                  const position =
-                    ((event.clientX - bounds.left) / bounds.width) * width;
-                  const vertical =
-                    ((event.clientY - bounds.top) / bounds.height) * height;
-                  if (
-                    position >= chartLayout.left &&
-                    position <= width - chartLayout.right &&
-                    vertical >= chartLayout.top &&
-                    vertical <= bottom
-                  )
-                    selectIndex(
-                      getNearestChartIndex(
-                        position,
-                        firstX,
-                        pointWidth,
-                        labels.length,
-                      ),
-                    );
-                }
-              : undefined
-          }
-          onKeyDown={
-            rangeSelection
-              ? (event) => {
-                  if (event.key === 'Escape') clearSelection();
-                }
-              : undefined
-          }
         >
           <defs>
             <clipPath id={`${id}-plot`}>
@@ -324,19 +210,6 @@ export const DashboardTrendChart = ({
           ))}
           {/* 데이터 도형만 자르고 축 라벨·포커스 영역은 그대로 유지한다. */}
           <g clipPath={`url(#${id}-plot)`}>
-            {selectedRange && (
-              <rect
-                x={x(selectedRange.start) - slotWidth / 2}
-                y={chartLayout.top}
-                width={
-                  x(selectedRange.end) - x(selectedRange.start) + slotWidth
-                }
-                height={bottom - chartLayout.top}
-                fill="var(--semantic-action-primary)"
-                fillOpacity="0.08"
-                pointerEvents="none"
-              />
-            )}
             {variant === 'bar' &&
               primary.values.map((value, index) =>
                 value === null ? null : (
@@ -399,12 +272,7 @@ export const DashboardTrendChart = ({
           {labels.map((label, index) => (
             <g key={label}>
               <circle
-                role={rangeSelection ? 'button' : 'img'}
-                aria-pressed={
-                  rangeSelection
-                    ? selection?.start === index || selection?.end === index
-                    : undefined
-                }
+                role="img"
                 aria-label={`${label}, ${primary.name} ${valueLabel(primary.values[index])}${secondary ? `, ${secondary.name} ${valueLabel(secondary.values[index])}` : ''}${tooltipDetails.map((detail) => `, ${detail.name} ${valueLabel(detail.values[index])}`).join('')}`}
                 tabIndex={0}
                 cx={x(index)}
@@ -417,16 +285,6 @@ export const DashboardTrendChart = ({
                   setActiveIndex(index);
                 }}
                 onBlur={hidePointer}
-                onKeyDown={
-                  rangeSelection
-                    ? (event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          selectIndex(index);
-                        }
-                      }
-                    : undefined
-                }
                 onMouseEnter={() => setActiveIndex(index)}
               />
               {showLabel(index) && (

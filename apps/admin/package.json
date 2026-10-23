@@ -10,7 +10,10 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test:auth": "node --test scripts/test-auth-session.mjs",
-    "test:api": "node --test scripts/test-api-responses.mjs"
+    "test:api": "node --test scripts/test-api-responses.mjs",
+    "test:selection": "node --test scripts/test-template-selection.mjs",
+    "test:dashboard": "node --test scripts/test-dashboard-links.mjs",
+    "test": "node --test scripts/test-auth-session.mjs scripts/test-api-responses.mjs scripts/test-dashboard-links.mjs scripts/test-template-selection.mjs"
   },
   "dependencies": {
     "@repo/ui": "workspace:*",

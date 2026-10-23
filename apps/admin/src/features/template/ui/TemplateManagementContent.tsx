@@ -1,8 +1,12 @@
-import { useId, useRef, useState } from 'react';
-import { Button } from '@repo/ui';
+import { useId, useMemo, useRef, useState } from 'react';
+import { Button, SearchField, SelectField } from '@repo/ui';
 import { Plus } from 'lucide-react';
 
+import { queryChoice, queryText } from '@admin/hooks/urlQuery';
+import { useUrlFilters } from '@admin/hooks/useUrlFilters';
+import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
+import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import type { PosterTemplate } from '../templateTypes';
 import { getTemplateError, TEMPLATE_LIMIT } from '../templateUtils';
@@ -19,6 +23,17 @@ export interface TemplateManagementContentProps {
   templates: PosterTemplate[];
 }
 
+const templateQuery = {
+  keyword: queryText(),
+  status: queryChoice(['ALL', 'DRAFT', 'PUBLISHED'] as const, 'ALL'),
+  sort: queryChoice(['LATEST', 'NAME'] as const, 'LATEST'),
+};
+// 한글·영문 이름을 비교하고 이름 속 숫자는 2, 10처럼 숫자 크기순으로 정렬한다.
+const nameCollator = new Intl.Collator('ko-KR', {
+  numeric: true,
+  sensitivity: 'base',
+});
+
 export const TemplateManagementContent = ({
   onCreate,
   onOpenTemplate,
@@ -28,10 +43,28 @@ export const TemplateManagementContent = ({
   error,
   templates,
 }: TemplateManagementContentProps) => {
+  const { filters, updateFilters } = useUrlFilters('templates.', templateQuery);
+  const search = useUrlSearch(filters.keyword, (keyword) =>
+    updateFilters({ keyword }),
+  );
+  // 전체 목록은 유지한 채 표시할 카드만 골라 생성 한도·삭제 후 갱신에 영향을 주지 않는다.
+  const visibleTemplates = useMemo(() => {
+    const keyword = search.keyword.trim().toLocaleLowerCase('ko-KR');
+    const filtered = templates.filter(
+      (template) =>
+        (filters.status === 'ALL' || template.status === filters.status) &&
+        (!keyword ||
+          template.name.toLocaleLowerCase('ko-KR').includes(keyword)),
+    );
+    // 최신 등록순은 서버 응답 순서를 보존하고, 이름순만 복사된 배열에서 정렬한다.
+    return filters.sort === 'NAME'
+      ? filtered.sort((a, b) => nameCollator.compare(a.name, b.name))
+      : filtered;
+  }, [templates, filters.status, filters.sort, search.keyword]);
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [limitTooltipOpen, setLimitTooltipOpen] = useState(false);
   const limitTooltipId = useId();
-  // 필터 없는 전체 응답으로 생성 한도를 판단하고, 서버의 최신 등록순을 그대로 표시한다.
+  // 검색 결과 개수가 아니라 필터 없는 전체 응답으로 생성 한도를 판단한다.
   const atTemplateLimit = templates.length >= TEMPLATE_LIMIT;
   const canCreate = !loading && !error && !atTemplateLimit;
   const [activationError, setActivationError] = useState<string | null>(null);
@@ -158,6 +191,45 @@ export const TemplateManagementContent = ({
         </p>
       )}
 
+      <FilterBar className="mb-4">
+        <SearchField
+          aria-label="템플릿명 검색"
+          placeholder="템플릿명 검색"
+          value={search.draftKeyword}
+          onChange={(event) => search.setDraftKeyword(event.target.value)}
+        />
+        <SelectField
+          aria-label="템플릿 상태"
+          fitContent
+          value={filters.status}
+          options={[
+            { label: '상태 전체', value: 'ALL' },
+            { label: '임시저장', value: 'DRAFT' },
+            { label: '게시됨', value: 'PUBLISHED' },
+          ]}
+          onValueChange={(status) => {
+            if (
+              status === 'ALL' ||
+              status === 'DRAFT' ||
+              status === 'PUBLISHED'
+            )
+              updateFilters({ status });
+          }}
+        />
+        <SelectField
+          aria-label="템플릿 정렬"
+          fitContent
+          value={filters.sort}
+          options={[
+            { label: '최신 등록순', value: 'LATEST' },
+            { label: '이름순', value: 'NAME' },
+          ]}
+          onValueChange={(sort) => {
+            if (sort === 'LATEST' || sort === 'NAME') updateFilters({ sort });
+          }}
+        />
+      </FilterBar>
+
       {loading || error ? (
         <div
           className="rounded-xl border border-border-subtle bg-bg-surface py-20 text-center text-body-sm-web text-text-secondary"
@@ -165,9 +237,9 @@ export const TemplateManagementContent = ({
         >
           {error ?? '템플릿을 불러오는 중입니다.'}
         </div>
-      ) : templates.length > 0 ? (
+      ) : visibleTemplates.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 @sm:grid-cols-2 @xl:grid-cols-3 @3xl:grid-cols-4 @5xl:grid-cols-5">
-          {templates.map((template) => (
+          {visibleTemplates.map((template) => (
             <TemplatePreviewCard
               key={template.templateId}
               onDeleteRequest={(target) => {
@@ -187,7 +259,9 @@ export const TemplateManagementContent = ({
         </div>
       ) : (
         <div className="rounded-xl border border-border-subtle bg-bg-surface py-20 text-center text-body-sm-web text-text-secondary">
-          조회된 템플릿이 없습니다
+          {search.keyword.trim() || filters.status !== 'ALL'
+            ? '조건에 맞는 템플릿이 없습니다.'
+            : '조회된 템플릿이 없습니다.'}
         </div>
       )}
 

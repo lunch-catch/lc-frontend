@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
-import { Button } from '@repo/ui';
+import { Button, StatusBadge } from '@repo/ui';
+import { ArrowUpRight, MessageSquareText, MousePointer2 } from 'lucide-react';
 
 import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
@@ -11,6 +12,29 @@ import { TemplateVersionMessage } from './TemplateVersionMessage';
 interface TemplateChatPanelProps {
   chat: TemplateChatState;
 }
+
+/** 전송 대기 중과 완료된 말풍선에서 같은 선택 태그를 표시한다. */
+const TemplateMessageTarget = ({ label }: { label: string }) => (
+  <div className="mb-2 min-w-0">
+    <StatusBadge
+      variant="neutral"
+      className="template-editor__target h-6 max-w-full gap-1.5 border"
+      style={{
+        paddingBlock: 0,
+        paddingInline: 'var(--space-2)',
+        backgroundColor: 'var(--editor-target-bg)',
+        color: 'var(--editor-target-fg)',
+        borderColor: 'var(--editor-target-border)',
+      }}
+    >
+      <MousePointer2 aria-hidden="true" className="size-3 shrink-0" />
+      <span className="min-w-0 truncate" title={label}>
+        <span className="sr-only">수정 대상: </span>
+        {label}
+      </span>
+    </StatusBadge>
+  </div>
+);
 
 export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
   const {
@@ -27,7 +51,65 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
 
   return (
     <section className="template-editor__chat flex min-h-0 min-w-0 flex-col border-r">
-      <ScrollArea className="flex flex-col gap-4 p-4" ref={chatHistoryRef}>
+      <header className="template-editor__panel-heading flex shrink-0 items-center gap-2 border-b p-4">
+        <MessageSquareText
+          aria-hidden="true"
+          className="size-4 text-text-secondary"
+        />
+        <h2
+          className="min-w-0 truncate text-body-sm-web font-semibold"
+          title={chat.displayName}
+        >
+          {chat.displayName}
+        </h2>
+      </header>
+      <ScrollArea
+        className="flex flex-col gap-5 px-5 py-4"
+        ref={chatHistoryRef}
+      >
+        {!published &&
+          previousVersions.length === 0 &&
+          messages.length === 0 &&
+          !pendingMessage && (
+            <div className="flex flex-col items-start py-4">
+              <h3 className="text-xl font-semibold leading-snug tracking-tight">
+                어떤 포스터를
+                <br />
+                만들어 볼까요?
+              </h3>
+              <p className="mt-2 text-body-sm-web leading-6 text-text-secondary">
+                원하는 분위기와 색상을 알려주세요.
+                <br />
+                대화하며 조금씩 다듬을 수 있어요.
+              </p>
+              <div
+                className="mt-5 flex w-full flex-col gap-2"
+                aria-label="시작 문구 예시"
+              >
+                {[
+                  '따뜻한 주황색의 점심 할인 포스터를 만들어줘',
+                  '깔끔한 흰색 배경에 메뉴가 돋보이게 만들어줘',
+                ].map((example) => (
+                  <button
+                    key={example}
+                    type="button"
+                    disabled={locked}
+                    className="template-editor__starter flex items-center justify-between gap-3 rounded-xl border p-3 text-left text-caption-web leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-action-primary"
+                    onClick={() => {
+                      chat.changePrompt(example);
+                      chat.promptRef.current?.focus();
+                    }}
+                  >
+                    {example}
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         {published && (
           <TemplateChatBubble variant="assistant">
             최종 저장된 템플릿입니다. 이후에는 수정할 수 없습니다.
@@ -46,9 +128,12 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
         {/* 버전 이력의 요청·설명을 복원하되 이번 대화에 있는 버전은 훅에서 제외한다. */}
         {previousVersions.map((version) => (
           <Fragment key={version.versionNumber}>
-            {version.requestPrompt.trim() && (
+            {version.text.trim() && (
               <TemplateChatBubble variant="user">
-                {version.requestPrompt}
+                {version.targetLabel && (
+                  <TemplateMessageTarget label={version.targetLabel} />
+                )}
+                {version.text}
               </TemplateChatBubble>
             )}
             {version.message.trim() && (
@@ -71,12 +156,10 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
           </Fragment>
         ))}
         {messages.map((message) => (
-          <Fragment key={message.versionNumber}>
+          <Fragment key={message.id}>
             <TemplateChatBubble variant="user">
               {message.targetLabel && (
-                <span className="template-editor__hint mb-1 block text-caption-web">
-                  수정 대상 · {message.targetLabel}
-                </span>
+                <TemplateMessageTarget label={message.targetLabel} />
               )}
               {message.text}
             </TemplateChatBubble>
@@ -89,15 +172,17 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
                 {message.assistantMessage}
               </TemplateChatBubble>
             )}
-            <TemplateVersionMessage
-              versionNumber={message.versionNumber}
-              current={message.versionNumber === versionNumber}
-              disabled={locked}
-              availability={editor.getVersionAvailability(
-                message.versionNumber,
-              )}
-              onSelect={requestVersionChange}
-            />
+            {message.versionNumber !== null && (
+              <TemplateVersionMessage
+                versionNumber={message.versionNumber}
+                current={message.versionNumber === versionNumber}
+                disabled={locked}
+                availability={editor.getVersionAvailability(
+                  message.versionNumber,
+                )}
+                onSelect={requestVersionChange}
+              />
+            )}
             {message.hasRemovedElements && (
               <TemplateChatBubble variant="assistant">
                 안전하지 않은 태그와 속성은 제거했습니다.
@@ -108,9 +193,7 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
         {pendingMessage && (
           <TemplateChatBubble variant="user">
             {pendingMessage.targetLabel && (
-              <span className="template-editor__hint mb-1 block text-caption-web">
-                수정 대상 · {pendingMessage.targetLabel}
-              </span>
+              <TemplateMessageTarget label={pendingMessage.targetLabel} />
             )}
             {pendingMessage.text}
           </TemplateChatBubble>

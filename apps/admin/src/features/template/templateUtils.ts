@@ -34,7 +34,10 @@ export const getValidTemplateName = (value: unknown): string | undefined => {
   return name.length > 0 && name.length <= 100 ? name : undefined;
 };
 
+/** 코드별 안내를 우선하고, 미등록 POSTER 오류는 서버가 보낸 사유를 텍스트로 표시한다. */
 export const getTemplateError = (error: unknown) =>
   error instanceof ApiError
-    ? (templateErrors[error.code ?? ''] ?? error.message)
+    ? (templateErrors[error.code ?? ''] ??
+      (error.code?.startsWith('POSTER-') ? error.serverMessage : undefined) ??
+      error.message)
     : '서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';

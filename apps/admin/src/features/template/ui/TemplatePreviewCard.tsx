@@ -1,5 +1,5 @@
 ﻿import { Button, StatusBadge, Toggle } from '@repo/ui';
-import { formatDate, formatDateTime } from '@repo/utils';
+import { formatDateTime } from '@repo/utils';
 import { Trash2 } from 'lucide-react';
 
 import type { PosterTemplate } from '../templateTypes';
@@ -20,7 +20,8 @@ export const TemplatePreviewCard = ({
 }: TemplatePreviewCardProps) => {
   const canChangeActivation = template.status === 'PUBLISHED';
   const openLabel = canChangeActivation ? '상세보기' : '수정';
-  const modifiedAt = template.lastModifiedAt ?? template.createdAt;
+  // 수정 시각이 없는 데이터는 최초 등록 시각으로 대체하지 않고 빈 값으로 표시한다.
+  const modifiedAt = template.lastModifiedAt;
 
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-surface transition-shadow hover:shadow-md">
@@ -48,23 +49,20 @@ export const TemplatePreviewCard = ({
         <TemplateThumbnail html={template.html} name={template.name} />
       </button>
 
-      <dl className="grid grid-cols-2 gap-2 px-3 py-2 text-caption-web text-text-secondary">
-        <div className="min-w-0">
-          <dt>최초 등록일</dt>
-          <dd
-            className="mt-1 whitespace-nowrap"
-            title={formatDateTime(template.createdAt)}
-          >
-            {formatDate(template.createdAt)}
+      <dl className="space-y-1.5 px-3 py-3 text-caption-web text-text-secondary">
+        <div className="flex items-baseline gap-1.5">
+          <dt className="shrink-0">최종 수정일:</dt>
+          <dd className="min-w-0 tabular-nums">
+            {modifiedAt ? formatDateTime(modifiedAt) : '—'}
           </dd>
         </div>
-        <div className="min-w-0 text-right">
-          <dt>최종 수정일</dt>
-          <dd
-            className="mt-1 whitespace-nowrap"
-            title={formatDateTime(modifiedAt)}
-          >
-            {formatDate(modifiedAt)}
+        <div className="flex items-baseline gap-1.5">
+          <dt className="shrink-0">최종 수정자:</dt>
+          {/* 목록 API는 수정자의 이름 대신 관리자 내부 ID를 제공한다. */}
+          <dd className="min-w-0">
+            {template.lastModifiedBy == null
+              ? '—'
+              : '관리자 #' + template.lastModifiedBy}
           </dd>
         </div>
       </dl>
