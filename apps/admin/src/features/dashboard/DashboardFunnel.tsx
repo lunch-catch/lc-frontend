@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Link } from 'react-router';
 import { Toggle } from '@repo/ui';
 import { formatNumber } from '@repo/utils';
@@ -59,6 +60,8 @@ export const DashboardFunnel = ({
     : '';
   // 합계는 전체 선택 기간을 유지하고 링크가 조회할 기간만 별도로 표시한다.
   const fraudPeriod = fraudQuery ? new URLSearchParams(fraudQuery) : null;
+  // aria-label이 링크 본문을 대신 읽으므로 보이는 조회 기간은 설명으로 연결한다.
+  const fraudPeriodId = useId();
   return (
     <DashboardSection
       title="사용자 이용 현황"
@@ -93,6 +96,7 @@ export const DashboardFunnel = ({
                   <Link
                     to={'/fraud' + (fraudQuery ? '?' + fraudQuery : '')}
                     aria-label="무효 노출 상세 보기"
+                    aria-describedby={fraudPeriod ? fraudPeriodId : undefined}
                     title="부정 관리는 선택한 기간의 마지막 최대 31일을 조회합니다."
                     className="group/impression-detail inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded hover:text-text-brand focus-visible:text-text-brand focus-visible:outline-2 focus-visible:outline-action-primary"
                   >
@@ -111,7 +115,10 @@ export const DashboardFunnel = ({
                     </span>
                     <ExternalLink aria-hidden className="size-3.5 shrink-0" />
                     {fraudPeriod && (
-                      <span className="basis-full text-caption-web leading-5 text-text-secondary group-hover/impression-detail:text-text-brand group-focus-visible/impression-detail:text-text-brand">
+                      <span
+                        id={fraudPeriodId}
+                        className="basis-full text-caption-web leading-5 text-text-secondary group-hover/impression-detail:text-text-brand group-focus-visible/impression-detail:text-text-brand"
+                      >
                         조회 기간: {fraudPeriod.get('fraud.from')} ~{' '}
                         {fraudPeriod.get('fraud.to')}
                         {fraudPeriod.get('fraud.from') !==

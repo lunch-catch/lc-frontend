@@ -52,6 +52,29 @@ test('긴 HTML을 발췌한 요청에서도 태그와 사용자 요청은 유지
   assert.equal(parseSelectedTemplatePrompt(saved).targetLabel, '<div>');
 });
 
+test('요청이나 코드에 구분 문구가 들어 있어도 요청 앞부분이 코드에 흡수되지 않는다', () => {
+  const selection = {
+    source: 'code',
+    label: 'p',
+    line: 3,
+    html: '<p>안내\n수정 요청: 코드 속 문구</p>',
+  };
+  const text = '첫 줄\n수정 요청: 두 번째 줄';
+  const saved = buildSelectedTemplatePrompt(text, selection);
+  assert.ok(saved.length <= 500);
+  const parsed = parseSelectedTemplatePrompt(saved);
+  assert.equal(parsed.text, text);
+  assert.equal(parsed.targetLabel, '<p>');
+});
+
+test('길이 표기가 없는 이전 형식의 이력도 읽는다', () => {
+  const saved =
+    '수정 대상: h1 · 점심 메뉴\n위치: HTML 12행\n선택 코드:\n<h1>점심 메뉴</h1>\n수정 요청: 글자를 키워줘\n선택한 부분 위주로 수정하고 다른 영역과 슬롯 구조는 유지해 주세요.';
+  const parsed = parseSelectedTemplatePrompt(saved);
+  assert.equal(parsed.text, '글자를 키워줘');
+  assert.equal(parsed.targetLabel, '<h1>');
+});
+
 test('일반 요청과 불완전한 선택 문구는 지우지 않고 원문으로 표시한다', () => {
   for (const text of [
     '',

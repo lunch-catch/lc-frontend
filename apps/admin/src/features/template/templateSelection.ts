@@ -207,6 +207,12 @@ export const selectTemplateElement = (element: Element): TemplateSelection => {
   };
 };
 
+const selectionRequestMarker = '\n수정 요청: ';
+const selectionPromptEnding =
+  '\n선택한 부분 위주로 수정하고 다른 영역과 슬롯 구조는 유지해 주세요.';
+// 코드 길이를 함께 저장해 코드나 요청에 구분 문구가 들어 있어도 경계가 섞이지 않게 한다.
+const selectionCodeLabel = (length: number) => `선택 코드 ${length}자:\n`;
+
 /** 기존 requestPrompt 계약 안에서 선택한 부분과 자연어 요청을 함께 전송한다. */
 export const buildSelectedTemplatePrompt = (
   prompt: string,
@@ -214,10 +220,12 @@ export const buildSelectedTemplatePrompt = (
 ) => {
   const instruction = prompt.trim();
   if (!selection) return instruction;
-  const prefix = `수정 대상: ${selection.label}\n위치: ${selection.selector ?? `HTML ${selection.line}행`}\n선택 코드:\n`;
-  const suffix = `\n수정 요청: ${instruction}\n선택한 부분 위주로 수정하고 다른 영역과 슬롯 구조는 유지해 주세요.`;
+  const header = `수정 대상: ${selection.label}\n위치: ${selection.selector ?? `HTML ${selection.line}행`}\n`;
+  const suffix = `${selectionRequestMarker}${instruction}${selectionPromptEnding}`;
   // 선택 정보도 500자 제한에 포함되므로 사용자 요청을 유지하고 코드 발췌문만 줄인다.
-  const available = 500 - prefix.length - suffix.length;
+  // 코드 길이 표기는 최대 세 자리이므로 세 자리 기준으로 예산을 잡는다.
+  const available =
+    500 - header.length - selectionCodeLabel(500).length - suffix.length;
   if (available < 32)
     throw new Error(
       '선택 영역과 함께 보낼 수 있도록 요청 내용을 조금 줄여 주세요.',
@@ -226,13 +234,34 @@ export const buildSelectedTemplatePrompt = (
     selection.html.length > available
       ? `${selection.html.slice(0, available - 1)}…`
       : selection.html;
-  return `${prefix}${snippet}${suffix}`;
+  return `${header}${selectionCodeLabel(snippet.length)}${snippet}${suffix}`;
 };
 
 /** 편집기가 만든 선택 문구만 분리한다. 일반 요청이나 다른 형식의 이력은 원문을 유지한다. */
 export const parseSelectedTemplatePrompt = (
   requestPrompt: string,
 ): { text: string; targetLabel?: string } => {
+  const header =
+    /^수정 대상: ([^\n]+)\n위치: ([^\n]+)\n선택 코드 (\d+)자:\n/.exec(
+      requestPrompt,
+    );
+  if (header) {
+    const rest = requestPrompt.slice(header[0].length);
+    const request = rest.slice(Number(header[3]));
+    if (
+      !header[1].trim() ||
+      !request.startsWith(selectionRequestMarker) ||
+      !request.endsWith(selectionPromptEnding)
+    )
+      return { text: requestPrompt };
+    const text = request.slice(
+      selectionRequestMarker.length,
+      request.length - selectionPromptEnding.length,
+    );
+    if (!text.trim()) return { text: requestPrompt };
+    return { text, targetLabel: formatTemplateTargetLabel(header[1]) };
+  }
+  // 길이 표기가 없던 이전 형식의 이력도 계속 읽는다.
   const match =
     /^수정 대상: ([^\n]+)\n위치: ([^\n]+)\n선택 코드:\n([\s\S]+)\n수정 요청: ([\s\S]+)\n선택한 부분 위주로 수정하고 다른 영역과 슬롯 구조는 유지해 주세요\.$/.exec(
       requestPrompt,
