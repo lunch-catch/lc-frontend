@@ -10,7 +10,7 @@ import tutorialCoupon from '@user/assets/illustrations/tutorial-coupon.webp';
 import tutorialLike from '@user/assets/illustrations/tutorial-like.webp';
 import { useAuth } from '@user/auth/useAuth';
 import { useOnboarding } from '@user/features/onboarding/useOnboarding';
-import { prefetchFirstFeed } from '@user/features/swipe/posterPreload';
+import { prefetchFirstFeed } from '@user/hooks/posterPreload';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import FeedbackToast from '@user/ui/FeedbackToast/FeedbackToast';
 

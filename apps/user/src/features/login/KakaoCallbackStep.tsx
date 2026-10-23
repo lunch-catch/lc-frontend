@@ -10,7 +10,7 @@ import {
   startKakaoLogin,
 } from '@user/auth/kakaoLogin';
 import { useAuth } from '@user/auth/useAuth';
-import { prefetchFirstFeed } from '@user/features/swipe/posterPreload';
+import { prefetchFirstFeed } from '@user/hooks/posterPreload';
 
 import LoginStatusScreen, { type LoginFailure } from './LoginStatusScreen';
 import WithdrawStatusScreen, {

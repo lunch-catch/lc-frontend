@@ -11,6 +11,12 @@ import {
   type SwipeAction,
 } from '@user/api/feed';
 import { type FeedFilter, saveFeedFilter } from '@user/api/feedFilter';
+import {
+  clearPrefetchedFeed,
+  fetchPreparedFeed,
+  getPrefetchedFeed,
+  preparePosters,
+} from '@user/hooks/posterPreload';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import {
   getHeaderLocationName,
@@ -37,12 +43,6 @@ import {
 import GestureRail from './GestureRail';
 import OpenCountdown from './OpenCountdown';
 import PosterCard from './PosterCard';
-import {
-  clearPrefetchedFeed,
-  fetchPreparedFeed,
-  getPrefetchedFeed,
-  preparePosters,
-} from './posterPreload';
 import PosterSkeleton from './PosterSkeleton';
 import SwipeDone from './SwipeDone';
 import SwipeHint from './SwipeHint';
