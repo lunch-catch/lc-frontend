@@ -28,9 +28,9 @@ export const TemplateChatComposer = ({ chat }: TemplateChatComposerProps) => {
       aria-busy={editor.busy}
       className="template-editor__composer flex flex-col gap-3 border-t p-4"
     >
-      {!prompt.trim() && editor.generation?.suggestedPrompts.length ? (
+      {!prompt.trim() && editor.suggestedPrompts.length ? (
         <div className="flex flex-wrap gap-2" aria-label="추천 수정 요청">
-          {editor.generation.suggestedPrompts.map((suggestion) => (
+          {editor.suggestedPrompts.map((suggestion) => (
             <button
               key={suggestion}
               type="button"

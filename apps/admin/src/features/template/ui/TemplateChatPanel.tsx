@@ -71,7 +71,7 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
           </Fragment>
         ))}
         {messages.map((message) => (
-          <Fragment key={message.versionNumber}>
+          <Fragment key={message.id}>
             <TemplateChatBubble variant="user">
               {message.targetLabel && (
                 <span className="template-editor__hint mb-1 block text-caption-web">
@@ -89,15 +89,17 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
                 {message.assistantMessage}
               </TemplateChatBubble>
             )}
-            <TemplateVersionMessage
-              versionNumber={message.versionNumber}
-              current={message.versionNumber === versionNumber}
-              disabled={locked}
-              availability={editor.getVersionAvailability(
-                message.versionNumber,
-              )}
-              onSelect={requestVersionChange}
-            />
+            {message.versionNumber !== null && (
+              <TemplateVersionMessage
+                versionNumber={message.versionNumber}
+                current={message.versionNumber === versionNumber}
+                disabled={locked}
+                availability={editor.getVersionAvailability(
+                  message.versionNumber,
+                )}
+                onSelect={requestVersionChange}
+              />
+            )}
             {message.hasRemovedElements && (
               <TemplateChatBubble variant="assistant">
                 안전하지 않은 태그와 속성은 제거했습니다.

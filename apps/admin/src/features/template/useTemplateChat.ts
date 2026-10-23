@@ -13,8 +13,9 @@ interface TemplateChatOptions {
 }
 
 interface TemplateChatEntry {
-  versionNumber: number;
-  html: string;
+  id: string;
+  versionNumber: number | null;
+  html: string | null;
   text: string;
   assistantMessage: string;
   targetLabel?: string;
@@ -79,6 +80,7 @@ export const useTemplateChat = ({
   const localVersion = messages.find(
     (message) =>
       message.versionNumber === versionNumber &&
+      message.versionNumber !== null &&
       editor.getVersionAvailability(message.versionNumber) === 'available',
   );
   const generatedHtml =
@@ -178,12 +180,15 @@ export const useTemplateChat = ({
         setPrompt(submittedPrompt);
         return;
       }
-      setSelectionContext(null);
-      setSelectedVersion(generated.versionNumber);
+      if (generated.status !== null) {
+        setSelectionContext(null);
+        setSelectedVersion(generated.versionNumber);
+      }
       setMessages((current) => [
         ...current,
         {
           versionNumber: generated.versionNumber,
+          id: crypto.randomUUID(),
           html: generated.html,
           text: submittedPrompt.trim(),
           assistantMessage: generated.message,
@@ -191,7 +196,8 @@ export const useTemplateChat = ({
           hasRemovedElements: generated.removedElements.length > 0,
         },
       ]);
-      if (!templateId) onCreated(generated.templateId);
+      if (!templateId && generated.status !== null)
+        onCreated(generated.templateId);
     } finally {
       sendingRef.current = false;
       setPendingMessage(null);
