@@ -150,7 +150,8 @@ const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1 py-1">
+      {/* 프로필 줄 높이(사진 44px)를 처음부터 잡아 두어, 응답이 와서 채워져도 아래 카드와 메뉴가 들썩이지 않게 한다 */}
+      <div className="min-h-13 px-1 py-1">
         {/* 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다 */}
         {showProfileSkeleton && (
           <div
@@ -179,7 +180,8 @@ const ProfileSummary = ({ profile }: { profile: Loaded<MyProfile> }) => {
         />
       )}
 
-      <section className={`p-4 ${cardClassName}`}>
+      {/* 금액 줄 높이(카드 78px)를 처음부터 잡아 두어, 응답이 와서 내용이 채워져도 아래 메뉴가 밀리지 않게 한다 */}
+      <section className={`min-h-19.5 p-4 ${cardClassName}`}>
         {showCouponsSkeleton && (
           <div
             aria-hidden="true"

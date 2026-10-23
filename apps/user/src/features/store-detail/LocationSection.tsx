@@ -33,7 +33,7 @@ const LocationSection = ({ onCopyAddress, store }: LocationSectionProps) => {
       )}
       <a
         aria-label="카카오맵에서 위치 보기"
-        className="relative block h-40 overflow-hidden rounded-xl bg-[#e9e2da]"
+        className="relative block h-40 overflow-hidden rounded-2xl border border-border-subtle bg-[#e9e2da]"
         href={getKakaoMapUrl(store)}
         rel="noreferrer"
         target="_blank"

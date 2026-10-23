@@ -7,6 +7,8 @@ export interface ExploreSnapshot {
   // 검색어·업종·위치를 묶은 값. 같은 조건일 때만 다시 쓴다
   key: string;
   stores: StoreListItem[];
+  // 더 보기로 펼쳐 둔 개수. 돌아와서도 같은 높이로 그려야 보던 자리로 내려갈 수 있다
+  visibleCount: number;
   nextPageToken: string | null;
   scrollY: number;
   savedAt: number;

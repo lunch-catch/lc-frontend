@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
+import { getNow } from '@user/api/clock';
 import {
   type CampaignIssueStatus,
+  type Coupon,
+  fetchCouponPage,
   fetchIssueStatus,
   issueCoupon,
   type IssueResult,
@@ -15,7 +18,7 @@ import {
   type WishItem,
 } from '@user/api/wishlist';
 import mascotError from '@user/assets/illustrations/mascot-error.webp';
-import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
+import { useSkeletonGate } from '@user/hooks/useDelayedLoading';
 import {
   formatCountdown,
   useOpenCountdown,
@@ -27,6 +30,7 @@ import FeedbackToast, {
 } from '@user/ui/FeedbackToast/FeedbackToast';
 import { getWishState, WISH_STATE_ORDER } from '@user/ui/wishState';
 
+import { isFinishedToday } from './finishedStates';
 import WishCard, { type WishCardState } from './WishCard';
 import WishlistEmpty from './WishlistEmpty';
 import WishlistSkeleton from './WishlistSkeleton';
@@ -73,7 +77,44 @@ interface WishEntry {
 const CARD_STATE_ORDER: Record<WishCardState, number> = {
   ...WISH_STATE_ORDER,
   unknown: 0,
-  ended: 3,
+  // 받은 뒤 쓰거나 만료돼 오늘 할 일이 없는 카드는, 내일 다시 받을 수 있는 카드(소진, 마감 등) 아래에 둔다
+  used: 4,
+  expired: 4,
+  removed: 4,
+  ended: 5,
+};
+
+// 오늘 받은 쿠폰을 찾을 만큼만 받는다. 하루에 3개까지라 최근 10개면 충분하다
+const TODAY_COUPON_PAGE_SIZE = 10;
+
+const fetchRecentCoupons = () =>
+  fetchCouponPage({ pageSize: TODAY_COUPON_PAGE_SIZE }).then(
+    (page) => page.items,
+  );
+
+const isSameDay = (isoString: string) =>
+  new Date(isoString).toDateString() === new Date(getNow()).toDateString();
+
+// 받은 카드가 그 뒤 어떻게 됐는지 쿠폰함과 맞춘다
+// 찜 목록은 "오늘 받았다"까지만 알아서, 쓰거나 만료되면 쿠폰함에서 사라진 것처럼 보이기 때문이다
+// 어제 받은 쿠폰은 보지 않는다. 다음 날에는 찜이 다시 받을 수 있는 상태로 돌아가야 한다
+// 쿠폰 목록을 받지 못했으면 알 수 없어 그대로 받았어요로 둔다
+// 쿠폰 목록에 없으면 사용자가 쿠폰함에서 지운 것이다 (서버는 지운 쿠폰을 목록에 주지 않는다)
+const refineIssuedState = (
+  state: WishCardState,
+  wish: WishItem,
+  coupons: Coupon[] | null,
+): WishCardState => {
+  if (state !== 'issued' || !coupons) return state;
+
+  const coupon = coupons.find(
+    (item) =>
+      String(item.storeId) === wish.storeId && isSameDay(item.issueTime),
+  );
+  if (!coupon) return 'removed';
+  if (coupon.state === 'USED') return 'used';
+  if (coupon.state === 'EXPIRED') return 'expired';
+  return 'issued';
 };
 
 // 발급 상태를 물을 찜. 끝난 캠페인은 오늘 쿠폰 이벤트가 없어 묻지 않는다
@@ -92,6 +133,7 @@ const toEntries = (
   wishes: WishItem[],
   { campaigns, dailyRemaining }: IssueStatusResponse,
   { isClosed, isOpen }: IssueTiming,
+  coupons: Coupon[] | null,
 ): WishEntry[] =>
   wishes.flatMap((wish): WishEntry[] => {
     if (wish.isEnded) return [{ state: 'ended', status: null, wish }];
@@ -106,9 +148,9 @@ const toEntries = (
       isClosed,
       isIssued: status.isIssued,
       isOpen,
-      remainingCount: status.remainingCount,
+      eventStatus: status.eventStatus,
     });
-    return [{ state, status, wish }];
+    return [{ state: refineIssuedState(state, wish, coupons), status, wish }];
   });
 
 // 받을 수 있는 카드가 위로 오는 순서 (캠페인 ID 목록)
@@ -116,8 +158,9 @@ const getSortedIds = (
   wishes: WishItem[],
   issueStatus: IssueStatusResponse,
   timing: IssueTiming,
+  coupons: Coupon[] | null,
 ) =>
-  toEntries(wishes, issueStatus, timing)
+  toEntries(wishes, issueStatus, timing, coupons)
     .sort((a, b) => CARD_STATE_ORDER[a.state] - CARD_STATE_ORDER[b.state])
     .map(({ wish }) => wish.campaignId);
 
@@ -127,19 +170,24 @@ type LoadState = 'loading' | 'ready' | 'error';
 const WishlistScreen = () => {
   const [wishes, setWishes] = useState<WishItem[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
-  const showSkeleton = useDelayedLoading(loadState === 'loading');
+  // 요청 두 번을 차례로 받아 0.3초를 넘기기 쉬워서, 회색 틀이 한 번 뜨면 짧게 사라지지 않게 잡아 둔다
+  const { isPending, showSkeleton } = useSkeletonGate(loadState === 'loading');
   // 다시 시도할 때마다 올려서 처음부터 다시 받는다
   const [attempt, setAttempt] = useState(0);
   // 찜 목록을 받았는데 발급 상태만 받지 못했으면 null이다. 이때는 받기 버튼 없이 찜만 보여준다
   const [issueStatus, setIssueStatus] = useState<IssueStatusResponse | null>(
     null,
   );
+  // 최근에 받은 쿠폰. 받은 카드가 쓰였는지, 만료됐는지 보여주는 데 쓴다. 받지 못했으면 null이다
+  const [coupons, setCoupons] = useState<Coupon[] | null>(null);
   // 쿠폰을 받는 중인 캠페인. 한 번에 하나씩만 받는다
   const [issuingCampaignId, setIssuingCampaignId] = useState<string | null>(
     null,
   );
   // 이 화면에서 쿠폰을 받았는지. 받았으면 맨 위 제목으로 알려준다
   const [hasIssued, setHasIssued] = useState(false);
+  // 오늘은 끝난 찜 묶음을 펼쳤는지. 평소에는 접어 둔다
+  const [isFinishedOpen, setIsFinishedOpen] = useState(false);
   const [toast, setToast] = useState<FeedbackToastProps | null>(null);
   // 11:00이 되면 새로고침하지 않아도 카드가 받기로 바뀐다
   const { isIssueClosed, isOpen, remainingMs } = useOpenCountdown();
@@ -155,7 +203,10 @@ const WishlistScreen = () => {
   } | null>(null);
 
   if (issueStatus && order?.timingKey !== timingKey) {
-    setOrder({ timingKey, ids: getSortedIds(wishes, issueStatus, timing) });
+    setOrder({
+      timingKey,
+      ids: getSortedIds(wishes, issueStatus, timing, coupons),
+    });
   }
 
   useEffect(() => {
@@ -172,13 +223,16 @@ const WishlistScreen = () => {
         return;
       }
 
-      const status = await fetchIssueStatus(getIssueTargets(items)).catch(
-        () => null,
-      );
+      // 받은 쿠폰은 카드 상태를 정할 때만 쓰므로, 받지 못해도 찜 목록은 그대로 보여준다
+      const [status, recentCoupons] = await Promise.all([
+        fetchIssueStatus(getIssueTargets(items)).catch(() => null),
+        fetchRecentCoupons().catch(() => null),
+      ]);
       if (ignore) return;
 
       setWishes(items);
       setIssueStatus(status);
+      setCoupons(recentCoupons);
       setLoadState('ready');
     };
     load();
@@ -192,6 +246,7 @@ const WishlistScreen = () => {
   const retry = () => {
     setLoadState('loading');
     setIssueStatus(null);
+    setCoupons(null);
     setOrder(null);
     setAttempt((value) => value + 1);
   };
@@ -229,11 +284,18 @@ const WishlistScreen = () => {
 
     // 성공이든 실패든 잔여 수량과 남은 횟수가 바뀌었을 수 있어 발급 상태를 다시 받는다
     // 다시 받지 못해도 발급 결과는 그대로 알린다. 받았으면 그 카드만 받음으로 바꾼다
+    // 쿠폰 목록도 함께 다시 받는다. 따로 받으면 방금 받은 쿠폰이 목록에 없어 잠깐 지운 쿠폰으로 보인다
     try {
-      setIssueStatus(await fetchIssueStatus(getIssueTargets(wishes)));
+      const [nextStatus, nextCoupons] = await Promise.all([
+        fetchIssueStatus(getIssueTargets(wishes)),
+        fetchRecentCoupons().catch(() => null),
+      ]);
+      setIssueStatus(nextStatus);
+      setCoupons(nextCoupons);
     } catch {
       if (result === 'issued') {
         setIssueStatus((status) => status && markIssued(status, campaignId));
+        setCoupons(null);
       }
     }
 
@@ -345,7 +407,7 @@ const WishlistScreen = () => {
       const index = order?.ids.indexOf(campaignId) ?? -1;
       return index === -1 ? Number.MAX_SAFE_INTEGER : index;
     };
-    return toEntries(wishes, issueStatus, timing).sort(
+    return toEntries(wishes, issueStatus, timing, coupons).sort(
       (a, b) => rank(a.wish.campaignId) - rank(b.wish.campaignId),
     );
   };
@@ -353,7 +415,7 @@ const WishlistScreen = () => {
   const renderContent = () => {
     // 요청 두 번이 차례로 끝나야 그릴 수 있어, 그동안 빈 화면 대신 회색 틀을 보여준다
     // 응답이 빠르면 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 보여준다
-    if (loadState === 'loading') {
+    if (isPending) {
       return (
         <div className="flex flex-col gap-4 px-page pt-4 pb-6">
           {showSkeleton && <WishlistSkeleton />}
@@ -377,6 +439,31 @@ const WishlistScreen = () => {
     }
 
     if (wishes.length === 0) return <WishlistEmpty />;
+
+    const entries = getOrderedEntries();
+    // 오늘 더 할 일이 없는 찜(쿠폰 없음, 사용 완료, 만료, 삭제함)은 접는 묶음으로 모아 받거나 쓸 카드가 묻히지 않게 한다
+    // 지우지 않은 찜이라 숨기지 않고 개수와 이유를 보여준다 (찜 개수와 카드 수가 어긋나 보이지 않게)
+    // 끝난 캠페인은 사라질 카드라 묶음 밖 맨 아래에 둔다
+    const activeEntries = entries.filter(
+      ({ state }) => !isFinishedToday(state) && state !== 'ended',
+    );
+    const finishedEntries = entries.filter(({ state }) =>
+      isFinishedToday(state),
+    );
+    const endedEntries = entries.filter(({ state }) => state === 'ended');
+    const renderCard = ({ state, status, wish }: WishEntry) => (
+      <WishCard
+        dailyLimit={issueStatus?.dailyLimit ?? 0}
+        isIssueBlocked={issuingCampaignId !== null}
+        isIssuing={issuingCampaignId === wish.campaignId}
+        issueStatus={status}
+        key={wish.campaignId}
+        onIssue={() => handleIssue(wish.campaignId)}
+        onRemove={() => handleRemove(wish)}
+        state={state}
+        wish={wish}
+      />
+    );
 
     return (
       <div className="flex flex-col gap-4 px-page pt-4 pb-6">
@@ -408,21 +495,38 @@ const WishlistScreen = () => {
             </button>
           </section>
         )}
-        <ul className="flex flex-col gap-4">
-          {getOrderedEntries().map(({ state, status, wish }) => (
-            <WishCard
-              dailyLimit={issueStatus?.dailyLimit ?? 0}
-              isIssueBlocked={issuingCampaignId !== null}
-              isIssuing={issuingCampaignId === wish.campaignId}
-              issueStatus={status}
-              key={wish.campaignId}
-              onIssue={() => handleIssue(wish.campaignId)}
-              onRemove={() => handleRemove(wish)}
-              state={state}
-              wish={wish}
-            />
-          ))}
-        </ul>
+        {activeEntries.length > 0 && (
+          <ul className="flex flex-col gap-4">
+            {activeEntries.map(renderCard)}
+          </ul>
+        )}
+        {finishedEntries.length > 0 && (
+          <section>
+            <button
+              aria-controls="wish-finished-list"
+              aria-expanded={isFinishedOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-1 text-body-sm-mobile font-medium text-text-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+              onClick={() => setIsFinishedOpen((open) => !open)}
+              type="button"
+            >
+              오늘은 끝난 찜 {finishedEntries.length}개
+              <ChevronDown
+                aria-hidden="true"
+                className={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${isFinishedOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {isFinishedOpen && (
+              <ul className="mt-2 flex flex-col gap-3" id="wish-finished-list">
+                {finishedEntries.map(renderCard)}
+              </ul>
+            )}
+          </section>
+        )}
+        {endedEntries.length > 0 && (
+          <ul className="flex flex-col gap-4">
+            {endedEntries.map(renderCard)}
+          </ul>
+        )}
       </div>
     );
   };

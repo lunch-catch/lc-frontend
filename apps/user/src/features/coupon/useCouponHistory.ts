@@ -15,6 +15,8 @@ interface HistoryState {
   isLoadingMore: boolean;
   // 다음 페이지를 받지 못했는지. 다시 시도하면 이어서 받는다
   hasMoreError: boolean;
+  // 필터를 바꿔 새 목록을 받는 중인지. 그동안 이전 목록을 흐리게 남겨 둔다
+  isRefreshing: boolean;
 }
 
 const initialState: HistoryState = {
@@ -22,6 +24,7 @@ const initialState: HistoryState = {
   nextPageToken: null,
   isLoadingMore: false,
   hasMoreError: false,
+  isRefreshing: false,
 };
 
 // 사용 내역을 한 페이지(20개)씩 받는다. 계속 쌓이는 목록이라 한 번에 다 받지 않는다
@@ -52,15 +55,22 @@ export const useCouponHistory = (filter: CouponFilter | undefined) => {
       });
   }, [filter, attempt]);
 
-  // 필터를 바꿀 때 부른다. 이전 목록 대신 불러오는 중을 보여준다
-  const reset = () => setState(initialState);
+  // 필터를 바꿀 때 부른다. 목록을 비우면 새 목록이 올 때까지 화면이 비었다 채워지며 번쩍여서,
+  // 이전 목록을 흐리게 남겨 두고 새 목록이 오면 바꾼다. 다음 페이지는 이전 필터 것이라 받지 않는다
+  const reset = () =>
+    setState((prev) =>
+      prev.items?.length
+        ? { ...initialState, items: prev.items, isRefreshing: true }
+        : initialState,
+    );
 
   const retry = () => {
     setState(initialState);
     setAttempt((value) => value + 1);
   };
 
-  const { hasMoreError, isLoadingMore, items, nextPageToken } = state;
+  const { hasMoreError, isLoadingMore, isRefreshing, items, nextPageToken } =
+    state;
 
   const loadMore = useCallback(() => {
     if (!items || !nextPageToken || isLoadingMore) return;
@@ -93,6 +103,7 @@ export const useCouponHistory = (filter: CouponFilter | undefined) => {
     hasMore: nextPageToken !== null,
     hasMoreError,
     isLoadingMore,
+    isRefreshing,
     loadMore,
     reset,
     retry,

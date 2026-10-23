@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { StoreListItem } from '@user/api/store';
+import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import MapOverlay from '@user/ui/KakaoMap/MapOverlay';
 import { useKakaoMap } from '@user/ui/KakaoMap/useKakaoMap';
@@ -37,6 +38,8 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
     ...center,
     level: DEFAULT_MAP_LEVEL,
   });
+  // 지도가 빨리 뜨면 깜빡이는 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 깜빡인다
+  const showMapSkeleton = useDelayedLoading(!kakao && !hasLoadError);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   // 지도에는 할인을 보여줄 수 있는 쿠폰 진행 중인 가게만 핀으로 둔다
   // 가게 목록을 새로 받을 때만 바뀌어서, 핀을 고를 때는 지도 영역을 다시 맞추지 않는다
@@ -141,10 +144,12 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
       )}
       {!kakao && !hasLoadError && (
         <>
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 animate-pulse bg-surface-subtle motion-reduce:animate-none"
-          />
+          {showMapSkeleton && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 animate-pulse bg-surface-subtle motion-reduce:animate-none"
+            />
+          )}
           <p className="sr-only" role="status">
             지도를 불러오는 중이에요
           </p>

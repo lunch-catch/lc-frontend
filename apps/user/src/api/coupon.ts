@@ -8,12 +8,17 @@ import {
   MOCK_DAILY_ISSUE_LIMIT,
 } from './mocks/coupon';
 
+// normal: 이벤트가 있고 수량이 남음(또는 오픈 전), soldOut: 수량이 모두 나감, noEvent: 오늘 이벤트가 없음
+export type EventStatus = 'normal' | 'soldOut' | 'noEvent';
+
 // 캠페인 하나의 발급 상태
 export interface CampaignIssueStatus {
   campaignId: string;
   // 오늘의 쿠폰 이벤트 ID. 발급할 때 서버에 보낸다. 오늘 이벤트가 없거나 mock이면 null
   eventId: number | null;
   remainingCount: number;
+  // 오늘 이벤트 상태. 수량이 0이어도 이벤트가 없는 것(noEvent)과 다 나간 것(soldOut)은 다르다
+  eventStatus: EventStatus;
   // 사용 시간 (HH:MM). 이벤트가 없으면 빈 문자열
   usableFrom: string;
   usableTo: string;
@@ -172,6 +177,17 @@ const formatClockTime = (isoString: string | null) =>
       })
     : '';
 
+// 서버가 알려 준 eventState를 먼저 본다. 수량 0만으로 소진이라 하면 이벤트가 없는 찜도 소진으로 보인다
+// 열린 이벤트인데 수량이 0이면 소진 반영이 늦은 것이라 소진으로 본다
+const toEventStatus = (item: CouponEventStatusItem): EventStatus => {
+  if (item.eventState === 'NO_EVENT') return 'noEvent';
+  if (item.eventState === 'SOLD_OUT') return 'soldOut';
+  if (item.eventState === 'OPEN' && item.remainingQuantity === 0) {
+    return 'soldOut';
+  }
+  return 'normal';
+};
+
 // 한 번에 물을 수 있는 가게 수 (명세의 storeIds 최대 개수)
 const MAX_STATUS_STORE_IDS = 100;
 
@@ -211,6 +227,7 @@ const fetchCampaignStatuses = async (
         campaignId: target.campaignId,
         eventId: item.eventId,
         remainingCount: item.remainingQuantity,
+        eventStatus: toEventStatus(item),
         usableFrom: formatClockTime(item.usableStartTime),
         usableTo: formatClockTime(item.usableEndTime),
         isIssued: item.hasIssuedToday,

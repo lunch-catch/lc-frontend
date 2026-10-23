@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { BottomSheet } from '@repo/ui';
 import { ChevronRight } from 'lucide-react';
 
 import { type TermsItem, userTerms } from '@user/api/terms';
 import ActionButton from '@user/ui/ActionButton/ActionButton';
 import { cardClassName } from '@user/ui/Card/Card';
 import FixedBottom from '@user/ui/FixedBottom/FixedBottom';
+import TermsSheet from '@user/ui/TermsSheet/TermsSheet';
 import TopBar from '@user/ui/TopBar/TopBar';
 
 import ConsentRow from './ConsentRow';
@@ -104,35 +104,7 @@ const ConsentStep = () => {
           동의하고 계속하기
         </ActionButton>
       </FixedBottom>
-      <BottomSheet
-        isOpen={openedTerms !== null}
-        onClose={() => setOpenedTerms(null)}
-        title={openedTerms?.title}
-      >
-        {/* 내용이 길어도 시트가 화면을 넘지 않도록 내용 영역만 스크롤한다 */}
-        <div
-          aria-label={`${openedTerms?.title ?? '약관'} 내용`}
-          className="flex max-h-[60dvh] flex-col gap-4 overflow-y-auto"
-          role="region"
-          tabIndex={0}
-        >
-          <p className="text-caption-mobile text-text-secondary">
-            버전 {openedTerms?.version}
-          </p>
-          {openedTerms?.sections.map((section) => (
-            <section className="flex flex-col gap-1" key={section.heading}>
-              <h3 className="text-body-sm-mobile font-bold text-text-primary">
-                {section.heading}
-              </h3>
-              <ul className="list-disc pl-5 text-body-sm-mobile leading-relaxed text-text-secondary">
-                {section.items.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      </BottomSheet>
+      <TermsSheet onClose={() => setOpenedTerms(null)} terms={openedTerms} />
     </>
   );
 };
