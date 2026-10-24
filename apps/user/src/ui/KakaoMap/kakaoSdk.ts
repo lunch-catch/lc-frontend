@@ -59,6 +59,8 @@ export interface KakaoMap {
   setLevel: (level: number) => void;
   // 확대 수준. 숫자가 작을수록 가까이 본다
   getLevel: () => number;
+  // 지도를 화면 기준 dx, dy(px)만큼 옮겨 본다. 양수면 지도를 오른쪽, 아래로 본다 (내용은 반대로 움직인다)
+  panBy: (dx: number, dy: number) => void;
   // 영역이 지도 안에 모두 들어오도록 옮기고 확대한다. 여백은 위, 오른쪽, 아래, 왼쪽 순서(px)
   setBounds: (
     bounds: KakaoLatLngBounds,

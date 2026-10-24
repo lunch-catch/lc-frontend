@@ -36,6 +36,9 @@ const BOUNDS_PADDING = { top: 48, side: 48, bottom: 64 };
 // 핀을 누른 자리에서 이만큼(px) 넘게 움직여 놓았으면 누른 것이 아니라 지도를 끈 것으로 본다
 const PIN_DRAG_PX = 5;
 
+// 고른 핀과 아래 가게 카드 사이에 남기는 간격(px)
+const PIN_CARD_GAP_PX = 12;
+
 // 핀에 짧게 보여줄 할인 (예: 20%, 3,000원)
 const formatPinLabel = (store: StoreListItem) =>
   store.activeCampaign
@@ -55,6 +58,9 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   // 핀을 누른 자리. 핀 위에서 시작한 끌기가 놓은 뒤의 클릭으로 핀을 고르지 않게 한다
   const pinPressAt = useRef<{ x: number; y: number } | null>(null);
+  // 방금 고른 핀과 아래 가게 카드. 카드가 핀을 덮으면 지도를 옮겨 핀이 카드 위에 보이게 한다
+  const selectedPinElement = useRef<HTMLElement | null>(null);
+  const cardElement = useRef<HTMLUListElement>(null);
 
   const rememberPinPress = (event: PointerEvent) => {
     pinPressAt.current = { x: event.clientX, y: event.clientY };
@@ -114,6 +120,25 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
     const { map } = kakao;
     map.setLevel(Math.min(14, Math.max(1, map.getLevel() + step)));
   };
+
+  // 핀을 고르면 아래에 가게 카드가 뜨는데, 아래쪽 핀은 그 카드에 덮여 보이지 않는다
+  // 카드가 그려진 뒤 핀이 카드에 가리면, 지도를 위로 옮겨 핀이 카드 바로 위에 보이게 한다
+  useEffect(() => {
+    if (!kakao || selectedStoreId === null) return;
+
+    const frame = requestAnimationFrame(() => {
+      const pin = selectedPinElement.current;
+      const card = cardElement.current;
+      if (!pin || !card) return;
+
+      const overlap =
+        pin.getBoundingClientRect().bottom +
+        PIN_CARD_GAP_PX -
+        card.getBoundingClientRect().top;
+      if (overlap > 0) kakao.map.panBy(0, overlap);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [kakao, selectedStoreId]);
 
   // 지도의 빈 곳을 누르면 고른 가게를 닫는다
   useEffect(() => {
@@ -175,6 +200,7 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
                   }`}
                   onClick={(event) => {
                     if (isPinDrag(event)) return;
+                    selectedPinElement.current = event.currentTarget;
                     setSelectedStoreId(store.storeId);
                   }}
                   onPointerDown={rememberPinPress}
@@ -251,7 +277,7 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
       )}
       {selectedStore && (
         // 카카오 로고와 축척을 가리지 않도록 그 위에 띄운다
-        <ul className="absolute inset-x-page bottom-9 z-10">
+        <ul className="absolute inset-x-page bottom-9 z-10" ref={cardElement}>
           <StoreCard store={selectedStore} />
         </ul>
       )}
