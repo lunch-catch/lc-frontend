@@ -76,6 +76,7 @@ export const useTemplateManagementState = (): TemplateManagement => {
                     ...item,
                     active: response.active,
                     activatedBy: response.activatedBy,
+                    activatedByName: response.activatedByName,
                     activatedAt: response.activatedAt,
                   }
                 : item,

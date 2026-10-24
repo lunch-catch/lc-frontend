@@ -64,9 +64,9 @@ export const TemplatePreviewCard = ({
         </div>
         <div className="flex items-baseline gap-1.5">
           <dt className="shrink-0">최종 수정자:</dt>
-          {/* API에 수정자 이름이 없어 내부 ID 대신 관리자 여부만 표시한다. */}
+          {/* 이름을 확인할 수 없을 때 관리자 ID나 로그인 ID로 대체하지 않는다. */}
           <dd className="min-w-0">
-            {template.lastModifiedBy == null ? '—' : '관리자'}
+            {template.lastModifiedByName?.trim() || '—'}
           </dd>
         </div>
       </dl>

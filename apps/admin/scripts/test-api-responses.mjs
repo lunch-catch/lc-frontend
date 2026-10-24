@@ -938,3 +938,66 @@ test('POSTER-006은 삭제 제한, POSTER-007은 새 임시저장 없음으로 �
     /새로 게시할 임시저장/,
   );
 });
+
+test('템플릿 목록·상세는 관리자 이름을 유지하고 누락·null은 이름 없음으로 처리한다', async () => {
+  for (const name of ['수정 담당자', null, undefined]) {
+    const template = {
+      ...publishedTemplate,
+      lastModifiedByName: name,
+      activatedByName: name,
+    };
+    const list = await setup([template]).templates.getTemplates();
+    const detail = await setup(template).templates.getTemplate('1');
+    for (const result of [list[0], detail]) {
+      assert.equal(result.lastModifiedByName, name ?? null);
+      assert.equal(result.activatedByName, name ?? null);
+      assert.equal(result.lastModifiedBy, publishedTemplate.lastModifiedBy);
+    }
+  }
+});
+
+test('이름 수정·활성 변경 응답의 관리자 이름은 그대로 전달한다', async () => {
+  for (const name of ['담당 관리자', null, undefined]) {
+    const renamed = await setup({
+      ...renamedTemplate,
+      lastModifiedByName: name,
+    }).templates.renameTemplate('1', renamedTemplate.name);
+    assert.equal(renamed.lastModifiedByName, name ?? null);
+    const active = await setup({
+      templateId: 1,
+      active: false,
+      activatedBy: 2,
+      activatedAt: publishedTemplate.activatedAt,
+      activatedByName: name,
+    }).templates.changeTemplateActive('1', false);
+    assert.equal(active.activatedByName, name ?? null);
+  }
+});
+
+test('문자열이나 null이 아닌 템플릿 관리자 이름 필드는 거부한다', async () => {
+  for (const name of [12, {}, []]) {
+    for (const field of ['lastModifiedByName', 'activatedByName']) {
+      const api = setup({ ...publishedTemplate, [field]: name });
+      await assert.rejects(
+        api.templates.getTemplate('1'),
+        isApiError(api.client),
+      );
+    }
+    const rename = setup({ ...renamedTemplate, lastModifiedByName: name });
+    await assert.rejects(
+      rename.templates.renameTemplate('1', renamedTemplate.name),
+      isApiError(rename.client),
+    );
+    const active = setup({
+      templateId: 1,
+      active: false,
+      activatedBy: 2,
+      activatedAt: publishedTemplate.activatedAt,
+      activatedByName: name,
+    });
+    await assert.rejects(
+      active.templates.changeTemplateActive('1', false),
+      isApiError(active.client),
+    );
+  }
+});
