@@ -90,12 +90,15 @@ const WishCard = ({
     switch (state) {
       case 'available':
         // 받는 동안 다시 누르지 못하게 막아 같은 요청이 두 번 가지 않게 한다
+        // 누른 카드만 연하게 하고 스피너를 돌린다. 다른 카드의 버튼도 같이 연해지면 전부 처리 중처럼 보여서,
+        // 다른 카드는 평소 모양 그대로 두고 눌러도 아무 일이 없게만 막는다 (발급 요청은 한 번에 하나만 간다)
         return (
           <button
             aria-busy={isIssuing}
+            aria-disabled={isIssueBlocked && !isIssuing ? true : undefined}
             aria-label={`${storeName} 쿠폰 받기`}
             className={`${pillClassName} ${pressableClassName} bg-surface-brand text-text-brand active:bg-brand-200`}
-            disabled={(isIssueBlocked && !isIssuing) || isIssuing}
+            disabled={isIssuing}
             onClick={onIssue}
             type="button"
           >
