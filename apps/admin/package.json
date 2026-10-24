@@ -13,12 +13,13 @@
     "test:api": "node --test scripts/test-api-responses.mjs",
     "test:selection": "node --test scripts/test-template-selection.mjs",
     "test:dashboard": "node --test scripts/test-dashboard-links.mjs",
-    "test": "node --test scripts/test-auth-session.mjs scripts/test-api-responses.mjs scripts/test-dashboard-links.mjs scripts/test-template-selection.mjs scripts/test-template-chat.mjs",
+    "test": "node --test \"scripts/test-*.mjs\"",
     "test:chat": "node --test scripts/test-template-chat.mjs"
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",
+    "@tanstack/react-virtual": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
