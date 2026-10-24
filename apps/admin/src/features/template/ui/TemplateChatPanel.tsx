@@ -128,7 +128,7 @@ export const TemplateChatPanel = ({
           )}
         {published && (
           <TemplateChatBubble variant="assistant">
-            최종 저장된 템플릿입니다. 이후에는 수정할 수 없습니다.
+            게시된 템플릿입니다. 수정 내용은 다시 게시할 때 점주에게 반영됩니다.
           </TemplateChatBubble>
         )}
         {editor.nextPageToken && (
@@ -220,9 +220,7 @@ export const TemplateChatPanel = ({
           </p>
         )}
       </ScrollArea>
-      {!published && (
-        <TemplateChatComposer chat={chat} onViewList={onViewList} />
-      )}
+      <TemplateChatComposer chat={chat} onViewList={onViewList} />
     </section>
   );
 };

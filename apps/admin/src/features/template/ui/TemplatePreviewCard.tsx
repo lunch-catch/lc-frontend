@@ -1,6 +1,6 @@
 ﻿import { Button, StatusBadge, Toggle } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 import type { PosterTemplate } from '../templateTypes';
 import { TemplateThumbnail } from './TemplateThumbnail';
@@ -9,6 +9,7 @@ export interface TemplatePreviewCardProps {
   onActivationRequest: (template: PosterTemplate) => void;
   onOpenTemplate: (template: PosterTemplate) => void;
   onDeleteRequest: (template: PosterTemplate) => void;
+  onRenameRequest: (template: PosterTemplate) => void;
   template: PosterTemplate;
 }
 
@@ -16,10 +17,12 @@ export const TemplatePreviewCard = ({
   onActivationRequest,
   onOpenTemplate,
   onDeleteRequest,
+  onRenameRequest,
   template,
 }: TemplatePreviewCardProps) => {
   const canChangeActivation = template.status === 'PUBLISHED';
-  const openLabel = canChangeActivation ? '상세보기' : '수정';
+  const openLabel =
+    canChangeActivation && template.hasDraft ? '이어서 수정' : '수정';
   // 수정 시각이 없는 데이터는 최초 등록 시각으로 대체하지 않고 빈 값으로 표시한다.
   const modifiedAt = template.lastModifiedAt;
 
@@ -32,12 +35,25 @@ export const TemplatePreviewCard = ({
         >
           {template.name}
         </h3>
-        <StatusBadge
-          className="shrink-0"
-          variant={canChangeActivation ? 'success' : 'neutral'}
+        <button
+          type="button"
+          aria-label={template.name + ' 이름 수정'}
+          className="shrink-0 rounded p-1 text-text-secondary hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
+          onClick={() => onRenameRequest(template)}
         >
-          {canChangeActivation ? '게시됨' : '임시저장 중'}
-        </StatusBadge>
+          <Pencil aria-hidden="true" className="size-3.5" />
+        </button>
+        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+          {canChangeActivation && template.hasDraft && (
+            <StatusBadge variant="warning">수정 중</StatusBadge>
+          )}
+          <StatusBadge
+            className="shrink-0"
+            variant={canChangeActivation ? 'success' : 'neutral'}
+          >
+            {canChangeActivation ? '게시됨' : '임시저장 중'}
+          </StatusBadge>
+        </div>
       </header>
 
       <button
