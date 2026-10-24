@@ -539,10 +539,11 @@ const WishlistScreen = () => {
   };
 
   return (
-    // 토스트를 탭 바로 아래에 띄우기 위한 기준 영역. 마지막 찜을 지워 빈 화면이 돼도 토스트를 보여준다
-    <div className="relative flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       {toast && (
-        <div className="absolute inset-x-0 top-0 z-20 px-page pt-3">
+        // 화면 아래(탭바 위)에 고정해 스크롤을 내려도 보이게 한다. 위에 두면 아래쪽 카드를 눌렀을 때 알림이 화면 밖에 있어 못 본다
+        // 마지막 찜을 지워 빈 화면이 돼도 보여준다
+        <div className="fixed inset-x-0 bottom-[calc(82px+env(safe-area-inset-bottom)+8px)] z-30 mx-auto max-w-mobile px-page">
           <FeedbackToast {...toast} />
         </div>
       )}
