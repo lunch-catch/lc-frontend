@@ -1,3 +1,5 @@
+import { formatDate } from '@repo/utils';
+
 import type { AnalyticsBucket } from '@admin/api/analytics';
 import { shiftDate } from '@admin/api/analyticsDateUtils';
 
@@ -25,6 +27,16 @@ export const funnelMetrics: { value: FunnelMetric; label: string }[] = [
   { value: 'saves', label: '찜' },
   { value: 'impressions', label: '유효 노출' },
 ];
+
+/** 증감률·비교 토글·범례에서 실제 이전 조회 기간을 같은 문구로 안내한다. */
+export const getDashboardComparisonLabel = (series?: {
+  from: string;
+  to: string;
+}) =>
+  series
+    ? formatDate(series.from) + ' ~ ' + formatDate(series.to) + ' 대비'
+    : undefined;
+
 export const getChangeLabel = (current: number, previous: number) => {
   if (previous === 0)
     return current === 0 ? '변동 없음' : '이전 기간 0 · 증감률 계산 불가';

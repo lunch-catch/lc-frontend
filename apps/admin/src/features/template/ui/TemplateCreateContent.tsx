@@ -47,11 +47,12 @@ export const TemplateCreateContent = ({
     confirmVersionChange,
   } = chat;
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [wrapCode, setWrapCode] = useState(false);
 
   const handleSave = async () => {
     if (versionNumber === undefined) return;
-    // 최종 저장 버튼은 선택한 버전을 확정하는 기존 게시 API를 사용한다.
+    // 첫 게시와 재게시 모두 서버에 남아 있는 선택 버전의 번호로 확정한다.
     if (await editor.publish(versionNumber)) onPublished();
   };
 
@@ -85,13 +86,17 @@ export const TemplateCreateContent = ({
       >
         {/* 세 영역을 함께 보며 편집할 수 있도록 최소 작업 너비 아래에서만 가로로 스크롤한다. */}
         <TemplateEditorPanels>
-          <TemplateChatPanel chat={chat} onViewList={onBack} />
+          <TemplateChatPanel
+            chat={chat}
+            onViewList={onBack}
+            onRename={() => setRenameModalOpen(true)}
+          />
           <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col p-4">
             <div className="flex min-h-0 flex-1">
               {previewHtml ? (
                 <SelectableTemplatePreview
                   html={previewHtml}
-                  disabled={locked || published}
+                  disabled={locked}
                   selected={selectedTarget}
                   onSelect={selectTarget}
                   title={`${displayName || '템플릿'} 미리보기`}
@@ -129,28 +134,26 @@ export const TemplateCreateContent = ({
                 >
                   목록으로
                 </Button>
-                {!published && (
-                  <Button
-                    disabled={!editor.template || versionNumber === undefined}
-                    aria-disabled={locked || undefined}
-                    className={
-                      '!min-h-8 !px-3 !py-1 text-caption-web' +
-                      (locked ? ' cursor-wait' : '')
-                    }
-                    onClick={() => {
-                      if (!locked) setSaveModalOpen(true);
-                    }}
-                  >
-                    저장
-                  </Button>
-                )}
+                <Button
+                  disabled={!editor.template || versionNumber === undefined}
+                  aria-disabled={locked || undefined}
+                  className={
+                    '!min-h-8 !px-3 !py-1 text-caption-web' +
+                    (locked ? ' cursor-wait' : '')
+                  }
+                  onClick={() => {
+                    if (!locked) setSaveModalOpen(true);
+                  }}
+                >
+                  {published ? '다시 게시' : '저장'}
+                </Button>
               </div>
             </header>
             {previewHtml ? (
               <TemplateHtmlCode
                 html={previewHtml}
                 wrapLines={wrapCode}
-                disabled={locked || published}
+                disabled={locked}
                 selected={selectedTarget}
                 onSelect={selectTarget}
               />
@@ -171,8 +174,18 @@ export const TemplateCreateContent = ({
         </TemplateEditorPanels>
       </ScrollArea>
 
+      {renameModalOpen && editor.template && (
+        <TemplateNameModal
+          initialName={displayName}
+          onClose={() => setRenameModalOpen(false)}
+          onStart={async (name) => {
+            await editor.rename(name);
+            setRenameModalOpen(false);
+          }}
+        />
+      )}
       <AdminModal
-        title="템플릿 저장"
+        title={published ? '템플릿 다시 게시' : '템플릿 저장'}
         open={saveModalOpen}
         onClose={() => {
           if (!editor.busy) setSaveModalOpen(false);
@@ -180,9 +193,11 @@ export const TemplateCreateContent = ({
       >
         <div className="flex flex-col gap-6">
           <p className="text-body-sm-web text-text-secondary">
-            {versionNumber}번 버전을 최종 저장하시겠습니까? 저장하면 해당
-            버전으로 게시되며 모든 임시저장 버전이 삭제됩니다. 이후에는 수정할
-            수 없습니다. 점주 노출 여부는 목록에서 설정할 수 있습니다.
+            {versionNumber}번 버전으로 {published ? '다시 게시' : '게시'}
+            하시겠습니까? 게시하면 모든 임시저장 버전과 대화가 정리됩니다.
+            {published
+              ? ' 점주 노출 상태는 유지되며, 새로 만드는 포스터부터 수정 내용이 반영됩니다. 이미 만든 포스터는 바뀌지 않습니다.'
+              : ' 게시 후에도 이름과 HTML을 수정할 수 있습니다. 점주 노출 여부는 목록에서 설정할 수 있습니다.'}
           </p>
           {editor.error && (
             <p role="alert" className="text-caption-web text-status-danger-fg">
@@ -197,8 +212,11 @@ export const TemplateCreateContent = ({
             >
               취소
             </Button>
-            <Button disabled={editor.busy} onClick={() => void handleSave()}>
-              {editor.busy ? '저장 중' : '저장'}
+            <Button
+              disabled={editor.busy || versionNumber === undefined}
+              onClick={() => void handleSave()}
+            >
+              {editor.busy ? '저장 중' : published ? '다시 게시' : '저장'}
             </Button>
           </div>
         </div>

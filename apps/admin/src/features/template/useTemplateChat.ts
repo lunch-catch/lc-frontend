@@ -104,7 +104,7 @@ export const useTemplateChat = ({
       ? selectionContext.target
       : null;
   const selectTarget = (target: TemplateSelection) => {
-    if (locked || published || !previewHtml) return;
+    if (locked || !previewHtml) return;
     setSelectionContext({ html: previewHtml, version: versionNumber, target });
     setSelectionError('');
     promptRef.current?.focus({ preventScroll: true });
@@ -149,19 +149,17 @@ export const useTemplateChat = ({
   }, [messages, pendingMessage, editor.busy, editor.error, editor.loading]);
 
   useEffect(() => {
-    if (locked || published || editor.loading || !restorePromptFocus.current)
-      return;
+    if (locked || editor.loading || !restorePromptFocus.current) return;
     // disabled가 해제된 DOM에 포커스한다. 최초 진입·버전 조회에는 포커스를 빼앗지 않는다.
     const input = promptRef.current;
     if (!input || input.disabled) return;
     input.focus({ preventScroll: true });
     restorePromptFocus.current = false;
-  }, [locked, published, editor.loading]);
+  }, [locked, editor.loading]);
 
   const handleSend = async (quickPrompt?: string) => {
     const submittedPrompt = quickPrompt ?? prompt;
-    if (sendingRef.current || locked || published || !submittedPrompt.trim())
-      return;
+    if (sendingRef.current || locked || !submittedPrompt.trim()) return;
     // 실제 요청에 포함한 선택만 보관한다. 퀵응답에는 선택 문맥을 붙이지 않는다.
     const targetLabel =
       quickPrompt === undefined ? selectedTarget?.label : undefined;
