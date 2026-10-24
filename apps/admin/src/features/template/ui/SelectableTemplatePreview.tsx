@@ -67,14 +67,14 @@ export const SelectableTemplatePreview = ({
         !/^(DIV|SPAN|P|H[1-6]|STRONG|EM|BR|IMG)$/.test(element.tagName)
       )
         return;
-      onSelect(selectTemplateElement(element));
+      onSelect(selectTemplateElement(element, html));
     };
     document.addEventListener('click', select, true);
     return () => {
       style.remove();
       document.removeEventListener('click', select, true);
     };
-  }, [document, disabled, onSelect]);
+  }, [document, disabled, onSelect, html]);
 
   useEffect(() => {
     // 전송 중 선택 변경은 막되, 기존 강조 표시는 성공할 때까지 유지한다.

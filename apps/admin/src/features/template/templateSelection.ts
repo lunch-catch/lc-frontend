@@ -174,7 +174,10 @@ export const formatTemplateTargetLabel = (label: string) => {
 };
 
 /** 서버 원본 HTML에서도 찾을 수 있도록 편집기 장식은 제외하고 구조 기반 경로를 만든다. */
-export const selectTemplateElement = (element: Element): TemplateSelection => {
+export const selectTemplateElement = (
+  element: Element,
+  originalHtml?: string,
+): TemplateSelection => {
   const slot = element.getAttribute('data-slot');
   const path: string[] = [];
   let current: Element | null = element;
@@ -192,7 +195,14 @@ export const selectTemplateElement = (element: Element): TemplateSelection => {
     element.ownerDocument.querySelectorAll(`[data-slot="${slot}"]`).length === 1
       ? `[data-slot="${slot}"]`
       : `body > ${path.join(' > ')}`;
-  const copy = element.cloneNode(true) as Element;
+  // 미리보기용 이미지와 장식이 AI 수정 요청에 섞이지 않도록 원본에서 같은 요소를 읽는다.
+  const originalElement =
+    originalHtml === undefined
+      ? null
+      : new DOMParser()
+          .parseFromString(originalHtml, 'text/html')
+          .querySelector(selector);
+  const copy = (originalElement ?? element).cloneNode(true) as Element;
   copy.removeAttribute('data-editor-selected');
   copy
     .querySelectorAll('[data-editor-selected]')
@@ -271,9 +281,26 @@ export const parseSelectedTemplatePrompt = (
   return { text: match[4], targetLabel: formatTemplateTargetLabel(match[1]) };
 };
 
+// 외부 이미지 요청 없이 사진 자리를 보여 주며, 저장되는 템플릿 HTML에는 넣지 않는다.
+const imagePlaceholder =
+  'data:image/svg+xml;charset=utf-8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="420" height="280" viewBox="0 0 420 280">' +
+      '<defs><pattern id="photo-area-pattern" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V12" stroke="#000000" stroke-opacity="0.06" stroke-width="2"/></pattern></defs>' +
+      '<rect width="420" height="280" rx="16" fill="#000000" fill-opacity="0.18"/>' +
+      '<rect width="420" height="280" rx="16" fill="url(#photo-area-pattern)"/></svg>',
+  );
+
 /** 미리보기의 스크립트 실행·폼 제출·외부 리소스 로딩을 제한한다. */
 export const createSelectablePreviewHtml = (html: string) => {
   const document = new DOMParser().parseFromString(html, 'text/html');
+  // 비어 있거나 보안 정책상 표시할 수 없는 사진은 미리보기에서만 자리 표시자로 채운다.
+  document.querySelectorAll('img').forEach((image) => {
+    const source = image.getAttribute('src')?.trim() ?? '';
+    if (/^(data:image\/|blob:)/i.test(source)) return;
+    image.removeAttribute('srcset');
+    image.setAttribute('src', imagePlaceholder);
+  });
   // 편집기에서는 A4 바깥 내용도 스크롤로 확인한다. 원본 HTML 자체는 변경하지 않는다.
   document.documentElement.style.overflow = 'auto';
   document.body.style.overflow = 'visible';
