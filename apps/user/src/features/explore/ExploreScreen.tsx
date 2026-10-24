@@ -442,7 +442,13 @@ const ExploreScreen = () => {
     }
 
     if (view === 'map' && latitude !== null && longitude !== null) {
-      return <StoreMap center={{ latitude, longitude }} stores={stores} />;
+      return (
+        <StoreMap
+          center={{ latitude, longitude }}
+          snapshotKey={listKey}
+          stores={stores}
+        />
+      );
     }
 
     // 서버는 쿠폰 가게와 아닌 가게를 거리순으로 섞어서 준다. 구역으로 나누면 더 받을 때마다 쿠폰 가게가 위로 끼어들어 숫자가 바뀌므로
@@ -531,7 +537,10 @@ const ExploreScreen = () => {
   return (
     <>
       <AppHeader locationName={locationName} wishCount={wishCount} />
-      <div className="flex flex-1 flex-col gap-3 px-page pt-2 pb-6">
+      {/* 지도 보기는 지도가 탭바 바로 위까지 차도록 아래 여백을 두지 않는다. 여백이 있으면 지도 밑에 빈 띠가 남는다 */}
+      <div
+        className={`flex flex-1 flex-col gap-3 px-page pt-2 ${view === 'map' ? 'pb-0' : 'pb-6'}`}
+      >
         {/* 목록·지도 전환은 검색창 옆에 둔다. 떠 있는 버튼은 목록을 내리는 내내 카드 글자를 가렸고,
             켜진 쪽이 보이는 탭이라 지금 어떤 보기인지도 바로 알 수 있다. 줄을 새로 만들지 않아 목록이 밀려 내려가지 않는다 */}
         {/* 목록을 내리는 중에도 검색과 업종을 바로 바꿀 수 있도록 위에 붙여 둔다 */}
