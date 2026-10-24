@@ -71,6 +71,12 @@ const StoreHeroImages = ({
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const start = drag.current;
     if (!start) return;
+    // 5px 움직이기 전에 영역 밖에서 버튼을 놓으면 pointerup을 못 받아 끌기 상태가 남는다
+    // 그대로 두면 버튼을 누르지 않고 돌아와도 움직이므로, 왼쪽 버튼이 눌려 있지 않으면 정리한다
+    if ((event.buttons & 1) === 0) {
+      drag.current = null;
+      return;
+    }
 
     const distance = event.clientX - start.startX;
     if (!didDrag.current) {
