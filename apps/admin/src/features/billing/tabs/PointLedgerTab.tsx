@@ -18,6 +18,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { VirtualTableRows } from '@admin/ui/DataTable/VirtualTableRows';
 import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
@@ -213,6 +214,7 @@ export const PointLedgerTab = ({
           </p>
         )}
         <DataTable
+          aria-rowcount={(ledger.data?.items.length ?? 0) + 1}
           columnSettings={columnSettings}
           columns={columns}
           density={density}
@@ -272,36 +274,42 @@ export const PointLedgerTab = ({
                 </TableEmpty>
               </tr>
             ) : (
-              ledger.data.items.map((item) => (
-                <TableRow
-                  key={item.ledgerId}
-                  showDetailArrow
-                  className="cursor-pointer"
-                  onClick={() => setSelected(item)}
-                >
-                  <TableCell>
-                    <button
-                      type="button"
-                      className="text-left hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
-                      aria-label={`원장 ${item.ledgerId} 상세 보기`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSelected(item);
-                      }}
-                    >
-                      {formatDateTime(item.createdAt)}
-                    </button>
-                  </TableCell>
-                  <TableCell>{item.ledgerId}</TableCell>
-                  <TableCell>{item.ownerId}</TableCell>
-                  <TableCell>{item.campaignId ?? '-'}</TableCell>
-                  <TableCell>{ledgerTypeLabels[item.entryType]}</TableCell>
-                  {/* 필터·커서로 일부 행만 받은 상태에서는 잔액을 재계산하지 않고 서버의 누적값을 표시한다. */}
-                  <TableCell>{formatPoints(item.balanceBefore)}</TableCell>
-                  <TableCell>{formatPoints(item.amount)}</TableCell>
-                  <TableCell>{formatPoints(item.balanceAfter)}</TableCell>
-                </TableRow>
-              ))
+              <VirtualTableRows
+                items={ledger.data.items}
+                getKey={(item) => item.ledgerId}
+                colSpan={columns.length}
+                density={density}
+                renderRow={(item) => (
+                  <TableRow
+                    key={item.ledgerId}
+                    showDetailArrow
+                    className="cursor-pointer"
+                    onClick={() => setSelected(item)}
+                  >
+                    <TableCell>
+                      <button
+                        type="button"
+                        className="text-left hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
+                        aria-description={`원장 ${item.ledgerId} 상세 보기`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelected(item);
+                        }}
+                      >
+                        {formatDateTime(item.createdAt)}
+                      </button>
+                    </TableCell>
+                    <TableCell>{item.ledgerId}</TableCell>
+                    <TableCell>{item.ownerId}</TableCell>
+                    <TableCell>{item.campaignId ?? '-'}</TableCell>
+                    <TableCell>{ledgerTypeLabels[item.entryType]}</TableCell>
+                    {/* 필터·커서로 일부 행만 받은 상태에서는 잔액을 재계산하지 않고 서버의 누적값을 표시한다. */}
+                    <TableCell>{formatPoints(item.balanceBefore)}</TableCell>
+                    <TableCell>{formatPoints(item.amount)}</TableCell>
+                    <TableCell>{formatPoints(item.balanceAfter)}</TableCell>
+                  </TableRow>
+                )}
+              />
             )}
             {ledger.data && ledger.error && (
               <tr>
