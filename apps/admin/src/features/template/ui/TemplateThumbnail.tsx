@@ -20,13 +20,10 @@ export const TemplateThumbnail = ({ html, name }: TemplateThumbnailProps) => {
   useEffect(() => {
     const container = containerRef.current;
     if (!container || typeof IntersectionObserver === 'undefined') return;
-    // 화면 위아래 300px부터 준비하고, 생성한 iframe은 유지해 재진입 시 로딩을 반복하지 않는다.
+    // 화면 근처에서만 iframe을 유지하고 멀어지면 문서와 관찰자를 함께 해제한다.
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setShouldRenderPreview(true);
-          observer.disconnect();
-        }
+        setShouldRenderPreview(entries.some((entry) => entry.isIntersecting));
       },
       { rootMargin: '300px 0px' },
     );
