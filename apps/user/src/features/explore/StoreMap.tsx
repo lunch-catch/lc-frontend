@@ -36,6 +36,10 @@ const BOUNDS_PADDING = { top: 48, side: 48, bottom: 64 };
 // 핀을 누른 자리에서 이만큼(px) 넘게 움직여 놓았으면 누른 것이 아니라 지도를 끈 것으로 본다
 const PIN_DRAG_PX = 5;
 
+// 영역을 맞춘 뒤 더 확대하는 단계 수. 가게가 한 구역에 몰려 있으면 영역에 맞춘 지도에서도 핀이 겹쳐 가격이 안 읽히는데,
+// 한 단계 가까이 보면 핀 사이가 벌어져 읽힌다. 가장자리 가게가 화면 밖으로 나가면 축소 버튼이나 처음 모습으로 돌아가기로 본다
+const FIT_EXTRA_ZOOM_STEPS = 1;
+
 // 고른 핀과 아래 가게 카드 사이에 남기는 간격(px)
 const PIN_CARD_GAP_PX = 12;
 
@@ -108,6 +112,7 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
       BOUNDS_PADDING.bottom,
       BOUNDS_PADDING.side,
     );
+    map.setLevel(Math.max(1, map.getLevel() - FIT_EXTRA_ZOOM_STEPS));
   }, [kakao, center.latitude, center.longitude, campaignStores]);
 
   useEffect(() => {
