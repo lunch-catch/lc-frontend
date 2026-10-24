@@ -99,7 +99,7 @@ const WishCard = ({
             aria-label={`${storeName} 쿠폰 받기`}
             className={`${pillClassName} ${pressableClassName} bg-surface-brand text-text-brand active:bg-brand-200`}
             disabled={isIssuing}
-            onClick={isIssueBlocked ? undefined : onIssue}
+            onClick={onIssue}
             type="button"
           >
             {isIssuing ? (

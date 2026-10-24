@@ -262,7 +262,14 @@ const WishlistScreen = () => {
   }, [toast]);
 
   const handleIssue = async (campaignId: string) => {
-    if (issuingCampaignId) return;
+    // 다른 쿠폰을 받는 중이면 요청은 보내지 않고, 눌렀는데 반응이 없다고 느끼지 않게 짧게 알린다
+    if (issuingCampaignId) {
+      setToast({
+        message: '지금 쿠폰을 받는 중이에요 · 잠시 후 다시 눌러 주세요',
+        tone: 'error',
+      });
+      return;
+    }
 
     setIssuingCampaignId(campaignId);
 
