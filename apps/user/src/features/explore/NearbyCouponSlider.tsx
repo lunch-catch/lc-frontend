@@ -207,7 +207,8 @@ const Carousel = ({ stores }: NearbyCouponSliderProps) => {
         aria-roledescription="carousel"
         // 위아래로는 화면이 스크롤되고, 좌우로만 슬라이드가 움직인다
         // 높이는 가운데 카드(16:9)와 같은 폭의 빈 항목이 잡아 준다. 카드는 모두 겹쳐 놓아 높이를 정하지 못한다
-        className="relative -mx-page touch-pan-y overflow-hidden px-0 py-1 select-none"
+        // 카드 그림자가 아래로 20px쯤 퍼져서, 잘리지 않게 아래를 비우고 같은 만큼 음수 여백으로 당겨 높이는 그대로 둔다
+        className="relative -mx-page -mb-4 touch-pan-y overflow-hidden px-0 pt-1 pb-5 select-none"
         onClickCapture={handleClickCapture}
         // 마우스로 끌 때 브라우저가 링크(카드)를 끌어가는 동작을 시작해 슬라이드가 멈추지 않게 한다
         onDragStart={(event) => event.preventDefault()}
