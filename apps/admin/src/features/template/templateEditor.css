@@ -230,3 +230,43 @@
 .template-editor__composer {
   background: var(--editor-chat);
 }
+
+/* 가는 경계선은 유지하되 드래그 가능한 영역은 8px로 확보한다. */
+.template-editor__resize-handle {
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  background: var(--editor-panel);
+  outline: none;
+}
+.template-editor__resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 1px;
+  background: var(--editor-border);
+}
+.template-editor__resize-handle::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 1px;
+  width: 6px;
+  height: 32px;
+  border: 1px solid var(--editor-border);
+  border-radius: 4px;
+  background: var(--editor-control);
+  transform: translateY(-50%);
+}
+
+.template-editor__resize-handle:hover::before,
+.template-editor__resize-handle:focus-visible::before,
+.template-editor__resize-handle[data-active='true']::before {
+  background: color-mix(
+    in srgb,
+    var(--semantic-text-brand) 14%,
+    var(--editor-control)
+  );
+}

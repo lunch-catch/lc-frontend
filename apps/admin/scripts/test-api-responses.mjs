@@ -787,3 +787,30 @@ test('템플릿 오류는 잘못된 서버 메시지에 기본 안내를 쓰고 
     return true;
   });
 });
+
+test('템플릿 생성 대기 중 취소하면 같은 AbortSignal로 HTTP 요청을 중단한다', async () => {
+  const controller = new AbortController();
+  const api = setup(
+    (_url, options) =>
+      new Promise((_resolve, reject) => {
+        assert.equal(options.signal, controller.signal);
+        options.signal.addEventListener(
+          'abort',
+          () => reject(options.signal.reason),
+          { once: true },
+        );
+      }),
+  );
+  const pending = api.templates.generateTemplate(
+    {
+      name: '테스트',
+      requestPrompt: '포스터 수정',
+      requestId: 'cancel-request',
+    },
+    '1',
+    controller.signal,
+  );
+  controller.abort();
+  await assert.rejects(pending, (error) => error.name === 'AbortError');
+  assert.equal(api.calls.length, 1);
+});

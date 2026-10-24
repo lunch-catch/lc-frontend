@@ -33,6 +33,7 @@ export const useTemplateChat = ({
   const [name, setName] = useState(initialName ?? '');
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<TemplateChatEntry[]>([]);
+  const [activeRevealId, setActiveRevealId] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<Pick<
     TemplateChatEntry,
     'text' | 'targetLabel'
@@ -161,6 +162,7 @@ export const useTemplateChat = ({
     const submittedPrompt = quickPrompt ?? prompt;
     if (sendingRef.current || locked || published || !submittedPrompt.trim())
       return;
+    // 실제 요청에 포함한 선택만 보관한다. 퀵응답에는 선택 문맥을 붙이지 않는다.
     const targetLabel =
       quickPrompt === undefined ? selectedTarget?.label : undefined;
     let requestPrompt: string;
@@ -178,13 +180,14 @@ export const useTemplateChat = ({
       return;
     }
     setSelectionError('');
+    setActiveRevealId(null);
     // 이전 답변의 추천은 한 번 전송하면 소비하고, 다음 응답의 추천만 새로 표시한다.
     editor.dismissSuggestions();
     sendingRef.current = true;
     restorePromptFocus.current = true;
     // 응답 전에 말풍선을 표시하고, 실패하면 원문을 복구해 같은 요청을 재시도할 수 있게 한다.
     setPrompt('');
-    if (quickPrompt !== undefined) setSelectionContext(null);
+    // 전송 중에도 선택 표시를 유지해 실패·중단 시 사라졌다 복원되는 깜빡임을 막는다.
     setPendingMessage({
       text: submittedPrompt.trim(),
       targetLabel,
@@ -199,15 +202,17 @@ export const useTemplateChat = ({
         setPrompt(submittedPrompt);
         return;
       }
-      if (generated.status !== null) {
-        setSelectionContext(null);
+      // 자연어 응답을 포함해 성공한 요청의 선택만 해제한다.
+      setSelectionContext(null);
+      if (generated.status !== null)
         setSelectedVersion(generated.versionNumber);
-      }
+      const messageId = crypto.randomUUID();
+      setActiveRevealId(generated.message.trim() ? messageId : null);
       setMessages((current) => [
         ...current,
         {
           versionNumber: generated.versionNumber,
-          id: crypto.randomUUID(),
+          id: messageId,
           html: generated.html,
           text: submittedPrompt.trim(),
           assistantMessage: generated.message,
@@ -246,6 +251,17 @@ export const useTemplateChat = ({
     chatHistoryRef,
     promptRef,
     handleSend,
+    activeRevealId,
+    finishReveal: (id: string) =>
+      setActiveRevealId((current) => (current === id ? null : current)),
+    isResponding: editor.requestPending || activeRevealId !== null,
+    stopResponse: () => {
+      if (editor.requestPending) editor.stopGeneration();
+      else {
+        setActiveRevealId(null);
+        promptRef.current?.focus({ preventScroll: true });
+      }
+    },
     selectionError,
     changePrompt: (value: string) => {
       setPrompt(value);
