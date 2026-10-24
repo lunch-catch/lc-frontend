@@ -14,6 +14,8 @@ const axisFormatter = new Intl.NumberFormat('ko-KR', { notation: 'compact' });
 
 interface TrendSeries {
   name: string;
+  /** 범례에 호버하거나 포커스했을 때 안내할 비교 기간. */
+  description?: string;
   values: (number | null)[];
 }
 
@@ -119,7 +121,8 @@ export const DashboardTrendChart = ({
     (index % tickInterval === 0 &&
       index < labels.length - 1 - tickInterval / 2);
   const getLabelAnchor = (index: number) => {
-    if (labels.length === 1) return 'middle';
+    // 막대는 양끝에도 반 칸 여백이 있어 날짜를 막대 중심에 맞춘다.
+    if (variant === 'bar' || labels.length === 1) return 'middle';
     if (index === 0) return 'start';
     if (index === labels.length - 1) return 'end';
     return 'middle';
@@ -394,12 +397,29 @@ export const DashboardTrendChart = ({
             />
             {primary.name}
           </span>
-          <span className="inline-flex items-center gap-1.5">
+          <span
+            tabIndex={secondary.description ? 0 : undefined}
+            aria-label={
+              secondary.description
+                ? secondary.name + ', ' + secondary.description
+                : undefined
+            }
+            className="group/comparison relative inline-flex cursor-default items-center gap-1.5"
+          >
             <span
               aria-hidden
               className="w-4 border-t-2 border-dashed border-action-secondary"
             />
             {secondary.name}
+            {secondary.description && (
+              <span
+                role="tooltip"
+                aria-hidden="true"
+                className="pointer-events-none invisible absolute bottom-full right-0 z-40 mb-1 w-max max-w-[calc(100vw-2rem)] rounded-md border border-border-subtle bg-bg-surface px-2 py-1 text-caption-web text-text-primary shadow-sm group-hover/comparison:visible group-focus-visible/comparison:visible"
+              >
+                {secondary.description}
+              </span>
+            )}
           </span>
         </div>
       )}

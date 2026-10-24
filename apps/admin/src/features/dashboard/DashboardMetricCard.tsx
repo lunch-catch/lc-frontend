@@ -156,12 +156,20 @@ export const DashboardMetricCard = ({
               <div className="min-h-4">
                 {canCompare && (
                   <p
-                    className={`inline-flex items-center gap-1 text-caption-web ${changeTextClassName}`}
-                    title={comparisonLabel}
+                    className={`group/comparison inline-flex cursor-default items-center gap-1 text-caption-web ${changeTextClassName}`}
+                    tabIndex={0}
                   >
                     <ChangeIcon className="size-3 shrink-0" aria-hidden />
                     {getChangeLabel(value, previous)}
                     <span className="sr-only">{comparisonLabel}</span>
+                    {/* 외곽 overflow에 잘리지 않도록 툴팁을 카드 내부 하단에 배치한다. */}
+                    <span
+                      role="tooltip"
+                      aria-hidden="true"
+                      className="pointer-events-none invisible absolute bottom-1 right-3 z-40 w-max max-w-[calc(100%-1.5rem)] rounded-md border border-border-subtle bg-bg-surface px-2 py-1 text-caption-web font-normal text-text-primary shadow-sm group-hover/comparison:visible group-focus-visible/comparison:visible"
+                    >
+                      {comparisonLabel}
+                    </span>
                   </p>
                 )}
               </div>

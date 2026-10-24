@@ -6,6 +6,7 @@ import {
   getTemplate,
   getTemplateVersions,
   publishTemplate,
+  renameTemplate,
   type TemplateGeneration,
 } from '@admin/api/templates';
 import { useRequestFeedback } from '@admin/hooks/useRequestFeedback';
@@ -66,10 +67,9 @@ export const useTemplateEditor = (initialId?: string) => {
     const controller = new AbortController();
     void getTemplate(initialId, controller.signal)
       .then(async (template) => {
-        const page =
-          template.status === 'DRAFT'
-            ? await getTemplateVersions(initialId, undefined, controller.signal)
-            : { items: [], nextPageToken: null };
+        const page = template.hasDraft
+          ? await getTemplateVersions(initialId, undefined, controller.signal)
+          : { items: [], nextPageToken: null };
         if (!controller.signal.aborted) {
           setResult({
             template,
@@ -165,8 +165,15 @@ export const useTemplateEditor = (initialId?: string) => {
       return null;
     }
     const id = result ? String(result.template.templateId) : savedId.current;
+    // 게시 후 임시저장이 없으면 서버가 게시본을 첫 수정의 기준으로 사용한다.
+    const usesPublishedBase =
+      result?.template.status === 'PUBLISHED' &&
+      versionsFresh &&
+      result.versions.length === 0 &&
+      !result.nextPageToken;
     if (
       id &&
+      !usesPublishedBase &&
       (selectedVersionNumber === undefined ||
         !Number.isSafeInteger(selectedVersionNumber) ||
         selectedVersionNumber <= 0)
@@ -187,7 +194,11 @@ export const useTemplateEditor = (initialId?: string) => {
       generation?.versionNumber ?? 0,
       ...(result?.versions.map((item) => item.versionNumber) ?? []),
     );
-    if (id && selectedVersionNumber !== latestVersionNumber) {
+    if (
+      id &&
+      !usesPublishedBase &&
+      selectedVersionNumber !== latestVersionNumber
+    ) {
       setError(
         '현재는 최신 버전만 수정할 수 있습니다. 최신 버전으로 이동해 주세요.',
       );
@@ -269,6 +280,9 @@ export const useTemplateEditor = (initialId?: string) => {
           }
         }
       } else if (mounted.current) {
+        // 재게시로 폐기된 requestId는 다시 쓸 수 없으므로 다음 전송에서 새로 만든다.
+        if (cause instanceof ApiError && cause.code === 'COMMON-002')
+          pendingRequest.current = null;
         setError(getTemplateError(cause));
         if (cause instanceof ApiError && cause.code === 'POSTER-004')
           reportError(cause);
@@ -299,7 +313,10 @@ export const useTemplateEditor = (initialId?: string) => {
       return mounted.current;
     } catch (cause) {
       // 다른 관리자 요청으로 버전이 삭제됐을 때도 남아 있는 버전 목록으로 갱신한다.
-      if (cause instanceof ApiError && cause.code === 'POSTER-008') {
+      if (
+        cause instanceof ApiError &&
+        ['POSTER-007', 'POSTER-008'].includes(cause.code ?? '')
+      ) {
         if (mounted.current) {
           setVersionsFresh(false);
           // 후속 목록 조회가 실패해도 서버가 삭제를 확인한 버전은 다시 허용하지 않는다.
@@ -309,24 +326,37 @@ export const useTemplateEditor = (initialId?: string) => {
               : [...current, versionNumber],
           );
         }
-        const page = await getTemplateVersions(
-          String(result.template.templateId),
-        ).catch(() => null);
-        if (mounted.current && page) {
-          setResult((current) =>
-            current
-              ? {
-                  ...current,
-                  versions: page.items,
-                  nextPageToken: page.nextPageToken,
-                }
-              : current,
-          );
-          setVersionsFresh(true);
-        }
+        await readSavedResult(String(result.template.templateId)).catch(
+          () => undefined,
+        );
       }
       if (mounted.current) setError(getTemplateError(cause));
       return false;
+    } finally {
+      operationRef.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  };
+
+  const rename = async (name: string) => {
+    if (!result || operationRef.current || moreRef.current)
+      throw new Error('템플릿을 불러온 뒤 다시 시도해 주세요.');
+    operationRef.current = true;
+    setBusy(true);
+    try {
+      const renamed = await renameTemplate(
+        String(result.template.templateId),
+        name,
+      );
+      if (mounted.current)
+        setResult((current) =>
+          current
+            ? {
+                ...current,
+                template: { ...current.template, ...renamed },
+              }
+            : current,
+        );
     } finally {
       operationRef.current = false;
       if (mounted.current) setBusy(false);
@@ -404,6 +434,7 @@ export const useTemplateEditor = (initialId?: string) => {
     loadingMore,
     generate,
     publish,
+    rename,
     loadMore,
   };
 };
