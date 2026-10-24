@@ -7,6 +7,8 @@ export interface TemplateRecord {
   name: string;
   status: TemplateStatus;
   active: boolean;
+  /** 게시본과 별개로 편집 중인 임시저장이 있는지 나타낸다. DRAFT는 항상 true다. */
+  hasDraft: boolean;
   createdAt: string;
   activatedBy: number | null;
   activatedAt: string | null;
@@ -32,7 +34,7 @@ export interface TemplateGeneration {
   templateId: number;
   name: string;
   versionNumber: number;
-  status: 'DRAFT';
+  status: TemplateStatus;
   html: string;
   /** LLM 설명은 HTML로 해석하지 않으며 설명이 없는 응답은 빈 문자열이다. */
   message: string;
@@ -62,6 +64,7 @@ const assertTemplate = (data: TemplateRecord) => {
     typeof data.name !== 'string' ||
     typeof data.html !== 'string' ||
     typeof data.active !== 'boolean' ||
+    typeof data.hasDraft !== 'boolean' ||
     typeof data.createdAt !== 'string' ||
     !['DRAFT', 'PUBLISHED'].includes(data.status)
   )
@@ -157,7 +160,7 @@ export const generateTemplate = async (
     return data;
   if (
     !data ||
-    data.status !== 'DRAFT' ||
+    (data.status !== 'DRAFT' && (!id || data.status !== 'PUBLISHED')) ||
     !Number.isSafeInteger(data.templateId) ||
     data.templateId <= 0 ||
     !Number.isSafeInteger(data.versionNumber) ||
@@ -196,6 +199,33 @@ export const publishTemplate = async (id: string, versionNumber: number) => {
     typeof data.publishedAt !== 'string'
   )
     throw new ApiError('템플릿 게시 응답 형식을 확인할 수 없습니다.', 200);
+  return data;
+};
+
+/** 이름 변경 응답만 병합해 게시본 HTML과 노출 상태를 유지한다. */
+export const renameTemplate = async (id: string, name: string) => {
+  const trimmedName = name.trim();
+  if (!trimmedName || trimmedName.length > 100)
+    throw new ApiError('템플릿명은 1~100자로 입력해 주세요.', 400);
+  const data = await requestData<{
+    templateId: number;
+    name: string;
+    lastModifiedBy: number;
+    lastModifiedAt: string;
+  }>(
+    `${basePath}/${encodeURIComponent(id)}`,
+    jsonOptions('PATCH', { name: trimmedName }),
+    200,
+  );
+  if (
+    !data ||
+    String(data.templateId) !== id ||
+    data.name !== trimmedName ||
+    !Number.isSafeInteger(data.lastModifiedBy) ||
+    data.lastModifiedBy <= 0 ||
+    typeof data.lastModifiedAt !== 'string'
+  )
+    throw new ApiError('템플릿 이름 변경 응답 형식을 확인할 수 없습니다.', 200);
   return data;
 };
 
