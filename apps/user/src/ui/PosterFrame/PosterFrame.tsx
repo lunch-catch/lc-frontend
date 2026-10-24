@@ -12,8 +12,12 @@ const SHOW_TIMEOUT_MS = 700;
 // 브라우저가 어떤 문서에나 자동으로 넣는 바깥 여백(8px)만 없앤다. 포스터 HTML에 있는 것이 아니라,
 // 남겨 두면 포스터 둘레로 뒤 바탕이 테두리처럼 비친다
 // 넘치는 부분은 잘라 스크롤 막대를 숨긴다. 카드 위에서는 스와이프를 받아 포스터를 스크롤할 수 없어 막대가 쓸모없이 보이기만 한다
+// 포스터 맨 바깥 요소의 모서리는 없앤다. 모서리는 카드가 둥글리는데, 템플릿 루트가 카드(12px)보다 더 둥글면(예: 24px)
+// 그 차이만큼 뒤 카드 바탕이 모서리에 비친다. 배경이 진한 포스터에서 특히 눈에 띈다
+// 조각 HTML이면 이 스타일이 body의 첫 요소가 되므로, 첫 자식이 아니라 style, script, link가 아닌 자식에 건다
 // 포스터가 A4를 넘거나 이미지가 폭보다 넓으면 잘린다. 크기는 템플릿(관리자)에서 맞춘다
-const BASE_STYLE = '<style>html,body{margin:0;overflow:hidden}</style>';
+const BASE_STYLE =
+  '<style>html,body{margin:0;overflow:hidden}body>*:not(style):not(script):not(link){border-radius:0!important}</style>';
 
 // 완성 HTML 문서면 head 안에, 조각이면 맨 앞에 기본 스타일을 넣는다
 // 문서 맨 앞(<!doctype> 앞)에 넣으면 표준 모드가 풀려 배치가 달라질 수 있어 피한다
