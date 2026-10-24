@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type MouseEvent,
+  type PointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import type { StoreListItem } from '@user/api/store';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
@@ -24,6 +31,9 @@ const DEFAULT_MAP_LEVEL = 4;
 // 핀이 가장자리에 붙지 않도록 남기는 여백(px). 아래는 카카오 로고와 축척 자리까지 비운다
 const BOUNDS_PADDING = { top: 48, side: 48, bottom: 64 };
 
+// 핀을 누른 자리에서 이만큼(px) 넘게 움직여 놓았으면 누른 것이 아니라 지도를 끈 것으로 본다
+const PIN_DRAG_PX = 5;
+
 // 핀에 짧게 보여줄 할인 (예: 20%, 3,000원)
 const formatPinLabel = (store: StoreListItem) =>
   store.activeCampaign
@@ -41,6 +51,20 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
   // 지도가 빨리 뜨면 깜빡이는 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 깜빡인다
   const showMapSkeleton = useDelayedLoading(!kakao && !hasLoadError);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  // 핀을 누른 자리. 핀 위에서 시작한 끌기가 놓은 뒤의 클릭으로 핀을 고르지 않게 한다
+  const pinPressAt = useRef<{ x: number; y: number } | null>(null);
+
+  const rememberPinPress = (event: PointerEvent) => {
+    pinPressAt.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const isPinDrag = (event: MouseEvent) => {
+    const start = pinPressAt.current;
+    return (
+      start !== null &&
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > PIN_DRAG_PX
+    );
+  };
   // 지도에는 할인을 보여줄 수 있는 쿠폰 진행 중인 가게만 핀으로 둔다
   // 가게 목록을 새로 받을 때만 바뀌어서, 핀을 고를 때는 지도 영역을 다시 맞추지 않는다
   const campaignStores = useMemo(
@@ -116,6 +140,9 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
             const isSelected = store.storeId === selectedStoreId;
             return (
               <MapOverlay
+                // 핀을 누를 수 있는 오버레이로 두면 카카오 지도가 핀 위에서 시작한 끌기를 지도로 넘기지 않는다
+                // 핀이 많아 핀 위에서 끌기를 시작하기 쉬우므로 눌러도 지도가 움직이게 두고, 핀을 고르는 건 아래 버튼의 클릭으로 한다
+                clickable={false}
                 kakao={kakao}
                 key={store.storeId}
                 latitude={store.latitude}
@@ -132,7 +159,11 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
                       ? 'scale-110 bg-action-primary text-text-inverse'
                       : 'bg-(--primitive-neutral-900) text-(--primitive-neutral-0)'
                   }`}
-                  onClick={() => setSelectedStoreId(store.storeId)}
+                  onClick={(event) => {
+                    if (isPinDrag(event)) return;
+                    setSelectedStoreId(store.storeId);
+                  }}
+                  onPointerDown={rememberPinPress}
                   type="button"
                 >
                   {formatPinLabel(store)}
