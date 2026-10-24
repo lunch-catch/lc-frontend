@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useNavigationType } from 'react-router';
 import { LocateFixed, Minus, Plus } from 'lucide-react';
 
 import type { StoreListItem } from '@user/api/store';
@@ -16,6 +17,7 @@ import MapOverlay from '@user/ui/KakaoMap/MapOverlay';
 import { useKakaoMap } from '@user/ui/KakaoMap/useKakaoMap';
 import { formatDiscount } from '@user/ui/storeFormat';
 
+import { readMapSnapshot, saveMapSnapshot } from './mapSnapshot';
 import StoreCard from './StoreCard';
 
 export interface MapCenter {
@@ -25,6 +27,8 @@ export interface MapCenter {
 
 interface StoreMapProps {
   center: MapCenter;
+  // 검색어·업종·위치를 묶은 값. 같은 조건에서 떠났다 돌아올 때만 보던 모습을 되살린다
+  snapshotKey: string;
   stores: StoreListItem[];
 }
 
@@ -50,8 +54,15 @@ const formatPinLabel = (store: StoreListItem) =>
     : '';
 
 // 탐색 탭의 지도 보기. 쿠폰 진행 중인 가게를 카카오 지도 위 핀으로 보여주고, 핀을 누르면 아래에 가게 카드를 띄운다
-const StoreMap = ({ center, stores }: StoreMapProps) => {
+const StoreMap = ({ center, snapshotKey, stores }: StoreMapProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  // 가게 상세에서 뒤로 가기로 돌아왔을 때만 보던 모습을 되살린다. 탭을 눌러 들어오면 처음 모습으로 시작한다
+  const navigationType = useNavigationType();
+  const [restored] = useState(() =>
+    navigationType === 'POP' ? readMapSnapshot(snapshotKey) : null,
+  );
+  // 되살리는 건 처음 한 번뿐이다. 그 뒤 가게 목록이 바뀌면 영역을 다시 맞춘다
+  const hasRestored = useRef(false);
   // 처음 가운데에 둘 위치. 그 뒤로 바뀌면 아래 영역 맞추기가 옮긴다
   const { hasLoadError, kakao, retry } = useKakaoMap(containerRef, {
     ...center,
@@ -59,7 +70,9 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
   });
   // 지도가 빨리 뜨면 깜빡이는 회색 틀이 잠깐 나왔다 사라져 번쩍이므로, 조금 기다린 뒤에만 깜빡인다
   const showMapSkeleton = useDelayedLoading(!kakao && !hasLoadError);
-  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(
+    restored?.selectedStoreId ?? null,
+  );
   // 핀을 누른 자리. 핀 위에서 시작한 끌기가 놓은 뒤의 클릭으로 핀을 고르지 않게 한다
   const pinPressAt = useRef<{ x: number; y: number } | null>(null);
   // 방금 고른 핀과 아래 가게 카드. 카드가 핀을 덮으면 지도를 옮겨 핀이 카드 위에 보이게 한다
@@ -116,8 +129,45 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
   }, [kakao, center.latitude, center.longitude, campaignStores]);
 
   useEffect(() => {
+    if (!kakao) return;
+
+    // 처음 한 번, 저장된 모습이 있으면 영역 맞추기 대신 그 중심과 확대 수준으로 되돌린다
+    if (restored && !hasRestored.current) {
+      hasRestored.current = true;
+      kakao.map.setLevel(restored.level);
+      kakao.map.setCenter(
+        new kakao.maps.LatLng(restored.latitude, restored.longitude),
+      );
+      return;
+    }
     fitMap();
-  }, [fitMap]);
+  }, [fitMap, kakao, restored]);
+
+  // 화면을 떠날 때(가게 상세로 갈 때 등) 지금의 중심과 확대 수준, 고른 핀을 저장한다
+  const latest = useRef({ kakao, selectedStoreId, snapshotKey });
+  useEffect(() => {
+    latest.current = { kakao, selectedStoreId, snapshotKey };
+  });
+  useEffect(
+    () => () => {
+      const {
+        kakao: handle,
+        selectedStoreId: selected,
+        snapshotKey: key,
+      } = latest.current;
+      if (!handle) return;
+      const center = handle.map.getCenter();
+      saveMapSnapshot({
+        key,
+        latitude: center.getLat(),
+        level: handle.map.getLevel(),
+        longitude: center.getLng(),
+        savedAt: Date.now(),
+        selectedStoreId: selected,
+      });
+    },
+    [],
+  );
 
   // 확대·축소. 마우스 휠이 없는 화면에서도 확대할 수 있고, 휠로 확대하는 걸 모르는 사람에게 단서가 된다
   const zoomBy = (step: number) => {

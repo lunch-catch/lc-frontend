@@ -56,6 +56,7 @@ interface KakaoLatLngBounds {
 
 export interface KakaoMap {
   setCenter: (latLng: KakaoLatLng) => void;
+  getCenter: () => KakaoLatLng;
   setLevel: (level: number) => void;
   // 확대 수준. 숫자가 작을수록 가까이 본다
   getLevel: () => number;

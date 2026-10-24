@@ -442,7 +442,13 @@ const ExploreScreen = () => {
     }
 
     if (view === 'map' && latitude !== null && longitude !== null) {
-      return <StoreMap center={{ latitude, longitude }} stores={stores} />;
+      return (
+        <StoreMap
+          center={{ latitude, longitude }}
+          snapshotKey={listKey}
+          stores={stores}
+        />
+      );
     }
 
     // 서버는 쿠폰 가게와 아닌 가게를 거리순으로 섞어서 준다. 구역으로 나누면 더 받을 때마다 쿠폰 가게가 위로 끼어들어 숫자가 바뀌므로
