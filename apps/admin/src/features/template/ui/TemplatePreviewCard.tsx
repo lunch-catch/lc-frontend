@@ -1,6 +1,6 @@
 ﻿import { Button, StatusBadge, Toggle } from '@repo/ui';
 import { formatDateTime } from '@repo/utils';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 import type { PosterTemplate } from '../templateTypes';
 import { TemplateThumbnail } from './TemplateThumbnail';
@@ -9,7 +9,6 @@ export interface TemplatePreviewCardProps {
   onActivationRequest: (template: PosterTemplate) => void;
   onOpenTemplate: (template: PosterTemplate) => void;
   onDeleteRequest: (template: PosterTemplate) => void;
-  onRenameRequest: (template: PosterTemplate) => void;
   template: PosterTemplate;
 }
 
@@ -17,7 +16,6 @@ export const TemplatePreviewCard = ({
   onActivationRequest,
   onOpenTemplate,
   onDeleteRequest,
-  onRenameRequest,
   template,
 }: TemplatePreviewCardProps) => {
   const canChangeActivation = template.status === 'PUBLISHED';
@@ -35,14 +33,6 @@ export const TemplatePreviewCard = ({
         >
           {template.name}
         </h3>
-        <button
-          type="button"
-          aria-label={template.name + ' 이름 수정'}
-          className="shrink-0 rounded p-1 text-text-secondary hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
-          onClick={() => onRenameRequest(template)}
-        >
-          <Pencil aria-hidden="true" className="size-3.5" />
-        </button>
         <div className="flex shrink-0 flex-wrap justify-end gap-1">
           {canChangeActivation && template.hasDraft && (
             <StatusBadge variant="warning">수정 중</StatusBadge>
@@ -74,11 +64,9 @@ export const TemplatePreviewCard = ({
         </div>
         <div className="flex items-baseline gap-1.5">
           <dt className="shrink-0">최종 수정자:</dt>
-          {/* 목록 API는 수정자의 이름 대신 관리자 내부 ID를 제공한다. */}
+          {/* API에 수정자 이름이 없어 내부 ID 대신 관리자 여부만 표시한다. */}
           <dd className="min-w-0">
-            {template.lastModifiedBy == null
-              ? '—'
-              : '관리자 #' + template.lastModifiedBy}
+            {template.lastModifiedBy == null ? '—' : '관리자'}
           </dd>
         </div>
       </dl>

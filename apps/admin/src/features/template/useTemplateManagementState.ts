@@ -4,7 +4,6 @@ import {
   changeTemplateActive,
   deleteTemplate,
   getTemplates,
-  renameTemplate,
 } from '@admin/api/templates';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 
@@ -16,7 +15,6 @@ export interface TemplateManagement {
   loading: boolean;
   error: string | null;
   refresh: () => void;
-  rename: (template: PosterTemplate, name: string) => Promise<void>;
   changeActive: (template: PosterTemplate) => Promise<void>;
   removeTemplate: (template: PosterTemplate) => Promise<void>;
 }
@@ -87,23 +85,6 @@ export const useTemplateManagementState = (): TemplateManagement => {
     );
   };
 
-  // 이름 수정 응답만 합쳐 게시본 미리보기와 활성 상태, 임시저장 여부를 보존한다.
-  const rename = async (template: PosterTemplate, name: string) => {
-    const renamed = await renameTemplate(String(template.templateId), name);
-    setResult((previous) =>
-      previous && previous.adminId === adminId
-        ? {
-            ...previous,
-            templates: previous.templates.map((item) =>
-              item.templateId === renamed.templateId
-                ? { ...item, ...renamed }
-                : item,
-            ),
-          }
-        : previous,
-    );
-  };
-
   const removeTemplate = async (template: PosterTemplate) => {
     await deleteTemplate(String(template.templateId));
     // 삭제 성공 후 목록과 생성 한도를 서버의 최신 값으로 다시 판단한다.
@@ -116,7 +97,6 @@ export const useTemplateManagementState = (): TemplateManagement => {
     error: current?.error ?? null,
     refresh,
     changeActive,
-    rename,
     removeTemplate,
   };
 };

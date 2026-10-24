@@ -2,7 +2,7 @@ import '../templateEditor.css';
 
 import { useState } from 'react';
 import { Button, Toggle } from '@repo/ui';
-import { ArrowLeft, Braces, Pencil } from 'lucide-react';
+import { ArrowLeft, Braces } from 'lucide-react';
 
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
@@ -86,7 +86,11 @@ export const TemplateCreateContent = ({
       >
         {/* 세 영역을 함께 보며 편집할 수 있도록 최소 작업 너비 아래에서만 가로로 스크롤한다. */}
         <TemplateEditorPanels>
-          <TemplateChatPanel chat={chat} onViewList={onBack} />
+          <TemplateChatPanel
+            chat={chat}
+            onViewList={onBack}
+            onRename={() => setRenameModalOpen(true)}
+          />
           <section className="template-editor__canvas flex min-h-0 min-w-0 flex-col p-4">
             <div className="flex min-h-0 flex-1">
               {previewHtml ? (
@@ -130,20 +134,6 @@ export const TemplateCreateContent = ({
                 >
                   목록으로
                 </Button>
-                {editor.template && (
-                  <Button
-                    variant="tertiary"
-                    disabled={locked}
-                    aria-label="템플릿 이름 수정"
-                    leadingIcon={
-                      <Pencil aria-hidden="true" className="size-3.5" />
-                    }
-                    className="!min-h-8 !px-2 !py-1 text-caption-web"
-                    onClick={() => setRenameModalOpen(true)}
-                  >
-                    이름 수정
-                  </Button>
-                )}
                 <Button
                   disabled={!editor.template || versionNumber === undefined}
                   aria-disabled={locked || undefined}

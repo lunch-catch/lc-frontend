@@ -17,7 +17,6 @@ export interface TemplateManagementContentProps {
   onCreate: (name: string) => void;
   onOpenTemplate: (template: PosterTemplate) => void;
   changeActive: (template: PosterTemplate) => Promise<void>;
-  rename: (template: PosterTemplate, name: string) => Promise<void>;
   removeTemplate: (template: PosterTemplate) => Promise<void>;
   loading: boolean;
   error: string | null;
@@ -39,7 +38,6 @@ export const TemplateManagementContent = ({
   onCreate,
   onOpenTemplate,
   changeActive,
-  rename,
   removeTemplate,
   loading,
   error,
@@ -64,8 +62,6 @@ export const TemplateManagementContent = ({
       : filtered;
   }, [templates, filters.status, filters.sort, search.keyword]);
   const [nameModalOpen, setNameModalOpen] = useState(false);
-  const [renamingTemplate, setRenamingTemplate] =
-    useState<PosterTemplate | null>(null);
   const [limitTooltipOpen, setLimitTooltipOpen] = useState(false);
   const limitTooltipId = useId();
   // 검색 결과 개수가 아니라 필터 없는 전체 응답으로 생성 한도를 판단한다.
@@ -256,7 +252,6 @@ export const TemplateManagementContent = ({
                 setActivationError(null);
                 setPendingActivationTemplate(template);
               }}
-              onRenameRequest={setRenamingTemplate}
               onOpenTemplate={onOpenTemplate}
               template={template}
             />
@@ -270,16 +265,6 @@ export const TemplateManagementContent = ({
         </div>
       )}
 
-      {renamingTemplate && (
-        <TemplateNameModal
-          initialName={renamingTemplate.name}
-          onClose={() => setRenamingTemplate(null)}
-          onStart={async (name) => {
-            await rename(renamingTemplate, name);
-            setRenamingTemplate(null);
-          }}
-        />
-      )}
       {nameModalOpen && (
         <TemplateNameModal
           onClose={() => setNameModalOpen(false)}
