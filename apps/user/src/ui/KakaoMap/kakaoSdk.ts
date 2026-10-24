@@ -57,6 +57,8 @@ interface KakaoLatLngBounds {
 export interface KakaoMap {
   setCenter: (latLng: KakaoLatLng) => void;
   setLevel: (level: number) => void;
+  // 확대 수준. 숫자가 작을수록 가까이 본다
+  getLevel: () => number;
   // 영역이 지도 안에 모두 들어오도록 옮기고 확대한다. 여백은 위, 오른쪽, 아래, 왼쪽 순서(px)
   setBounds: (
     bounds: KakaoLatLngBounds,

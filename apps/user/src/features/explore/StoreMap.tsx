@@ -1,11 +1,13 @@
 import {
   type MouseEvent,
   type PointerEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
+import { LocateFixed, Minus, Plus } from 'lucide-react';
 
 import type { StoreListItem } from '@user/api/store';
 import { useDelayedLoading } from '@user/hooks/useDelayedLoading';
@@ -76,7 +78,8 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
   );
 
   // 내 위치와 쿠폰 가게가 모두 보이도록 영역을 맞춘다. 가게가 없으면 내 위치를 가운데에 둔다
-  useEffect(() => {
+  // 처음 그릴 때와 "처음 모습으로" 버튼이 같은 모양으로 맞추도록 한 곳에 둔다
+  const fitMap = useCallback(() => {
     if (!kakao) return;
 
     const { map, maps } = kakao;
@@ -100,6 +103,17 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
       BOUNDS_PADDING.side,
     );
   }, [kakao, center.latitude, center.longitude, campaignStores]);
+
+  useEffect(() => {
+    fitMap();
+  }, [fitMap]);
+
+  // 확대·축소. 마우스 휠이 없는 화면에서도 확대할 수 있고, 휠로 확대하는 걸 모르는 사람에게 단서가 된다
+  const zoomBy = (step: number) => {
+    if (!kakao) return;
+    const { map } = kakao;
+    map.setLevel(Math.min(14, Math.max(1, map.getLevel() + step)));
+  };
 
   // 지도의 빈 곳을 누르면 고른 가게를 닫는다
   useEffect(() => {
@@ -173,6 +187,40 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
           })}
         </>
       )}
+      {kakao && (
+        // 지도 오른쪽 위의 조작 버튼. 카카오 로고와 축척, 아래에 뜨는 가게 카드를 가리지 않게 위에 둔다
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+          <div className="flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-bg-surface shadow-md">
+            <button
+              aria-label="지도 확대"
+              className="flex size-10 items-center justify-center text-text-primary active:bg-surface-subtle"
+              onClick={() => zoomBy(-1)}
+              type="button"
+            >
+              <Plus aria-hidden="true" className="size-5" />
+            </button>
+            <button
+              aria-label="지도 축소"
+              className="flex size-10 items-center justify-center border-t border-border-subtle text-text-primary active:bg-surface-subtle"
+              onClick={() => zoomBy(1)}
+              type="button"
+            >
+              <Minus aria-hidden="true" className="size-5" />
+            </button>
+          </div>
+          <button
+            aria-label="처음 모습으로 돌아가기"
+            className="flex size-10 items-center justify-center rounded-xl border border-border-subtle bg-bg-surface text-text-primary shadow-md active:bg-surface-subtle"
+            onClick={() => {
+              setSelectedStoreId(null);
+              fitMap();
+            }}
+            type="button"
+          >
+            <LocateFixed aria-hidden="true" className="size-5" />
+          </button>
+        </div>
+      )}
       {!kakao && !hasLoadError && (
         <>
           {showMapSkeleton && (
@@ -197,7 +245,7 @@ const StoreMap = ({ center, stores }: StoreMapProps) => {
         </div>
       )}
       {kakao && campaignStores.length === 0 && (
-        <p className="pointer-events-none absolute inset-x-page top-3 z-10 rounded-lg bg-bg-surface/90 px-3 py-2 text-center text-body-sm-mobile text-text-secondary">
+        <p className="pointer-events-none absolute inset-x-page top-3 right-16 z-10 rounded-lg bg-bg-surface/90 px-3 py-2 text-center text-body-sm-mobile text-text-secondary">
           주변에 쿠폰 진행 중인 가게가 없어요
         </p>
       )}
