@@ -70,6 +70,7 @@ for (const name of [
   'DashboardSparkline',
   'DashboardMetricCard',
   'DashboardSection',
+  'DashboardChartPlot',
   'DashboardTrendChart',
 ]) {
   dependencies['./' + name] = load(

@@ -1,23 +1,20 @@
-import type { PointerEvent } from 'react';
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent } from 'react';
+import {
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { formatNumber } from '@repo/utils';
 
+import { DashboardChartPlot, type TrendSeries } from './DashboardChartPlot';
 import {
-  getChartAxisMaximum,
-  getChartLabelInterval,
+  getDashboardChartGeometry,
   getNearestChartIndex,
 } from './dashboardChartUtils';
-
-const comparisonLayout = { left: 64, right: 32, top: 20 };
-const singleSeriesLayout = { left: 40, right: 12, top: 12 };
-const axisFormatter = new Intl.NumberFormat('ko-KR', { notation: 'compact' });
-
-interface TrendSeries {
-  name: string;
-  /** 범례에 호버하거나 포커스했을 때 안내할 비교 기간. */
-  description?: string;
-  values: (number | null)[];
-}
+const emptyTooltipDetails: TrendSeries[] = [];
 
 interface DashboardTrendChartProps {
   title: string;
@@ -36,20 +33,17 @@ export const DashboardTrendChart = ({
   labels,
   primary,
   secondary,
-  tooltipDetails = [],
+  tooltipDetails = emptyTooltipDetails,
   unit = '건',
   height = 208,
   variant = 'line',
 }: DashboardTrendChartProps) => {
-  // 단일 지표는 범례와 넓은 여백을 덜어내고 축 라벨에 필요한 공간만 남긴다.
-  const chartLayout = secondary ? comparisonLayout : singleSeriesLayout;
-  const bottom = height - 28;
-  const labelY = height - 8;
   const id = useId();
   const chartRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const pointerY = useRef<number | null>(null);
   const [width, setWidth] = useState(640);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [pointerY, setPointerY] = useState<number | null>(null);
   const hasLabels = labels.length > 0;
   useLayoutEffect(() => {
     const container = chartRef.current;
@@ -65,78 +59,80 @@ export const DashboardTrendChart = ({
     return () => observer.disconnect();
   }, [hasLabels]);
   const active = Math.min(activeIndex ?? labels.length - 1, labels.length - 1);
-  const tickInterval = getChartLabelInterval(labels.length, width);
-  const values = [...primary.values, ...(secondary?.values ?? [])].filter(
-    (value): value is number => value !== null,
+  const geometry = useMemo(
+    () =>
+      getDashboardChartGeometry(
+        labels.length,
+        width,
+        height,
+        variant,
+        [...primary.values, ...(secondary?.values ?? [])].filter(
+          (value): value is number => value !== null,
+        ),
+        Boolean(secondary),
+      ),
+    [labels.length, width, height, variant, primary.values, secondary],
   );
-  const max = getChartAxisMaximum(values);
-  // 과오 차감 정정으로 소진액이 음수가 될 수 있어 0 아래 구간도 표시한다.
-  const min =
-    Math.min(0, ...values) < 0
-      ? -getChartAxisMaximum(values.map((value) => -value))
-      : 0;
-  const plotWidth = width - chartLayout.left - chartLayout.right;
-  // 막대는 날짜별 칸의 중앙에 놓아 첫·마지막 막대도 축 경계 안에 들어오게 한다.
-  const slotWidth = plotWidth / Math.max(1, labels.length);
-  const firstX = chartLayout.left + (variant === 'bar' ? slotWidth / 2 : 0);
-  const pointWidth = plotWidth - (variant === 'bar' ? slotWidth : 0);
-  const x = (index: number) =>
-    labels.length === 1
-      ? chartLayout.left + plotWidth / 2
-      : firstX + (index * pointWidth) / (labels.length - 1);
-  const y = (value: number) =>
-    bottom - ((value - min) / (max - min)) * (bottom - chartLayout.top);
-  const barWidth = Math.max(
-    1,
-    Math.min(32, (plotWidth / labels.length) * 0.55),
-  );
-  // 미확정 값을 0으로 그리거나 양옆의 확정 구간과 연결하지 않는다.
-  const paths = (values: (number | null)[]) => {
-    const segments: { points: string; start: number; end: number }[] = [];
-    values.forEach((value, index) => {
-      if (value === null) return;
-      const point = `${x(index)},${y(value)}`;
-      const last = segments.at(-1);
-      if (last && last.end === index - 1) {
-        last.points += ' ' + point;
-        last.end = index;
-      } else segments.push({ points: point, start: index, end: index });
-    });
-    return segments;
-  };
+  const { x, y, bottom, chartLayout, firstX, pointWidth } = geometry;
   const valueLabel = (value: number | null | undefined) =>
     value == null ? '미확정' : formatNumber(value) + unit;
-  const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    // 화면 좌표를 SVG 좌표로 변환해 마우스에 가장 가까운 구간을 선택한다.
-    const position = ((event.clientX - bounds.left) / bounds.width) * width;
-    setPointerY(event.clientY - bounds.top);
-    setActiveIndex(
-      getNearestChartIndex(position, firstX, pointWidth, labels.length),
-    );
+  const pendingFrame = useRef<number | null>(null);
+  const pointer = useRef({ clientX: 0, clientY: 0 });
+  const cancelPointerFrame = useCallback(() => {
+    if (pendingFrame.current !== null)
+      cancelAnimationFrame(pendingFrame.current);
+    pendingFrame.current = null;
+  }, []);
+  useLayoutEffect(() => cancelPointerFrame, [cancelPointerFrame, geometry]);
+  const moveTooltip = useCallback(
+    (position: number) => {
+      if (tooltipRef.current)
+        tooltipRef.current.style.top =
+          Math.min(bottom, Math.max(chartLayout.top, position)) + 'px';
+    },
+    [bottom, chartLayout.top],
+  );
+  useLayoutEffect(() => {
+    if (pointerY.current !== null) moveTooltip(pointerY.current);
+  }, [activeIndex, moveTooltip]);
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    pointer.current = { clientX: event.clientX, clientY: event.clientY };
+    if (pendingFrame.current !== null) return;
+    // 한 프레임에 포인터 위치를 한 번만 읽고 툴팁·강조 표시만 갱신한다.
+    pendingFrame.current = requestAnimationFrame(() => {
+      pendingFrame.current = null;
+      const bounds = chartRef.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const position =
+        ((pointer.current.clientX - bounds.left) / bounds.width) * width;
+      pointerY.current = pointer.current.clientY - bounds.top;
+      moveTooltip(pointerY.current);
+      setActiveIndex(
+        getNearestChartIndex(position, firstX, pointWidth, labels.length),
+      );
+    });
   };
-  const showLabel = (index: number) =>
-    index === 0 ||
-    index === labels.length - 1 ||
-    (index % tickInterval === 0 &&
-      index < labels.length - 1 - tickInterval / 2);
-  const getLabelAnchor = (index: number) => {
-    // 막대는 양끝에도 반 칸 여백이 있어 날짜를 막대 중심에 맞춘다.
-    if (variant === 'bar' || labels.length === 1) return 'middle';
-    if (index === 0) return 'start';
-    if (index === labels.length - 1) return 'end';
-    return 'middle';
-  };
-  const hidePointer = () => {
+  const focusPoint = useCallback(
+    (index: number) => {
+      cancelPointerFrame();
+      pointerY.current = null;
+      moveTooltip(y(primary.values[index] ?? 0));
+      setActiveIndex(index);
+    },
+    [cancelPointerFrame, moveTooltip, y, primary.values],
+  );
+  const hidePointer = useCallback(() => {
+    cancelPointerFrame();
     setActiveIndex(null);
-    setPointerY(null);
-  };
+    pointerY.current = null;
+  }, [cancelPointerFrame]);
   const tooltipVisible = activeIndex !== null;
   // 툴팁은 활성 구간 옆에 붙이되 차트 오른쪽 절반에서는 왼쪽으로 뒤집어 잘리지 않게 한다.
   const tooltipFlipped = x(active) > width / 2;
+  // 세로 위치는 툴팁 DOM에서만 갱신해 SVG 전체의 스타일 재계산을 피한다.
   const tooltipTop = Math.min(
     bottom,
-    Math.max(chartLayout.top, pointerY ?? y(primary.values[active] ?? 0)),
+    Math.max(chartLayout.top, y(primary.values[active] ?? 0)),
   );
   if (!labels.length)
     return (
@@ -149,117 +145,36 @@ export const DashboardTrendChart = ({
     );
   return (
     <div className="space-y-3">
-      <div ref={chartRef} className="relative rounded-lg bg-bg-surface">
+      <div
+        ref={chartRef}
+        className="relative rounded-lg bg-bg-surface"
+        onPointerMove={handlePointerMove}
+        onPointerLeave={hidePointer}
+        style={
+          { '--chart-bar-opacity': tooltipVisible ? 0.45 : 1 } as CSSProperties
+        }
+      >
+        <DashboardChartPlot
+          geometry={geometry}
+          title={title}
+          labels={labels}
+          primary={primary}
+          secondary={secondary}
+          tooltipDetails={tooltipDetails}
+          unit={unit}
+          height={height}
+          width={width}
+          variant={variant}
+          id={id}
+          onPointFocus={focusPoint}
+          onPointBlur={hidePointer}
+        />
         <svg
-          aria-label={title}
-          className="w-full text-caption-web"
-          style={{
-            height,
-          }}
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 top-0 w-full"
+          style={{ height }}
           viewBox={`0 0 ${width} ${height}`}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={hidePointer}
         >
-          <defs>
-            <clipPath id={`${id}-plot`}>
-              <rect
-                x={chartLayout.left}
-                y={chartLayout.top}
-                width={plotWidth}
-                height={bottom - chartLayout.top}
-              />
-            </clipPath>
-            <linearGradient id={`${id}-bar`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--semantic-action-primary)" />
-              <stop
-                offset="100%"
-                stopColor="var(--semantic-action-primary)"
-                stopOpacity="0.35"
-              />
-            </linearGradient>
-            <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor="var(--semantic-action-primary)"
-                stopOpacity="0.14"
-              />
-              <stop
-                offset="100%"
-                stopColor="var(--semantic-action-primary)"
-                stopOpacity="0"
-              />
-            </linearGradient>
-          </defs>
-          {[0, 0.25, 0.5, 0.75, 1].map((fraction) => (
-            <g key={fraction}>
-              <line
-                x1={chartLayout.left}
-                x2={width - chartLayout.right}
-                y1={y(min + (max - min) * fraction)}
-                y2={y(min + (max - min) * fraction)}
-                stroke="var(--semantic-border-subtle)"
-                strokeDasharray={fraction === 0 ? undefined : '2 6'}
-                strokeOpacity={fraction === 0 ? 1 : 0.6}
-              />
-              <text
-                x={chartLayout.left - 8}
-                y={y(min + (max - min) * fraction) + 4}
-                textAnchor="end"
-                fill="var(--semantic-text-tertiary)"
-              >
-                {axisFormatter.format(min + (max - min) * fraction)}
-              </text>
-            </g>
-          ))}
-          {/* 데이터 도형만 자르고 축 라벨·포커스 영역은 그대로 유지한다. */}
-          <g clipPath={`url(#${id}-plot)`}>
-            {variant === 'bar' &&
-              primary.values.map((value, index) =>
-                value === null ? null : (
-                  <rect
-                    key={labels[index]}
-                    x={x(index) - barWidth / 2}
-                    y={Math.min(y(value), y(0))}
-                    width={barWidth}
-                    height={Math.abs(y(value) - y(0))}
-                    rx={3}
-                    fill={`url(#${id}-bar)`}
-                    fillOpacity={
-                      activeIndex === null || activeIndex === index ? 1 : 0.45
-                    }
-                  />
-                ),
-              )}
-            {variant === 'line' &&
-              paths(primary.values).map((segment) => (
-                <polygon
-                  key={segment.start}
-                  points={`${x(segment.start)},${y(0)} ${segment.points} ${x(segment.end)},${y(0)}`}
-                  fill={`url(#${id}-fill)`}
-                />
-              ))}
-            {[primary, ...(secondary ? [secondary] : [])].map((series, index) =>
-              (variant === 'bar' && index === 0
-                ? []
-                : paths(series.values)
-              ).map((segment) => (
-                <polyline
-                  key={series.name + segment.start}
-                  points={segment.points}
-                  fill="none"
-                  stroke={
-                    index === 0
-                      ? 'var(--semantic-action-primary)'
-                      : 'var(--semantic-action-secondary)'
-                  }
-                  strokeWidth={index === 0 ? 2.5 : 2}
-                  strokeDasharray={index === 0 ? undefined : '5 5'}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-              )),
-            )}
-          </g>
           <line
             opacity={tooltipVisible ? 1 : 0}
             x1={x(active)}
@@ -271,37 +186,19 @@ export const DashboardTrendChart = ({
             strokeDasharray="4 4"
             pointerEvents="none"
           />
-          {/* 점을 모두 그리는 대신 투명한 포커스 영역으로 구간별 키보드 탐색을 유지한다. */}
-          {labels.map((label, index) => (
-            <g key={label}>
-              <circle
-                role="img"
-                aria-label={`${label}, ${primary.name} ${valueLabel(primary.values[index])}${secondary ? `, ${secondary.name} ${valueLabel(secondary.values[index])}` : ''}${tooltipDetails.map((detail) => `, ${detail.name} ${valueLabel(detail.values[index])}`).join('')}`}
-                tabIndex={0}
-                cx={x(index)}
-                cy={y(primary.values[index] ?? 0)}
-                r="10"
-                fill="transparent"
-                className="focus:outline-action-primary"
-                onFocus={() => {
-                  setPointerY(null);
-                  setActiveIndex(index);
-                }}
-                onBlur={hidePointer}
-                onMouseEnter={() => setActiveIndex(index)}
+
+          {variant === 'bar' &&
+            tooltipVisible &&
+            primary.values[active] != null && (
+              <rect
+                x={x(active) - geometry.barWidth / 2}
+                y={Math.min(y(primary.values[active]!), y(0))}
+                width={geometry.barWidth}
+                height={Math.abs(y(primary.values[active]!) - y(0))}
+                rx={3}
+                fill={`url(#${id}-bar)`}
               />
-              {showLabel(index) && (
-                <text
-                  x={x(index)}
-                  y={labelY}
-                  textAnchor={getLabelAnchor(index)}
-                  fill="var(--semantic-text-secondary)"
-                >
-                  {label.slice(5) || label}
-                </text>
-              )}
-            </g>
-          ))}
+            )}
           <g pointerEvents="none" opacity={tooltipVisible ? 1 : 0}>
             <g opacity={primary.values[active] == null ? 0 : 1}>
               <circle
@@ -334,6 +231,7 @@ export const DashboardTrendChart = ({
         </svg>
         {tooltipVisible && (
           <div
+            ref={tooltipRef}
             aria-hidden
             className="pointer-events-none absolute z-10 w-max max-w-full rounded-lg whitespace-nowrap border border-border-subtle bg-bg-surface px-3 py-2 shadow-md"
             style={{

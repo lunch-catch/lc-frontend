@@ -19,6 +19,7 @@ import {
   TableRow,
   useTableColumnSettings,
 } from '@admin/ui/DataTable';
+import { VirtualTableRows } from '@admin/ui/DataTable/VirtualTableRows';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 import { LoadMoreButton } from '@admin/ui/Pagination/LoadMoreButton';
 
@@ -135,6 +136,7 @@ export const CampaignManagementContent = () => {
         />
       </FilterBar>
       <DataTable
+        aria-rowcount={items.length + 1}
         className="table-fixed"
         columnSettings={columnSettings}
         columns={columns}
@@ -179,69 +181,75 @@ export const CampaignManagementContent = () => {
               </TableEmpty>
             </tr>
           ) : (
-            items.map((campaign) => {
-              const report = performance.reports.get(campaign.campaignId);
-              const unavailable = performance.error ? '조회 실패' : '조회 중';
-              return (
-                <TableRow
-                  key={campaign.campaignId}
-                  tabIndex={0}
-                  showDetailArrow
-                  className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
-                  onClick={() => openDetail(campaign.campaignId)}
-                  onKeyDown={(event) => {
-                    if (
-                      event.target === event.currentTarget &&
-                      (event.key === 'Enter' || event.key === ' ')
-                    ) {
-                      event.preventDefault();
-                      openDetail(campaign.campaignId);
-                    }
-                  }}
-                >
-                  <TableCell>
-                    <button
-                      type="button"
-                      className="text-text-primary hover:underline focus-visible:outline-2 focus-visible:outline-action-primary"
-                      aria-label={`캠페인 ${campaign.campaignId} 상세 보기`}
-                      onClick={(event) => {
-                        event.stopPropagation();
+            <VirtualTableRows
+              items={items}
+              getKey={(item) => item.campaignId}
+              colSpan={columns.length}
+              density={density}
+              renderRow={(campaign) => {
+                const report = performance.reports.get(campaign.campaignId);
+                const unavailable = performance.error ? '조회 실패' : '조회 중';
+                return (
+                  <TableRow
+                    key={campaign.campaignId}
+                    tabIndex={0}
+                    showDetailArrow
+                    className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
+                    onClick={() => openDetail(campaign.campaignId)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.target === event.currentTarget &&
+                        (event.key === 'Enter' || event.key === ' ')
+                      ) {
+                        event.preventDefault();
                         openDetail(campaign.campaignId);
-                      }}
-                    >
-                      {campaign.campaignId}
-                    </button>
-                  </TableCell>
-                  <TableCell>{campaign.storeId}</TableCell>
-                  <TableCell title={campaign.storeName ?? undefined}>
-                    {campaign.storeName ?? '미등록 가게'}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      variant={campaignStatusMeta[campaign.status].variant}
-                    >
-                      {campaignStatusMeta[campaign.status].label}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell>{formatDateTime(campaign.createdAt)}</TableCell>
-                  <TableCell>{getCampaignDiscount(campaign)}</TableCell>
-                  <TableCell>
-                    {campaign.dailyBudget === null
-                      ? '미설정'
-                      : formatPoints(campaign.dailyBudget)}
-                  </TableCell>
-                  <TableCell>{getCampaignPeriod(campaign)}</TableCell>
-                  <TableCell>
-                    {report ? formatPoints(report.spentAmount) : unavailable}
-                  </TableCell>
-                  <TableCell>
-                    {report
-                      ? `${formatNumber(report.validImpressionCount)}회`
-                      : unavailable}
-                  </TableCell>
-                </TableRow>
-              );
-            })
+                      }
+                    }}
+                  >
+                    <TableCell>
+                      <button
+                        type="button"
+                        className="text-text-primary hover:underline focus-visible:outline-2 focus-visible:outline-action-primary"
+                        aria-description={`캠페인 ${campaign.campaignId} 상세 보기`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openDetail(campaign.campaignId);
+                        }}
+                      >
+                        {campaign.campaignId}
+                      </button>
+                    </TableCell>
+                    <TableCell>{campaign.storeId}</TableCell>
+                    <TableCell title={campaign.storeName ?? undefined}>
+                      {campaign.storeName ?? '미등록 가게'}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        variant={campaignStatusMeta[campaign.status].variant}
+                      >
+                        {campaignStatusMeta[campaign.status].label}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell>{formatDateTime(campaign.createdAt)}</TableCell>
+                    <TableCell>{getCampaignDiscount(campaign)}</TableCell>
+                    <TableCell>
+                      {campaign.dailyBudget === null
+                        ? '미설정'
+                        : formatPoints(campaign.dailyBudget)}
+                    </TableCell>
+                    <TableCell>{getCampaignPeriod(campaign)}</TableCell>
+                    <TableCell>
+                      {report ? formatPoints(report.spentAmount) : unavailable}
+                    </TableCell>
+                    <TableCell>
+                      {report
+                        ? `${formatNumber(report.validImpressionCount)}회`
+                        : unavailable}
+                    </TableCell>
+                  </TableRow>
+                );
+              }}
+            />
           )}
           {resource.data && resource.error && (
             <tr>

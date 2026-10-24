@@ -27,7 +27,13 @@ const loadAccounts = async (keyword: string, signal: AbortSignal) => {
 };
 
 export const useAdminAccounts = (keyword: string, enabled: boolean) => {
-  const resource = useApiResource(loadAccounts, enabled ? keyword : null);
+  // 이 래퍼는 권한·대기 오류도 반환값으로 전달하므로 성공 캐시에서 제외한다.
+  const resource = useApiResource(
+    loadAccounts,
+    enabled ? keyword : null,
+    undefined,
+    { cache: false },
+  );
   const failure = resource.data?.failure;
   const retryAt = failure?.retryAt ?? 0;
   const [readyAt, setReadyAt] = useState(0);

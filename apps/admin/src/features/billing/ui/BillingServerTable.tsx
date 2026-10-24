@@ -143,7 +143,9 @@ export const BillingServerTable = <T,>({
                 showDetailArrow={Boolean(onOpen)}
                 tabIndex={onOpen ? 0 : undefined}
                 role={onOpen ? 'button' : undefined}
-                aria-label={onOpen ? `${rowId(item)} 상세 보기` : undefined}
+                aria-description={
+                  onOpen ? `${rowId(item)} 상세 보기` : undefined
+                }
                 className={
                   onOpen
                     ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary'
