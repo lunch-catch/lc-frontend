@@ -248,7 +248,8 @@ const StoreMap = ({ center, snapshotKey, stores }: StoreMapProps) => {
                   aria-label={`${store.name} ${formatPinLabel(store)} 할인`}
                   aria-pressed={isSelected}
                   // 지도는 다크 모드에서도 밝아서, 고르지 않은 핀은 모드와 상관없이 검정 바탕으로 둔다
-                  className={`rounded-full px-2.5 py-1 text-caption-mobile font-bold whitespace-nowrap shadow-md transition-transform ${
+                  // 진한 도로나 글자 위에 얹혀도 경계가 보이도록 얇은 흰 테두리를 두른다
+                  className={`rounded-full border border-white/80 px-2.5 py-1 text-caption-mobile font-bold whitespace-nowrap shadow-md transition-transform ${
                     isSelected
                       ? 'scale-110 bg-action-primary text-text-inverse'
                       : 'bg-(--primitive-neutral-900) text-(--primitive-neutral-0)'
