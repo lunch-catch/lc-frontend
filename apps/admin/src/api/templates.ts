@@ -7,10 +7,14 @@ export interface TemplateRecord {
   name: string;
   status: TemplateStatus;
   active: boolean;
+  /** 게시본과 별개로 편집 중인 임시저장이 있는지 나타낸다. DRAFT는 항상 true다. */
+  hasDraft: boolean;
   createdAt: string;
   activatedBy: number | null;
+  activatedByName: string | null;
   activatedAt: string | null;
   lastModifiedBy: number | null;
+  lastModifiedByName: string | null;
   lastModifiedAt: string | null;
   html: string;
 }
@@ -32,7 +36,7 @@ export interface TemplateGeneration {
   templateId: number;
   name: string;
   versionNumber: number;
-  status: 'DRAFT';
+  status: TemplateStatus;
   html: string;
   /** LLM 설명은 HTML로 해석하지 않으며 설명이 없는 응답은 빈 문자열이다. */
   message: string;
@@ -54,6 +58,10 @@ export interface TemplateChatReply {
 
 const basePath = '/v1/admin/templates';
 
+// 구버전 서버의 필드 누락과 관리자를 찾지 못한 null은 모두 이름 없음으로 처리한다.
+const isOptionalAdminName = (value: unknown) =>
+  value == null || typeof value === 'string';
+
 const assertTemplate = (data: TemplateRecord) => {
   if (
     !data ||
@@ -62,11 +70,18 @@ const assertTemplate = (data: TemplateRecord) => {
     typeof data.name !== 'string' ||
     typeof data.html !== 'string' ||
     typeof data.active !== 'boolean' ||
+    typeof data.hasDraft !== 'boolean' ||
     typeof data.createdAt !== 'string' ||
+    !isOptionalAdminName(data.lastModifiedByName) ||
+    !isOptionalAdminName(data.activatedByName) ||
     !['DRAFT', 'PUBLISHED'].includes(data.status)
   )
     throw new ApiError('템플릿 응답 형식을 확인할 수 없습니다.', 200);
-  return data;
+  return {
+    ...data,
+    lastModifiedByName: data.lastModifiedByName ?? null,
+    activatedByName: data.activatedByName ?? null,
+  };
 };
 
 export const getTemplates = async (signal?: AbortSignal) => {
@@ -123,6 +138,7 @@ export const generateTemplate = async (
     requestId: string;
   },
   id?: string,
+  signal?: AbortSignal,
 ) => {
   const path = id ? `${basePath}/${encodeURIComponent(id)}/versions` : basePath;
   const body = id
@@ -137,7 +153,7 @@ export const generateTemplate = async (
       };
   const data = await requestData<TemplateGeneration | TemplateChatReply>(
     path,
-    jsonOptions('POST', body),
+    { ...jsonOptions('POST', body), signal },
     [200, 201],
   );
   // 자연어 응답은 새 템플릿이나 버전을 만들지 않는다.
@@ -156,7 +172,7 @@ export const generateTemplate = async (
     return data;
   if (
     !data ||
-    data.status !== 'DRAFT' ||
+    (data.status !== 'DRAFT' && (!id || data.status !== 'PUBLISHED')) ||
     !Number.isSafeInteger(data.templateId) ||
     data.templateId <= 0 ||
     !Number.isSafeInteger(data.versionNumber) ||
@@ -198,11 +214,41 @@ export const publishTemplate = async (id: string, versionNumber: number) => {
   return data;
 };
 
+/** 이름 변경 응답만 병합해 게시본 HTML과 노출 상태를 유지한다. */
+export const renameTemplate = async (id: string, name: string) => {
+  const trimmedName = name.trim();
+  if (!trimmedName || trimmedName.length > 100)
+    throw new ApiError('템플릿명은 1~100자로 입력해 주세요.', 400);
+  const data = await requestData<{
+    templateId: number;
+    name: string;
+    lastModifiedBy: number;
+    lastModifiedByName?: string | null;
+    lastModifiedAt: string;
+  }>(
+    `${basePath}/${encodeURIComponent(id)}`,
+    jsonOptions('PATCH', { name: trimmedName }),
+    200,
+  );
+  if (
+    !data ||
+    String(data.templateId) !== id ||
+    data.name !== trimmedName ||
+    !Number.isSafeInteger(data.lastModifiedBy) ||
+    data.lastModifiedBy <= 0 ||
+    typeof data.lastModifiedAt !== 'string' ||
+    !isOptionalAdminName(data.lastModifiedByName)
+  )
+    throw new ApiError('템플릿 이름 변경 응답 형식을 확인할 수 없습니다.', 200);
+  return { ...data, lastModifiedByName: data.lastModifiedByName ?? null };
+};
+
 export const changeTemplateActive = async (id: string, active: boolean) => {
   const data = await requestData<{
     templateId: number;
     active: boolean;
     activatedBy: number;
+    activatedByName?: string | null;
     activatedAt: string;
   }>(
     `${basePath}/${encodeURIComponent(id)}/active`,
@@ -213,10 +259,11 @@ export const changeTemplateActive = async (id: string, active: boolean) => {
     String(data.templateId) !== id ||
     data.active !== active ||
     !Number.isSafeInteger(data.activatedBy) ||
-    typeof data.activatedAt !== 'string'
+    typeof data.activatedAt !== 'string' ||
+    !isOptionalAdminName(data.activatedByName)
   )
     throw new ApiError('템플릿 활성 상태 응답 형식을 확인할 수 없습니다.', 200);
-  return data;
+  return { ...data, activatedByName: data.activatedByName ?? null };
 };
 
 /** 초안과 모든 버전을 삭제하며, 성공한 204 응답은 JSON 본문을 읽지 않는다. */

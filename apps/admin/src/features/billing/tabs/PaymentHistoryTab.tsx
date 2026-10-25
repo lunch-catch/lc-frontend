@@ -257,7 +257,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
                 showDetailArrow
                 tabIndex={0}
                 role="button"
-                aria-label={`결제 ${item.paymentId} 상세 보기`}
+                aria-description={`결제 ${item.paymentId} 상세 보기`}
                 className="cursor-pointer focus-visible:outline-2 focus-visible:outline-action-primary"
                 onClick={() => setSelected(item)}
                 onKeyDown={(event) => {

@@ -116,3 +116,36 @@
   animation-duration: var(--default-transition-duration);
   animation-timing-function: var(--default-transition-timing-function);
 }
+
+/* 작은 글자도 밝은 페이지·보조 배경에서 읽히도록 관리자 앱의 대비만 보정한다. */
+:root:not([data-theme='dark']) {
+  --semantic-table-header-text: var(--semantic-text-secondary);
+  --semantic-text-secondary: color-mix(
+    in srgb,
+    var(--primitive-neutral-500) 88%,
+    black
+  );
+  --semantic-text-tertiary: color-mix(
+    in srgb,
+    var(--primitive-neutral-500) 90%,
+    black
+  );
+  --semantic-action-primary: var(--primitive-brand-700);
+  --semantic-action-primary-hover: var(--primitive-brand-800);
+  --semantic-text-brand: var(--primitive-brand-700);
+  --semantic-status-success-fg: color-mix(
+    in srgb,
+    var(--primitive-success-500) 82%,
+    black
+  );
+  --semantic-status-warning-fg: color-mix(
+    in srgb,
+    var(--primitive-warning-500) 75%,
+    black
+  );
+  --semantic-status-info-fg: color-mix(
+    in srgb,
+    var(--primitive-info-500) 90%,
+    black
+  );
+}

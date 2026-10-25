@@ -787,3 +787,217 @@ test('템플릿 오류는 잘못된 서버 메시지에 기본 안내를 쓰고 
     return true;
   });
 });
+
+test('템플릿 생성 대기 중 취소하면 같은 AbortSignal로 HTTP 요청을 중단한다', async () => {
+  const controller = new AbortController();
+  const api = setup(
+    (_url, options) =>
+      new Promise((_resolve, reject) => {
+        assert.equal(options.signal, controller.signal);
+        options.signal.addEventListener(
+          'abort',
+          () => reject(options.signal.reason),
+          { once: true },
+        );
+      }),
+  );
+  const pending = api.templates.generateTemplate(
+    {
+      name: '테스트',
+      requestPrompt: '포스터 수정',
+      requestId: 'cancel-request',
+    },
+    '1',
+    controller.signal,
+  );
+  controller.abort();
+  await assert.rejects(pending, (error) => error.name === 'AbortError');
+  assert.equal(api.calls.length, 1);
+});
+
+const publishedTemplate = {
+  templateId: 1,
+  name: '테스트',
+  status: 'PUBLISHED',
+  active: true,
+  hasDraft: false,
+  html: templateHtml,
+  createdAt: '2026-10-20T10:00:00+09:00',
+  activatedBy: 1,
+  activatedAt: '2026-10-20T10:00:00+09:00',
+  lastModifiedBy: 1,
+  lastModifiedAt: '2026-10-24T10:00:00+09:00',
+};
+
+test('게시된 템플릿의 임시저장 유무와 게시본 HTML을 목록·상세에서 보존한다', async () => {
+  for (const hasDraft of [true, false]) {
+    const template = { ...publishedTemplate, hasDraft };
+    const list = setup([template]);
+    const detail = setup(template);
+    assert.equal((await list.templates.getTemplates())[0].hasDraft, hasDraft);
+    assert.equal((await detail.templates.getTemplate('1')).html, templateHtml);
+  }
+});
+
+test('템플릿의 hasDraft 누락이나 잘못된 타입을 거부한다', async () => {
+  for (const hasDraft of [undefined, null, 0, 'true']) {
+    const { templates, client } = setup({ ...publishedTemplate, hasDraft });
+    await assert.rejects(templates.getTemplate('1'), isApiError(client));
+  }
+});
+
+test('게시된 템플릿 수정 응답은 PUBLISHED 상태와 새 임시저장 번호를 유지한다', async () => {
+  const { templates, calls } = setup(
+    { ...generatedTemplate, status: 'PUBLISHED', versionNumber: 6 },
+    201,
+  );
+  const response = await templates.generateTemplate(templateRequest, '1');
+  assert.equal(response.status, 'PUBLISHED');
+  assert.equal(response.versionNumber, 6);
+  assert.equal(calls[0].url, 'http://test/v1/admin/templates/1/versions');
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    requestPrompt: templateRequest.requestPrompt,
+    requestId: templateRequest.requestId,
+  });
+  const create = setup({ ...generatedTemplate, status: 'PUBLISHED' }, 201);
+  await assert.rejects(
+    create.templates.generateTemplate(templateRequest),
+    isApiError(create.client),
+  );
+});
+
+const renamedTemplate = {
+  templateId: 1,
+  name: '바꾼 이름',
+  lastModifiedBy: 2,
+  lastModifiedAt: '2026-10-24T11:00:00+09:00',
+};
+
+test('이름 수정은 공백을 제거한 이름만 PATCH로 보내고 수정자·시각을 반환한다', async () => {
+  const { templates, calls } = setup(renamedTemplate);
+  const renamed = await templates.renameTemplate('1', '  바꾼 이름  ');
+  assert.equal(renamed.lastModifiedBy, 2);
+  assert.equal(renamed.lastModifiedAt, renamedTemplate.lastModifiedAt);
+  assert.equal(calls[0].url, 'http://test/v1/admin/templates/1');
+  assert.equal(calls[0].options.method, 'PATCH');
+  assert.equal(calls[0].options.credentials, 'include');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { name: '바꾼 이름' });
+});
+
+test('잘못된 이름은 전송하지 않고 이름 변경의 잘못된 응답·서버 실패는 거부한다', async () => {
+  const invalid = setup(renamedTemplate);
+  for (const name of ['', '   ', '가'.repeat(101)])
+    await assert.rejects(
+      invalid.templates.renameTemplate('1', name),
+      isApiError(invalid.client),
+    );
+  assert.equal(invalid.calls.length, 0);
+  for (const data of [
+    null,
+    { ...renamedTemplate, templateId: 2 },
+    { ...renamedTemplate, name: '다른 이름' },
+    { ...renamedTemplate, lastModifiedBy: null },
+    { ...renamedTemplate, lastModifiedAt: null },
+  ]) {
+    const { templates, client } = setup(data);
+    await assert.rejects(
+      templates.renameTemplate('1', '바꾼 이름'),
+      isApiError(client),
+    );
+  }
+  const failure = setup(null, 403, {
+    code: 'COMMON-004',
+    message: '권한 없음',
+  });
+  await assert.rejects(
+    failure.templates.renameTemplate('1', '바꾼 이름'),
+    isApiError(failure.client),
+  );
+});
+
+test('재게시는 선택한 임시저장 번호만 전송하고 활성 상태 변경을 요청하지 않는다', async () => {
+  const { templates, calls } = setup({
+    ...publishedTemplate,
+    publishedAt: '2026-10-24T11:00:00+09:00',
+  });
+  const result = await templates.publishTemplate('1', 6);
+  assert.equal(result.status, 'PUBLISHED');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'http://test/v1/admin/templates/1/publish');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { versionNumber: 6 });
+});
+
+test('POSTER-006은 삭제 제한, POSTER-007은 새 임시저장 없음으로 안내한다', () => {
+  const { templateUtils, client } = setup(null);
+  assert.equal(
+    templateUtils.getTemplateError(new client.ApiError('', 409, 'POSTER-006')),
+    '게시된 템플릿은 삭제할 수 없습니다.',
+  );
+  assert.match(
+    templateUtils.getTemplateError(new client.ApiError('', 409, 'POSTER-007')),
+    /새로 게시할 임시저장/,
+  );
+});
+
+test('템플릿 목록·상세는 관리자 이름을 유지하고 누락·null은 이름 없음으로 처리한다', async () => {
+  for (const name of ['수정 담당자', null, undefined]) {
+    const template = {
+      ...publishedTemplate,
+      lastModifiedByName: name,
+      activatedByName: name,
+    };
+    const list = await setup([template]).templates.getTemplates();
+    const detail = await setup(template).templates.getTemplate('1');
+    for (const result of [list[0], detail]) {
+      assert.equal(result.lastModifiedByName, name ?? null);
+      assert.equal(result.activatedByName, name ?? null);
+      assert.equal(result.lastModifiedBy, publishedTemplate.lastModifiedBy);
+    }
+  }
+});
+
+test('이름 수정·활성 변경 응답의 관리자 이름은 그대로 전달한다', async () => {
+  for (const name of ['담당 관리자', null, undefined]) {
+    const renamed = await setup({
+      ...renamedTemplate,
+      lastModifiedByName: name,
+    }).templates.renameTemplate('1', renamedTemplate.name);
+    assert.equal(renamed.lastModifiedByName, name ?? null);
+    const active = await setup({
+      templateId: 1,
+      active: false,
+      activatedBy: 2,
+      activatedAt: publishedTemplate.activatedAt,
+      activatedByName: name,
+    }).templates.changeTemplateActive('1', false);
+    assert.equal(active.activatedByName, name ?? null);
+  }
+});
+
+test('문자열이나 null이 아닌 템플릿 관리자 이름 필드는 거부한다', async () => {
+  for (const name of [12, {}, []]) {
+    for (const field of ['lastModifiedByName', 'activatedByName']) {
+      const api = setup({ ...publishedTemplate, [field]: name });
+      await assert.rejects(
+        api.templates.getTemplate('1'),
+        isApiError(api.client),
+      );
+    }
+    const rename = setup({ ...renamedTemplate, lastModifiedByName: name });
+    await assert.rejects(
+      rename.templates.renameTemplate('1', renamedTemplate.name),
+      isApiError(rename.client),
+    );
+    const active = setup({
+      templateId: 1,
+      active: false,
+      activatedBy: 2,
+      activatedAt: publishedTemplate.activatedAt,
+      activatedByName: name,
+    });
+    await assert.rejects(
+      active.templates.changeTemplateActive('1', false),
+      isApiError(active.client),
+    );
+  }
+});

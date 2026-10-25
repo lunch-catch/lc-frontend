@@ -1,6 +1,11 @@
 import { Fragment } from 'react';
 import { Button, StatusBadge } from '@repo/ui';
-import { ArrowUpRight, MessageSquareText, MousePointer2 } from 'lucide-react';
+import {
+  ArrowUpRight,
+  MessageSquareText,
+  MousePointer2,
+  Pencil,
+} from 'lucide-react';
 
 import { ScrollArea } from '@admin/ui/ScrollArea/ScrollArea';
 
@@ -12,6 +17,8 @@ import { TemplateVersionMessage } from './TemplateVersionMessage';
 
 interface TemplateChatPanelProps {
   chat: TemplateChatState;
+  onViewList: () => void;
+  onRename: () => void;
 }
 
 /** 전송 대기 중과 완료된 말풍선에서 같은 선택 태그를 표시한다. */
@@ -37,7 +44,11 @@ const TemplateMessageTarget = ({ label }: { label: string }) => (
   </div>
 );
 
-export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
+export const TemplateChatPanel = ({
+  chat,
+  onViewList,
+  onRename,
+}: TemplateChatPanelProps) => {
   const {
     editor,
     published,
@@ -62,7 +73,7 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
   };
 
   return (
-    <section className="template-editor__chat flex min-h-0 min-w-0 flex-col border-r">
+    <section className="template-editor__chat flex min-h-0 min-w-0 flex-col">
       <header className="template-editor__panel-heading flex shrink-0 items-center gap-2 border-b p-4">
         <MessageSquareText
           aria-hidden="true"
@@ -74,6 +85,19 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
         >
           {chat.displayName}
         </h2>
+        {/* 이름 변경 API를 호출할 수 있는 저장된 템플릿에서만 수정 버튼을 표시한다. */}
+        {editor.template && (
+          <button
+            type="button"
+            aria-label="템플릿 이름 수정"
+            title="템플릿 이름 수정"
+            disabled={locked}
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={onRename}
+          >
+            <Pencil aria-hidden="true" className="size-3.5" />
+          </button>
+        )}
       </header>
       <ScrollArea
         className="flex flex-col gap-5 px-5 py-4"
@@ -124,7 +148,7 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
           )}
         {published && (
           <TemplateChatBubble variant="assistant">
-            최종 저장된 템플릿입니다. 이후에는 수정할 수 없습니다.
+            게시된 템플릿입니다. 수정 내용은 다시 게시할 때 점주에게 반영됩니다.
           </TemplateChatBubble>
         )}
         {editor.nextPageToken && (
@@ -177,6 +201,8 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
               <TemplateChatBubble variant="assistant">
                 <TemplateChatReveal
                   text={message.assistantMessage}
+                  complete={chat.activeRevealId !== message.id}
+                  onComplete={() => chat.finishReveal(message.id)}
                   onProgress={followLatestMessage}
                 />
               </TemplateChatBubble>
@@ -214,7 +240,7 @@ export const TemplateChatPanel = ({ chat }: TemplateChatPanelProps) => {
           </p>
         )}
       </ScrollArea>
-      {!published && <TemplateChatComposer chat={chat} />}
+      <TemplateChatComposer chat={chat} onViewList={onViewList} />
     </section>
   );
 };

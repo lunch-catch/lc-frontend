@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { setImmediate } from 'node:timers/promises';
 import test from 'node:test';
@@ -23,7 +24,7 @@ const deferred = () => {
  * 브라우저 없이 실제 요청 모듈과 Store를 검사한다.
  * 테스트마다 모듈 상태를 격리하고 fetch만 교체해 응답 순서를 제어한다.
  */
-const setup = (fetchMock) => {
+const setup = (fetchMock, browser = {}) => {
   const context = vm.createContext({
     fetch: fetchMock,
     Response,
@@ -33,12 +34,15 @@ const setup = (fetchMock) => {
     Error,
     Number,
     JSON,
+    crypto: webcrypto,
+    ...browser,
   });
   const modules = {};
   for (const [key, path] of [
     ['client', 'api/client.ts'],
     ['listResponse', 'api/listResponse.ts'],
     ['auth', 'api/auth.ts'],
+    ['adminAuthSync', 'auth/adminAuthSync.ts'],
     ['store', 'auth/adminAuthStore.ts'],
   ]) {
     const source = readFileSync(
@@ -60,6 +64,352 @@ const setup = (fetchMock) => {
   }
   return modules;
 };
+
+// 서로 다른 VM이 공유하는 브라우저 잠금·저장소. 이벤트 지연도 재현한다.
+const createBrowserTabs = () => {
+  const values = new Map();
+  const tabs = [];
+  const lockNames = new Set();
+  let tail = Promise.resolve();
+  const locks = {
+    request(name, work) {
+      lockNames.add(name);
+      const pending = tail.then(work);
+      tail = pending.catch(() => undefined);
+      return pending;
+    },
+  };
+  return {
+    lockNames,
+    values,
+    create() {
+      const handlers = new Map();
+      const tab = {
+        paused: false,
+        dispatch(type, event) {
+          if (!tab.paused)
+            handlers.get(type)?.forEach((listener) => listener(event));
+        },
+        window: {
+          localStorage: {
+            getItem: (key) => values.get(key) ?? null,
+            setItem(key, value) {
+              values.set(key, value);
+              for (const other of tabs)
+                if (other !== tab)
+                  queueMicrotask(() => other.dispatch('storage', { key }));
+            },
+          },
+          addEventListener(type, listener) {
+            if (!handlers.has(type)) handlers.set(type, []);
+            handlers.get(type).push(listener);
+          },
+        },
+        navigator: { locks },
+      };
+      tabs.push(tab);
+      return tab;
+    },
+  };
+};
+
+test('여러 탭의 동시 401은 한 번만 재발급하고 각 원래 요청을 재시도한다', async () => {
+  const browser = createBrowserTabs();
+  const gate = deferred();
+  let refreshes = 0;
+  let calls = 0;
+  const fetchMock = async (url) => {
+    if (url.endsWith('/tokens')) return success();
+    if (url.endsWith(':refresh')) {
+      refreshes++;
+      await gate.promise;
+      return success();
+    }
+    calls++;
+    return refreshes && calls > 2 ? success() : expired();
+  };
+  const left = setup(fetchMock, browser.create());
+  const right = setup(fetchMock, browser.create());
+  await left.store.loginAdmin(credentials);
+  await setImmediate();
+  const requests = Promise.all([
+    left.client.request('/v1/admin/members'),
+    right.client.request('/v1/admin/members'),
+  ]);
+  await setImmediate();
+  assert.equal(refreshes, 1);
+  gate.resolve();
+  await requests;
+  assert.equal(refreshes, 1);
+  assert.equal(calls, 4);
+  assert.equal(browser.lockNames.size, 1);
+});
+
+test('새 탭들의 초기 인증 복원도 동시에 토큰을 회전하지 않는다', async () => {
+  const browser = createBrowserTabs();
+  const gate = deferred();
+  let refreshes = 0;
+  const fetchMock = async () => {
+    refreshes++;
+    await gate.promise;
+    return success();
+  };
+  const left = setup(fetchMock, browser.create());
+  const right = setup(fetchMock, browser.create());
+  const restores = Promise.all([
+    left.store.restoreAdmin(),
+    right.store.restoreAdmin(),
+  ]);
+  await setImmediate();
+  gate.resolve();
+  await restores;
+  assert.equal(refreshes, 1);
+  assert.equal(left.store.getAuthState().admin.adminId, 1);
+  assert.equal(right.store.getAuthState().admin.adminId, 1);
+});
+
+test('다른 탭 로그인·계정 변경은 기존 요청을 재전송하지 않는다', async () => {
+  const browser = createBrowserTabs();
+  const gate = deferred();
+  let current = adminA;
+  let protectedCalls = 0;
+  let refreshes = 0;
+  const fetchMock = async (url) => {
+    if (url.endsWith('/tokens')) return success(current);
+    if (url.endsWith(':refresh')) {
+      refreshes++;
+      return success(current);
+    }
+    protectedCalls++;
+    return gate.promise;
+  };
+  const left = setup(fetchMock, browser.create());
+  const right = setup(fetchMock, browser.create());
+  await left.store.loginAdmin(credentials);
+  const request = left.client.request('/v1/admin/admins', {
+    method: 'POST',
+    body: '{}',
+  });
+  const rejected = assert.rejects(request, (error) => error.status === 0);
+  current = adminB;
+  await right.store.loginAdmin(credentials);
+  gate.resolve(expired());
+  await rejected;
+  assert.equal(protectedCalls, 1);
+  assert.equal(refreshes, 0);
+  assert.equal(left.store.getAuthState().admin.adminId, 2);
+});
+
+test('storage 알림이 늦어도 계정 변경 후의 요청과 이전 성공 응답을 막는다', async () => {
+  const browser = createBrowserTabs();
+  const leftTab = browser.create();
+  const gate = deferred();
+  let current = adminA;
+  let calls = 0;
+  const fetchMock = async (url) => {
+    if (url.endsWith('/tokens')) return success(current);
+    calls++;
+    return gate.promise;
+  };
+  const left = setup(fetchMock, leftTab);
+  const right = setup(fetchMock, browser.create());
+  await left.store.loginAdmin(credentials);
+  const request = left.client.request('/v1/admin/members');
+  const rejected = assert.rejects(request, (error) => error.status === 0);
+  leftTab.paused = true;
+  current = adminB;
+  await right.store.loginAdmin(credentials);
+  await assert.rejects(
+    left.client.request('/v1/admin/members'),
+    (error) => error.status === 0,
+  );
+  gate.resolve(success());
+  await rejected;
+  assert.equal(calls, 1);
+  leftTab.paused = false;
+  leftTab.dispatch('focus');
+  assert.equal(left.store.getAuthState().admin.adminId, 2);
+});
+
+test('재발급과 로그아웃은 같은 잠금으로 직렬화하고 모든 탭 화면을 로그아웃한다', async () => {
+  const browser = createBrowserTabs();
+  const gate = deferred();
+  const order = [];
+  const fetchMock = async (url, options) => {
+    if (options.method === 'DELETE') {
+      order.push('logout');
+      return new Response(null, { status: 204 });
+    }
+    if (url.endsWith(':refresh')) {
+      order.push('refresh:start');
+      await gate.promise;
+      order.push('refresh:end');
+    }
+    return success();
+  };
+  const left = setup(fetchMock, browser.create());
+  const right = setup(fetchMock, browser.create());
+  await left.store.loginAdmin(credentials);
+  const refresh = left.store.refreshAdmin();
+  await setImmediate();
+  const logout = right.store.logoutAdmin();
+  await setImmediate();
+  assert.deepEqual(order, ['refresh:start']);
+  gate.resolve();
+  await Promise.all([refresh, logout]);
+  await setImmediate();
+  assert.deepEqual(order, ['refresh:start', 'refresh:end', 'logout']);
+  assert.equal(left.store.getAuthState().admin, null);
+  assert.equal(right.store.getAuthState().admin, null);
+  assert.equal(browser.lockNames.size, 1);
+});
+
+test('재사용 감지와 회전 결과 미확정은 현재 브라우저 탭들에 재로그인을 안내한다', async () => {
+  for (const [status, code] of [
+    [401, 'AUTH-004'],
+    [503, 'AUTH-002'],
+  ]) {
+    const browser = createBrowserTabs();
+    let refreshes = 0;
+    const fetchMock = async (url) => {
+      if (url.endsWith('/tokens')) return success();
+      refreshes++;
+      return Response.json({ code }, { status });
+    };
+    const left = setup(fetchMock, browser.create());
+    const right = setup(fetchMock, browser.create());
+    await left.store.loginAdmin(credentials);
+    await assert.rejects(
+      left.store.refreshAdmin(),
+      (error) => error.code === code,
+    );
+    await setImmediate();
+    assert.equal(refreshes, 1);
+    assert.equal(left.store.getAuthState().admin, null);
+    assert.equal(right.store.getAuthState().admin, null);
+    assert.match(right.store.getAuthState().authNotice, /다시 로그인/);
+    assert.doesNotMatch(right.store.getAuthState().authNotice, /모든 기기/);
+  }
+});
+
+test('새로 열린 탭은 저장된 관리자 정보만 믿고 인증 복원을 생략하지 않는다', async () => {
+  const browser = createBrowserTabs();
+  const first = setup(async () => success(), browser.create());
+  await first.store.loginAdmin(credentials);
+  let refreshes = 0;
+  const tab = browser.create();
+  const second = setup(async () => {
+    refreshes++;
+    return Response.json({ code: 'AUTH-003' }, { status: 401 });
+  }, tab);
+  tab.dispatch('focus');
+  tab.dispatch('pageshow');
+  assert.equal(second.store.getAuthState().admin, null);
+  await assert.rejects(second.store.restoreAdmin());
+  assert.equal(refreshes, 1);
+  assert.equal(second.store.getAuthState().admin, null);
+  assert.equal(first.store.getAuthState().admin, null);
+});
+
+test('다른 탭의 재발급이 끝난 뒤에만 로그인 요청이 실행된다', async () => {
+  const browser = createBrowserTabs();
+  const gate = deferred();
+  const order = [];
+  let current = adminA;
+  const fetchMock = async (url) => {
+    if (url.endsWith(':refresh')) {
+      order.push('refresh:start');
+      await gate.promise;
+      order.push('refresh:end');
+      return success(adminA);
+    }
+    order.push('login');
+    return success(current);
+  };
+  const left = setup(fetchMock, browser.create());
+  const right = setup(fetchMock, browser.create());
+  await left.store.loginAdmin(credentials);
+  order.length = 0;
+  const refresh = left.store.refreshAdmin();
+  await setImmediate();
+  current = adminB;
+  const login = right.store.loginAdmin(credentials);
+  await setImmediate();
+  assert.deepEqual(order, ['refresh:start']);
+  gate.resolve();
+  await Promise.all([refresh, login]);
+  await setImmediate();
+  assert.deepEqual(order, ['refresh:start', 'refresh:end', 'login']);
+  assert.equal(left.store.getAuthState().admin.adminId, 2);
+  assert.equal(right.store.getAuthState().admin.adminId, 2);
+});
+
+test('429 대기 시간은 탭 간 공유하고 재발급 요청을 반복하지 않는다', async () => {
+  const browser = createBrowserTabs();
+  let refreshes = 0;
+  const fetchMock = async (url) => {
+    if (url.endsWith('/tokens')) return success();
+    refreshes++;
+    return new Response(null, {
+      status: 429,
+      headers: { 'Retry-After': '60' },
+    });
+  };
+  const left = setup(fetchMock, browser.create());
+  const right = setup(fetchMock, browser.create());
+  await left.store.loginAdmin(credentials);
+  const results = await Promise.allSettled([
+    left.store.refreshAdmin(),
+    right.store.refreshAdmin(),
+  ]);
+  assert.equal(refreshes, 1);
+  assert.ok(
+    results.every(
+      (result) => result.status === 'rejected' && result.reason.status === 429,
+    ),
+  );
+  assert.equal(left.store.getAuthState().admin.adminId, 1);
+  assert.equal(right.store.getAuthState().admin.adminId, 1);
+});
+
+test('Web Locks를 사용할 수 없으면 잠금 없는 인증 요청을 보내지 않는다', async () => {
+  const browser = createBrowserTabs();
+  const tab = browser.create();
+  tab.navigator = {};
+  let calls = 0;
+  const { store } = setup(async () => {
+    calls++;
+    return success();
+  }, tab);
+  await assert.rejects(store.restoreAdmin(), (error) => error.status === 0);
+  await assert.rejects(
+    store.loginAdmin(credentials),
+    (error) => error.status === 0,
+  );
+  assert.equal(calls, 0);
+  assert.equal(store.getAuthState().isRestoring, false);
+});
+
+test('같은 탭에서 로그인 직후 요청한 로그아웃은 로그인 완료 후 실행한다', async () => {
+  const gate = deferred();
+  const order = [];
+  const { store } = setup(async (_url, options) => {
+    if (options.method === 'DELETE') {
+      order.push('logout');
+      return new Response(null, { status: 204 });
+    }
+    order.push('login');
+    await gate.promise;
+    return success();
+  });
+  const login = store.loginAdmin(credentials);
+  await setImmediate();
+  const logout = store.logoutAdmin();
+  gate.resolve();
+  await Promise.all([login, logout]);
+  assert.deepEqual(order, ['login', 'logout']);
+  assert.equal(store.getAuthState().admin, null);
+});
 
 test('동일 세션의 동시 인증 오류는 재발급 한 번 후 각각 재시도한다', async () => {
   let refreshes = 0;

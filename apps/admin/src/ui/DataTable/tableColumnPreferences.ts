@@ -37,6 +37,7 @@ export const normalizeColumnPreferences = (
 };
 
 interface TableChildProps {
+  renderRow?: (item: unknown) => ReactNode;
   style?: CSSProperties;
   children?: ReactNode;
   columnIndex?: number;
@@ -82,6 +83,24 @@ export const reorderTableChildren = (
 ): ReactNode =>
   flattenChildren(children).map((child) => {
     if (!isValidElement<TableChildProps>(child)) return child;
+    // 가상화 행은 렌더 시점에도 저장된 열 순서와 숨김 설정을 적용한다.
+    if (child.props.renderRow) {
+      const renderRow = child.props.renderRow;
+      return cloneElement(child, {
+        colSpan: indexes.length,
+        renderRow: (item: unknown) =>
+          Children.toArray(
+            reorderTableChildren(
+              renderRow(item),
+              indexes,
+              columnCount,
+              rowType,
+              headerCellType,
+              columns,
+            ),
+          )[0],
+      });
+    }
     const cells = flattenChildren(child.props.children);
     if (child.type === 'tr' || child.type === rowType) {
       const stateCell =

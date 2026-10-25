@@ -13,6 +13,7 @@ import { DashboardTrendChart } from './DashboardTrendChart';
 import type { FunnelMetric } from './dashboardTypes';
 import {
   funnelMetrics,
+  getDashboardComparisonLabel,
   getDashboardMetricHint,
   getFraudDetailQuery,
 } from './dashboardUtils';
@@ -47,6 +48,12 @@ export const DashboardFunnel = ({
   const rows = resource.data?.items ?? [];
   const previous = previousResource.data?.items ?? [];
   const canCompare = rows.length > 0 && previous.length === rows.length;
+  const comparisonLabel = getDashboardComparisonLabel(previousResource.data);
+  const comparisonHint =
+    comparisonLabel ??
+    (previousResource.loading
+      ? '이전 기간 데이터를 불러오는 중입니다.'
+      : '이전 기간 데이터가 없어 비교할 수 없습니다.');
   const selected = funnelMetrics.find((item) => item.value === metric)!;
   const valid = sumAnalytics(resource.data, 'validImpressionCount');
   const invalid = sumAnalytics(resource.data, 'invalidImpressionCount');
@@ -62,18 +69,34 @@ export const DashboardFunnel = ({
   const fraudPeriod = fraudQuery ? new URLSearchParams(fraudQuery) : null;
   // aria-label이 링크 본문을 대신 읽으므로 보이는 조회 기간은 설명으로 연결한다.
   const fraudPeriodId = useId();
+  const comparisonHintId = useId();
   return (
     <DashboardSection
       title="사용자 이용 현황"
       featured
       description="발급·사용·찜·유효 노출 건수와 일별 변화를 확인할 수 있습니다."
+      // title의 브라우저 표시 지연 없이 호버·키보드 포커스로 비교 기간을 안내한다.
       action={
-        <Toggle
-          label="이전 기간 비교"
-          checked={compare && canCompare}
-          disabled={!canCompare}
-          onChange={(event) => onCompareChange(event.target.checked)}
-        />
+        <span
+          className="group/comparison relative inline-flex cursor-default"
+          tabIndex={canCompare ? undefined : 0}
+          aria-describedby={comparisonHintId}
+        >
+          <Toggle
+            label="이전 기간 비교"
+            aria-describedby={comparisonHintId}
+            checked={compare && canCompare}
+            disabled={!canCompare}
+            onChange={(event) => onCompareChange(event.target.checked)}
+          />
+          <span
+            id={comparisonHintId}
+            role="tooltip"
+            className="pointer-events-none invisible absolute right-0 top-full z-40 mt-1 w-max max-w-[calc(100vw-2rem)] rounded-md border border-border-subtle bg-bg-surface px-2 py-1 text-caption-web text-text-primary shadow-sm group-hover/comparison:visible group-focus-within/comparison:visible"
+          >
+            {comparisonHint}
+          </span>
+        </span>
       }
     >
       {/* 행동별 합계를 비교하며, 서로 다른 행동 사이의 전환율로 해석하지 않는다. */}
@@ -170,6 +193,7 @@ export const DashboardFunnel = ({
                 compare && canCompare
                   ? {
                       name: '이전 기간',
+                      description: comparisonLabel,
                       values: previous.map((row) => row[fields[metric]]),
                     }
                   : undefined

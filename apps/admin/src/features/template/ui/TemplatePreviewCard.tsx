@@ -19,7 +19,8 @@ export const TemplatePreviewCard = ({
   template,
 }: TemplatePreviewCardProps) => {
   const canChangeActivation = template.status === 'PUBLISHED';
-  const openLabel = canChangeActivation ? '상세보기' : '수정';
+  const openLabel =
+    canChangeActivation && template.hasDraft ? '이어서 수정' : '수정';
   // 수정 시각이 없는 데이터는 최초 등록 시각으로 대체하지 않고 빈 값으로 표시한다.
   const modifiedAt = template.lastModifiedAt;
 
@@ -32,12 +33,17 @@ export const TemplatePreviewCard = ({
         >
           {template.name}
         </h3>
-        <StatusBadge
-          className="shrink-0"
-          variant={canChangeActivation ? 'success' : 'neutral'}
-        >
-          {canChangeActivation ? '게시됨' : '임시저장 중'}
-        </StatusBadge>
+        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+          {canChangeActivation && template.hasDraft && (
+            <StatusBadge variant="warning">수정 중</StatusBadge>
+          )}
+          <StatusBadge
+            className="shrink-0"
+            variant={canChangeActivation ? 'success' : 'neutral'}
+          >
+            {canChangeActivation ? '게시됨' : '임시저장 중'}
+          </StatusBadge>
+        </div>
       </header>
 
       <button
@@ -58,11 +64,9 @@ export const TemplatePreviewCard = ({
         </div>
         <div className="flex items-baseline gap-1.5">
           <dt className="shrink-0">최종 수정자:</dt>
-          {/* 목록 API는 수정자의 이름 대신 관리자 내부 ID를 제공한다. */}
+          {/* 이름을 확인할 수 없을 때 관리자 ID나 로그인 ID로 대체하지 않는다. */}
           <dd className="min-w-0">
-            {template.lastModifiedBy == null
-              ? '—'
-              : '관리자 #' + template.lastModifiedBy}
+            {template.lastModifiedByName?.trim() || '—'}
           </dd>
         </div>
       </dl>

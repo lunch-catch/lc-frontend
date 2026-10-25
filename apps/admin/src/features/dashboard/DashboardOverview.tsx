@@ -1,9 +1,10 @@
-import { formatDate } from '@repo/utils';
-
 import { sumAnalytics } from '@admin/api/analyticsUtils';
 
 import { DashboardMetricCard } from './DashboardMetricCard';
-import { getDashboardMetricHint } from './dashboardUtils';
+import {
+  getDashboardComparisonLabel,
+  getDashboardMetricHint,
+} from './dashboardUtils';
 import type { useDashboardMetrics } from './useDashboardMetrics';
 
 interface DashboardOverviewProps {
@@ -12,10 +13,7 @@ interface DashboardOverviewProps {
 export const DashboardOverview = ({ metrics }: DashboardOverviewProps) => {
   const { sales, previousSales } = metrics;
   // 증감률에 사용한 이전 조회 응답의 실제 기간을 안내한다.
-  const previousSeries = previousSales.data;
-  const comparisonLabel = previousSeries
-    ? `${formatDate(previousSeries.from)} ~ ${formatDate(previousSeries.to)} 대비`
-    : undefined;
+  const comparisonLabel = getDashboardComparisonLabel(previousSales.data);
   const cards = [
     {
       label: '소진액 · 광고 매출',

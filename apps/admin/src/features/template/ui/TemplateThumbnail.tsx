@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  TEMPLATE_PREVIEW_HEIGHT,
+  TEMPLATE_PREVIEW_WIDTH,
+} from '../templatePreviewSize';
 import { createSelectablePreviewHtml } from '../templateSelection';
-
-const previewWidth = 420;
-const previewHeight = (previewWidth * 297) / 210;
 
 interface TemplateThumbnailProps {
   html: string;
@@ -19,13 +20,10 @@ export const TemplateThumbnail = ({ html, name }: TemplateThumbnailProps) => {
   useEffect(() => {
     const container = containerRef.current;
     if (!container || typeof IntersectionObserver === 'undefined') return;
-    // 화면 위아래 300px부터 준비하고, 생성한 iframe은 유지해 재진입 시 로딩을 반복하지 않는다.
+    // 화면 근처에서만 iframe을 유지하고 멀어지면 문서와 관찰자를 함께 해제한다.
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setShouldRenderPreview(true);
-          observer.disconnect();
-        }
+        setShouldRenderPreview(entries.some((entry) => entry.isIntersecting));
       },
       { rootMargin: '300px 0px' },
     );
@@ -57,6 +55,9 @@ const LoadedTemplateThumbnail = ({ html, name }: TemplateThumbnailProps) => {
     );
     // 브라우저 기본 body 여백이 A4 바깥으로 내용을 밀어내지 않게 한다.
     document.body.style.margin = '0';
+    // 목록의 작은 썸네일은 스크롤 조작 없이 A4 한 장만 표시한다.
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
     return `<!doctype html>\n${document.documentElement.outerHTML}`;
   }, [html]);
 
@@ -65,7 +66,7 @@ const LoadedTemplateThumbnail = ({ html, name }: TemplateThumbnailProps) => {
     if (!container) return;
     // 창 크기가 그대로여도 사이드바 등으로 카드 너비가 바뀌면 배율을 갱신한다.
     const observer = new ResizeObserver(([entry]) => {
-      if (entry) setScale(entry.contentRect.width / previewWidth);
+      if (entry) setScale(entry.contentRect.width / TEMPLATE_PREVIEW_WIDTH);
     });
     observer.observe(container);
     return () => observer.disconnect();
@@ -76,13 +77,13 @@ const LoadedTemplateThumbnail = ({ html, name }: TemplateThumbnailProps) => {
     <div ref={containerRef} className="absolute inset-0">
       <iframe
         className="pointer-events-none absolute left-0 top-0 origin-top-left border-0"
-        height={previewHeight}
+        height={TEMPLATE_PREVIEW_HEIGHT}
         sandbox=""
         srcDoc={previewHtml}
         style={{ transform: `scale(${scale})` }}
         tabIndex={-1}
         title={`${name} 미리보기`}
-        width={previewWidth}
+        width={TEMPLATE_PREVIEW_WIDTH}
       />
     </div>
   );

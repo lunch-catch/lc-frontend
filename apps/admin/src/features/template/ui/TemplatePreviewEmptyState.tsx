@@ -1,4 +1,4 @@
-import { Image, Sparkles } from 'lucide-react';
+import { Image } from 'lucide-react';
 
 export const TemplatePreviewEmptyState = () => (
   <div className="template-editor__empty-poster flex size-full flex-col items-center justify-center rounded-lg border px-5 text-center shadow-sm">
@@ -15,10 +15,6 @@ export const TemplatePreviewEmptyState = () => (
       <span className="h-1 w-14 rounded-full bg-current opacity-20" />
       <span className="h-1 w-10 rounded-full bg-current opacity-15" />
     </div>
-    <span className="mb-2 flex items-center gap-1.5 text-caption-web text-text-brand">
-      <Sparkles aria-hidden="true" className="size-3.5" />
-      아이디어가 포스터로
-    </span>
     <p className="text-body-sm-web font-semibold text-text-primary">
       첫 대화를 시작해 보세요
     </p>

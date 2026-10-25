@@ -16,7 +16,11 @@ const { outputText } = ts.transpileModule(source, {
 });
 const exports = {};
 vm.runInNewContext('(function(exports) {' + outputText + '\n})')(exports);
-const { buildSelectedTemplatePrompt, parseSelectedTemplatePrompt } = exports;
+const {
+  buildSelectedTemplatePrompt,
+  parseSelectedTemplatePrompt,
+  filterTemplatePreviewSrcset,
+} = exports;
 
 for (const source of ['preview', 'code']) {
   test(
@@ -102,4 +106,62 @@ test('선택 라벨은 영역명 또는 HTML 태그명만 표시한다', () => {
   ]) {
     assert.equal(exports.formatTemplateTargetLabel(label), expected);
   }
+});
+
+const previewDataImage = 'data:image/png;base64,iVBORw0KGgo=';
+
+test('srcset의 원격 후보만 제거하고 데이터·blob 후보와 배율을 보존한다', () => {
+  assert.equal(
+    filterTemplatePreviewSrcset(
+      'https://example.com/a.png 1x, ' +
+        previewDataImage +
+        ' 2x, blob:https://example.com/local 3x',
+    ),
+    previewDataImage + ' 2x, blob:https://example.com/local 3x',
+  );
+});
+
+test('데이터 URL의 내부 쉼표는 후보 구분자로 나누지 않는다', () => {
+  const svg = 'data:image/svg+xml,%3Csvg%3E,%3C/svg%3E';
+  assert.equal(
+    filterTemplatePreviewSrcset(svg + ' 1x, ' + previewDataImage + ' 2x'),
+    svg + ' 1x, ' + previewDataImage + ' 2x',
+  );
+  assert.equal(filterTemplatePreviewSrcset(previewDataImage), previewDataImage);
+  assert.equal(
+    filterTemplatePreviewSrcset(previewDataImage + ', blob:local 2x'),
+    previewDataImage + ', blob:local 2x',
+  );
+});
+
+test('srcset의 너비·소수 배율·지수 배율과 ASCII 공백을 유지한다', () => {
+  assert.equal(
+    filterTemplatePreviewSrcset(' \t, blob:small\t320w,\nblob:large 640w, '),
+    'blob:small 320w, blob:large 640w',
+  );
+  for (const descriptor of ['.5x', '1.5x', '2e0x'])
+    assert.equal(
+      filterTemplatePreviewSrcset(previewDataImage + ' ' + descriptor),
+      previewDataImage + ' ' + descriptor,
+    );
+});
+
+test('허용하지 않은 URL과 잘못된 후보는 남기지 않는다', () => {
+  for (const value of [
+    '',
+    'https://example.com/a.png 1x, /local.png 2x',
+    'data:text/html,hello 1x',
+    'javascript:alert(1) 1x',
+    'blob:local -1x',
+    'blob:local 0w',
+    'blob:local 1x 2x',
+    'blob:local nonsense',
+  ])
+    assert.equal(filterTemplatePreviewSrcset(value), '');
+  assert.equal(
+    filterTemplatePreviewSrcset(
+      'https://example.com/a.png invalid(a,b), blob:local 2x',
+    ),
+    'blob:local 2x',
+  );
 });
