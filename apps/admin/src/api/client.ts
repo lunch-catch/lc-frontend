@@ -67,7 +67,7 @@ interface AuthRecovery {
   getVersion: () => number;
   getSessionId: () => number | null;
   refresh: () => Promise<unknown>;
-  expire: (sessionId: number) => void;
+  expire: (sessionId: number) => void | Promise<void>;
 }
 
 let authRecovery: AuthRecovery | undefined;
@@ -182,7 +182,8 @@ export const request = async (
         retryError.status === 401 &&
         retryError.code === 'AUTH-005'
       )
-        recovery.expire(sessionId);
+        // 만료도 인증 잠금을 기다리므로 상태 반영이 끝난 뒤 요청 실패를 전달한다.
+        await recovery.expire(sessionId);
       throw retryError;
     }
   }
