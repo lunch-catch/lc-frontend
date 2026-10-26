@@ -121,19 +121,20 @@ export const PointAdjustmentModal = ({
         if (!mutation.busy) onClose();
       }}
       title={mismatch ? '정산 불일치 정정' : '포인트 수동 조정'}
+      size={mismatch ? 'wide' : 'default'}
     >
       <form
         onSubmit={(event) => {
           event.preventDefault();
           submit();
         }}
-        className="max-h-[calc(100dvh-10rem)] space-y-4 overflow-y-auto"
+        className={`max-h-[calc(100dvh-10rem)] overflow-y-auto ${mismatch ? 'space-y-3' : 'space-y-4'}`}
       >
         {mismatch && (
           <div className="space-y-2 text-caption-web leading-5 text-text-secondary">
             <p className="font-medium text-text-primary">
-              차이 값은 조정 금액이 아닙니다. 원인을 확인한 뒤 실제로 바로잡을
-              금액을 입력하세요.
+              차이 값은 조정 금액이 아닙니다. 원인 확인 후 필요한 금액만
+              입력하세요.
             </p>
             <p>{mismatchGuidance[mismatch.checkType]}</p>
           </div>
@@ -161,10 +162,12 @@ export const PointAdjustmentModal = ({
                 {formatPoints(Number(signedAmount))}
               </dd>
             </div>
-            <div className="flex justify-between">
-              <dt>캠페인 ID</dt>
-              <dd>{campaign || '—'}</dd>
-            </div>
+            {campaignApplicable && campaign && (
+              <div className="flex justify-between">
+                <dt>캠페인 ID</dt>
+                <dd>{campaign}</dd>
+              </div>
+            )}
             {campaignApplicable && campaign && (
               <div className="flex justify-between">
                 <dt>대상 영업일</dt>
@@ -184,9 +187,6 @@ export const PointAdjustmentModal = ({
               inputMode="numeric"
               value={owner}
               disabled={Boolean(mismatch)}
-              helperText={
-                mismatch ? '정산 불일치 내역의 점주로 정정합니다.' : undefined
-              }
               onChange={(event) => {
                 setOwner(event.target.value);
                 mutation.setError('');
@@ -249,43 +249,48 @@ export const PointAdjustmentModal = ({
               </p>
             </fieldset>
             {campaignApplicable && (
-              <Input
-                label={campaignRequired ? '캠페인 ID' : '캠페인 ID (선택)'}
-                required={campaignRequired}
-                inputMode="numeric"
-                value={campaign}
-                disabled={campaignRequired}
-                onChange={(event) => {
-                  setCampaign(event.target.value);
-                  if (!event.target.value) setTargetBusinessDate('');
-                  mutation.setError('');
-                }}
-              />
-            )}
-            {campaignApplicable && campaign && (
-              <div className="space-y-1.5">
-                <p className="text-body-sm-web font-medium text-text-primary">
-                  대상 영업일{' '}
-                  <span aria-hidden className="text-status-danger-fg">
-                    *
-                  </span>
-                </p>
-                <DatePicker
-                  maxDate={kstToday}
-                  todayDate={kstToday}
-                  ariaLabel="대상 영업일"
-                  value={targetBusinessDate}
+              <div
+                className={`grid items-start gap-3 ${campaignRequired ? 'sm:grid-cols-2' : ''}`}
+              >
+                <Input
+                  label={campaignRequired ? '캠페인 ID' : '캠페인 ID (선택)'}
+                  required={campaignRequired}
+                  inputMode="numeric"
+                  value={campaign}
                   disabled={campaignRequired}
-                  onValueChange={(value) => {
-                    setTargetBusinessDate(value);
+                  onChange={(event) => {
+                    setCampaign(event.target.value);
+                    if (!event.target.value) setTargetBusinessDate('');
                     mutation.setError('');
                   }}
                 />
-                <p className="text-caption-web text-text-secondary">
-                  {campaignRequired
-                    ? '정산 불일치 내역의 영업일로 정정합니다.'
-                    : '조정할 원래 영업일을 선택해 주세요. 오늘(한국 시간)까지 가능합니다.'}
-                </p>
+                {campaign && (
+                  <div className="space-y-1.5">
+                    <p className="text-caption-web font-medium text-text-primary">
+                      대상 영업일{' '}
+                      <span aria-hidden className="text-status-danger-fg">
+                        *
+                      </span>
+                    </p>
+                    <DatePicker
+                      maxDate={kstToday}
+                      todayDate={kstToday}
+                      ariaLabel="대상 영업일"
+                      value={targetBusinessDate}
+                      disabled={campaignRequired}
+                      onValueChange={(value) => {
+                        setTargetBusinessDate(value);
+                        mutation.setError('');
+                      }}
+                    />
+                    {!campaignRequired && (
+                      <p className="text-caption-web text-text-secondary">
+                        조정할 원래 영업일을 선택해 주세요. 오늘(한국 시간)까지
+                        가능합니다.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             <Input
