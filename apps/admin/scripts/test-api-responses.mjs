@@ -744,15 +744,8 @@ test('정의되지 않은 해결 유형은 해결 상태로 임의 처리하지 
   );
 });
 
-test('정산 불일치의 누락되거나 잘못된 점주 ID를 대상 ID로 대신하지 않는다', async () => {
-  for (const ownerId of [
-    undefined,
-    0,
-    -1,
-    '7',
-    1.5,
-    Number.MAX_SAFE_INTEGER + 1,
-  ]) {
+test('정산 불일치의 잘못된 점주 ID를 대상 ID로 대신하지 않는다', async () => {
+  for (const ownerId of [0, -1, '7', 1.5, Number.MAX_SAFE_INTEGER + 1]) {
     const { settlementMismatches, client } = setup({
       items: [{ ...mismatch, ownerId }],
       page: 0,
@@ -763,6 +756,31 @@ test('정산 불일치의 누락되거나 잘못된 점주 ID를 대상 ID로 �
       settlementMismatches.getSettlementMismatches('page=0&size=20', signal),
       isApiError(client),
     );
+  }
+});
+
+test('점주 ID가 없는 이전 불일치 응답도 전체 건수를 유지하고 점주는 null로 표시한다', async () => {
+  for (const checkType of [
+    'PG_VS_CHARGE',
+    'CAMPAIGN_SPEND_VS_LEDGER',
+    'CAMPAIGN_OVERSPEND',
+  ]) {
+    const item = { ...mismatch, checkType };
+    delete item.ownerId;
+    const { settlementMismatches } = setup({
+      items: [item],
+      page: 0,
+      size: 1,
+      totalElements: 3,
+    });
+    const result = await settlementMismatches.getSettlementMismatches(
+      'page=0&size=1',
+      signal,
+    );
+    assert.equal(result.totalElements, 3);
+    assert.equal(result.items.length, 1);
+    assert.equal(result.items[0].ownerId, null);
+    assert.equal(result.items[0].targetId, item.targetId);
   }
 });
 
