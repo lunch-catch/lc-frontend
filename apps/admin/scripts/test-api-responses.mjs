@@ -805,6 +805,65 @@ test('대상을 찾지 못해 점주 ID가 null인 불일치도 목록에서 제
   }
 });
 
+test('조정 없이 종결은 본문 없는 POST로 요청하고 서버의 처리자·시각을 반환한다', async () => {
+  const response = {
+    ...mismatch,
+    resolutionType: 'NO_ADJUSTMENT_REQUIRED',
+    resolvedAt: '2026-10-26T17:00:00+09:00',
+    resolvedBy: 2,
+  };
+  const { settlementMismatches, calls } = setup(response);
+  const result = await settlementMismatches.closeSettlementMismatch(
+    mismatch.mismatchId,
+  );
+  assert.equal(
+    calls[0].url,
+    `http://test/v1/admin/settlement-mismatches/${mismatch.mismatchId}:closeWithoutAdjustment`,
+  );
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.body, undefined);
+  assert.equal(calls[0].options.credentials, 'include');
+  assert.equal(result.resolutionType, 'NO_ADJUSTMENT_REQUIRED');
+  assert.equal(result.resolvedBy, 2);
+});
+
+test('종결 응답의 다른 ID·미해결 상태·처리 정보 누락을 성공으로 처리하지 않는다', async () => {
+  const response = {
+    ...mismatch,
+    resolutionType: 'NO_ADJUSTMENT_REQUIRED',
+    resolvedAt: '2026-10-26T17:00:00+09:00',
+    resolvedBy: 2,
+  };
+  for (const patch of [
+    { mismatchId: mismatch.mismatchId + 1 },
+    { resolutionType: null },
+    { resolvedAt: null },
+    { resolvedBy: null },
+  ]) {
+    const { settlementMismatches, client } = setup({ ...response, ...patch });
+    await assert.rejects(
+      settlementMismatches.closeSettlementMismatch(mismatch.mismatchId),
+      isApiError(client),
+    );
+  }
+});
+
+test('종결 시 이미 처리된 건과 없는 건의 서버 오류 코드를 보존한다', async () => {
+  for (const [status, code] of [
+    [409, 'BILLING-021'],
+    [404, 'BILLING-020'],
+  ]) {
+    const { settlementMismatches } = setup(null, status, {
+      code,
+      message: '종결 불가',
+    });
+    await assert.rejects(
+      settlementMismatches.closeSettlementMismatch(mismatch.mismatchId),
+      (error) => error.status === status && error.code === code,
+    );
+  }
+});
+
 const adjustmentRequest = {
   requestId: 'adjust-test-1',
   ownerId: 7,

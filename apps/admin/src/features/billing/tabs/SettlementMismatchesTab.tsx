@@ -3,7 +3,9 @@ import { Button, SelectField, StatusBadge } from '@repo/ui';
 import { formatDate, formatDateTime, formatPoints } from '@repo/utils';
 import { ArrowRight, ArrowRightLeft, SlidersHorizontal } from 'lucide-react';
 
+import { ApiError } from '@admin/api/client';
 import {
+  closeSettlementMismatch,
   getSettlementMismatches,
   type SettlementMismatch,
 } from '@admin/api/settlementMismatches';
@@ -26,6 +28,7 @@ import {
   BillingServerTable,
 } from '../ui/BillingServerTable';
 import { PointAdjustmentModal } from '../ui/PointAdjustmentModal';
+import { useBillingMutation } from '../useBillingMutation';
 import { useBillingResource } from '../useBillingResource';
 
 // 기본 정렬인 발견 시각 뒤에 처리 상태·대상·금액 비교를 두고 추적용 불일치 ID는 마지막에 둔다.
@@ -124,7 +127,7 @@ export const SettlementMismatchesTab = ({
   const [selected, setSelected] = useState<SettlementMismatch | null>(null);
   const [adjusting, setAdjusting] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
-  const nextResolved = selected?.resolutionType === null;
+  const closing = useBillingMutation();
   const [notice, setNotice] = useState('');
   const validation = getBillingRangeError(filters.from, filters.to);
   const query = new URLSearchParams({
@@ -145,6 +148,36 @@ export const SettlementMismatchesTab = ({
     updateFilters({ ...patch, page: 1 });
     setSelected(null);
     setNotice('');
+  };
+  const closeSelectedMismatch = () => {
+    if (!selected || selected.resolutionType) return;
+    void closing.run(
+      () => closeSettlementMismatch(selected.mismatchId),
+      (result) => {
+        // 서버가 반환한 확정 상태로 패널을 갱신하고 목록·건수 캐시도 다시 조회한다.
+        setSelected(result);
+        setEditingStatus(false);
+        setNotice('포인트 조정 없이 종결했습니다.');
+        updateFilters({ page: 1 }, true);
+        resource.refresh();
+      },
+      (cause) => {
+        if (
+          cause instanceof ApiError &&
+          ['BILLING-020', 'BILLING-021'].includes(cause.code ?? '')
+        ) {
+          // 다른 관리자가 먼저 처리했거나 삭제된 건은 오래된 상세를 닫고 다시 조회한다.
+          setEditingStatus(false);
+          setSelected(null);
+          setNotice(
+            cause.code === 'BILLING-021'
+              ? '이미 해결된 내역입니다. 목록을 다시 조회했습니다.'
+              : '내역을 찾을 수 없어 목록을 다시 조회했습니다.',
+          );
+          resource.refresh();
+        }
+      },
+    );
   };
   return (
     <>
@@ -229,7 +262,7 @@ export const SettlementMismatchesTab = ({
       <AdminDrawer
         open={selected !== null}
         onClose={() => {
-          if (!adjusting && !editingStatus) setSelected(null);
+          if (!adjusting && !editingStatus && !closing.busy) setSelected(null);
         }}
         title="정산 불일치 상세"
         resizable
@@ -237,42 +270,42 @@ export const SettlementMismatchesTab = ({
         {selected && (
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <button
-                type="button"
-                aria-label={`${selected.resolutionType ? '해결됨' : '미해결'} 상태 변경`}
-                aria-haspopup="dialog"
-                className="inline-flex items-center gap-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
-                onClick={() => {
-                  setEditingStatus(true);
-                }}
-              >
-                <StatusBadge
-                  variant={selected.resolutionType ? 'neutral' : 'warning'}
+              {selected.resolutionType ? (
+                <StatusBadge variant="neutral">해결됨</StatusBadge>
+              ) : (
+                <button
+                  type="button"
+                  aria-label="미해결 상태 변경"
+                  aria-haspopup="dialog"
+                  className="inline-flex items-center gap-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+                  onClick={() => {
+                    closing.setError('');
+                    setEditingStatus(true);
+                  }}
                 >
-                  {selected.resolutionType ? '해결됨' : '미해결'}
-                </StatusBadge>
-                <ArrowRightLeft
-                  aria-hidden="true"
-                  className="size-4 text-text-secondary"
-                />
-              </button>
-              {!selected.resolutionType && (
-                <Button
-                  className="ml-auto"
-                  variant={
-                    selected.checkType === 'CAMPAIGN_SPEND_VS_LEDGER'
-                      ? 'neutral'
-                      : 'primary'
-                  }
-                  leadingIcon={
-                    <SlidersHorizontal aria-hidden="true" className="size-4" />
-                  }
-                  disabled={selected.ownerId === null}
-                  onClick={() => setAdjusting(true)}
-                >
-                  포인트 조정으로 정정
-                </Button>
+                  <StatusBadge variant="warning">미해결</StatusBadge>
+                  <ArrowRightLeft
+                    aria-hidden="true"
+                    className="size-4 text-text-secondary"
+                  />
+                </button>
               )}
+              {!selected.resolutionType &&
+                selected.checkType !== 'CAMPAIGN_SPEND_VS_LEDGER' && (
+                  <Button
+                    className="ml-auto"
+                    leadingIcon={
+                      <SlidersHorizontal
+                        aria-hidden="true"
+                        className="size-4"
+                      />
+                    }
+                    disabled={selected.ownerId === null}
+                    onClick={() => setAdjusting(true)}
+                  >
+                    포인트 조정으로 정정
+                  </Button>
+                )}
             </div>
 
             <section className="space-y-2">
@@ -357,16 +390,19 @@ export const SettlementMismatchesTab = ({
             ) : (
               <section className="space-y-3">
                 <h3 className="text-body-sm-web font-semibold text-text-primary">
-                  정정하기
+                  {selected.checkType === 'CAMPAIGN_SPEND_VS_LEDGER'
+                    ? '종결 안내'
+                    : '정정하기'}
                 </h3>
                 <p className="text-caption-web leading-relaxed text-text-secondary">
                   {mismatchGuidance[selected.checkType]}
                 </p>
-                {selected.ownerId === null && (
-                  <p className="text-caption-web text-status-warning-fg">
-                    점주 정보를 확인할 수 없어 정정할 수 없습니다.
-                  </p>
-                )}
+                {selected.ownerId === null &&
+                  selected.checkType !== 'CAMPAIGN_SPEND_VS_LEDGER' && (
+                    <p className="text-caption-web text-status-warning-fg">
+                      점주 정보를 확인할 수 없어 정정할 수 없습니다.
+                    </p>
+                  )}
               </section>
             )}
 
@@ -389,77 +425,77 @@ export const SettlementMismatchesTab = ({
             </section>
           </div>
         )}
-        {selected && editingStatus && (
+        {selected && !selected.resolutionType && editingStatus && (
           <AdminModal
             open
-            title={
-              nextResolved ? '조정 없이 종결할까요?' : '미해결로 되돌릴까요?'
-            }
-            onClose={() => setEditingStatus(false)}
+            title="조정 없이 종결할까요?"
+            onClose={() => {
+              if (!closing.busy) setEditingStatus(false);
+            }}
           >
             <div className="space-y-4 p-5">
               <div className="flex items-center justify-center gap-4 rounded-lg border border-border-subtle px-4 py-5">
-                <StatusBadge
-                  variant={selected.resolutionType ? 'neutral' : 'warning'}
-                >
-                  {selected.resolutionType ? '해결됨' : '미해결'}
-                </StatusBadge>
+                <StatusBadge variant="warning">미해결</StatusBadge>
                 <ArrowRight
                   aria-hidden="true"
                   className="size-4 text-text-secondary"
                 />
-                <StatusBadge variant={nextResolved ? 'neutral' : 'warning'}>
-                  {nextResolved ? '해결됨' : '미해결'}
-                </StatusBadge>
+                <StatusBadge variant="neutral">해결됨</StatusBadge>
               </div>
               <p className="text-body-sm-web text-text-secondary">
-                {nextResolved
-                  ? '포인트 지급·차감이 필요 없는 내역을 조정 없이 종결합니다.'
-                  : '다시 확인할 수 있도록 내역을 미해결 상태로 되돌립니다.'}{' '}
-                상태 변경은 포인트 잔액을 바꾸거나 이전 조정을 취소하지
-                않습니다.
+                원인을 확인한 내역을 포인트 지급·차감 없이 종결합니다. 점주의
+                포인트 잔액은 바뀌지 않습니다.
               </p>
               <dl>
                 <DetailItem label="불일치 ID" compact>
                   {selected.mismatchId}
                 </DetailItem>
-                {nextResolved && (
-                  <DetailItem label="해결 방식" compact>
-                    {resolutionLabels.NO_ADJUSTMENT_REQUIRED}
-                  </DetailItem>
-                )}
+                <DetailItem label="해결 방식" compact>
+                  {resolutionLabels.NO_ADJUSTMENT_REQUIRED}
+                </DetailItem>
               </dl>
-              {/* UI 미리보기 단계: API 연결 전에는 서버 상태나 성공 안내를 변경하지 않는다. */}
-              <p role="status" className="text-caption-web text-text-secondary">
-                현재는 화면 미리보기입니다. 변경한 상태는 저장되지 않습니다.
-              </p>
+              {closing.error && (
+                <p
+                  role="alert"
+                  className="text-caption-web text-status-danger-fg"
+                >
+                  {closing.error}
+                </p>
+              )}
               <div className="flex justify-end gap-2">
                 <Button
                   variant="neutral"
+                  disabled={closing.busy}
                   onClick={() => setEditingStatus(false)}
                 >
                   취소
                 </Button>
-                <Button onClick={() => setEditingStatus(false)}>
-                  {nextResolved ? '조정 없이 종결' : '미해결로 변경'}
+                <Button
+                  isLoading={closing.busy}
+                  onClick={closeSelectedMismatch}
+                >
+                  조정 없이 종결
                 </Button>
               </div>
             </div>
           </AdminModal>
         )}
-        {selected && selected.ownerId !== null && adjusting && (
-          <PointAdjustmentModal
-            mismatch={selected}
-            onClose={() => setAdjusting(false)}
-            onSaved={(ledgerId) => {
-              setAdjusting(false);
-              setSelected(null);
-              setNotice(`정정을 완료했습니다. (원장 ID: ${ledgerId})`);
-              updateFilters({ page: 1 }, true);
-              resource.refresh();
-            }}
-          />
-        )}
+        {selected &&
+          selected.ownerId !== null &&
+          selected.checkType !== 'CAMPAIGN_SPEND_VS_LEDGER' &&
+          adjusting && (
+            <PointAdjustmentModal
+              mismatch={selected}
+              onClose={() => setAdjusting(false)}
+              onSaved={(ledgerId) => {
+                setAdjusting(false);
+                setSelected(null);
+                setNotice(`정정을 완료했습니다. (원장 ID: ${ledgerId})`);
+                updateFilters({ page: 1 }, true);
+                resource.refresh();
+              }}
+            />
+          )}
       </AdminDrawer>
     </>
   );

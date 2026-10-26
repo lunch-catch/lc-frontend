@@ -6,7 +6,7 @@ import {
   isOptionalBillingId,
   readBillingPage,
 } from './billingResponse';
-import { requestData } from './client';
+import { ApiError, requestData } from './client';
 
 export type MismatchCheckType =
   'PG_VS_CHARGE' | 'CAMPAIGN_SPEND_VS_LEDGER' | 'CAMPAIGN_OVERSPEND';
@@ -58,6 +58,11 @@ const isMismatch = (value: unknown): value is SettlementMismatch =>
   isBillingText(value.resolvedAt) &&
   isOptionalBillingId(value.resolvedBy);
 
+const normalizeMismatch = (item: unknown) =>
+  isBillingRecord(item) && item.ownerId === undefined
+    ? { ...item, ownerId: null }
+    : item;
+
 export const getSettlementMismatches = async (
   query: string,
   signal: AbortSignal,
@@ -73,12 +78,31 @@ export const getSettlementMismatches = async (
     isBillingRecord(data) && Array.isArray(data.items)
       ? {
           ...data,
-          items: data.items.map((item: unknown) =>
-            isBillingRecord(item) && item.ownerId === undefined
-              ? { ...item, ownerId: null }
-              : item,
-          ),
+          items: data.items.map(normalizeMismatch),
         }
       : data;
   return readBillingPage(normalized, isMismatch);
+};
+
+/** 원장은 변경하지 않고 종결한다. 재호출 시 서버는 BILLING-021을 반환한다. */
+export const closeSettlementMismatch = async (
+  mismatchId: number,
+): Promise<SettlementMismatch> => {
+  const data = normalizeMismatch(
+    await requestData<unknown>(
+      `/v1/admin/settlement-mismatches/${mismatchId}:closeWithoutAdjustment`,
+      { method: 'POST' },
+      200,
+    ),
+  );
+  if (
+    !isMismatch(data) ||
+    data.mismatchId !== mismatchId ||
+    data.resolutionType !== 'NO_ADJUSTMENT_REQUIRED' ||
+    data.resolvedAt === null ||
+    data.resolvedBy === null
+  ) {
+    throw new ApiError('정산 불일치 종결 응답을 확인할 수 없습니다.', 200);
+  }
+  return data;
 };
