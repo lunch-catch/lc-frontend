@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { syncTemplatePreviewFrame } from '../templatePreviewFrame';
 import {
   TEMPLATE_PREVIEW_HEIGHT,
   TEMPLATE_PREVIEW_WIDTH,
@@ -35,7 +36,7 @@ export const TemplateThumbnail = ({ html, name }: TemplateThumbnailProps) => {
   return (
     <div
       ref={containerRef}
-      className="relative aspect-[210/297] w-full overflow-hidden rounded-md bg-white shadow-sm"
+      className="relative aspect-[210/297] w-full overflow-hidden"
     >
       {shouldRenderPreview && (
         <LoadedTemplateThumbnail html={html} name={name} />
@@ -76,14 +77,16 @@ const LoadedTemplateThumbnail = ({ html, name }: TemplateThumbnailProps) => {
   return (
     <div ref={containerRef} className="absolute inset-0">
       <iframe
-        className="pointer-events-none absolute left-0 top-0 origin-top-left border-0"
+        className="pointer-events-none absolute left-0 top-0 origin-top-left border-0 bg-transparent shadow-sm"
         height={TEMPLATE_PREVIEW_HEIGHT}
-        sandbox=""
+        // 모서리 스타일을 읽기 위한 접근만 허용하며 스크립트 실행은 계속 차단한다.
+        sandbox="allow-same-origin"
         srcDoc={previewHtml}
         style={{ transform: `scale(${scale})` }}
         tabIndex={-1}
         title={`${name} 미리보기`}
         width={TEMPLATE_PREVIEW_WIDTH}
+        onLoad={(event) => syncTemplatePreviewFrame(event.currentTarget)}
       />
     </div>
   );
