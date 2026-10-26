@@ -73,7 +73,7 @@ export const OwnerMemberListContent = () => {
   const resource = useApiResource(getOwners, error ? null : params.toString());
   const pagination = {
     currentPage: filters.page,
-    totalPages: Math.ceil((resource.data?.totalElements ?? 0) / 20),
+    totalPages: Math.ceil((resource.totalCount ?? 0) / 20),
     onPageChange: (page: number) => updateFilters({ page }),
   };
   return (
@@ -185,10 +185,7 @@ export const OwnerMemberListContent = () => {
           )}
         </tbody>
       </DataTable>
-      <PaginationSummary
-        totalCount={resource.data?.totalElements}
-        pageSize={20}
-      />
+      <PaginationSummary totalCount={resource.totalCount} pageSize={20} />
     </>
   );
 };

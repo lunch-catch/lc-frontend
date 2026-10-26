@@ -111,7 +111,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
   const selectedPayment = selected
     ? (items.find((item) => item.paymentId === selected.paymentId) ?? selected)
     : null;
-  const totalCount = payments.data?.totalElements ?? 0;
+  const totalCount = payments.totalCount ?? 0;
   const pagination = {
     currentPage: page,
     pageSize,
@@ -291,10 +291,7 @@ export const PaymentHistoryTab = ({ preferences }: PaymentHistoryTabProps) => {
           )}
         </tbody>
       </DataTable>
-      <PaginationSummary
-        {...pagination}
-        totalCount={payments.data?.totalElements}
-      />
+      <PaginationSummary {...pagination} totalCount={payments.totalCount} />
       <AdminDrawer
         open={selectedPayment !== null}
         onClose={() => setSelected(null)}
