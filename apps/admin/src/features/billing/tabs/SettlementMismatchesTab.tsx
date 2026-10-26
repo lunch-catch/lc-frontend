@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { Button, SelectField, StatusBadge } from '@repo/ui';
 import { formatDate, formatDateTime, formatPoints } from '@repo/utils';
-import {
-  ArrowRight,
-  ArrowRightLeft,
-  Check,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { ArrowRight, ArrowRightLeft, SlidersHorizontal } from 'lucide-react';
 
 import {
   getSettlementMismatches,
@@ -38,16 +33,16 @@ const columns: BillingServerColumn<SettlementMismatch>[] = [
   {
     key: 'createdAt',
     label: '발견 시각',
-    width: '12%',
-    minWidth: 170,
+    width: '11%',
+    minWidth: 160,
     sortable: true,
     render: (item) => formatDateTime(item.createdAt),
   },
   {
     key: 'resolutionType',
     label: '처리 상태',
-    width: '9%',
-    minWidth: 100,
+    width: '8%',
+    minWidth: 96,
     render: (item) => (
       <StatusBadge variant={item.resolutionType ? 'neutral' : 'warning'}>
         {item.resolutionType ? '해결됨' : '미해결'}
@@ -65,7 +60,7 @@ const columns: BillingServerColumn<SettlementMismatch>[] = [
   {
     key: 'checkType',
     label: '검증 종류',
-    width: '16%',
+    width: '15%',
     minWidth: 200,
     render: (item) => mismatchLabels[item.checkType],
   },
@@ -73,7 +68,7 @@ const columns: BillingServerColumn<SettlementMismatch>[] = [
     key: 'ownerId',
     label: '점주 ID',
     width: '8%',
-    minWidth: 100,
+    minWidth: 96,
     render: (item) => item.ownerId ?? '—',
   },
   {
@@ -87,7 +82,7 @@ const columns: BillingServerColumn<SettlementMismatch>[] = [
     key: 'expectedValue',
     label: '기준 금액',
     width: '10%',
-    minWidth: 115,
+    minWidth: 110,
     align: 'right',
     render: (item) => formatPoints(item.expectedValue),
   },
@@ -95,7 +90,7 @@ const columns: BillingServerColumn<SettlementMismatch>[] = [
     key: 'actualValue',
     label: '실제 금액',
     width: '10%',
-    minWidth: 115,
+    minWidth: 110,
     align: 'right',
     render: (item) => formatPoints(item.actualValue),
   },
@@ -103,15 +98,16 @@ const columns: BillingServerColumn<SettlementMismatch>[] = [
     key: 'diff',
     label: '차액',
     width: '9%',
-    minWidth: 110,
+    minWidth: 104,
     align: 'right',
     render: (item) => formatPoints(item.diff),
   },
   {
     key: 'mismatchId',
     label: '불일치 ID',
-    width: '8%',
-    minWidth: 100,
+    // 다른 열의 여유 폭을 나눠 긴 식별자도 기본 상태에서 읽을 수 있게 한다.
+    width: '11%',
+    minWidth: 140,
     render: (item) => item.mismatchId,
   },
 ];
@@ -261,35 +257,21 @@ export const SettlementMismatchesTab = ({
                 />
               </button>
               {!selected.resolutionType && (
-                <div className="ml-auto flex flex-wrap justify-end gap-2">
-                  {selected.checkType === 'CAMPAIGN_SPEND_VS_LEDGER' && (
-                    <Button
-                      leadingIcon={
-                        <Check aria-hidden="true" className="size-4" />
-                      }
-                      onClick={() => setEditingStatus(true)}
-                    >
-                      조정 없이 종결
-                    </Button>
-                  )}
-                  <Button
-                    variant={
-                      selected.checkType === 'CAMPAIGN_SPEND_VS_LEDGER'
-                        ? 'neutral'
-                        : 'primary'
-                    }
-                    leadingIcon={
-                      <SlidersHorizontal
-                        aria-hidden="true"
-                        className="size-4"
-                      />
-                    }
-                    disabled={selected.ownerId === null}
-                    onClick={() => setAdjusting(true)}
-                  >
-                    포인트 조정으로 정정
-                  </Button>
-                </div>
+                <Button
+                  className="ml-auto"
+                  variant={
+                    selected.checkType === 'CAMPAIGN_SPEND_VS_LEDGER'
+                      ? 'neutral'
+                      : 'primary'
+                  }
+                  leadingIcon={
+                    <SlidersHorizontal aria-hidden="true" className="size-4" />
+                  }
+                  disabled={selected.ownerId === null}
+                  onClick={() => setAdjusting(true)}
+                >
+                  포인트 조정으로 정정
+                </Button>
               )}
             </div>
 
