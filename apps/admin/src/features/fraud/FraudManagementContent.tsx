@@ -288,8 +288,8 @@ export const FraudManagementContent = () => {
                   filters.reason === 'ALL' || filters.reason === reason,
               )
               .map(([reason, label]) => {
-                const count = invalid.data
-                  ? (invalid.data.summaryByReason.find(
+                const count = state.summaryByReason
+                  ? (state.summaryByReason.find(
                       (item) => item.reasonCode === reason,
                     )?.count ?? 0)
                   : undefined;
@@ -354,7 +354,7 @@ export const FraudManagementContent = () => {
       )}
       <PaginationSummary
         {...pagination}
-        totalCount={state.resource.data?.totalElements}
+        totalCount={state.resource.totalCount}
       />
     </section>
   );

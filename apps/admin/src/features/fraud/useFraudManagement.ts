@@ -1,7 +1,12 @@
 import { useState } from 'react';
 
 import { shiftDate } from '@admin/api/analyticsDateUtils';
-import { getCampaignWarnings, getInvalidImpressions } from '@admin/api/fraud';
+import {
+  getCampaignWarnings,
+  getInvalidImpressions,
+  type ReasonSummary,
+} from '@admin/api/fraud';
+import { useAdminAuth } from '@admin/auth/useAdminAuth';
 import { getKstToday } from '@admin/hooks/queryDateUtils';
 import {
   queryChoice,
@@ -18,6 +23,7 @@ import type { TableDensity } from '@admin/ui/DataTable';
 import { getFraudRangeError } from './fraudUtils';
 
 export const useFraudManagement = () => {
+  const { admin } = useAdminAuth();
   const today = getKstToday();
   // 시작일과 종료일을 모두 포함하므로 오늘에서 30일 전까지가 최대 31일이다.
   const { filters, updateFilters } = useUrlFilters('fraud.', {
@@ -95,6 +101,39 @@ export const useFraudManagement = () => {
     getInvalidImpressions,
     !validation && filters.tab === 'impressions' ? params.toString() : null,
   );
+  // 사유별 합계는 페이지·크기·정렬과 무관하다. 같은 필터의 목록을 조회하는
+  // 동안만 유지하고, 필터나 로그인 계정이 바뀌면 이전 합계는 숨긴다.
+  const summaryKey = JSON.stringify([
+    filters.from,
+    filters.to,
+    filters.reason,
+    filters.campaignId.trim(),
+    filters.memberId.trim(),
+  ]);
+  const [summary, setSummary] = useState<{
+    key: string;
+    owner: typeof admin;
+    data: ReasonSummary[];
+  } | null>(null);
+  if (
+    invalid.data &&
+    (summary?.key !== summaryKey ||
+      summary.owner !== admin ||
+      summary.data !== invalid.data.summaryByReason)
+  ) {
+    setSummary({
+      key: summaryKey,
+      owner: admin,
+      data: invalid.data.summaryByReason,
+    });
+  }
+  const summaryByReason =
+    !validation && filters.tab === 'impressions'
+      ? (invalid.data?.summaryByReason ??
+        (summary?.key === summaryKey && summary.owner === admin
+          ? summary.data
+          : undefined))
+      : undefined;
   const warnings = useApiResource(
     getCampaignWarnings,
     !validation && filters.tab === 'warnings' ? params.toString() : null,
@@ -103,8 +142,8 @@ export const useFraudManagement = () => {
   const pagination = {
     currentPage: filters.page,
     pageSize: filters.size,
-    totalCount: resource.data?.totalElements ?? 0,
-    totalPages: Math.ceil((resource.data?.totalElements ?? 0) / filters.size),
+    totalCount: resource.totalCount ?? 0,
+    totalPages: Math.ceil((resource.totalCount ?? 0) / filters.size),
     onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (size: number) => updateFilters({ size, page: 1 }),
   };
@@ -123,6 +162,7 @@ export const useFraudManagement = () => {
     campaign,
     member,
     invalid,
+    summaryByReason,
     warnings,
     resource,
     validation,
