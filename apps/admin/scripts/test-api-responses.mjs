@@ -714,6 +714,7 @@ test('수동 조정의 새 해결 유형과 전환 전 해결 유형을 모두 �
     'CACHE_REBUILD',
     'LEDGER_CORRECTION',
     'MANUAL_ADJUSTMENT',
+    'NO_ADJUSTMENT_REQUIRED',
     'OVERCHARGE_REVERSAL',
   ]) {
     const { settlementMismatches } = setup({

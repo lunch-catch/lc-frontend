@@ -14,6 +14,7 @@ export type MismatchResolutionType =
   | 'CACHE_REBUILD'
   | 'LEDGER_CORRECTION'
   | 'MANUAL_ADJUSTMENT'
+  | 'NO_ADJUSTMENT_REQUIRED'
   // 배포 전 응답과 기존 로컬 데이터도 전환 기간에는 함께 읽는다.
   | 'OVERCHARGE_REVERSAL';
 export interface SettlementMismatch {
@@ -49,6 +50,7 @@ const isMismatch = (value: unknown): value is SettlementMismatch =>
       'CACHE_REBUILD',
       'LEDGER_CORRECTION',
       'MANUAL_ADJUSTMENT',
+      'NO_ADJUSTMENT_REQUIRED',
       'OVERCHARGE_REVERSAL',
     ].includes(String(value.resolutionType))) &&
   typeof value.createdAt === 'string' &&

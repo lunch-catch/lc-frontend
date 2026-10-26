@@ -25,10 +25,22 @@ export const mismatchLabels: Record<MismatchCheckType, string> = {
   CAMPAIGN_SPEND_VS_LEDGER: '캠페인 소진액과 포인트 원장 비교',
   CAMPAIGN_OVERSPEND: '예약액 초과 소진',
 };
+export const campaignDeductionError =
+  '캠페인 관련 불일치는 포인트를 차감할 수 없습니다.';
+// 상세 패널과 조정 폼에서 같은 정책 안내를 사용한다.
+export const mismatchGuidance: Record<MismatchCheckType, string> = {
+  PG_VS_CHARGE:
+    '결제사 기록과 충전 기록이 다른 건입니다. 결제가 승인되지 않았는데 포인트가 충전됐다면 차감(−)으로 회수하고, 결제는 됐는데 포인트가 덜 충전됐다면 지급(+)합니다. 포인트에 문제가 없으면 조정 없이 종결합니다.',
+  CAMPAIGN_OVERSPEND:
+    '하루 예약액보다 많이 차감된 건입니다. 실제로 더 차감된 것이 확인되면 그 금액을 지급(+)으로 돌려줍니다. 덜 차감된 광고비는 다시 걷지 않으므로 차감(−)은 할 수 없습니다.',
+  CAMPAIGN_SPEND_VS_LEDGER:
+    '원장과 집계 캐시의 값이 다른 건이며 대부분 점주 잔액과 관계가 없습니다. 보통은 조정 없이 종결합니다. 과다 과금이 따로 확인된 경우에만 지급(+)하며 차감(−)은 할 수 없습니다.',
+};
 export const resolutionLabels: Record<MismatchResolutionType, string> = {
   CACHE_REBUILD: '캐시 재집계',
   LEDGER_CORRECTION: '원장 보정',
   MANUAL_ADJUSTMENT: '수동 포인트 조정',
+  NO_ADJUSTMENT_REQUIRED: '조정 불필요',
   OVERCHARGE_REVERSAL: '수동 포인트 조정',
 };
 const errors: Record<string, string> = {
@@ -64,6 +76,7 @@ interface PointAdjustmentInput {
   targetBusinessDate: string;
   amount: string;
   reason: string;
+  mismatchCheckType?: MismatchCheckType;
 }
 
 export const getPointAdjustmentError = ({
@@ -72,6 +85,7 @@ export const getPointAdjustmentError = ({
   targetBusinessDate,
   amount,
   reason,
+  mismatchCheckType,
 }: PointAdjustmentInput) => {
   if (
     !isBillingInputId(ownerId) ||
@@ -94,6 +108,14 @@ export const getPointAdjustmentError = ({
   const points = Number(amount);
   if (!/^-?\d+$/.test(amount) || !Number.isSafeInteger(points) || points === 0)
     return '조정 포인트를 0이 아닌 정수로 입력해 주세요.';
+  // 일반 수동 조정의 캠페인 차감과, mismatchId로 연결된 캠페인 불일치 정정을 구분한다.
+  if (mismatchCheckType && mismatchCheckType !== 'PG_VS_CHARGE' && points < 0)
+    return campaignDeductionError;
+  if (
+    mismatchCheckType === 'PG_VS_CHARGE' &&
+    (campaignId || targetBusinessDate)
+  )
+    return '결제 불일치 조정에는 캠페인 ID와 대상 영업일을 입력하지 않습니다.';
   if (!reason.trim() || reason.length > 255)
     return '조정 사유를 1~255자로 입력해 주세요.';
   return '';
