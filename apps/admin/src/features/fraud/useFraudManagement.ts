@@ -130,7 +130,10 @@ export const useFraudManagement = () => {
   const summaryByReason =
     !validation && filters.tab === 'impressions'
       ? (invalid.data?.summaryByReason ??
-        (summary?.key === summaryKey && summary.owner === admin
+        (invalid.loading &&
+        !invalid.error &&
+        summary?.key === summaryKey &&
+        summary.owner === admin
           ? summary.data
           : undefined))
       : undefined;

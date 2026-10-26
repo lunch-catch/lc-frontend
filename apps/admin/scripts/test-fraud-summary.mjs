@@ -90,6 +90,9 @@ const createHarness = () => {
     load: (data) => {
       invalid = data ? { data } : { loading: true };
     },
+    resource: (next) => {
+      invalid = next;
+    },
     filter: (next) => {
       filters = { ...filters, ...next };
     },
@@ -132,4 +135,29 @@ test('기간·사유·검색 조건이나 계정이 바뀌면 이전 요약을 �
     else hook.account();
     assert.equal(hook.render().summaryByReason, undefined);
   }
+});
+
+test('이전 요약은 로딩 중에만 유지하고 오류 시 숨기며 새 응답은 우선 표시한다', () => {
+  const hook = createHarness();
+  const summary = [{ reasonCode: 'NOT_OWNER', count: 12 }];
+  hook.load({ summaryByReason: summary });
+  hook.render();
+  hook.filter({ page: 2 });
+  hook.load();
+  assert.equal(hook.render().summaryByReason, summary);
+
+  hook.resource({ loading: false, error: '조회 실패' });
+  assert.equal(hook.render().summaryByReason, undefined);
+  hook.resource({ loading: true, error: '조회 실패' });
+  assert.equal(hook.render().summaryByReason, undefined);
+  hook.resource({ loading: false });
+  assert.equal(hook.render().summaryByReason, undefined);
+
+  const updated = [{ reasonCode: 'NOT_OWNER', count: 15 }];
+  hook.resource({
+    loading: false,
+    error: '조회 실패',
+    data: { summaryByReason: updated },
+  });
+  assert.equal(hook.render().summaryByReason, updated);
 });
