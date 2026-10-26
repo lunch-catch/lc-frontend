@@ -30,13 +30,13 @@ export const CampaignPerformance = ({ campaignId }: { campaignId: number }) => {
         <dl className="grid grid-cols-2 gap-4 text-body-sm-web">
           <div>
             <dt className="text-text-secondary">소진 포인트</dt>
-            <dd className="mt-2 font-semibold text-action-primary">
+            <dd className="mt-2 font-semibold text-action-primary-text">
               {formatPoints(report.spentAmount)}
             </dd>
           </div>
           <div>
             <dt className="text-text-secondary">유효 노출</dt>
-            <dd className="mt-2 font-semibold text-action-primary">
+            <dd className="mt-2 font-semibold text-action-primary-text">
               {formatNumber(report.validImpressionCount)}회
             </dd>
           </div>

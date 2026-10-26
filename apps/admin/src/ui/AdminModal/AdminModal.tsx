@@ -7,6 +7,8 @@ interface AdminModalProps {
   onClose: () => void;
   open: boolean;
   title: string;
+  /** 긴 입력 폼만 조금 넓히고 다른 모달은 기존 기본 너비를 유지한다. */
+  size?: 'default' | 'wide';
 }
 
 export const AdminModal = ({
@@ -14,6 +16,7 @@ export const AdminModal = ({
   onClose,
   open,
   title,
+  size = 'default',
 }: AdminModalProps) => {
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -59,7 +62,9 @@ export const AdminModal = ({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-md rounded-xl border border-border-subtle bg-bg-surface shadow-lg">
+      <div
+        className={`relative w-full rounded-xl border border-border-subtle bg-bg-surface shadow-lg ${size === 'wide' ? 'max-w-lg' : 'max-w-md'}`}
+      >
         <header className="relative flex justify-center px-5 pb-2 pt-5">
           <h2
             className="translate-y-px text-heading-sm-web font-semibold"

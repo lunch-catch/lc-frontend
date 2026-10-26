@@ -97,8 +97,8 @@ export const UserMemberListContent = ({
   const pagination = {
     currentPage: page,
     pageSize: size,
-    totalCount: data?.totalElements ?? 0,
-    totalPages: Math.ceil((data?.totalElements ?? 0) / size),
+    totalCount: resource.totalCount ?? 0,
+    totalPages: Math.ceil((resource.totalCount ?? 0) / size),
     onPageChange: (page: number) => updateFilters({ page }),
     onPageSizeChange: (value: number) => {
       updateFilters({ page: 1, size: value });
@@ -245,7 +245,7 @@ export const UserMemberListContent = ({
           )}
         </tbody>
       </DataTable>
-      <PaginationSummary {...pagination} totalCount={data?.totalElements} />
+      <PaginationSummary {...pagination} totalCount={resource.totalCount} />
     </>
   );
 };

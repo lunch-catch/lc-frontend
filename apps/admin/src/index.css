@@ -130,8 +130,9 @@
     var(--primitive-neutral-500) 90%,
     black
   );
-  --semantic-action-primary: var(--primitive-brand-700);
-  --semantic-action-primary-hover: var(--primitive-brand-800);
+  /* 밝은 기본 강조색은 유지하고 주황색 글자에만 대비 보정을 적용한다. */
+  --semantic-action-primary-text: var(--primitive-brand-700);
+  --semantic-action-primary-text-hover: var(--primitive-brand-800);
   --semantic-text-brand: var(--primitive-brand-700);
   --semantic-status-success-fg: color-mix(
     in srgb,

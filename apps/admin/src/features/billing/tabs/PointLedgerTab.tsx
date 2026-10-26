@@ -289,7 +289,7 @@ export const PointLedgerTab = ({
                     <TableCell>
                       <button
                         type="button"
-                        className="text-left hover:text-action-primary focus-visible:outline-2 focus-visible:outline-action-primary"
+                        className="text-left hover:text-action-primary-text focus-visible:outline-2 focus-visible:outline-action-primary"
                         aria-description={`원장 ${item.ledgerId} 상세 보기`}
                         onClick={(event) => {
                           event.stopPropagation();

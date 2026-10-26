@@ -11,11 +11,18 @@ import { requestData } from './client';
 export type MismatchCheckType =
   'PG_VS_CHARGE' | 'CAMPAIGN_SPEND_VS_LEDGER' | 'CAMPAIGN_OVERSPEND';
 export type MismatchResolutionType =
-  'CACHE_REBUILD' | 'LEDGER_CORRECTION' | 'OVERCHARGE_REVERSAL';
+  | 'CACHE_REBUILD'
+  | 'LEDGER_CORRECTION'
+  | 'MANUAL_ADJUSTMENT'
+  | 'NO_ADJUSTMENT_REQUIRED'
+  // 배포 전 응답과 기존 로컬 데이터도 전환 기간에는 함께 읽는다.
+  | 'OVERCHARGE_REVERSAL';
 export interface SettlementMismatch {
   mismatchId: number;
   checkType: MismatchCheckType;
   targetId: number;
+  ownerId: number | null;
+  /** 대사 대상 영업일(YYYY-MM-DD). 발견 시각(createdAt)과 달리 시각은 없다. */
   businessDate: string;
   expectedValue: number;
   actualValue: number;
@@ -30,6 +37,7 @@ const isMismatch = (value: unknown): value is SettlementMismatch =>
   isBillingRecord(value) &&
   isBillingId(value.mismatchId) &&
   isBillingId(value.targetId) &&
+  isOptionalBillingId(value.ownerId) &&
   ['PG_VS_CHARGE', 'CAMPAIGN_SPEND_VS_LEDGER', 'CAMPAIGN_OVERSPEND'].includes(
     String(value.checkType),
   ) &&
@@ -38,9 +46,13 @@ const isMismatch = (value: unknown): value is SettlementMismatch =>
   isBillingInteger(value.actualValue) &&
   isBillingInteger(value.diff) &&
   (value.resolutionType === null ||
-    ['CACHE_REBUILD', 'LEDGER_CORRECTION', 'OVERCHARGE_REVERSAL'].includes(
-      String(value.resolutionType),
-    )) &&
+    [
+      'CACHE_REBUILD',
+      'LEDGER_CORRECTION',
+      'MANUAL_ADJUSTMENT',
+      'NO_ADJUSTMENT_REQUIRED',
+      'OVERCHARGE_REVERSAL',
+    ].includes(String(value.resolutionType))) &&
   typeof value.createdAt === 'string' &&
   isOptionalBillingId(value.jobExecutionId) &&
   isBillingText(value.resolvedAt) &&
