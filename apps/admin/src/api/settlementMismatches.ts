@@ -61,12 +61,24 @@ const isMismatch = (value: unknown): value is SettlementMismatch =>
 export const getSettlementMismatches = async (
   query: string,
   signal: AbortSignal,
-) =>
-  readBillingPage(
-    await requestData<unknown>(
-      `/v1/admin/settlement-mismatches?${query}`,
-      { signal },
-      200,
-    ),
-    isMismatch,
+) => {
+  const data = await requestData<unknown>(
+    `/v1/admin/settlement-mismatches?${query}`,
+    { signal },
+    200,
   );
+  // ownerId 추가 전 응답도 건수·목록 조회에는 사용한다. 점주를 추정하지 않고
+  // null로 정규화하면 기존 UI가 정정 버튼을 비활성화해 잘못된 조정을 막는다.
+  const normalized =
+    isBillingRecord(data) && Array.isArray(data.items)
+      ? {
+          ...data,
+          items: data.items.map((item: unknown) =>
+            isBillingRecord(item) && item.ownerId === undefined
+              ? { ...item, ownerId: null }
+              : item,
+          ),
+        }
+      : data;
+  return readBillingPage(normalized, isMismatch);
+};
