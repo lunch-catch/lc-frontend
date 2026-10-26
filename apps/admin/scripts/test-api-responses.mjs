@@ -30,6 +30,7 @@ const setup = (data, status = 200, errorBody) => {
     'listResponse',
     'billingResponse',
     'pointAdjustments',
+    'settlementMismatches',
     'members',
     'adminAccounts',
     'owners',
@@ -660,6 +661,131 @@ test('캠페인 실적 조회 실패는 0으로 대체하지 않고 오류를 �
   );
 });
 
+const mismatch = {
+  mismatchId: 55,
+  checkType: 'CAMPAIGN_SPEND_VS_LEDGER',
+  targetId: 12,
+  ownerId: 7,
+  businessDate: '2026-10-01',
+  expectedValue: 9800,
+  actualValue: 9790,
+  diff: -10,
+  resolutionType: null,
+  createdAt: '2026-10-01T13:35:00+09:00',
+  jobExecutionId: 301,
+  resolvedAt: null,
+  resolvedBy: null,
+};
+
+test('정산 불일치의 모든 검증 유형에서 점주 ID와 페이지 계약을 유지한다', async () => {
+  for (const checkType of [
+    'PG_VS_CHARGE',
+    'CAMPAIGN_SPEND_VS_LEDGER',
+    'CAMPAIGN_OVERSPEND',
+  ]) {
+    const item = { ...mismatch, checkType };
+    const { settlementMismatches, calls } = setup({
+      items: [item],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+    });
+    const result = await settlementMismatches.getSettlementMismatches(
+      'page=0&size=20&resolved=false',
+      signal,
+    );
+    assert.equal(result.items[0].ownerId, 7);
+    assert.equal(result.items[0].targetId, 12);
+    assert.equal(result.items[0].checkType, checkType);
+    assert.equal(result.page, 0);
+    assert.equal(result.totalElements, 1);
+    assert.match(
+      calls[0].url,
+      /settlement-mismatches\?page=0&size=20&resolved=false$/,
+    );
+    assert.equal(calls[0].options.signal, signal);
+    assert.equal(calls[0].options.credentials, 'include');
+  }
+});
+
+test('수동 조정의 새 해결 유형과 전환 전 해결 유형을 모두 읽는다', async () => {
+  for (const resolutionType of [
+    null,
+    'CACHE_REBUILD',
+    'LEDGER_CORRECTION',
+    'MANUAL_ADJUSTMENT',
+    'OVERCHARGE_REVERSAL',
+  ]) {
+    const { settlementMismatches } = setup({
+      items: [{ ...mismatch, resolutionType }],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+    });
+    const result = await settlementMismatches.getSettlementMismatches(
+      'page=0&size=20',
+      signal,
+    );
+    assert.equal(result.items[0].resolutionType, resolutionType);
+  }
+});
+
+test('정의되지 않은 해결 유형은 해결 상태로 임의 처리하지 않는다', async () => {
+  const { settlementMismatches, client } = setup({
+    items: [{ ...mismatch, resolutionType: 'UNKNOWN' }],
+    page: 0,
+    size: 20,
+    totalElements: 1,
+  });
+  await assert.rejects(
+    settlementMismatches.getSettlementMismatches('page=0&size=20', signal),
+    isApiError(client),
+  );
+});
+
+test('정산 불일치의 누락되거나 잘못된 점주 ID를 대상 ID로 대신하지 않는다', async () => {
+  for (const ownerId of [
+    undefined,
+    0,
+    -1,
+    '7',
+    1.5,
+    Number.MAX_SAFE_INTEGER + 1,
+  ]) {
+    const { settlementMismatches, client } = setup({
+      items: [{ ...mismatch, ownerId }],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+    });
+    await assert.rejects(
+      settlementMismatches.getSettlementMismatches('page=0&size=20', signal),
+      isApiError(client),
+    );
+  }
+});
+
+test('대상을 찾지 못해 점주 ID가 null인 불일치도 목록에서 제외하지 않는다', async () => {
+  for (const checkType of [
+    'PG_VS_CHARGE',
+    'CAMPAIGN_SPEND_VS_LEDGER',
+    'CAMPAIGN_OVERSPEND',
+  ]) {
+    const { settlementMismatches } = setup({
+      items: [{ ...mismatch, checkType, ownerId: null }],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+    });
+    const result = await settlementMismatches.getSettlementMismatches(
+      'page=0&size=20',
+      signal,
+    );
+    assert.equal(result.items[0].ownerId, null);
+    assert.equal(result.totalElements, 1);
+  }
+});
+
 const adjustmentRequest = {
   requestId: 'adjust-test-1',
   ownerId: 7,
@@ -693,6 +819,26 @@ test('캠페인 포인트 조정은 대상 영업일과 멱등 키를 전송하�
     assert.equal(body.mismatchId, 55);
     assert.equal(body.requestId, adjustmentRequest.requestId);
     assert.equal(calls[0].options.credentials, 'include');
+  }
+});
+
+test('불일치 정정의 지급·차감 요청에도 mismatchId와 대상 정보를 유지한다', async () => {
+  for (const amount of [1000, -1000]) {
+    const { pointAdjustments, calls } = setup(
+      { ...adjustmentResponse, amount },
+      201,
+    );
+    const result = await pointAdjustments.adjustPoints({
+      ...adjustmentRequest,
+      amount,
+    });
+    const body = JSON.parse(calls[0].options.body);
+    assert.equal(body.amount, amount);
+    assert.equal(body.mismatchId, 55);
+    assert.equal(body.ownerId, 7);
+    assert.equal(body.campaignId, 12);
+    assert.equal(body.targetBusinessDate, adjustmentRequest.targetBusinessDate);
+    assert.equal(result.amount, amount);
   }
 });
 

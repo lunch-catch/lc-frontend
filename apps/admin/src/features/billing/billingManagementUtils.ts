@@ -21,14 +21,15 @@ export const refundVariants: Record<RefundStatus, StatusBadgeVariant> = {
   COMPLETED: 'success',
 };
 export const mismatchLabels: Record<MismatchCheckType, string> = {
-  PG_VS_CHARGE: '결제 승인 / 충전 원장',
-  CAMPAIGN_SPEND_VS_LEDGER: '캠페인 소진 / 원장',
+  PG_VS_CHARGE: '결제 승인액과 충전 원장 비교',
+  CAMPAIGN_SPEND_VS_LEDGER: '캠페인 소진액과 포인트 원장 비교',
   CAMPAIGN_OVERSPEND: '예약액 초과 소진',
 };
 export const resolutionLabels: Record<MismatchResolutionType, string> = {
   CACHE_REBUILD: '캐시 재집계',
   LEDGER_CORRECTION: '원장 보정',
-  OVERCHARGE_REVERSAL: '과과금 정정',
+  MANUAL_ADJUSTMENT: '수동 포인트 조정',
+  OVERCHARGE_REVERSAL: '수동 포인트 조정',
 };
 const errors: Record<string, string> = {
   'BILLING-006':
@@ -63,7 +64,6 @@ interface PointAdjustmentInput {
   targetBusinessDate: string;
   amount: string;
   reason: string;
-  correctingMismatch: boolean;
 }
 
 export const getPointAdjustmentError = ({
@@ -72,7 +72,6 @@ export const getPointAdjustmentError = ({
   targetBusinessDate,
   amount,
   reason,
-  correctingMismatch,
 }: PointAdjustmentInput) => {
   if (
     !isBillingInputId(ownerId) ||
@@ -95,9 +94,6 @@ export const getPointAdjustmentError = ({
   const points = Number(amount);
   if (!/^-?\d+$/.test(amount) || !Number.isSafeInteger(points) || points === 0)
     return '조정 포인트를 0이 아닌 정수로 입력해 주세요.';
-  // 불일치 정정 API는 과도하게 차감된 포인트를 돌려주는 조정만 허용한다.
-  if (correctingMismatch && points < 0)
-    return '정산 불일치 정정은 포인트를 돌려주는 양수 조정만 가능합니다.';
   if (!reason.trim() || reason.length > 255)
     return '조정 사유를 1~255자로 입력해 주세요.';
   return '';

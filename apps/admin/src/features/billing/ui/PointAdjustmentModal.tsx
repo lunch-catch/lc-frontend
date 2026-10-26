@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Button, DatePicker, Input } from '@repo/ui';
+import { useId, useRef, useState } from 'react';
+import { Button, DatePicker, Input, SegmentedControl } from '@repo/ui';
 import { formatPoints } from '@repo/utils';
 
 import { adjustPoints } from '@admin/api/pointAdjustments';
@@ -22,10 +22,14 @@ export const PointAdjustmentModal = ({
   onClose,
   onSaved,
 }: PointAdjustmentModalProps) => {
+  const amountHintId = useId();
   // 캠페인 대상 두 유형은 정정 시 targetId와 동일한 campaignId가 필요하다.
   const campaignRequired =
     mismatch !== undefined && mismatch.checkType !== 'PG_VS_CHARGE';
-  const [owner, setOwner] = useState(ownerId);
+  // 대상 ID는 결제 또는 캠페인 ID이므로 점주를 추측하지 않고 서버의 ownerId를 사용한다.
+  const [owner, setOwner] = useState(
+    mismatch ? String(mismatch.ownerId ?? '') : ownerId,
+  );
   const [campaign, setCampaign] = useState(
     campaignRequired ? String(mismatch.targetId) : '',
   );
@@ -33,6 +37,9 @@ export const PointAdjustmentModal = ({
     campaignRequired ? mismatch.businessDate : '',
   );
   const [amount, setAmount] = useState('');
+  const [direction, setDirection] = useState<'increase' | 'decrease'>(
+    'increase',
+  );
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
   const kstToday = getKstToday();
@@ -40,10 +47,14 @@ export const PointAdjustmentModal = ({
     null,
   );
   const mutation = useBillingMutation();
+  // 사용자는 크기만 입력하고 부호는 조정 방식으로 결정한다.
+  const isDeduction = direction === 'decrease';
+  const signedAmount = isDeduction && amount ? `-${amount}` : amount;
   const commonValues = {
     ownerId: Number(owner),
-    amount: Number(amount),
+    amount: Number(signedAmount),
     reason: reason.trim(),
+    // 서버가 이 조정과 불일치를 연결해 해결 처리하도록 함께 전달한다.
     ...(mismatch ? { mismatchId: mismatch.mismatchId } : {}),
   };
   // 조건부 객체 전개 대신 요청을 분기해 ID·영업일의 타입 관계를 유지한다.
@@ -51,13 +62,18 @@ export const PointAdjustmentModal = ({
     ? { ...commonValues, campaignId: Number(campaign), targetBusinessDate }
     : commonValues;
   const submit = () => {
+    if (!/^\d+$/.test(amount)) {
+      mutation.setError(
+        '조정 포인트는 부호 없이 0보다 큰 정수로 입력해 주세요.',
+      );
+      return;
+    }
     const error = getPointAdjustmentError({
       ownerId: owner,
       campaignId: campaign,
       targetBusinessDate,
-      amount,
+      amount: signedAmount,
       reason,
-      correctingMismatch: Boolean(mismatch),
     });
     if (error) {
       mutation.setError(error);
@@ -94,7 +110,7 @@ export const PointAdjustmentModal = ({
       >
         {mismatch && (
           <p className="text-caption-web text-text-secondary">
-            대상 점주와 돌려줄 포인트, 정정 사유를 확인해 주세요.
+            대상 점주와 지급·차감 방식, 조정 포인트와 사유를 확인해 주세요.
           </p>
         )}
         {confirming ? (
@@ -104,16 +120,18 @@ export const PointAdjustmentModal = ({
               <dd>{owner}</dd>
             </div>
             <div className="flex justify-between">
+              <dt>조정 방식</dt>
+              <dd>{isDeduction ? '차감 · 잔액 감소' : '지급 · 잔액 증가'}</dd>
+            </div>
+            <div className="flex justify-between">
               <dt>조정 포인트</dt>
               <dd
                 className={
-                  Number(amount) < 0
-                    ? 'text-status-danger-fg'
-                    : 'text-action-primary'
+                  isDeduction ? 'text-status-danger-fg' : 'text-action-primary'
                 }
               >
-                {Number(amount) > 0 ? '+' : ''}
-                {formatPoints(Number(amount))}
+                {isDeduction ? '' : '+'}
+                {formatPoints(Number(signedAmount))}
               </dd>
             </div>
             <div className="flex justify-between">
@@ -138,27 +156,65 @@ export const PointAdjustmentModal = ({
               required
               inputMode="numeric"
               value={owner}
+              disabled={Boolean(mismatch)}
+              helperText={
+                mismatch ? '정산 불일치 내역의 점주로 정정합니다.' : undefined
+              }
               onChange={(event) => {
                 setOwner(event.target.value);
                 mutation.setError('');
               }}
             />
-            <Input
-              label="조정 포인트"
-              required
-              inputMode={mismatch ? 'numeric' : 'text'}
-              value={amount}
-              trailing="P"
-              helperText={
-                mismatch
-                  ? '입력한 포인트만큼 점주의 잔액이 늘어납니다.'
-                  : '양수는 과오 차감 정정(잔액 증가), 음수는 포인트 차감입니다.'
-              }
-              onChange={(event) => {
-                setAmount(event.target.value);
-                mutation.setError('');
-              }}
-            />
+            <fieldset className="min-w-0">
+              <legend className="mb-2 text-caption-web font-medium text-text-primary">
+                조정 포인트
+                <span aria-hidden="true" className="ml-1 text-status-danger-fg">
+                  *
+                </span>
+              </legend>
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+                <SegmentedControl
+                  ariaLabel="포인트 조정 방식"
+                  items={[
+                    { label: '지급 (+)', value: 'increase' },
+                    { label: '차감 (−)', value: 'decrease' },
+                  ]}
+                  value={direction}
+                  onValueChange={(value) => {
+                    setDirection(value);
+                    mutation.setError('');
+                  }}
+                />
+                <Input
+                  aria-label="조정 포인트"
+                  aria-describedby={amountHintId}
+                  required
+                  inputMode="numeric"
+                  value={amount}
+                  leadingIcon={
+                    <span
+                      aria-hidden="true"
+                      className="flex size-4 items-center justify-center text-body-sm-web leading-none"
+                    >
+                      {isDeduction ? '−' : '+'}
+                    </span>
+                  }
+                  trailing="P"
+                  onChange={(event) => {
+                    setAmount(event.target.value);
+                    mutation.setError('');
+                  }}
+                />
+              </div>
+              <p
+                id={amountHintId}
+                className="mt-1 text-caption-web text-text-secondary"
+              >
+                {isDeduction
+                  ? '입력한 포인트만큼 점주의 잔액이 줄어듭니다.'
+                  : '입력한 포인트만큼 점주의 잔액이 늘어납니다.'}
+              </p>
+            </fieldset>
             <Input
               label={campaignRequired ? '캠페인 ID' : '캠페인 ID (선택)'}
               required={campaignRequired}
