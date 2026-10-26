@@ -127,7 +127,9 @@ export const PointAdjustmentModal = ({
               <dt>조정 포인트</dt>
               <dd
                 className={
-                  isDeduction ? 'text-status-danger-fg' : 'text-action-primary'
+                  isDeduction
+                    ? 'text-status-danger-fg'
+                    : 'text-action-primary-text'
                 }
               >
                 {isDeduction ? '' : '+'}
