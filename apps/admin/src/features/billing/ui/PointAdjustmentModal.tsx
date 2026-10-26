@@ -2,12 +2,17 @@ import { useId, useRef, useState } from 'react';
 import { Button, DatePicker, Input, SegmentedControl } from '@repo/ui';
 import { formatPoints } from '@repo/utils';
 
+import { ApiError } from '@admin/api/client';
 import { adjustPoints } from '@admin/api/pointAdjustments';
 import type { SettlementMismatch } from '@admin/api/settlementMismatches';
 import { getKstToday } from '@admin/hooks/queryDateUtils';
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 
-import { getPointAdjustmentError } from '../billingManagementUtils';
+import {
+  campaignDeductionError,
+  getPointAdjustmentError,
+  mismatchGuidance,
+} from '../billingManagementUtils';
 import { useBillingMutation } from '../useBillingMutation';
 
 interface PointAdjustmentModalProps {
@@ -26,6 +31,8 @@ export const PointAdjustmentModal = ({
   // 캠페인 대상 두 유형은 정정 시 targetId와 동일한 campaignId가 필요하다.
   const campaignRequired =
     mismatch !== undefined && mismatch.checkType !== 'PG_VS_CHARGE';
+  // 결제 불일치는 캠페인과 무관하므로 입력 UI와 요청 필드에서 모두 제외한다.
+  const campaignApplicable = !mismatch || campaignRequired;
   // 대상 ID는 결제 또는 캠페인 ID이므로 점주를 추측하지 않고 서버의 ownerId를 사용한다.
   const [owner, setOwner] = useState(
     mismatch ? String(mismatch.ownerId ?? '') : ownerId,
@@ -36,6 +43,7 @@ export const PointAdjustmentModal = ({
   const [targetBusinessDate, setTargetBusinessDate] = useState(
     campaignRequired ? mismatch.businessDate : '',
   );
+  // 차액에는 캐시 차이도 포함되므로 실제 조정액을 추정해 미리 채우지 않는다.
   const [amount, setAmount] = useState('');
   const [direction, setDirection] = useState<'increase' | 'decrease'>(
     'increase',
@@ -58,9 +66,10 @@ export const PointAdjustmentModal = ({
     ...(mismatch ? { mismatchId: mismatch.mismatchId } : {}),
   };
   // 조건부 객체 전개 대신 요청을 분기해 ID·영업일의 타입 관계를 유지한다.
-  const values = campaign
-    ? { ...commonValues, campaignId: Number(campaign), targetBusinessDate }
-    : commonValues;
+  const values =
+    campaignApplicable && campaign
+      ? { ...commonValues, campaignId: Number(campaign), targetBusinessDate }
+      : commonValues;
   const submit = () => {
     if (!/^\d+$/.test(amount)) {
       mutation.setError(
@@ -70,10 +79,11 @@ export const PointAdjustmentModal = ({
     }
     const error = getPointAdjustmentError({
       ownerId: owner,
-      campaignId: campaign,
-      targetBusinessDate,
+      campaignId: campaignApplicable ? campaign : '',
+      targetBusinessDate: campaignApplicable ? targetBusinessDate : '',
       amount: signedAmount,
       reason,
+      mismatchCheckType: mismatch?.checkType,
     });
     if (error) {
       mutation.setError(error);
@@ -91,6 +101,17 @@ export const PointAdjustmentModal = ({
     void mutation.run(
       () => adjustPoints({ ...values, requestId }),
       (result) => onSaved(result.ledgerId),
+      (cause) => {
+        if (
+          campaignRequired &&
+          isDeduction &&
+          cause instanceof ApiError &&
+          cause.status === 400 &&
+          cause.code === 'COMMON-002'
+        ) {
+          mutation.setError(campaignDeductionError);
+        }
+      },
     );
   };
   return (
@@ -106,12 +127,16 @@ export const PointAdjustmentModal = ({
           event.preventDefault();
           submit();
         }}
-        className="space-y-4"
+        className="max-h-[calc(100dvh-10rem)] space-y-4 overflow-y-auto"
       >
         {mismatch && (
-          <p className="text-caption-web text-text-secondary">
-            대상 점주와 지급·차감 방식, 조정 포인트와 사유를 확인해 주세요.
-          </p>
+          <div className="space-y-2 text-caption-web leading-5 text-text-secondary">
+            <p className="font-medium text-text-primary">
+              차이 값은 조정 금액이 아닙니다. 원인을 확인한 뒤 실제로 바로잡을
+              금액을 입력하세요.
+            </p>
+            <p>{mismatchGuidance[mismatch.checkType]}</p>
+          </div>
         )}
         {confirming ? (
           <dl className="space-y-2 text-body-sm-web">
@@ -140,7 +165,7 @@ export const PointAdjustmentModal = ({
               <dt>캠페인 ID</dt>
               <dd>{campaign || '—'}</dd>
             </div>
-            {campaign && (
+            {campaignApplicable && campaign && (
               <div className="flex justify-between">
                 <dt>대상 영업일</dt>
                 <dd>{targetBusinessDate}</dd>
@@ -179,10 +204,15 @@ export const PointAdjustmentModal = ({
                   ariaLabel="포인트 조정 방식"
                   items={[
                     { label: '지급 (+)', value: 'increase' },
-                    { label: '차감 (−)', value: 'decrease' },
+                    {
+                      label: '차감 (−)',
+                      value: 'decrease',
+                      disabled: campaignRequired,
+                    },
                   ]}
                   value={direction}
                   onValueChange={(value) => {
+                    if (campaignRequired && value === 'decrease') return;
                     setDirection(value);
                     mutation.setError('');
                   }}
@@ -215,21 +245,24 @@ export const PointAdjustmentModal = ({
                 {isDeduction
                   ? '입력한 포인트만큼 점주의 잔액이 줄어듭니다.'
                   : '입력한 포인트만큼 점주의 잔액이 늘어납니다.'}
+                {campaignRequired && ' 캠페인 관련 불일치는 지급만 가능합니다.'}
               </p>
             </fieldset>
-            <Input
-              label={campaignRequired ? '캠페인 ID' : '캠페인 ID (선택)'}
-              required={campaignRequired}
-              inputMode="numeric"
-              value={campaign}
-              disabled={campaignRequired}
-              onChange={(event) => {
-                setCampaign(event.target.value);
-                if (!event.target.value) setTargetBusinessDate('');
-                mutation.setError('');
-              }}
-            />
-            {campaign && (
+            {campaignApplicable && (
+              <Input
+                label={campaignRequired ? '캠페인 ID' : '캠페인 ID (선택)'}
+                required={campaignRequired}
+                inputMode="numeric"
+                value={campaign}
+                disabled={campaignRequired}
+                onChange={(event) => {
+                  setCampaign(event.target.value);
+                  if (!event.target.value) setTargetBusinessDate('');
+                  mutation.setError('');
+                }}
+              />
+            )}
+            {campaignApplicable && campaign && (
               <div className="space-y-1.5">
                 <p className="text-body-sm-web font-medium text-text-primary">
                   대상 영업일{' '}

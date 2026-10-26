@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Button, SelectField, StatusBadge } from '@repo/ui';
 import { formatDate, formatDateTime, formatPoints } from '@repo/utils';
-import { SlidersHorizontal } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowRightLeft,
+  Check,
+  SlidersHorizontal,
+} from 'lucide-react';
 
 import {
   getSettlementMismatches,
@@ -9,10 +14,12 @@ import {
 } from '@admin/api/settlementMismatches';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { AdminDrawer } from '@admin/ui/AdminDrawer/AdminDrawer';
+import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
 import { AdminDateRangePicker } from '@admin/ui/DatePicker/AdminDateRangePicker';
 
 import {
   getBillingRangeError,
+  mismatchGuidance,
   mismatchLabels,
   resolutionLabels,
 } from '../billingManagementUtils';
@@ -120,6 +127,8 @@ export const SettlementMismatchesTab = ({
   );
   const [selected, setSelected] = useState<SettlementMismatch | null>(null);
   const [adjusting, setAdjusting] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const nextResolved = selected?.resolutionType === null;
   const [notice, setNotice] = useState('');
   const validation = getBillingRangeError(filters.from, filters.to);
   const query = new URLSearchParams({
@@ -224,7 +233,7 @@ export const SettlementMismatchesTab = ({
       <AdminDrawer
         open={selected !== null}
         onClose={() => {
-          if (!adjusting) setSelected(null);
+          if (!adjusting && !editingStatus) setSelected(null);
         }}
         title="정산 불일치 상세"
         resizable
@@ -232,21 +241,55 @@ export const SettlementMismatchesTab = ({
         {selected && (
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <StatusBadge
-                variant={selected.resolutionType ? 'neutral' : 'warning'}
+              <button
+                type="button"
+                aria-label={`${selected.resolutionType ? '해결됨' : '미해결'} 상태 변경`}
+                aria-haspopup="dialog"
+                className="inline-flex items-center gap-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+                onClick={() => {
+                  setEditingStatus(true);
+                }}
               >
-                {selected.resolutionType ? '해결됨' : '미해결'}
-              </StatusBadge>
-              {!selected.resolutionType && (
-                <Button
-                  leadingIcon={
-                    <SlidersHorizontal aria-hidden="true" className="size-4" />
-                  }
-                  disabled={selected.ownerId === null}
-                  onClick={() => setAdjusting(true)}
+                <StatusBadge
+                  variant={selected.resolutionType ? 'neutral' : 'warning'}
                 >
-                  포인트 조정으로 정정
-                </Button>
+                  {selected.resolutionType ? '해결됨' : '미해결'}
+                </StatusBadge>
+                <ArrowRightLeft
+                  aria-hidden="true"
+                  className="size-4 text-text-secondary"
+                />
+              </button>
+              {!selected.resolutionType && (
+                <div className="ml-auto flex flex-wrap justify-end gap-2">
+                  {selected.checkType === 'CAMPAIGN_SPEND_VS_LEDGER' && (
+                    <Button
+                      leadingIcon={
+                        <Check aria-hidden="true" className="size-4" />
+                      }
+                      onClick={() => setEditingStatus(true)}
+                    >
+                      조정 없이 종결
+                    </Button>
+                  )}
+                  <Button
+                    variant={
+                      selected.checkType === 'CAMPAIGN_SPEND_VS_LEDGER'
+                        ? 'neutral'
+                        : 'primary'
+                    }
+                    leadingIcon={
+                      <SlidersHorizontal
+                        aria-hidden="true"
+                        className="size-4"
+                      />
+                    }
+                    disabled={selected.ownerId === null}
+                    onClick={() => setAdjusting(true)}
+                  >
+                    포인트 조정으로 정정
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -277,38 +320,37 @@ export const SettlementMismatchesTab = ({
               </dl>
             </section>
 
-            {/* 기준과 실제 값을 나란히 비교하고 판단에 필요한 차액을 강조한다. */}
-            <section className="space-y-3">
-              <h3 className="text-body-sm-web font-semibold text-text-primary">
-                금액 비교
+            {/* 포인트 변동 상세처럼 핵심 금액을 위에, 비교값을 구분선 아래에 배치한다. */}
+            <section
+              aria-label="금액 비교"
+              className="rounded-lg border border-border-subtle bg-bg-surface p-4"
+            >
+              <h3 className="text-caption-web text-text-secondary">
+                차액 · 실제 금액 − 기준 금액
               </h3>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-4 rounded-lg border border-border-subtle bg-surface-subtle p-4">
-                <div className="min-w-0 space-y-1">
-                  <dt className="text-caption-web text-text-secondary">
-                    기준 금액
-                  </dt>
-                  <dd className="break-words text-body-sm-web font-medium tabular-nums">
+              <p className="mt-2 break-words text-3xl font-semibold tabular-nums text-text-primary">
+                {selected.diff > 0 ? '+' : ''}
+                {formatPoints(selected.diff)}
+              </p>
+              <div className="mt-3 border-t border-border-subtle pt-3">
+                <h4 className="mb-1 text-caption-web text-text-secondary">
+                  기준 금액 / 실제 금액
+                </h4>
+                <div className="flex flex-wrap items-center gap-2 text-body-sm-web tabular-nums">
+                  <span className="min-w-0 break-words font-medium">
+                    <span className="sr-only">기준 금액 </span>
                     {formatPoints(selected.expectedValue)}
-                  </dd>
-                </div>
-                <div className="min-w-0 space-y-1">
-                  <dt className="text-caption-web text-text-secondary">
-                    실제 금액
-                  </dt>
-                  <dd className="break-words text-body-sm-web font-medium tabular-nums">
+                  </span>
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-text-tertiary"
+                  />
+                  <span className="min-w-0 break-words font-semibold">
+                    <span className="sr-only">실제 금액 </span>
                     {formatPoints(selected.actualValue)}
-                  </dd>
+                  </span>
                 </div>
-                <div className="col-span-2 space-y-1 border-t border-border-subtle pt-3">
-                  <dt className="text-caption-web text-text-secondary">
-                    차액 · 실제 금액 − 기준 금액
-                  </dt>
-                  <dd className="break-words text-heading-sm-web font-semibold tabular-nums text-text-primary">
-                    {selected.diff > 0 ? '+' : ''}
-                    {formatPoints(selected.diff)}
-                  </dd>
-                </div>
-              </dl>
+              </div>
             </section>
 
             {selected.resolutionType ? (
@@ -336,8 +378,7 @@ export const SettlementMismatchesTab = ({
                   정정하기
                 </h3>
                 <p className="text-caption-web leading-relaxed text-text-secondary">
-                  지급은 점주의 잔액을 늘리고, 차감은 잔액을 줄입니다. 대상
-                  점주와 조정 방식·금액을 확인한 뒤 정정해 주세요.
+                  {mismatchGuidance[selected.checkType]}
                 </p>
                 {selected.ownerId === null && (
                   <p className="text-caption-web text-status-warning-fg">
@@ -365,6 +406,64 @@ export const SettlementMismatchesTab = ({
               </dl>
             </section>
           </div>
+        )}
+        {selected && editingStatus && (
+          <AdminModal
+            open
+            title={
+              nextResolved ? '조정 없이 종결할까요?' : '미해결로 되돌릴까요?'
+            }
+            onClose={() => setEditingStatus(false)}
+          >
+            <div className="space-y-4 p-5">
+              <div className="flex items-center justify-center gap-4 rounded-lg border border-border-subtle px-4 py-5">
+                <StatusBadge
+                  variant={selected.resolutionType ? 'neutral' : 'warning'}
+                >
+                  {selected.resolutionType ? '해결됨' : '미해결'}
+                </StatusBadge>
+                <ArrowRight
+                  aria-hidden="true"
+                  className="size-4 text-text-secondary"
+                />
+                <StatusBadge variant={nextResolved ? 'neutral' : 'warning'}>
+                  {nextResolved ? '해결됨' : '미해결'}
+                </StatusBadge>
+              </div>
+              <p className="text-body-sm-web text-text-secondary">
+                {nextResolved
+                  ? '포인트 지급·차감이 필요 없는 내역을 조정 없이 종결합니다.'
+                  : '다시 확인할 수 있도록 내역을 미해결 상태로 되돌립니다.'}{' '}
+                상태 변경은 포인트 잔액을 바꾸거나 이전 조정을 취소하지
+                않습니다.
+              </p>
+              <dl>
+                <DetailItem label="불일치 ID" compact>
+                  {selected.mismatchId}
+                </DetailItem>
+                {nextResolved && (
+                  <DetailItem label="해결 방식" compact>
+                    {resolutionLabels.NO_ADJUSTMENT_REQUIRED}
+                  </DetailItem>
+                )}
+              </dl>
+              {/* UI 미리보기 단계: API 연결 전에는 서버 상태나 성공 안내를 변경하지 않는다. */}
+              <p role="status" className="text-caption-web text-text-secondary">
+                현재는 화면 미리보기입니다. 변경한 상태는 저장되지 않습니다.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="neutral"
+                  onClick={() => setEditingStatus(false)}
+                >
+                  취소
+                </Button>
+                <Button onClick={() => setEditingStatus(false)}>
+                  {nextResolved ? '조정 없이 종결' : '미해결로 변경'}
+                </Button>
+              </div>
+            </div>
+          </AdminModal>
         )}
         {selected && selected.ownerId !== null && adjusting && (
           <PointAdjustmentModal
