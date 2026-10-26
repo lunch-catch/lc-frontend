@@ -4,6 +4,7 @@ import { ApiError } from '@admin/api/client';
 import { useAdminAuth } from '@admin/auth/useAdminAuth';
 
 import { apiResourceCache } from './apiResourceCache';
+import { usePaginationTotal } from './usePaginationTotal';
 
 const getResourceError = (cause: unknown) =>
   cause instanceof ApiError ? cause.message : '데이터를 불러오지 못했습니다.';
@@ -72,11 +73,27 @@ export const useApiResource = <T>(
     result.load === load
       ? result
       : cached;
+  const loading = key !== null && !current;
+  const data = current?.data;
+  // 행은 현재 요청의 로딩 상태를 따르고 페이지 이동 UI에 필요한 건수만 유지한다.
+  const totalCount = usePaginationTotal(
+    data &&
+      typeof data === 'object' &&
+      'totalElements' in data &&
+      typeof data.totalElements === 'number'
+      ? data.totalElements
+      : undefined,
+    loading,
+    query,
+    admin,
+    load,
+  );
   return {
     enabled: key !== null,
     data: current?.data,
     error: current?.error,
-    loading: key !== null && !current,
+    loading,
+    totalCount,
     refresh,
   };
 };

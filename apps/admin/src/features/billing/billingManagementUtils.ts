@@ -21,14 +21,27 @@ export const refundVariants: Record<RefundStatus, StatusBadgeVariant> = {
   COMPLETED: 'success',
 };
 export const mismatchLabels: Record<MismatchCheckType, string> = {
-  PG_VS_CHARGE: '결제 승인 / 충전 원장',
-  CAMPAIGN_SPEND_VS_LEDGER: '캠페인 소진 / 원장',
+  PG_VS_CHARGE: '결제 승인액과 충전 원장 비교',
+  CAMPAIGN_SPEND_VS_LEDGER: '캠페인 소진액과 포인트 원장 비교',
   CAMPAIGN_OVERSPEND: '예약액 초과 소진',
+};
+export const campaignDeductionError =
+  '캠페인 관련 불일치는 포인트를 차감할 수 없습니다.';
+// 상세 패널과 조정 폼에서 같은 정책 안내를 사용한다.
+export const mismatchGuidance: Record<MismatchCheckType, string> = {
+  PG_VS_CHARGE:
+    '결제·충전 기록을 확인해 부족분은 지급(+), 잘못 충전된 금액은 차감(−)하세요. 포인트에 문제가 없으면 조정 없이 종결합니다.',
+  CAMPAIGN_OVERSPEND:
+    '하루 예약액을 초과해 차감된 금액만 지급(+)하세요. 덜 차감된 광고비는 회수하지 않으며 차감(−)은 불가합니다.',
+  CAMPAIGN_SPEND_VS_LEDGER:
+    '원장·집계 캐시 차이는 보통 조정 없이 종결합니다. 별도 과다 과금이 확인된 경우만 지급(+)하며 차감(−)은 불가합니다.',
 };
 export const resolutionLabels: Record<MismatchResolutionType, string> = {
   CACHE_REBUILD: '캐시 재집계',
   LEDGER_CORRECTION: '원장 보정',
-  OVERCHARGE_REVERSAL: '과과금 정정',
+  MANUAL_ADJUSTMENT: '수동 포인트 조정',
+  NO_ADJUSTMENT_REQUIRED: '조정 불필요',
+  OVERCHARGE_REVERSAL: '수동 포인트 조정',
 };
 const errors: Record<string, string> = {
   'BILLING-006':
@@ -63,7 +76,7 @@ interface PointAdjustmentInput {
   targetBusinessDate: string;
   amount: string;
   reason: string;
-  correctingMismatch: boolean;
+  mismatchCheckType?: MismatchCheckType;
 }
 
 export const getPointAdjustmentError = ({
@@ -72,7 +85,7 @@ export const getPointAdjustmentError = ({
   targetBusinessDate,
   amount,
   reason,
-  correctingMismatch,
+  mismatchCheckType,
 }: PointAdjustmentInput) => {
   if (
     !isBillingInputId(ownerId) ||
@@ -95,9 +108,14 @@ export const getPointAdjustmentError = ({
   const points = Number(amount);
   if (!/^-?\d+$/.test(amount) || !Number.isSafeInteger(points) || points === 0)
     return '조정 포인트를 0이 아닌 정수로 입력해 주세요.';
-  // 불일치 정정 API는 과도하게 차감된 포인트를 돌려주는 조정만 허용한다.
-  if (correctingMismatch && points < 0)
-    return '정산 불일치 정정은 포인트를 돌려주는 양수 조정만 가능합니다.';
+  // 일반 수동 조정의 캠페인 차감과, mismatchId로 연결된 캠페인 불일치 정정을 구분한다.
+  if (mismatchCheckType && mismatchCheckType !== 'PG_VS_CHARGE' && points < 0)
+    return campaignDeductionError;
+  if (
+    mismatchCheckType === 'PG_VS_CHARGE' &&
+    (campaignId || targetBusinessDate)
+  )
+    return '결제 불일치 조정에는 캠페인 ID와 대상 영업일을 입력하지 않습니다.';
   if (!reason.trim() || reason.length > 255)
     return '조정 사유를 1~255자로 입력해 주세요.';
   return '';

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { syncTemplatePreviewFrame } from '../templatePreviewFrame';
 import {
   TEMPLATE_PREVIEW_HEIGHT,
   TEMPLATE_PREVIEW_WIDTH,
@@ -132,7 +133,7 @@ export const SelectableTemplatePreview = ({
       className="relative size-full min-h-0 min-w-0 flex-1 overflow-auto"
     >
       <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg shadow-md outline outline-1 outline-border-subtle"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         style={{
           width: TEMPLATE_PREVIEW_WIDTH * scale,
           height: TEMPLATE_PREVIEW_HEIGHT * scale,
@@ -140,7 +141,7 @@ export const SelectableTemplatePreview = ({
       >
         <iframe
           ref={frameRef}
-          className="absolute left-0 top-0 origin-top-left rounded-lg border-0 bg-bg-page"
+          className="absolute left-0 top-0 origin-top-left border-0 bg-transparent shadow-md"
           width={TEMPLATE_PREVIEW_WIDTH}
           height={TEMPLATE_PREVIEW_HEIGHT}
           style={{
@@ -151,12 +152,13 @@ export const SelectableTemplatePreview = ({
           sandbox="allow-same-origin"
           srcDoc={srcDoc}
           title={title}
-          onLoad={() =>
+          onLoad={(event) => {
+            syncTemplatePreviewFrame(event.currentTarget);
             setLoaded({
               html,
               document: frameRef.current?.contentDocument ?? null,
-            })
-          }
+            });
+          }}
         />
       </div>
     </div>

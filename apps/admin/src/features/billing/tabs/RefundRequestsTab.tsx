@@ -146,7 +146,7 @@ export const RefundRequestsTab = ({
         preferences={preferences}
         page={filters.page}
         size={filters.size}
-        total={resource.data?.totalElements}
+        total={resource.totalCount}
         onPageChange={(page) => {
           updateFilters({ page });
           setSelected(null);

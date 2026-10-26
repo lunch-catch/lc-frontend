@@ -71,7 +71,7 @@ export const LoginContent = ({ onLogin, authNotice }: LoginContentProps) => {
     <main className="flex min-h-screen items-center justify-center bg-surface-subtle px-5 py-10">
       <section className="w-full max-w-[400px] rounded-xl border border-border-subtle bg-bg-surface p-8 shadow-sm sm:p-10">
         <div className="mb-8 text-center">
-          <p className="text-caption-web font-semibold text-action-primary">
+          <p className="text-caption-web font-semibold text-action-primary-text">
             LUNCH CATCH
           </p>
           <h1 className="mt-2 text-title-md-web font-semibold text-text-primary">
