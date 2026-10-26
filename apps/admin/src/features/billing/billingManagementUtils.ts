@@ -30,11 +30,11 @@ export const campaignDeductionError =
 // 상세 패널과 조정 폼에서 같은 정책 안내를 사용한다.
 export const mismatchGuidance: Record<MismatchCheckType, string> = {
   PG_VS_CHARGE:
-    '결제·충전 기록을 확인해 부족분은 지급(+), 잘못 충전된 금액은 차감(−)하세요. 포인트에 문제가 없으면 조정 없이 종결합니다.',
+    '결제 승인액에서 해당 결제의 실제 충전액을 뺀 정확한 금액을 입력하세요. 부족분은 지급(+), 잘못 충전된 금액은 차감(−)합니다. 금액의 최종 검증은 서버에서 처리합니다.',
   CAMPAIGN_OVERSPEND:
-    '하루 예약액을 초과해 차감된 금액만 지급(+)하세요. 덜 차감된 광고비는 회수하지 않으며 차감(−)은 불가합니다.',
+    '실제 초과 차감액 이하의 금액만 지급(+)할 수 있습니다. 덜 차감된 광고비는 회수하지 않으며 차감(−)은 불가합니다.',
   CAMPAIGN_SPEND_VS_LEDGER:
-    '원장·집계 캐시 차이는 보통 조정 없이 종결합니다. 별도 과다 과금이 확인된 경우만 지급(+)하며 차감(−)은 불가합니다.',
+    '원장·집계 캐시 차이는 포인트 조정 없이 종결합니다. 초과 소진이 있다면 같은 영업일의 예약액 초과 소진 건을 확인해 정정하세요. 해당 건은 이틀 뒤 00:00에 기록될 수 있습니다.',
 };
 export const resolutionLabels: Record<MismatchResolutionType, string> = {
   CACHE_REBUILD: '캐시 재집계',
@@ -77,6 +77,7 @@ interface PointAdjustmentInput {
   amount: string;
   reason: string;
   mismatchCheckType?: MismatchCheckType;
+  mismatchExcess?: number;
 }
 
 export const getPointAdjustmentError = ({
@@ -86,7 +87,10 @@ export const getPointAdjustmentError = ({
   amount,
   reason,
   mismatchCheckType,
+  mismatchExcess,
 }: PointAdjustmentInput) => {
+  if (mismatchCheckType === 'CAMPAIGN_SPEND_VS_LEDGER')
+    return '원장·집계 캐시 불일치는 포인트를 조정할 수 없습니다. 조정 없이 종결해 주세요.';
   if (
     !isBillingInputId(ownerId) ||
     (campaignId && !isBillingInputId(campaignId))
@@ -111,6 +115,12 @@ export const getPointAdjustmentError = ({
   // 일반 수동 조정의 캠페인 차감과, mismatchId로 연결된 캠페인 불일치 정정을 구분한다.
   if (mismatchCheckType && mismatchCheckType !== 'PG_VS_CHARGE' && points < 0)
     return campaignDeductionError;
+  // 이 상한은 초과 소진 건에만 적용한다. 결제 건의 정확한 금액은 서버가 원장으로 검증한다.
+  if (
+    mismatchCheckType === 'CAMPAIGN_OVERSPEND' &&
+    (mismatchExcess === undefined || points > mismatchExcess)
+  )
+    return '조정 포인트는 실제 초과 차감액 이하여야 합니다.';
   if (
     mismatchCheckType === 'PG_VS_CHARGE' &&
     (campaignId || targetBusinessDate)

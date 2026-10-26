@@ -161,7 +161,7 @@ test('일반 포인트 수동 조정의 점주 입력은 기존처럼 수정할 
   assert.doesNotMatch(html, /<button[^>]*disabled[^>]*>차감/);
 });
 
-test('캠페인 불일치만 음수 조정을 거부하고 결제·일반 조정은 양방향을 허용한다', () => {
+test('소진·원장 불일치는 조정 불가, 초과 소진은 초과액 이하 양수, 결제·일반 조정은 양방향이다', () => {
   const input = {
     ownerId: '7',
     campaignId: '12',
@@ -169,23 +169,43 @@ test('캠페인 불일치만 음수 조정을 거부하고 결제·일반 조정
     amount: '-100',
     reason: '원인 확인 후 정정',
   };
-  for (const mismatchCheckType of [
-    'CAMPAIGN_SPEND_VS_LEDGER',
-    'CAMPAIGN_OVERSPEND',
-  ]) {
-    assert.equal(
-      policy.getPointAdjustmentError({ ...input, mismatchCheckType }),
-      policy.campaignDeductionError,
-    );
-    assert.equal(
+  for (const amount of ['100', '-100']) {
+    assert.match(
       policy.getPointAdjustmentError({
         ...input,
-        amount: '100',
-        mismatchCheckType,
+        amount,
+        mismatchCheckType: 'CAMPAIGN_SPEND_VS_LEDGER',
       }),
-      '',
+      /조정 없이 종결/,
     );
   }
+  const mismatchCheckType = 'CAMPAIGN_OVERSPEND';
+  assert.equal(
+    policy.getPointAdjustmentError({
+      ...input,
+      mismatchCheckType,
+      mismatchExcess: 100,
+    }),
+    policy.campaignDeductionError,
+  );
+  assert.equal(
+    policy.getPointAdjustmentError({
+      ...input,
+      amount: '100',
+      mismatchCheckType,
+      mismatchExcess: 100,
+    }),
+    '',
+  );
+  assert.match(
+    policy.getPointAdjustmentError({
+      ...input,
+      amount: '101',
+      mismatchCheckType,
+      mismatchExcess: 100,
+    }),
+    /초과 차감액 이하/,
+  );
   assert.equal(policy.getPointAdjustmentError(input), '');
   for (const amount of ['100', '-100']) {
     assert.equal(

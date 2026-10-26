@@ -84,6 +84,9 @@ export const PointAdjustmentModal = ({
       amount: signedAmount,
       reason,
       mismatchCheckType: mismatch?.checkType,
+      mismatchExcess: mismatch
+        ? mismatch.actualValue - mismatch.expectedValue
+        : undefined,
     });
     if (error) {
       mutation.setError(error);
@@ -103,13 +106,20 @@ export const PointAdjustmentModal = ({
       (result) => onSaved(result.ledgerId),
       (cause) => {
         if (
-          campaignRequired &&
-          isDeduction &&
+          mismatch &&
           cause instanceof ApiError &&
           cause.status === 400 &&
           cause.code === 'COMMON-002'
         ) {
-          mutation.setError(campaignDeductionError);
+          mutation.setError(
+            mismatch.checkType === 'PG_VS_CHARGE'
+              ? '결제 승인액과 해당 결제의 실제 충전 원장을 다시 확인해 정확한 조정 금액을 입력해 주세요.'
+              : mismatch.checkType === 'CAMPAIGN_SPEND_VS_LEDGER'
+                ? '이 불일치는 포인트 조정 없이 종결해야 합니다.'
+                : isDeduction
+                  ? campaignDeductionError
+                  : '실제 초과 차감액 이하의 지급 금액인지 다시 확인해 주세요.',
+          );
         }
       },
     );
