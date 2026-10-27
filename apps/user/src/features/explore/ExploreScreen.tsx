@@ -6,6 +6,7 @@ import {
   useState,
 } from 'react';
 import { useNavigate, useNavigationType, useSearchParams } from 'react-router';
+import { SegmentedControl } from '@repo/ui';
 import { ChevronDown, Search, X } from 'lucide-react';
 
 import {
@@ -53,26 +54,19 @@ const moreButtonClassName =
 
 // 목록 위 탭. 서버는 쿠폰 여부로 거르지 못해 받은 가게에서 화면이 거른다
 const listTabs: { label: string; value: ListTab }[] = [
-  { label: '쿠폰 진행 중', value: 'coupon' },
+  { label: '쿠폰', value: 'coupon' },
   { label: '전체', value: 'all' },
 ];
 
 // 쿠폰 탭에서 모자란 가게를 채우려고 다음 페이지를 이어 받는 한도. 쿠폰 가게가 드문 곳에서 끝없이 받지 않게 한다
 const MAX_AUTO_LOADED_STORES = 300;
 
-// 목록·지도 전환과 쿠폰·전체 탭이 같은 모양으로 보이도록 묶음과 버튼 모양을 함께 쓴다. 높이는 놓인 자리에 맞춰 따로 준다
-const toggleGroupClassName =
-  'flex shrink-0 items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1';
-const toggleButtonClassName = (isSelected: boolean) =>
-  `flex h-full items-center justify-center rounded-lg px-2.5 text-body-sm-mobile font-bold transition-colors ${
-    isSelected ? 'bg-surface-brand text-text-brand' : 'text-text-tertiary'
-  }`;
-
 // 줄 세 개 아이콘은 메뉴·정렬로도 읽혀서, 뜻이 바로 보이는 두 글자로 쓴다
-const viewOptions = [
+// 목록·지도 전환과 쿠폰·전체 탭은 설정의 화면 모드 선택과 같은 공통 전환 버튼(SegmentedControl)으로 모양을 맞춘다
+const viewOptions: { label: string; value: ExploreView }[] = [
   { value: 'list', label: '목록' },
   { value: 'map', label: '지도' },
-] as const;
+];
 
 // 탐색 탭. 주변 가게를 업종별로 보고 가게명이나 메뉴로 검색한다 (Figma 4. 홈의 목록·지도 보기)
 // 목록과 지도는 같은 가게 목록을 보여주는 방식만 다르다
@@ -539,23 +533,12 @@ const ExploreScreen = () => {
                 가까운 순
               </p>
             </div>
-            <div
-              aria-label="가게 목록 거르기"
-              className={`h-9 ${toggleGroupClassName}`}
-              role="group"
-            >
-              {listTabs.map(({ label, value }) => (
-                <button
-                  aria-pressed={listTab === value}
-                  className={toggleButtonClassName(listTab === value)}
-                  key={value}
-                  onClick={() => changeListTab(value)}
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              ariaLabel="가게 목록 거르기"
+              items={listTabs}
+              onValueChange={changeListTab}
+              value={listTab}
+            />
           </div>
           {hasNoCoupons ? (
             <EmptyState
@@ -665,25 +648,17 @@ const ExploreScreen = () => {
                 </button>
               )}
             </form>
-            <div
-              aria-label="보기 방식"
-              className={`h-11 ${toggleGroupClassName}`}
-              role="group"
-            >
-              {viewOptions.map(({ label, value }) => (
-                <button
-                  aria-pressed={view === value}
-                  className={toggleButtonClassName(view === value)}
-                  key={value}
-                  onClick={() =>
-                    // 업종·검색어는 그대로 두고 보기 방식만 바꾼다
-                    updateParams({ view: value === 'map' ? 'map' : null })
-                  }
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
+            {/* 검색창 높이에 맞춰 늘린다 (전환 버튼이 감싼 칸 높이를 채운다) */}
+            <div className="flex h-11 shrink-0">
+              <SegmentedControl
+                ariaLabel="보기 방식"
+                items={viewOptions}
+                onValueChange={(value) =>
+                  // 업종·검색어는 그대로 두고 보기 방식만 바꾼다
+                  updateParams({ view: value === 'map' ? 'map' : null })
+                }
+                value={view}
+              />
             </div>
           </div>
           <CategoryIconRow onChange={changeCategory} value={category} />
