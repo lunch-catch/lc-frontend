@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 
 import bannerBefore from '@user/assets/illustrations/banner-before.webp';
+import bannerBg from '@user/assets/illustrations/banner-bg.webp';
 import bannerClosed from '@user/assets/illustrations/banner-closed.webp';
 import bannerOpen from '@user/assets/illustrations/banner-open.webp';
 import {
@@ -77,7 +78,15 @@ const StatusBanner = () => {
 
   return (
     <Link
-      className="relative flex h-20 items-center justify-between overflow-hidden rounded-2xl border border-secondary-200 bg-secondary-100 px-4 active:bg-secondary-200 focus-visible:outline-2 focus-visible:outline-action-primary"
+      className="relative flex h-20 items-center justify-between overflow-hidden rounded-2xl border border-secondary-200 bg-status-banner px-4 active:bg-secondary-200 focus-visible:outline-2 focus-visible:outline-action-primary"
+      // 가운데가 비어 보이지 않게 티켓과 원을 그린 바탕 그림을 깐다. 높이에 맞추고 오른쪽에 붙여 원이 늘 마스코트 뒤에 오게 하고,
+      // 배너가 그림보다 넓으면 남는 왼쪽은 그림 가장자리와 같은 바탕색으로 이어진다
+      style={{
+        backgroundImage: `url(${bannerBg})`,
+        backgroundPosition: 'right center',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'auto 100%',
+      }}
       to={content.to}
     >
       <div className="relative flex min-w-0 flex-col gap-1">
