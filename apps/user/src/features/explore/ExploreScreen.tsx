@@ -525,9 +525,9 @@ const ExploreScreen = () => {
             {/* 검색 중에는 위에 검색 결과 제목이 있어 구역 이름을 두지 않는다. 어떤 순서인지는 늘 알린다 */}
             <div className="flex min-w-0 items-baseline gap-1.5">
               {!query && (
-                <h3 className="text-body-sm-mobile font-bold text-text-primary">
+                <h2 className="text-body-sm-mobile font-bold text-text-primary">
                   주변 가게
-                </h3>
+                </h2>
               )}
               <p className="text-caption-mobile text-text-tertiary">
                 가까운 순

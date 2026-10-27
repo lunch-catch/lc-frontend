@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useLocation } from 'react-router';
 
 import TopBar from '@user/ui/TopBar/TopBar';
 
@@ -11,6 +11,9 @@ const couponTabs = [
 
 // 쿠폰함 탭 안의 화면들이 함께 쓰는 제목과 탭 줄
 const CouponLayout = () => {
+  const { pathname } = useLocation();
+  const currentTab = couponTabs.find((tab) => tab.to === pathname);
+
   return (
     <>
       <TopBar title="쿠폰함" tone="page" />
@@ -44,6 +47,8 @@ const CouponLayout = () => {
           </NavLink>
         ))}
       </nav>
+      {/* 쿠폰 카드 제목(h3)이 화면 제목(h1) 바로 아래로 오지 않게, 지금 탭 이름을 보이지 않는 구역 제목으로 둔다 */}
+      {currentTab && <h2 className="sr-only">{currentTab.label}</h2>}
       <Outlet />
     </>
   );
