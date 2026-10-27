@@ -21,23 +21,31 @@ const Digit = ({ value }: { value: string }) => (
   </span>
 );
 
+// 오픈까지 남은 시간. 숫자를 다른 배너 문구보다 크게 두어 배너 가운데를 채우고, 콜론은 연하게 둬 숫자가 먼저 읽히게 한다
 const Countdown = ({ remainingMs }: { remainingMs: number }) => {
   const text = formatCountdown(remainingMs);
 
   return (
     // 매초 읽어 주지 않도록 시간 전체를 하나의 이미지 글처럼 알린다
-    <span aria-label={`오픈까지 ${text}`} className="tabular-nums" role="img">
-      {text.split('').map((char, index) =>
-        char === ':' ? (
-          <span aria-hidden="true" key={index}>
-            :
+    <span
+      aria-label={`오픈까지 ${text}`}
+      className="flex items-center gap-1 tabular-nums"
+      role="img"
+    >
+      {text.split(':').map((unit, unitIndex) => (
+        <span
+          aria-hidden="true"
+          className="flex items-center gap-1"
+          key={unitIndex}
+        >
+          {unitIndex > 0 && <span className="text-secondary-600">:</span>}
+          <span className="text-h2-mobile">
+            {unit.split('').map((char, charIndex) => (
+              <Digit key={charIndex} value={char} />
+            ))}
           </span>
-        ) : (
-          <span aria-hidden="true" key={index}>
-            <Digit value={char} />
-          </span>
-        ),
-      )}
+        </span>
+      ))}
     </span>
   );
 };
@@ -72,7 +80,7 @@ const StatusBanner = () => {
       className="relative flex h-20 items-center justify-between overflow-hidden rounded-2xl border border-secondary-200 bg-secondary-100 px-4 active:bg-secondary-200 focus-visible:outline-2 focus-visible:outline-action-primary"
       to={content.to}
     >
-      <div className="relative flex flex-col gap-0.5">
+      <div className="relative flex min-w-0 flex-col gap-1">
         <p className="flex items-center gap-1.5 text-caption-mobile font-medium text-text-secondary">
           {isOpen && !isIssueClosed && (
             <span
@@ -93,7 +101,7 @@ const StatusBanner = () => {
       </div>
       <img
         alt=""
-        className="relative size-14 object-contain"
+        className="relative size-14 shrink-0 object-contain"
         height={56}
         src={content.image}
         width={56}
