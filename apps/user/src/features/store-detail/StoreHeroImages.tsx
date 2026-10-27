@@ -1,6 +1,8 @@
 import { type PointerEvent, type UIEvent, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Store } from 'lucide-react';
 
+import FadeImage from '@user/ui/FadeImage/FadeImage';
+
 interface StoreHeroImagesProps {
   // 가게 대표 이미지. 서버 필드 이름은 logoImage지만, 점주에게는 "손님이 가게를 찾을 때 보여지는 사진"으로 받는다
   mainImageUrl: string | null;
@@ -114,9 +116,9 @@ const StoreHeroImages = ({
         role="region"
       >
         {imageUrls.map((url, position) => (
-          <img
+          <FadeImage
             alt={`가게 사진 ${position + 1}/${imageUrls.length}`}
-            className="size-full shrink-0 snap-center object-cover"
+            className="size-full shrink-0 snap-center"
             height={240}
             key={url}
             // 첫 장만 바로 받고 나머지는 넘길 때 받는다

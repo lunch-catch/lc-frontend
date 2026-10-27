@@ -4,6 +4,7 @@ import { Store, TicketSlash } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
 import { cardClassName } from '@user/ui/Card/Card';
+import FadeImage from '@user/ui/FadeImage/FadeImage';
 import { formatDiscountTarget, formatWalkTime } from '@user/ui/storeFormat';
 
 interface StoreCardProps {
@@ -34,9 +35,9 @@ const StoreCard = ({ store }: StoreCardProps) => {
 
   const thumbnail =
     store.thumbnailUrl && !hasImageError ? (
-      <img
+      <FadeImage
         alt=""
-        className="size-14 shrink-0 rounded-lg bg-surface-subtle object-cover"
+        className="size-14 shrink-0 rounded-lg"
         height={72}
         loading="lazy"
         onError={() => setHasImageError(true)}

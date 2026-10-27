@@ -4,6 +4,7 @@ import { Store } from 'lucide-react';
 
 import { BUSINESS_CATEGORY_LABELS, type StoreListItem } from '@user/api/store';
 import { cardClassName } from '@user/ui/Card/Card';
+import FadeImage from '@user/ui/FadeImage/FadeImage';
 import {
   formatDiscount,
   formatDiscountTarget,
@@ -41,9 +42,9 @@ const FeaturedStoreCard = ({
   const hasImage = Boolean(store.thumbnailUrl) && !hasImageError;
 
   const photo = hasImage ? (
-    <img
+    <FadeImage
       alt=""
-      className="size-full object-cover"
+      className="size-full"
       height={176}
       onError={() => setHasImageError(true)}
       src={store.thumbnailUrl ?? undefined}
