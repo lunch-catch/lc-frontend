@@ -93,3 +93,51 @@ test('사용자 메시지는 마크다운으로 변환하지 않는다', () => {
   assert.match(html, /\*\*이 문구\*\*/);
   assert.match(html, /&lt;h1&gt;/);
 });
+
+const { TemplateChatComposer } = load('TemplateChatComposer', {
+  'react/jsx-runtime': jsxRuntime,
+  '@repo/ui': {
+    Button: ({ variant, ...props }) => React.createElement('button', props),
+    StatusBadge: () => null,
+  },
+  'lucide-react': Object.fromEntries(
+    ['Code2', 'MousePointer2', 'Send', 'Square', 'X'].map((key) => [
+      key,
+      () => null,
+    ]),
+  ),
+});
+const renderComposer = (isViewingPreviousVersion) =>
+  renderToStaticMarkup(
+    React.createElement(TemplateChatComposer, {
+      chat: {
+        editor: { suggestedPrompts: ['색상을 바꿔줘'], busy: false },
+        prompt: '제목을 바꿔줘',
+        locked: false,
+        isViewingPreviousVersion,
+        selectedTarget: null,
+        displayName: '테스트',
+        promptRef: { current: null },
+        isResponding: false,
+      },
+    }),
+  );
+test('이전 버전에서는 채팅 전송을 막고 게시 가능 안내만 제공한다', () => {
+  const html = renderComposer(true);
+  assert.match(html, /저장·게시할 수 있습니다/);
+  assert.doesNotMatch(html, /<button[^>]*>최신 버전으로 이동/);
+  assert.match(html, /<textarea[^>]*readOnly=""/);
+  assert.match(
+    html,
+    /<button[^>]*aria-label="생성·수정 요청 보내기"[^>]*disabled=""/,
+  );
+  assert.match(html, /aria-describedby="template-version-notice"/);
+});
+test('최신 버전에서는 입력과 전송을 허용하고 이전 버전 안내를 숨긴다', () => {
+  const html = renderComposer(false);
+  assert.doesNotMatch(html, /readOnly=""|template-version-notice/);
+  assert.doesNotMatch(
+    html,
+    /<button[^>]*aria-label="생성·수정 요청 보내기"[^>]*disabled=""/,
+  );
+});

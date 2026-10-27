@@ -6,6 +6,7 @@ import { queryChoice, queryText } from '@admin/hooks/urlQuery';
 import { useUrlFilters } from '@admin/hooks/useUrlFilters';
 import { useUrlSearch } from '@admin/hooks/useUrlSearch';
 import { AdminModal } from '@admin/ui/AdminModal/AdminModal';
+import { ErrorState } from '@admin/ui/ErrorState/ErrorState';
 import { FilterBar } from '@admin/ui/FilterBar/FilterBar';
 
 import type { PosterTemplate } from '../templateTypes';
@@ -18,6 +19,7 @@ export interface TemplateManagementContentProps {
   onOpenTemplate: (template: PosterTemplate) => void;
   changeActive: (template: PosterTemplate) => Promise<void>;
   removeTemplate: (template: PosterTemplate) => Promise<void>;
+  refresh: () => void;
   loading: boolean;
   error: string | null;
   templates: PosterTemplate[];
@@ -39,6 +41,7 @@ export const TemplateManagementContent = ({
   onOpenTemplate,
   changeActive,
   removeTemplate,
+  refresh,
   loading,
   error,
   templates,
@@ -230,12 +233,18 @@ export const TemplateManagementContent = ({
         />
       </FilterBar>
 
-      {loading || error ? (
+      {error ? (
+        <ErrorState
+          className="rounded-xl border border-border-subtle bg-bg-surface py-20"
+          description={error}
+          onRetry={refresh}
+        />
+      ) : loading ? (
         <div
           className="rounded-xl border border-border-subtle bg-bg-surface py-20 text-center text-body-sm-web text-text-secondary"
-          role={error ? 'alert' : 'status'}
+          role="status"
         >
-          {error ?? '템플릿을 불러오는 중입니다.'}
+          템플릿을 불러오는 중입니다.
         </div>
       ) : visibleTemplates.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 @sm:grid-cols-2 @xl:grid-cols-3 @3xl:grid-cols-4 @5xl:grid-cols-5">

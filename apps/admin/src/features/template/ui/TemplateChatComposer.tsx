@@ -16,8 +16,7 @@ export const TemplateChatComposer = ({
     editor,
     prompt,
     locked,
-    versionNumber,
-    latestVersionNumber,
+    isViewingPreviousVersion,
     selectedTarget,
     handleSend,
     promptRef,
@@ -29,9 +28,14 @@ export const TemplateChatComposer = ({
     stopResponse,
   } = chat;
 
+  const showSuggestions =
+    !isViewingPreviousVersion &&
+    !prompt.trim() &&
+    editor.suggestedPrompts.length > 0;
+
   return (
     <>
-      {!prompt.trim() && editor.suggestedPrompts.length ? (
+      {showSuggestions ? (
         <div
           className="flex shrink-0 flex-wrap gap-2 px-4 pb-1 pt-2"
           aria-label="추천 수정 요청"
@@ -40,7 +44,7 @@ export const TemplateChatComposer = ({
             <button
               key={suggestion}
               type="button"
-              disabled={locked || versionNumber !== latestVersionNumber}
+              disabled={locked}
               className="template-editor__suggestion rounded-full border px-3 py-1.5 text-caption-web transition-colors focus-visible:outline-2 focus-visible:outline-action-primary disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void handleSend(suggestion)}
             >
@@ -56,6 +60,15 @@ export const TemplateChatComposer = ({
         {editor.isWaiting && (
           <p role="status" className="template-editor__hint text-caption-web">
             {editor.retryAfterSeconds}초 후 같은 요청을 다시 보낼 수 있습니다.
+          </p>
+        )}
+        {isViewingPreviousVersion && (
+          <p
+            id="template-version-notice"
+            className="text-caption-web text-text-secondary"
+          >
+            이전 버전은 확인하거나 저장·게시할 수 있습니다. 채팅 수정은 최신
+            버전에서만 가능합니다.
           </p>
         )}
         <label htmlFor="template-request" className="sr-only">
@@ -106,17 +119,23 @@ export const TemplateChatComposer = ({
             id="template-request"
             className="ui-scrollbar block h-20 w-full resize-none overflow-y-auto overscroll-y-contain rounded-md border-0 bg-transparent px-3 py-2 pr-12 text-body-sm-web text-text-primary focus:outline-none"
             aria-describedby={
-              selectedTarget ? 'template-selection-label' : undefined
+              isViewingPreviousVersion
+                ? 'template-version-notice'
+                : selectedTarget
+                  ? 'template-selection-label'
+                  : undefined
             }
             maxLength={500}
-            // disabled로 포커스를 잃지 않도록 전송 중에는 편집만 막는다.
-            readOnly={locked}
+            // 전송 중 포커스와 이전 버전에서 작성한 입력을 보존하되 수정·전송은 막는다.
+            readOnly={locked || isViewingPreviousVersion}
             value={prompt}
             onChange={(event) => changePrompt(event.target.value)}
             placeholder={
-              selectedTarget
-                ? '선택한 부분의 수정 내용을 입력해 주세요'
-                : '원하는 분위기나 수정 내용을 입력해 주세요'
+              isViewingPreviousVersion
+                ? '채팅 수정은 최신 버전으로 이동한 뒤 요청해 주세요'
+                : selectedTarget
+                  ? '선택한 부분의 수정 내용을 입력해 주세요'
+                  : '원하는 분위기나 수정 내용을 입력해 주세요'
             }
             onKeyDown={(event) => {
               if (
@@ -147,7 +166,11 @@ export const TemplateChatComposer = ({
             }
             className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-lg bg-action-primary text-white transition-colors enabled:hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
             disabled={
-              !isResponding && (locked || !displayName.trim() || !prompt.trim())
+              !isResponding &&
+              (locked ||
+                isViewingPreviousVersion ||
+                !displayName.trim() ||
+                !prompt.trim())
             }
             onClick={() => (isResponding ? stopResponse() : void handleSend())}
           >

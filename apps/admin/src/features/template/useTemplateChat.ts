@@ -76,6 +76,8 @@ export const useTemplateChat = ({
     editor.getVersionAvailability(selectedVersion) === 'available'
       ? selectedVersion
       : latestVersionNumber;
+  // 과거 버전은 조회·게시만 가능하며 수정 API는 항상 최신 버전을 기준으로 한다.
+  const isViewingPreviousVersion = versionNumber !== latestVersionNumber;
   const version = editor.versions.find(
     (item) => item.versionNumber === versionNumber,
   );
@@ -104,7 +106,7 @@ export const useTemplateChat = ({
       ? selectionContext.target
       : null;
   const selectTarget = (target: TemplateSelection) => {
-    if (locked || !previewHtml) return;
+    if (locked || isViewingPreviousVersion || !previewHtml) return;
     setSelectionContext({ html: previewHtml, version: versionNumber, target });
     setSelectionError('');
     promptRef.current?.focus({ preventScroll: true });
@@ -159,7 +161,13 @@ export const useTemplateChat = ({
 
   const handleSend = async (quickPrompt?: string) => {
     const submittedPrompt = quickPrompt ?? prompt;
-    if (sendingRef.current || locked || !submittedPrompt.trim()) return;
+    if (
+      sendingRef.current ||
+      locked ||
+      isViewingPreviousVersion ||
+      !submittedPrompt.trim()
+    )
+      return;
     // 실제 요청에 포함한 선택만 보관한다. 퀵응답에는 선택 문맥을 붙이지 않는다.
     const targetLabel =
       quickPrompt === undefined ? selectedTarget?.label : undefined;
@@ -236,6 +244,7 @@ export const useTemplateChat = ({
     published,
     locked,
     latestVersionNumber,
+    isViewingPreviousVersion,
     versionNumber,
     previewHtml,
     displayName,

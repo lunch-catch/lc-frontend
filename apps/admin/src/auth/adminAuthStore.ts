@@ -49,16 +49,25 @@ export const subscribeAuth = (listener: () => void) => {
 };
 const applySharedState = (next: SharedAuthState) => {
   if (next.revision === sharedRevision) return;
-  if (
-    next.session !== sharedSession ||
-    next.admin?.adminId !== state.admin?.adminId
-  )
-    sessionId += 1;
+  const sameSession =
+    next.session === sharedSession &&
+    next.admin?.adminId === state.admin?.adminId;
+  if (!sameSession) sessionId += 1;
+  // 토큰만 갱신됐을 때 객체를 바꾸면 조회 훅이 재시도를 취소하고 새 요청을 시작한다.
+  // 같은 세션·표시 정보는 유지하되 재로그인과 권한 변경은 새 객체로 구분한다.
+  const admin =
+    sameSession &&
+    state.admin &&
+    next.admin &&
+    state.admin.name === next.admin.name &&
+    state.admin.role === next.admin.role
+      ? state.admin
+      : next.admin;
   sharedRevision = next.revision;
   sharedSession = next.session;
   authVersion += 1;
   publish({
-    admin: next.admin,
+    admin,
     authNotice: next.notice,
     isRestoring: false,
     restoreError: null,

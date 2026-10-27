@@ -532,3 +532,37 @@ test('같은 세션에서 재시도도 만료되면 인증을 초기화하고 �
   assert.equal(protectedCalls, 2);
   assert.equal(store.getAuthState().admin, null);
 });
+
+test('같은 세션의 토큰 재발급은 관리자 객체를 유지해 진행 중인 조회를 취소하지 않는다', async () => {
+  const { store } = setup(async () => success());
+  await store.loginAdmin(credentials);
+  const before = store.getAuthState().admin;
+  await store.refreshAdmin();
+  assert.equal(store.getAuthState().admin, before);
+});
+
+test('같은 관리자라도 재로그인하면 이전 조회 캐시와 다른 객체를 사용한다', async () => {
+  const { store } = setup(async (_url, options) =>
+    options?.method === 'DELETE'
+      ? new Response(null, { status: 204 })
+      : success(),
+  );
+  await store.loginAdmin(credentials);
+  const before = store.getAuthState().admin;
+  await store.logoutAdmin();
+  await store.loginAdmin(credentials);
+  assert.notEqual(store.getAuthState().admin, before);
+  assert.equal(store.getAuthState().admin.adminId, before.adminId);
+});
+
+test('재발급 때 이름이나 권한이 바뀌면 새 관리자 정보와 조회 기준을 반영한다', async () => {
+  let current = adminA;
+  const { store } = setup(async () => success(current));
+  await store.loginAdmin(credentials);
+  const before = store.getAuthState().admin;
+  current = { ...adminA, name: '변경된 이름', role: 'ADMIN' };
+  await store.refreshAdmin();
+  assert.notEqual(store.getAuthState().admin, before);
+  assert.equal(store.getAuthState().admin.name, current.name);
+  assert.equal(store.getAuthState().admin.role, current.role);
+});
