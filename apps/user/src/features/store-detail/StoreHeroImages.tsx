@@ -106,7 +106,7 @@ const StoreHeroImages = ({
     <>
       <div
         aria-label="가게 사진"
-        className="peer flex size-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-none [&::-webkit-scrollbar]:hidden"
+        className="peer flex size-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action-primary [&::-webkit-scrollbar]:hidden"
         onPointerCancel={finishDrag}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -114,6 +114,9 @@ const StoreHeroImages = ({
         onScroll={handleScroll}
         ref={regionRef}
         role="region"
+        // 사진이 여러 장이면 키보드로도 사진 칸에 닿아 방향키로 넘길 수 있게 한다
+        // 이전·다음 버튼은 마우스가 있는 화면에만 있어서, 터치 기기에 키보드를 붙이면 넘길 방법이 없었다
+        tabIndex={imageUrls.length > 1 ? 0 : undefined}
       >
         {imageUrls.map((url, position) => (
           <FadeImage
