@@ -229,10 +229,11 @@ export const TemplateCreateContent = ({
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <p className="text-body-sm-web text-text-primary">
-              {pendingVersion}번 버전으로 돌아가시겠습니까?
+              {pendingVersion}번 버전을 확인하시겠습니까?
             </p>
             <p className="text-body-sm-web text-text-secondary">
-              선택한 버전의 HTML과 미리보기를 표시합니다.
+              선택한 버전의 HTML과 미리보기를 표시합니다. 이전 버전도
+              저장·게시할 수 있지만, 채팅 수정은 최신 버전에서만 가능합니다.
             </p>
           </div>
           <div className="flex justify-end gap-2">
@@ -240,7 +241,7 @@ export const TemplateCreateContent = ({
               취소
             </Button>
             <Button disabled={locked} onClick={confirmVersionChange}>
-              돌아가기
+              버전 보기
             </Button>
           </div>
         </div>
