@@ -6,7 +6,6 @@ import {
   useState,
 } from 'react';
 import { useNavigate, useNavigationType, useSearchParams } from 'react-router';
-import { SegmentedControl } from '@repo/ui';
 import { ChevronDown, Search, X } from 'lucide-react';
 
 import {
@@ -60,6 +59,14 @@ const listTabs: { label: string; value: ListTab }[] = [
 
 // 쿠폰 탭에서 모자란 가게를 채우려고 다음 페이지를 이어 받는 한도. 쿠폰 가게가 드문 곳에서 끝없이 받지 않게 한다
 const MAX_AUTO_LOADED_STORES = 300;
+
+// 목록·지도 전환과 쿠폰·전체 탭이 같은 모양으로 보이도록 묶음과 버튼 모양을 함께 쓴다. 높이는 놓인 자리에 맞춰 따로 준다
+const toggleGroupClassName =
+  'flex shrink-0 items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1';
+const toggleButtonClassName = (isSelected: boolean) =>
+  `flex h-full items-center justify-center rounded-lg px-2.5 text-body-sm-mobile font-bold transition-colors ${
+    isSelected ? 'bg-surface-brand text-text-brand' : 'text-text-tertiary'
+  }`;
 
 // 줄 세 개 아이콘은 메뉴·정렬로도 읽혀서, 뜻이 바로 보이는 두 글자로 쓴다
 const viewOptions = [
@@ -532,12 +539,23 @@ const ExploreScreen = () => {
                 가까운 순
               </p>
             </div>
-            <SegmentedControl
-              ariaLabel="가게 목록 거르기"
-              items={listTabs}
-              onValueChange={changeListTab}
-              value={listTab}
-            />
+            <div
+              aria-label="가게 목록 거르기"
+              className={`h-9 ${toggleGroupClassName}`}
+              role="group"
+            >
+              {listTabs.map(({ label, value }) => (
+                <button
+                  aria-pressed={listTab === value}
+                  className={toggleButtonClassName(listTab === value)}
+                  key={value}
+                  onClick={() => changeListTab(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           {hasNoCoupons ? (
             <EmptyState
@@ -649,17 +667,13 @@ const ExploreScreen = () => {
             </form>
             <div
               aria-label="보기 방식"
-              className="flex h-11 shrink-0 items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1"
+              className={`h-11 ${toggleGroupClassName}`}
               role="group"
             >
               {viewOptions.map(({ label, value }) => (
                 <button
                   aria-pressed={view === value}
-                  className={`flex h-full items-center justify-center rounded-lg px-2.5 text-body-sm-mobile font-bold transition-colors ${
-                    view === value
-                      ? 'bg-surface-brand text-text-brand'
-                      : 'text-text-tertiary'
-                  }`}
+                  className={toggleButtonClassName(view === value)}
                   key={value}
                   onClick={() =>
                     // 업종·검색어는 그대로 두고 보기 방식만 바꾼다
