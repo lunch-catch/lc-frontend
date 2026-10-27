@@ -323,12 +323,12 @@ const NearbyCouponSlider = ({ stores }: NearbyCouponSliderProps) => {
       aria-labelledby="nearby-coupons-title"
       className="flex flex-col gap-3"
     >
-      <h3
+      <h2
         className="text-body-sm-mobile font-bold text-text-primary"
         id="nearby-coupons-title"
       >
         가까운 순 쿠폰 {nearest.length}곳
-      </h3>
+      </h2>
       <Carousel stores={nearest} />
     </section>
   );

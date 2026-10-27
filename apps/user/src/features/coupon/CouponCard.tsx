@@ -3,6 +3,7 @@ import { Store, X } from 'lucide-react';
 
 import type { Coupon } from '@user/api/coupon';
 import Card from '@user/ui/Card/Card';
+import FadeImage from '@user/ui/FadeImage/FadeImage';
 import { TicketDivider } from '@user/ui/Ticket/Ticket';
 
 import { formatDiscount, formatTarget } from './couponFormat';
@@ -48,10 +49,11 @@ const CouponCard = ({
       className={`flex items-center gap-3 p-3 ${onRemove ? 'pr-10' : ''} ${dimmed ? 'opacity-60' : ''}`}
     >
       {coupon.storeImageUrl ? (
-        <img
+        <FadeImage
           alt=""
-          className={`size-14 shrink-0 rounded-lg bg-surface-subtle object-cover ${dimmed ? 'grayscale' : ''}`}
+          className="size-14 shrink-0 rounded-lg"
           height={56}
+          imageClassName={dimmed ? 'grayscale' : ''}
           src={coupon.storeImageUrl}
           width={56}
         />

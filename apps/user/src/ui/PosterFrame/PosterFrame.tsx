@@ -16,8 +16,9 @@ const SHOW_TIMEOUT_MS = 700;
 // 그 차이만큼 뒤 카드 바탕이 모서리에 비친다. 배경이 진한 포스터에서 특히 눈에 띈다
 // 조각 HTML이면 이 스타일이 body의 첫 요소가 되므로, 첫 자식이 아니라 style, script, link가 아닌 자식에 건다
 // 포스터가 A4를 넘거나 이미지가 폭보다 넓으면 잘린다. 크기는 템플릿(관리자)에서 맞춘다
+// 카드가 A4보다 조금 길면 포스터 아래가 비어 뒤 바탕이 줄처럼 보이므로, 맨 바깥 요소를 틀 높이까지 늘려 포스터 배경으로 채운다
 const BASE_STYLE =
-  '<style>html,body{margin:0;overflow:hidden}body>*:not(style):not(script):not(link){border-radius:0!important}</style>';
+  '<style>html,body{margin:0;height:100%;overflow:hidden}body>*:not(style):not(script):not(link){border-radius:0!important;min-height:100%}</style>';
 
 // 완성 HTML 문서면 head 안에, 조각이면 맨 앞에 기본 스타일을 넣는다
 // 문서 맨 앞(<!doctype> 앞)에 넣으면 표준 모드가 풀려 배치가 달라질 수 있어 피한다
@@ -87,7 +88,8 @@ const PosterFrame = ({ html, title }: PosterFrameProps) => {
           // 포스터 안의 스크립트, 폼, 링크 이동을 모두 막는다
           sandbox=""
           srcDoc={withBaseStyle(html)}
-          style={{ transform: `scale(${scale})` }}
+          // 포스터 문서는 밝은 테마라, 앱이 다크 모드여도 같은 테마로 둔다. 다르면 브라우저가 틀에 흰 바탕을 깔아 줄처럼 비친다
+          style={{ colorScheme: 'light', transform: `scale(${scale})` }}
           tabIndex={-1}
           title={title}
           width={POSTER_BASE_WIDTH}

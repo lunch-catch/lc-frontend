@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Utensils } from 'lucide-react';
 
 import type { StoreMenu } from '@user/api/store';
+import FadeImage from '@user/ui/FadeImage/FadeImage';
 
 interface MenuRowProps {
   menu: StoreMenu;
@@ -20,9 +21,9 @@ const MenuRow = ({ couponLabel, menu }: MenuRowProps) => {
   return (
     <li className="flex items-center gap-3 py-3">
       {showImage ? (
-        <img
+        <FadeImage
           alt=""
-          className="size-16 shrink-0 rounded-lg bg-surface-subtle object-cover"
+          className="size-16 shrink-0 rounded-lg"
           height={64}
           loading="lazy"
           onError={() => setHasImageError(true)}

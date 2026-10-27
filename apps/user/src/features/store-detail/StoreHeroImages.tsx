@@ -1,6 +1,8 @@
 import { type PointerEvent, type UIEvent, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Store } from 'lucide-react';
 
+import FadeImage from '@user/ui/FadeImage/FadeImage';
+
 interface StoreHeroImagesProps {
   // 가게 대표 이미지. 서버 필드 이름은 logoImage지만, 점주에게는 "손님이 가게를 찾을 때 보여지는 사진"으로 받는다
   mainImageUrl: string | null;
@@ -104,7 +106,7 @@ const StoreHeroImages = ({
     <>
       <div
         aria-label="가게 사진"
-        className="peer flex size-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-none [&::-webkit-scrollbar]:hidden"
+        className="peer flex size-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action-primary [&::-webkit-scrollbar]:hidden"
         onPointerCancel={finishDrag}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -112,11 +114,14 @@ const StoreHeroImages = ({
         onScroll={handleScroll}
         ref={regionRef}
         role="region"
+        // 사진이 여러 장이면 키보드로도 사진 칸에 닿아 방향키로 넘길 수 있게 한다
+        // 이전·다음 버튼은 마우스가 있는 화면에만 있어서, 터치 기기에 키보드를 붙이면 넘길 방법이 없었다
+        tabIndex={imageUrls.length > 1 ? 0 : undefined}
       >
         {imageUrls.map((url, position) => (
-          <img
+          <FadeImage
             alt={`가게 사진 ${position + 1}/${imageUrls.length}`}
-            className="size-full shrink-0 snap-center object-cover"
+            className="size-full shrink-0 snap-center"
             height={240}
             key={url}
             // 첫 장만 바로 받고 나머지는 넘길 때 받는다

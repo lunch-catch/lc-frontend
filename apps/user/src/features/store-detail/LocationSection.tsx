@@ -51,7 +51,8 @@ const LocationSection = ({ onCopyAddress, store }: LocationSectionProps) => {
           className="absolute top-1/2 left-1/2 size-9 -translate-x-1/2 -translate-y-full fill-action-primary text-bg-surface"
         />
         {/* 진짜 지도를 가짜 판 위에 덮는다. 지도가 누르는 동작을 가져가지 않게 해서 눌러도 카카오맵이 열린다 */}
-        <div aria-hidden="true" className="pointer-events-none relative">
+        {/* 카카오 지도가 안에 로고 링크를 넣어, aria-hidden만으로는 Tab이 보이지 않는 링크로 들어간다. inert로 포커스까지 막는다 */}
+        <div aria-hidden="true" className="pointer-events-none relative" inert>
           <LocationPreviewMap
             latitude={store.latitude}
             longitude={store.longitude}

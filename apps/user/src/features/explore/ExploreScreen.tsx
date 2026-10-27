@@ -6,6 +6,7 @@ import {
   useState,
 } from 'react';
 import { useNavigate, useNavigationType, useSearchParams } from 'react-router';
+import { SegmentedControl } from '@repo/ui';
 import { ChevronDown, Search, X } from 'lucide-react';
 
 import {
@@ -37,6 +38,7 @@ import StoreListSkeleton from './StoreListSkeleton';
 import StoreMap from './StoreMap';
 
 type ExploreView = 'list' | 'map';
+type ListTab = 'all' | 'coupon';
 
 // 주소의 업종 값을 고를 수 있는 업종으로 바꾼다. 모르는 값이면 전체로 본다
 const toCategoryFilter = (value: string | null): CategoryFilter =>
@@ -50,11 +52,21 @@ const PAGE_STEP = 10;
 const moreButtonClassName =
   'mx-auto flex h-10 items-center justify-center gap-1 rounded-full bg-surface-subtle px-5 text-body-sm-mobile font-medium text-text-secondary active:bg-border-subtle focus-visible:outline-2 focus-visible:outline-action-primary';
 
+// 목록 위 탭. 서버는 쿠폰 여부로 거르지 못해 받은 가게에서 화면이 거른다
+const listTabs: { label: string; value: ListTab }[] = [
+  { label: '쿠폰', value: 'coupon' },
+  { label: '전체', value: 'all' },
+];
+
+// 쿠폰 탭에서 모자란 가게를 채우려고 다음 페이지를 이어 받는 한도. 쿠폰 가게가 드문 곳에서 끝없이 받지 않게 한다
+const MAX_AUTO_LOADED_STORES = 300;
+
 // 줄 세 개 아이콘은 메뉴·정렬로도 읽혀서, 뜻이 바로 보이는 두 글자로 쓴다
-const viewOptions = [
+// 목록·지도 전환과 쿠폰·전체 탭은 설정의 화면 모드 선택과 같은 공통 전환 버튼(SegmentedControl)으로 모양을 맞춘다
+const viewOptions: { label: string; value: ExploreView }[] = [
   { value: 'list', label: '목록' },
   { value: 'map', label: '지도' },
-] as const;
+];
 
 // 탐색 탭. 주변 가게를 업종별로 보고 가게명이나 메뉴로 검색한다 (Figma 4. 홈의 목록·지도 보기)
 // 목록과 지도는 같은 가게 목록을 보여주는 방식만 다르다
@@ -65,6 +77,10 @@ const ExploreScreen = () => {
   // 검색 버튼을 눌러 확정한 검색어. 입력 중에는 목록을 다시 받지 않는다
   const query = searchParams.get('q') ?? '';
   const category = toCategoryFilter(searchParams.get('category'));
+  // 쿠폰 진행 중인 가게만 볼지, 전체를 볼지(?tab=all). 쿠폰을 찾으러 온 화면이라 쿠폰 진행 중을 먼저 보여준다
+  // 같은 목록을 화면에서 거르는 것이라 탭을 바꿔도 다시 받지 않는다
+  const listTab: ListTab = searchParams.get('tab') === 'all' ? 'all' : 'coupon';
+  const isCouponTab = listTab === 'coupon';
   const [inputValue, setInputValue] = useState(query);
   const navigationType = useNavigationType();
   const navigate = useNavigate();
@@ -130,6 +146,12 @@ const ExploreScreen = () => {
     myLocation !== null &&
     (latitude === null || longitude === null);
   const storeCategory = category === 'ALL' ? undefined : category;
+  // 지금 탭에서 보여줄 가게. 쿠폰 탭이면 쿠폰 진행 중인 가게만 남긴다 (서버가 준 거리순 그대로)
+  const tabStores =
+    stores && isCouponTab
+      ? stores.filter((store) => store.hasActiveCampaign)
+      : stores;
+  const isBrowsing = !query && category === 'ALL';
 
   // 위치가 바뀌거나 다시 시도하면 이전 결과 대신 회색 틀을 보여준다
   const resetStores = () => {
@@ -302,6 +324,14 @@ const ExploreScreen = () => {
     return () => observer.disconnect();
   });
 
+  // 쿠폰 탭에서 보여줄 쿠폰 가게가 모자라면, 목록 끝 표시를 두어 사용자가 더 누르지 않아도 다음 페이지를 이어 받는다
+  // 둘러보기는 보여줄 개수만큼, 검색·업종은 첫 화면을 채울 만큼 받는다. 받은 가게가 한도를 넘으면 멈추고 더 보기로 넘긴다
+  const couponShortage =
+    isCouponTab &&
+    Boolean(tabStores) &&
+    (tabStores?.length ?? 0) < (isBrowsing ? visibleCount : PAGE_STEP) &&
+    (stores?.length ?? 0) < MAX_AUTO_LOADED_STORES;
+
   const retry = () => {
     refreshMyLocation();
     resetStores();
@@ -339,6 +369,13 @@ const ExploreScreen = () => {
   const clearSearch = () => {
     setInputValue('');
     changeQuery('');
+  };
+
+  // 탭은 같은 목록을 거르는 것이라 다시 받지 않고, 보여줄 개수만 처음으로 돌린다
+  const changeListTab = (nextTab: ListTab) => {
+    if (nextTab === listTab) return;
+    setVisible({ count: PAGE_STEP, key: listKey });
+    updateParams({ tab: nextTab === 'all' ? 'all' : null });
   };
 
   const changeCategory = (nextCategory: CategoryFilter) => {
@@ -452,19 +489,27 @@ const ExploreScreen = () => {
     }
 
     // 서버는 쿠폰 가게와 아닌 가게를 거리순으로 섞어서 준다. 구역으로 나누면 더 받을 때마다 쿠폰 가게가 위로 끼어들어 숫자가 바뀌므로
-    // 하나의 목록으로 두고, 쿠폰 유무는 카드 오른쪽 칸(주황 할인, 회색 쿠폰 없음)으로 구분한다. 새 가게는 항상 맨 아래에 붙는다
-    // 쿠폰 가게를 먼저 보는 길은 위 슬라이드가 맡는다
+    // 하나의 목록으로 두고, 쿠폰 가게만 보고 싶으면 위 탭으로 거른다. 새 가게는 항상 맨 아래에 붙는다
     // 처음 둘러볼 때만 슬라이드와 더 보기로 나눠 보여주고, 검색하거나 업종을 고르면 빨리 찾도록 결과 전체를 이어서 보여준다
-    const isBrowsing = !query && category === 'ALL';
-    const shownStores = isBrowsing ? stores.slice(0, visibleCount) : stores;
+    // 두 탭 모두 서버가 준 거리순 그대로 둔다. 쿠폰 가게를 먼저 보는 길은 쿠폰 탭이 맡는다
+    const listStores = tabStores ?? [];
+    const shownStores = isBrowsing
+      ? listStores.slice(0, visibleCount)
+      : listStores;
     const hasMore =
-      isBrowsing && (stores.length > visibleCount || Boolean(nextPageToken));
+      isBrowsing &&
+      (listStores.length > visibleCount || Boolean(nextPageToken));
+    // 쿠폰 탭에서 다음 페이지를 다 받았는데도 한 곳도 없으면 빈 안내를 보여준다
+    const hasNoCoupons =
+      isCouponTab && listStores.length === 0 && !nextPageToken;
+    // 목록 끝 표시를 두어 화면에 보이면 다음 페이지를 받는다. 검색·업종 목록과, 쿠폰 탭에서 가게가 모자랄 때다
+    const autoLoads = Boolean(nextPageToken) && (!isBrowsing || couponShortage);
 
     const showMore = () => {
       const nextCount = visibleCount + PAGE_STEP;
       setVisible({ count: nextCount, key: listKey });
       // 이미 받은 가게로 모자라면 서버에서 다음 페이지를 받는다
-      if (stores.length < nextCount) loadMore();
+      if (listStores.length < nextCount) loadMore();
     };
 
     return (
@@ -476,17 +521,44 @@ const ExploreScreen = () => {
           />
         )}
         <section className="flex flex-col gap-3">
-          {!query && (
-            <h3 className="text-body-sm-mobile font-bold text-text-primary">
-              주변 가게
-            </h3>
+          <div className="flex items-center justify-between gap-3">
+            {/* 검색 중에는 위에 검색 결과 제목이 있어 구역 이름을 두지 않는다. 어떤 순서인지는 늘 알린다 */}
+            <div className="flex min-w-0 items-baseline gap-1.5">
+              {!query && (
+                <h2 className="text-body-sm-mobile font-bold text-text-primary">
+                  주변 가게
+                </h2>
+              )}
+              <p className="text-caption-mobile text-text-tertiary">
+                가까운 순
+              </p>
+            </div>
+            <SegmentedControl
+              ariaLabel="가게 목록 거르기"
+              items={listTabs}
+              onValueChange={changeListTab}
+              value={listTab}
+            />
+          </div>
+          {hasNoCoupons ? (
+            <EmptyState
+              description="쿠폰은 매일 바뀌어요. 전체 가게도 둘러보세요"
+              image={mascotEmpty}
+              title="주변에 쿠폰 진행 중인 가게가 없어요"
+            >
+              <ActionButton onClick={() => changeListTab('all')}>
+                전체 가게 보기
+              </ActionButton>
+            </EmptyState>
+          ) : (
+            <ul aria-label="주변 가게" className="flex flex-col gap-3">
+              {shownStores.map((store) => (
+                <StoreCard key={store.storeId} store={store} />
+              ))}
+            </ul>
           )}
-          <ul aria-label="주변 가게" className="flex flex-col gap-3">
-            {shownStores.map((store) => (
-              <StoreCard key={store.storeId} store={store} />
-            ))}
-          </ul>
           {hasMore &&
+            !autoLoads &&
             (hasMoreError ? (
               <div className="flex items-center justify-between gap-3 py-2">
                 <p className="text-body-sm-mobile text-text-secondary">
@@ -509,7 +581,7 @@ const ExploreScreen = () => {
             ))}
         </section>
         {/* 더 보기를 쓰지 않는 검색, 업종 목록은 끝에 닿으면 다음 페이지를 이어서 받는다 */}
-        {!isBrowsing && nextPageToken && (
+        {autoLoads && (
           <div ref={sentinelRef}>
             {hasMoreError ? (
               <div className="flex items-center justify-between gap-3 py-2">
@@ -576,29 +648,17 @@ const ExploreScreen = () => {
                 </button>
               )}
             </form>
-            <div
-              aria-label="보기 방식"
-              className="flex h-11 shrink-0 items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1"
-              role="group"
-            >
-              {viewOptions.map(({ label, value }) => (
-                <button
-                  aria-pressed={view === value}
-                  className={`flex h-full items-center justify-center rounded-lg px-2.5 text-body-sm-mobile font-bold transition-colors ${
-                    view === value
-                      ? 'bg-surface-brand text-text-brand'
-                      : 'text-text-tertiary'
-                  }`}
-                  key={value}
-                  onClick={() =>
-                    // 업종·검색어는 그대로 두고 보기 방식만 바꾼다
-                    updateParams({ view: value === 'map' ? 'map' : null })
-                  }
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
+            {/* 검색창 높이에 맞춰 늘린다 (전환 버튼이 감싼 칸 높이를 채운다) */}
+            <div className="flex h-11 shrink-0">
+              <SegmentedControl
+                ariaLabel="보기 방식"
+                items={viewOptions}
+                onValueChange={(value) =>
+                  // 업종·검색어는 그대로 두고 보기 방식만 바꾼다
+                  updateParams({ view: value === 'map' ? 'map' : null })
+                }
+                value={view}
+              />
             </div>
           </div>
           <CategoryIconRow onChange={changeCategory} value={category} />
@@ -612,7 +672,7 @@ const ExploreScreen = () => {
             {stores && (
               <p className="shrink-0 text-body-sm-mobile text-text-secondary">
                 {/* 서버가 전체 개수를 주지 않아, 더 있으면 받은 수에 +를 붙인다 */}
-                {stores.length}
+                {tabStores?.length ?? stores.length}
                 {nextPageToken ? '+' : ''}개 가게
               </p>
             )}
