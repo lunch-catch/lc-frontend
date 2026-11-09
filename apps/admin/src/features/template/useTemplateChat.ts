@@ -19,6 +19,7 @@ interface TemplateChatEntry {
   html: string | null;
   text: string;
   assistantMessage: string;
+  revealStopped?: boolean;
   targetLabel?: string;
   hasRemovedElements: boolean;
 }
@@ -265,6 +266,14 @@ export const useTemplateChat = ({
     stopResponse: () => {
       if (editor.requestPending) editor.stopGeneration();
       else {
+        // 완료와 중단을 구분해 이후 전송·재렌더링에서도 남은 답변이 펼쳐지지 않게 한다.
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === activeRevealId
+              ? { ...message, revealStopped: true }
+              : message,
+          ),
+        );
         setActiveRevealId(null);
         promptRef.current?.focus({ preventScroll: true });
       }
