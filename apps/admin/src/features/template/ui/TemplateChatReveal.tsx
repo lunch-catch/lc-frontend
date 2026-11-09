@@ -17,6 +17,7 @@ const REVEAL_MAX_MS = 4000;
 interface TemplateChatRevealProps {
   text: string;
   complete: boolean;
+  stopped?: boolean;
   onComplete: () => void;
   onProgress: (force?: boolean) => boolean;
 }
@@ -25,6 +26,7 @@ interface TemplateChatRevealProps {
 export const TemplateChatReveal = ({
   text,
   complete,
+  stopped = false,
   onComplete,
   onProgress,
 }: TemplateChatRevealProps) => {
@@ -47,12 +49,14 @@ export const TemplateChatReveal = ({
   const reportProgress = useEffectEvent(onProgress);
   const shouldFollow = useRef(false);
   const reportComplete = useEffectEvent(onComplete);
-  // 출력 중단은 이미 받은 답변을 버리지 않고 애니메이션만 끝낸다.
-  const displayedCount = complete ? characters.length : visibleCount;
+  // 중단은 완료와 달리 마지막으로 표시된 글자 수를 유지한다. 서버 원문은 보존한다.
+  const displayedCount =
+    complete && !stopped ? characters.length : visibleCount;
 
   useEffect(() => {
     // 접근성 설정에서는 즉시 표시하고, 긴 답변도 최대 4초 안에 끝낸다.
     if (
+      stopped ||
       complete ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     )
@@ -75,7 +79,7 @@ export const TemplateChatReveal = ({
       if (count === characters.length) window.clearInterval(timer);
     }, REVEAL_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [characters, complete]);
+  }, [characters, complete, stopped]);
 
   useLayoutEffect(() => {
     // 변경된 높이로 다시 판단하지 않고, 페인트 전에 이전 추적 상태를 적용한다.
@@ -84,12 +88,15 @@ export const TemplateChatReveal = ({
   }, [displayedCount]);
 
   useEffect(() => {
-    if (displayedCount >= characters.length) reportComplete();
-  }, [displayedCount, characters.length]);
+    if (!stopped && displayedCount >= characters.length) reportComplete();
+  }, [displayedCount, characters.length, stopped]);
 
   // 글자가 늘어날 때마다 스크린 리더가 문장을 다시 읽지 않도록 한다.
   return (
-    <div aria-live="off" aria-busy={displayedCount < characters.length}>
+    <div
+      aria-live="off"
+      aria-busy={!stopped && displayedCount < characters.length}
+    >
       <TemplateChatMarkdown>
         {characters.slice(0, displayedCount).join('')}
       </TemplateChatMarkdown>

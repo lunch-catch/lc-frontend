@@ -202,6 +202,7 @@ export const TemplateChatPanel = ({
                 <TemplateChatReveal
                   text={message.assistantMessage}
                   complete={chat.activeRevealId !== message.id}
+                  stopped={message.revealStopped ?? false}
                   onComplete={() => chat.finishReveal(message.id)}
                   onProgress={followLatestMessage}
                 />

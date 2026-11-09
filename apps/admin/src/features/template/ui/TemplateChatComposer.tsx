@@ -154,14 +154,14 @@ export const TemplateChatComposer = ({
               isResponding
                 ? editor.requestPending
                   ? '응답 대기 중단'
-                  : '답변 전체 표시'
+                  : '답변 표시 중단'
                 : '생성·수정 요청 보내기'
             }
             title={
               isResponding
                 ? editor.requestPending
                   ? '응답 대기 중단 (서버 생성은 계속될 수 있습니다)'
-                  : '답변 전체 표시'
+                  : '답변 표시 중단'
                 : '보내기'
             }
             className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-lg bg-action-primary text-white transition-colors enabled:hover:bg-action-primary-hover disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-text-disabled focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
